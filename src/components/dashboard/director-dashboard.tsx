@@ -322,8 +322,8 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                     <Mail className="h-4 w-4 mr-2" />
                     Send Message
                   </button>
-                  {/* Development seed button - remove in production */}
-                  {process.env.NODE_ENV === 'development' && (
+                  {/* Development seed button - only show in development */}
+                  {typeof window !== 'undefined' && window.location.hostname === 'localhost' && (
                     <button 
                       onClick={async () => {
                         try {
