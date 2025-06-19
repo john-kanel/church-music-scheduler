@@ -31,7 +31,7 @@ interface User {
   id: string
   name: string
   email: string
-  role: 'DIRECTOR' | 'MUSICIAN'
+  role: 'DIRECTOR' | 'MUSICIAN' | 'PASTOR'
   parishName: string
   avatar?: string
 }
