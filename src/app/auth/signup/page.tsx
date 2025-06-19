@@ -241,7 +241,7 @@ export default function SignUpPage() {
                 <div>Per Month</div>
               </div>
               <div>
-                <div className="font-semibold text-purple-600">∞</div>
+                <div className="font-semibold text-purple-600">Unlimited</div>
                 <div>Musicians</div>
               </div>
             </div>

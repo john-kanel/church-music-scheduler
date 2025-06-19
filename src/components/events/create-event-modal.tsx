@@ -28,6 +28,7 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
   const { data: session } = useSession()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
 
   const [formData, setFormData] = useState({
     name: '',
@@ -110,6 +111,7 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
     e.preventDefault()
     setLoading(true)
     setError('')
+    setSuccess('')
 
     try {
       const eventData = {
@@ -143,26 +145,32 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
 
       const result = await response.json()
       
-      onEventCreated?.()
-      onClose()
+      setSuccess(`Event "${formData.name}" created successfully!`)
       
-      // Reset form
-      setFormData({
-        name: '',
-        description: '',
-        location: '',
-        startDate: '',
-        startTime: '',
-        endTime: '',
-        signupType: 'open',
-        notes: ''
-      })
-      setRoles([
-        { id: '1', name: 'Accompanist', maxCount: 1, isRequired: true },
-        { id: '2', name: 'Vocalist', maxCount: 4, isRequired: false }
-      ])
-      setHymns([])
-      setMusicFiles([])
+      // Wait a moment to show success message, then close
+      setTimeout(() => {
+        onEventCreated?.()
+        onClose()
+        
+        // Reset form
+        setFormData({
+          name: '',
+          description: '',
+          location: '',
+          startDate: '',
+          startTime: '',
+          endTime: '',
+          signupType: 'open',
+          notes: ''
+        })
+        setRoles([
+          { id: '1', name: 'Accompanist', maxCount: 1, isRequired: true },
+          { id: '2', name: 'Vocalist', maxCount: 4, isRequired: false }
+        ])
+        setHymns([])
+        setMusicFiles([])
+        setSuccess('')
+      }, 1500)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Network error. Please try again.')
     } finally {
@@ -179,7 +187,8 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
           <h2 className="text-2xl font-bold text-gray-900">Create New Event</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-700 hover:text-gray-900"
+            disabled={loading}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-700 hover:text-gray-900 disabled:opacity-50"
           >
             <X className="h-6 w-6" />
           </button>
@@ -189,6 +198,17 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4">
               <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          )}
+
+          {success && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <p className="text-green-600 text-sm flex items-center">
+                <svg className="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                {success}
+              </p>
             </div>
           )}
 
@@ -450,16 +470,31 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              disabled={loading}
+              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={loading}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              disabled={loading || !!success}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center"
             >
-              {loading ? 'Creating...' : 'Create Event'}
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Creating...
+                </>
+              ) : success ? (
+                <>
+                  <svg className="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Created!
+                </>
+              ) : (
+                'Create Event'
+              )}
             </button>
           </div>
         </form>

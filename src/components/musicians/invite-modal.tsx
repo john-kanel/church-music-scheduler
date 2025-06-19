@@ -21,6 +21,7 @@ export function InviteModal({ isOpen, onClose, onInvitesSent }: InviteModalProps
   const { data: session } = useSession()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [inviteMode, setInviteMode] = useState<'individual' | 'bulk'>('individual')
 
   const [singleInvite, setSingleInvite] = useState({
@@ -102,6 +103,7 @@ export function InviteModal({ isOpen, onClose, onInvitesSent }: InviteModalProps
     e.preventDefault()
     setLoading(true)
     setError('')
+    setSuccess('')
 
     try {
       const [firstName, ...lastNameParts] = singleInvite.name.trim().split(' ')
@@ -129,14 +131,23 @@ export function InviteModal({ isOpen, onClose, onInvitesSent }: InviteModalProps
         throw new Error(errorData.error || 'Failed to send invitation')
       }
 
-      onInvitesSent?.()
+      const result = await response.json()
       
-      // Reset form
-      setSingleInvite({
-        email: '',
-        name: '',
-        role: 'musician'
-      })
+      setSuccess(`Invitation sent successfully to ${singleInvite.email}! They can now sign in with their email and temporary password.`)
+      
+      // Wait a moment to show success message, then close
+      setTimeout(() => {
+        onInvitesSent?.()
+        onClose()
+        
+        // Reset form
+        setSingleInvite({
+          email: '',
+          name: '',
+          role: 'musician'
+        })
+        setSuccess('')
+      }, 2000)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send invitation. Please try again.')
     } finally {
@@ -148,6 +159,7 @@ export function InviteModal({ isOpen, onClose, onInvitesSent }: InviteModalProps
     e.preventDefault()
     setLoading(true)
     setError('')
+    setSuccess('')
 
     const validInvites = bulkInvites.filter(invite => invite.email.trim())
     
@@ -191,15 +203,26 @@ export function InviteModal({ isOpen, onClose, onInvitesSent }: InviteModalProps
 
       const result = await response.json()
       
+      let successMessage = `Successfully sent ${result.results?.successful?.length || validInvites.length} invitation(s)!`
+      
       if (result.results?.failed?.length > 0) {
         const failedEmails = result.results.failed.map((f: any) => f.email).join(', ')
+        successMessage += ` Some invitations failed: ${failedEmails}`
         setError(`Some invitations failed: ${failedEmails}`)
+      } else {
+        setSuccess(successMessage + ' All musicians can now sign in with their email and temporary passwords.')
+        
+        // Wait a moment to show success message, then close
+        setTimeout(() => {
+          onInvitesSent?.()
+          onClose()
+          
+          // Reset form
+          setBulkInvites([])
+          setBulkText('')
+          setSuccess('')
+        }, 2500)
       }
-      
-      onInvitesSent?.()
-      
-      // Reset form
-      setBulkInvites([])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send invitations. Please try again.')
     } finally {
@@ -216,7 +239,8 @@ export function InviteModal({ isOpen, onClose, onInvitesSent }: InviteModalProps
           <h2 className="text-2xl font-bold text-gray-900">Invite Musicians</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-700 hover:text-gray-900"
+            disabled={loading}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-700 hover:text-gray-900 disabled:opacity-50"
           >
             <X className="h-6 w-6" />
           </button>
@@ -229,11 +253,23 @@ export function InviteModal({ isOpen, onClose, onInvitesSent }: InviteModalProps
             </div>
           )}
 
+          {success && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+              <p className="text-green-600 text-sm flex items-center">
+                <svg className="h-4 w-4 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                {success}
+              </p>
+            </div>
+          )}
+
           {/* Mode Selection */}
           <div className="flex space-x-4 mb-6">
             <button
               onClick={() => setInviteMode('individual')}
-              className={`flex items-center px-4 py-2 rounded-lg transition-colors ${
+              disabled={loading}
+              className={`flex items-center px-4 py-2 rounded-lg transition-colors disabled:opacity-50 ${
                 inviteMode === 'individual'
                   ? 'bg-green-600 text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -244,7 +280,8 @@ export function InviteModal({ isOpen, onClose, onInvitesSent }: InviteModalProps
             </button>
             <button
               onClick={() => setInviteMode('bulk')}
-              className={`flex items-center px-4 py-2 rounded-lg transition-colors ${
+              disabled={loading}
+              className={`flex items-center px-4 py-2 rounded-lg transition-colors disabled:opacity-50 ${
                 inviteMode === 'bulk'
                   ? 'bg-green-600 text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -301,17 +338,34 @@ export function InviteModal({ isOpen, onClose, onInvitesSent }: InviteModalProps
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  disabled={loading}
+                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || !!success}
                   className="flex items-center px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
                 >
-                  <Mail className="h-4 w-4 mr-2" />
-                  {loading ? 'Sending...' : 'Send Invitation'}
+                  {loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Sending...
+                    </>
+                  ) : success ? (
+                    <>
+                      <svg className="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      Sent!
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="h-4 w-4 mr-2" />
+                      Send Invitation
+                    </>
+                  )}
                 </button>
               </div>
             </form>
@@ -346,8 +400,6 @@ export function InviteModal({ isOpen, onClose, onInvitesSent }: InviteModalProps
                   </button>
                 </div>
               </div>
-
-
 
               {bulkInvites.length > 0 && (
                 <form onSubmit={handleBulkSubmit}>

@@ -20,7 +20,8 @@ import {
   BarChart3,
   Mail,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  CheckCircle
 } from 'lucide-react'
 import Link from 'next/link'
 import { CreateEventModal } from '../events/create-event-modal'
@@ -36,6 +37,17 @@ interface User {
   avatar?: string
 }
 
+interface DashboardData {
+  parishStats: {
+    totalMusicians: number
+    upcomingEvents: number
+    pendingInvitations: number
+    pendingAssignments: number
+  }
+  upcomingEvents: any[]
+  recentActivity: any[]
+}
+
 interface DirectorDashboardProps {
   user: User
 }
@@ -49,8 +61,9 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
   const [showMessageModal, setShowMessageModal] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
   const [currentDate, setCurrentDate] = useState(new Date())
-  const [dashboardData, setDashboardData] = useState<any>(null)
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [showSeedModal, setShowSeedModal] = useState(false)
 
   // Fetch dashboard data
   useEffect(() => {
@@ -98,6 +111,21 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
     }
   }
 
+  const handleInvitesSent = () => {
+    // Refresh dashboard data to show updated pending invitation count
+    refreshDashboardData()
+  }
+
+  const handleEventCreated = () => {
+    // Refresh dashboard data to show new event
+    refreshDashboardData()
+  }
+
+  const handleMessageSent = () => {
+    // Refresh dashboard data to show updated communication history
+    refreshDashboardData()
+  }
+
   // Calendar helpers
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -142,6 +170,22 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
   const days = getDaysInMonth(currentDate)
   const today = new Date()
   const isCurrentMonth = currentDate.getMonth() === today.getMonth() && currentDate.getFullYear() === today.getFullYear()
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  if (!dashboardData) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-600">Unable to load dashboard data</p>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -307,7 +351,7 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                     <div>
                       <p className="text-sm font-medium text-gray-600">Musicians</p>
                       <p className="text-3xl font-bold text-gray-900">
-                        {loading ? '...' : dashboardData?.stats?.totalMusicians || 0}
+                        {dashboardData.parishStats.totalMusicians}
                       </p>
                     </div>
                     <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -317,7 +361,7 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                   <div className="mt-4 flex items-center text-sm">
                     <UserCheck className="h-4 w-4 text-blue-500 mr-1" />
                     <span className="text-blue-600 font-medium">
-                      {(dashboardData?.stats?.totalMusicians || 0) === 0 
+                      {(dashboardData.parishStats.totalMusicians === 0) 
                         ? 'Start by inviting musicians' 
                         : 'Active musicians'
                       }
@@ -330,7 +374,7 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                     <div>
                       <p className="text-sm font-medium text-gray-600">Upcoming Events</p>
                       <p className="text-3xl font-bold text-gray-900">
-                        {loading ? '...' : dashboardData?.stats?.upcomingEvents || 0}
+                        {dashboardData.parishStats.upcomingEvents}
                       </p>
                     </div>
                     <div className="h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center">
@@ -340,7 +384,7 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                   <div className="mt-4 flex items-center text-sm">
                     <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
                     <span className="text-green-600 font-medium">
-                      {(dashboardData?.stats?.upcomingEvents || 0) === 0 
+                      {(dashboardData.parishStats.upcomingEvents === 0) 
                         ? 'Ready to create your first event' 
                         : 'Events scheduled'
                       }
@@ -353,17 +397,17 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                     <div>
                       <p className="text-sm font-medium text-gray-600">Pending Invitations</p>
                       <p className="text-3xl font-bold text-gray-900">
-                        {loading ? '...' : dashboardData?.stats?.pendingInvitations || 0}
+                        {dashboardData.parishStats.pendingInvitations}
                       </p>
                     </div>
                     <div className="h-12 w-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                      <Bell className="h-6 w-6 text-yellow-600" />
+                      <Mail className="h-6 w-6 text-yellow-600" />
                     </div>
                   </div>
                   <div className="mt-4 flex items-center text-sm">
                     <Clock className="h-4 w-4 text-gray-500 mr-1" />
                     <span className="text-gray-600">
-                      {(dashboardData?.stats?.pendingInvitations || 0) === 0 
+                      {(dashboardData.parishStats.pendingInvitations === 0) 
                         ? 'No pending invites' 
                         : 'Awaiting responses'
                       }
@@ -374,18 +418,23 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                 <div className="bg-white rounded-xl shadow-sm p-6 border">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-gray-600">This Month Events</p>
+                      <p className="text-sm font-medium text-gray-600">Pending Responses</p>
                       <p className="text-3xl font-bold text-gray-900">
-                        {loading ? '...' : dashboardData?.stats?.thisMonthEvents || 0}
+                        {dashboardData.parishStats.pendingAssignments}
                       </p>
                     </div>
-                    <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <Calendar className="h-6 w-6 text-blue-600" />
+                    <div className="h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                      <CheckCircle className="h-6 w-6 text-purple-600" />
                     </div>
                   </div>
                   <div className="mt-4 flex items-center text-sm">
-                    <BarChart3 className="h-4 w-4 text-indigo-500 mr-1" />
-                    <span className="text-indigo-600 font-medium">Monthly activity</span>
+                    <Clock className="h-4 w-4 text-gray-500 mr-1" />
+                    <span className="text-gray-600">
+                      {(dashboardData.parishStats.pendingAssignments === 0) 
+                        ? 'No pending responses' 
+                        : 'Awaiting responses'
+                      }
+                    </span>
                   </div>
                 </div>
               </div>
@@ -492,13 +541,7 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                 <div className="bg-white rounded-xl shadow-sm p-6 border">
                   <h2 className="text-xl font-bold text-gray-900 mb-6">Upcoming Events</h2>
                   <div className="space-y-4">
-                    {loading ? (
-                      <div className="space-y-3">
-                        {[1, 2, 3].map(i => (
-                          <div key={i} className="animate-pulse bg-gray-200 h-16 rounded"></div>
-                        ))}
-                      </div>
-                    ) : dashboardData?.upcomingEvents?.length > 0 ? (
+                    {dashboardData.upcomingEvents?.length > 0 ? (
                       dashboardData.upcomingEvents.map((event: any) => (
                         <div key={event.id} className="flex items-center p-3 bg-gray-50 rounded-lg">
                           <div className="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -591,25 +634,19 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
       <CreateEventModal 
         isOpen={showCreateEventModal}
         onClose={() => setShowCreateEventModal(false)}
-        onEventCreated={() => {
-          refreshDashboardData()
-        }}
+        onEventCreated={handleEventCreated}
       />
 
       <InviteModal 
         isOpen={showInviteModal}
         onClose={() => setShowInviteModal(false)}
-        onInvitesSent={() => {
-          refreshDashboardData()
-        }}
+        onInvitesSent={handleInvitesSent}
       />
 
       <SendMessageModal 
         isOpen={showMessageModal}
         onClose={() => setShowMessageModal(false)}
-        onMessageSent={() => {
-          refreshDashboardData()
-        }}
+        onMessageSent={handleMessageSent}
       />
     </div>
   )
