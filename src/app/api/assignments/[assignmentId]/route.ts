@@ -6,8 +6,9 @@ import { prisma } from '@/lib/db'
 // PUT /api/assignments/[assignmentId] - Accept or decline assignment
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { assignmentId: string } }
+  context: { params: Promise<{ assignmentId: string }> }
 ) {
+  const params = await context.params
   try {
     const session = await getServerSession(authOptions)
     

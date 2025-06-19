@@ -6,8 +6,9 @@ import { prisma } from '@/lib/db'
 // GET /api/events/[eventId] - Get single event
 export async function GET(
   request: NextRequest,
-  { params }: { params: { eventId: string } }
+  context: { params: Promise<{ eventId: string }> }
 ) {
+  const params = await context.params
   try {
     const session = await getServerSession(authOptions)
     
@@ -62,8 +63,9 @@ export async function GET(
 // PUT /api/events/[eventId] - Update event
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { eventId: string } }
+  context: { params: Promise<{ eventId: string }> }
 ) {
+  const params = await context.params
   try {
     const session = await getServerSession(authOptions)
     
@@ -197,8 +199,9 @@ export async function PUT(
 // DELETE /api/events/[eventId] - Delete event
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { eventId: string } }
+  context: { params: Promise<{ eventId: string }> }
 ) {
+  const params = await context.params
   try {
     const session = await getServerSession(authOptions)
     
