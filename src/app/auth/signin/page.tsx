@@ -1,11 +1,12 @@
 'use client'
 
+import { Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { LoginForm } from '@/components/auth/login-form'
 import { Music, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
-export default function SignInPage() {
+function SignInContent() {
   const searchParams = useSearchParams()
   const message = searchParams.get('message')
 
@@ -59,5 +60,17 @@ export default function SignInPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    }>
+      <SignInContent />
+    </Suspense>
   )
 } 
