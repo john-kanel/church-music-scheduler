@@ -67,16 +67,16 @@ export default function HomePage() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="text-center p-4 bg-white rounded-lg shadow-sm">
-                <div className="text-3xl font-bold text-blue-600">$34</div>
+                <div className="text-3xl font-bold text-blue-600">$35</div>
                 <div className="text-sm text-gray-600">per month</div>
               </div>
               <div className="text-center p-4 bg-white rounded-lg shadow-sm">
                 <div className="text-3xl font-bold text-green-600">30</div>
                 <div className="text-sm text-gray-600">day free trial</div>
               </div>
-              <div className="text-center p-4 bg-white rounded-lg shadow-sm">
-                <div className="text-3xl font-bold text-purple-600">∞</div>
-                <div className="text-sm text-gray-600">unlimited musicians</div>
+              <div className="text-center p-4 bg-white rounded-lg shadow-sm border-2 border-green-400">
+                <div className="text-2xl font-bold text-green-600">$200</div>
+                <div className="text-xs text-green-700 font-medium">annually (save $220!)</div>
               </div>
             </div>
 
@@ -180,23 +180,90 @@ export default function HomePage() {
               Simple, Affordable Pricing
             </h2>
             <p className="text-lg text-gray-600">
-              One price, all features. No hidden fees.
+              Choose monthly or save big with annual billing
             </p>
           </div>
 
-          <div className="max-w-md mx-auto">
-            <div className="bg-white rounded-2xl shadow-xl p-8 border-2 border-blue-500">
-              <div className="text-center">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">Parish Plan</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto md:grid-rows-1">
+            {/* Monthly Plan */}
+                          <div className="bg-white rounded-2xl shadow-xl p-8 flex flex-col h-full">
+              <div className="text-center flex-1">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Monthly Plan</h3>
                 <div className="mb-4">
-                  <span className="text-4xl font-bold text-blue-600">$34</span>
+                  <span className="text-4xl font-bold text-blue-600">$35</span>
                   <span className="text-gray-600">/month</span>
                 </div>
+                <p className="text-gray-600 mb-4">
+                  Complete church music scheduling solution
+                </p>
+                <div className="bg-blue-50 text-blue-700 text-sm font-medium px-3 py-1 rounded-full inline-block mb-4">
+                  One month free trial included!
+                </div>
                 <p className="text-gray-600 mb-6">
-                  Everything your church needs to manage music scheduling
+                  Get started with full access today!
                 </p>
 
-                <div className="space-y-3 mb-8">
+                <div className="space-y-3 mb-8 min-h-[144px] flex flex-col justify-between">
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-blue-600 rounded-full mr-3"></div>
+                    <span className="text-gray-700">One month free trial</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-blue-600 rounded-full mr-3"></div>
+                    <span className="text-gray-700">Unlimited musicians</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-blue-600 rounded-full mr-3"></div>
+                    <span className="text-gray-700">Unlimited events</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-blue-600 rounded-full mr-3"></div>
+                    <span className="text-gray-700">Email & SMS messaging</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-blue-600 rounded-full mr-3"></div>
+                    <span className="text-gray-700">Music file sharing</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-blue-600 rounded-full mr-3"></div>
+                    <span className="text-gray-700">Priority support</span>
+                  </div>
+                </div>
+
+                <div className="mt-auto">
+                  <a href="/auth/signup" className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 transition-colors block text-center">
+                    Start Free Trial
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* Annual Plan */}
+            <div className="bg-white rounded-2xl shadow-xl p-8 border-2 border-green-500 relative flex flex-col h-full">
+              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                <span className="bg-green-500 text-white px-4 py-1 rounded-full text-sm font-medium">
+                  Best Value - Save 52%
+                </span>
+              </div>
+              <div className="text-center flex-1">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Annual Plan</h3>
+                <div className="mb-2">
+                  <div className="text-lg text-gray-500 line-through">$420/year</div>
+                  <div className="text-4xl font-bold text-green-600">$200</div>
+                  <div className="text-gray-600">/year</div>
+                </div>
+                <div className="bg-green-50 text-green-700 text-sm font-medium px-3 py-1 rounded-full inline-block mb-4">
+                  Save $220 per year!
+                </div>
+                <p className="text-gray-600 mb-6">
+                  Everything included - 2 months free!
+                </p>
+
+                <div className="space-y-3 mb-8 min-h-[144px] flex flex-col justify-between">
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
+                    <span className="text-gray-700">Two month free trial</span>
+                  </div>
                   <div className="flex items-center">
                     <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
                     <span className="text-gray-700">Unlimited musicians</span>
@@ -207,28 +274,26 @@ export default function HomePage() {
                   </div>
                   <div className="flex items-center">
                     <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
+                    <span className="text-gray-700">Email & SMS messaging</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
                     <span className="text-gray-700">Music file sharing</span>
                   </div>
                   <div className="flex items-center">
                     <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
-                    <span className="text-gray-700">Email & SMS notifications</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
-                    <span className="text-gray-700">Calendar integration</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
-                    <span className="text-gray-700">30-day free trial</span>
+                    <span className="text-gray-700">Priority support</span>
                   </div>
                 </div>
 
-                <a
-                  href="/auth/signup"
-                  className="w-full bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors inline-block text-center"
-                >
-                  Start Free Trial
-                </a>
+                <div className="mt-auto -mb-1">
+                  <a
+                    href="/auth/signup"
+                    className="w-full bg-green-600 text-white font-medium py-3 px-6 rounded-lg hover:bg-green-700 transition-colors inline-block text-center"
+                  >
+                    Start Free Trial
+                  </a>
+                </div>
               </div>
             </div>
           </div>

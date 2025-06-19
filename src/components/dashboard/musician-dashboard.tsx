@@ -11,9 +11,11 @@ import {
   Home,
   Clock,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  MapPin,
+  X
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface User {
   id: string
@@ -30,9 +32,57 @@ interface MusicianDashboardProps {
 
 export function MusicianDashboard({ user }: MusicianDashboardProps) {
   const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const [dashboardData, setDashboardData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  // Fetch dashboard data
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const response = await fetch('/api/dashboard')
+        if (response.ok) {
+          const data = await response.json()
+          setDashboardData(data)
+        } else {
+          console.error('Failed to fetch dashboard data')
+        }
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchDashboardData()
+  }, [])
 
   const handleSignOut = () => {
     signOut({ callbackUrl: '/' })
+  }
+
+  const handleAssignmentAction = async (assignmentId: string, action: 'accept' | 'decline') => {
+    try {
+      const response = await fetch(`/api/assignments/${assignmentId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ action })
+      })
+
+      if (response.ok) {
+        // Refresh dashboard data
+        const dashboardResponse = await fetch('/api/dashboard')
+        if (dashboardResponse.ok) {
+          const data = await dashboardResponse.json()
+          setDashboardData(data)
+        }
+      } else {
+        console.error('Failed to update assignment')
+      }
+    } catch (error) {
+      console.error('Error updating assignment:', error)
+    }
   }
 
   return (
@@ -132,63 +182,97 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
               <h2 className="text-lg font-semibold text-gray-900 mb-4">My Assignments</h2>
               
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
-                  <div className="flex items-center">
-                    <CheckCircle className="h-6 w-6 text-green-600 mr-3" />
-                    <div>
-                      <h3 className="font-medium text-gray-900">Sunday Mass - Vocalist</h3>
-                      <p className="text-sm text-gray-600">This Sunday, 10:00 AM</p>
-                      <p className="text-xs text-green-600">Confirmed</p>
+                {loading ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map(i => (
+                      <div key={i} className="animate-pulse bg-gray-200 h-20 rounded"></div>
+                    ))}
+                  </div>
+                ) : dashboardData?.upcomingAssignments?.length > 0 ? (
+                  dashboardData.upcomingAssignments.map((assignment: any) => (
+                    <div 
+                      key={assignment.id} 
+                      className={`flex items-center justify-between p-4 rounded-lg border ${
+                        assignment.status === 'ACCEPTED' 
+                          ? 'bg-green-50 border-green-200' 
+                          : assignment.status === 'PENDING'
+                          ? 'bg-yellow-50 border-yellow-200'
+                          : 'bg-gray-50 border-gray-200'
+                      }`}
+                    >
+                      <div className="flex items-center">
+                        {assignment.status === 'ACCEPTED' ? (
+                          <CheckCircle className="h-6 w-6 text-green-600 mr-3" />
+                        ) : assignment.status === 'PENDING' ? (
+                          <Clock className="h-6 w-6 text-yellow-600 mr-3" />
+                        ) : (
+                          <X className="h-6 w-6 text-gray-600 mr-3" />
+                        )}
+                        <div>
+                          <h3 className="font-medium text-gray-900">
+                            {assignment.event.name} - {assignment.roleName}
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            {new Date(assignment.event.startTime).toLocaleDateString()} at {' '}
+                            {new Date(assignment.event.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                          <div className="flex items-center mt-1">
+                            <MapPin className="h-3 w-3 text-gray-400 mr-1" />
+                            <span className="text-xs text-gray-500">{assignment.event.location}</span>
+                          </div>
+                          <p className={`text-xs font-medium ${
+                            assignment.status === 'ACCEPTED' 
+                              ? 'text-green-600' 
+                              : assignment.status === 'PENDING'
+                              ? 'text-yellow-600'
+                              : 'text-gray-600'
+                          }`}>
+                            {assignment.status === 'PENDING' ? 'Pending Response' : assignment.status}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex space-x-2">
+                        {assignment.status === 'PENDING' ? (
+                          <>
+                            <button 
+                              onClick={() => handleAssignmentAction(assignment.id, 'accept')}
+                              className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
+                            >
+                              Accept
+                            </button>
+                            <button 
+                              onClick={() => handleAssignmentAction(assignment.id, 'decline')}
+                              className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700"
+                            >
+                              Decline
+                            </button>
+                          </>
+                        ) : (
+                          <button className="text-blue-600 hover:text-blue-700 text-sm">
+                            <FileText className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
                     </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <Calendar className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Assignments</h3>
+                    <p className="text-gray-600">
+                      You don't have any upcoming assignments yet.
+                    </p>
                   </div>
-                  <div className="flex space-x-2">
-                    <button className="text-blue-600 hover:text-blue-700 text-sm">
-                      <FileText className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                  <div className="flex items-center">
-                    <Clock className="h-6 w-6 text-yellow-600 mr-3" />
-                    <div>
-                      <h3 className="font-medium text-gray-900">Christmas Eve Mass - Accompanist</h3>
-                      <p className="text-sm text-gray-600">Dec 24, 6:00 PM</p>
-                      <p className="text-xs text-yellow-600">Pending Response</p>
-                    </div>
-                  </div>
-                  <div className="flex space-x-2">
-                    <button className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700">
-                      Accept
-                    </button>
-                    <button className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700">
-                      Decline
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <div className="flex items-center">
-                    <CheckCircle className="h-6 w-6 text-blue-600 mr-3" />
-                    <div>
-                      <h3 className="font-medium text-gray-900">Wedding Ceremony - Vocalist</h3>
-                      <p className="text-sm text-gray-600">Jan 15, 2:00 PM</p>
-                      <p className="text-xs text-blue-600">Confirmed</p>
-                    </div>
-                  </div>
-                  <div className="flex space-x-2">
-                    <button className="text-blue-600 hover:text-blue-700 text-sm">
-                      <FileText className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
+                )}
               </div>
 
-              <div className="mt-4">
-                <a href="/my-assignments" className="text-blue-600 hover:text-blue-700 text-sm font-medium">
-                  View all assignments →
-                </a>
-              </div>
+              {dashboardData?.upcomingAssignments?.length > 0 && (
+                <div className="mt-4">
+                  <a href="/my-assignments" className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                    View all assignments →
+                  </a>
+                </div>
+              )}
             </div>
           </div>
 
@@ -242,16 +326,28 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
               
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Upcoming Assignments</span>
+                  <span className="text-lg font-bold text-blue-600">
+                    {loading ? '...' : dashboardData?.stats?.upcomingAssignments || 0}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Accepted Total</span>
+                  <span className="text-lg font-bold text-green-600">
+                    {loading ? '...' : dashboardData?.stats?.acceptedAssignments || 0}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Pending Responses</span>
+                  <span className="text-lg font-bold text-yellow-600">
+                    {loading ? '...' : dashboardData?.stats?.pendingResponses || 0}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">This Month</span>
-                  <span className="text-lg font-bold text-blue-600">3</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Total Events</span>
-                  <span className="text-lg font-bold text-green-600">28</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Pending</span>
-                  <span className="text-lg font-bold text-yellow-600">1</span>
+                  <span className="text-lg font-bold text-purple-600">
+                    {loading ? '...' : dashboardData?.stats?.thisMonthAssignments || 0}
+                  </span>
                 </div>
               </div>
             </div>
