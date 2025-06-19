@@ -9,19 +9,45 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@auth/prisma-adapter": "^2.9.1",
+    "@hookform/resolvers": "^5.1.1",
+    "@prisma/client": "^6.10.1",
+    "@radix-ui/react-dialog": "^1.1.14",
+    "@radix-ui/react-dropdown-menu": "^2.1.15",
+    "@radix-ui/react-select": "^2.2.5",
+    "@stripe/stripe-js": "^7.3.1",
+    "@types/bcrypt": "^5.0.2",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@uploadthing/react": "^7.3.1",
+    "bcrypt": "^6.0.0",
+    "date-fns": "^4.1.0",
+    "html2canvas": "^1.4.1",
+    "jsonwebtoken": "^9.0.2",
+    "jspdf": "^3.0.1",
+    "lucide-react": "^0.517.0",
+    "next": "15.3.4",
+    "next-auth": "^4.24.11",
+    "prisma": "^6.10.1",
     "react": "^19.0.0",
+    "react-big-calendar": "^1.19.4",
+    "react-calendar": "^6.0.0",
     "react-dom": "^19.0.0",
-    "next": "15.3.4"
+    "react-hook-form": "^7.58.1",
+    "resend": "^4.6.0",
+    "stripe": "^18.2.1",
+    "twilio": "^5.7.1",
+    "uploadthing": "^7.7.2",
+    "zod": "^3.25.67"
   },
   "devDependencies": {
-    "typescript": "^5",
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4",
     "eslint": "^9",
     "eslint-config-next": "15.3.4",
-    "@eslint/eslintrc": "^3"
+    "tailwindcss": "^4",
+    "typescript": "^5"
   }
 }

@@ -1,0 +1,314 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Parish represents a church/organization
+model Parish {
+  id          String   @id @default(cuid())
+  name        String
+  address     String?
+  phone       String?
+  email       String?
+  logo        String?  // URL to logo file
+  stripeCustomerId String? @unique
+  subscriptionStatus String @default("trial") // trial, active, suspended
+  subscriptionEnds DateTime?
+  referralCode String @unique @default(cuid())
+  referredBy  String? // Parish ID that referred this parish
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  users       User[]
+  events      Event[]
+  groups      Group[]
+  eventTypes  EventType[]
+  customRoles CustomRole[]
+  invitations Invitation[]
+  communications Communication[]
+  referrals   Referral[]
+
+  @@map("parishes")
+}
+
+// User represents both directors/pastors and musicians
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  phone        String?
+  firstName    String
+  lastName     String
+  password     String
+  role         UserRole @default(MUSICIAN)
+  isVerified   Boolean  @default(false)
+  emailNotifications Boolean @default(true)
+  smsNotifications   Boolean @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  parishId     String
+  parish       Parish @relation(fields: [parishId], references: [id], onDelete: Cascade)
+  
+  groupMemberships GroupMember[]
+  eventAssignments EventAssignment[]
+  uploadedFiles    MusicFile[]
+  sentCommunications Communication[]
+
+  @@map("users")
+}
+
+// Predefined and custom roles
+enum UserRole {
+  DIRECTOR
+  PASTOR
+  ASSOCIATE_PASTOR
+  MUSICIAN
+}
+
+model CustomRole {
+  id        String   @id @default(cuid())
+  name      String
+  parishId  String
+  parish    Parish   @relation(fields: [parishId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  eventAssignments EventAssignment[]
+
+  @@unique([name, parishId])
+  @@map("custom_roles")
+}
+
+// Event types defined by each parish
+model EventType {
+  id        String   @id @default(cuid())
+  name      String
+  color     String   @default("#3B82F6") // Hex color for calendar
+  parishId  String
+  parish    Parish   @relation(fields: [parishId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  events Event[]
+
+  @@unique([name, parishId])
+  @@map("event_types")
+}
+
+// Events (masses, services, etc.)
+model Event {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  location    String
+  startTime   DateTime
+  endTime     DateTime?
+  isRecurring Boolean   @default(false)
+  recurrencePattern String? // JSON string for recurrence rules
+  recurrenceEnd DateTime?
+  parentEventId String? // For recurring events
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  parishId    String
+  parish      Parish    @relation(fields: [parishId], references: [id], onDelete: Cascade)
+  
+  eventTypeId String
+  eventType   EventType @relation(fields: [eventTypeId], references: [id])
+  
+  assignments EventAssignment[]
+  musicFiles  MusicFile[]
+  communications Communication[]
+
+  @@map("events")
+}
+
+// Groups of musicians
+model Group {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  parishId    String
+  parish      Parish   @relation(fields: [parishId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  members GroupMember[]
+  assignments EventAssignment[]
+
+  @@unique([name, parishId])
+  @@map("groups")
+}
+
+model GroupMember {
+  id       String @id @default(cuid())
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  groupId  String
+  group    Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  joinedAt DateTime @default(now())
+
+  @@unique([userId, groupId])
+  @@map("group_members")
+}
+
+// Event assignments for musicians and groups
+model EventAssignment {
+  id         String            @id @default(cuid())
+  eventId    String
+  event      Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  
+  // Can be assigned to individual user OR group
+  userId     String?
+  user       User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  groupId    String?
+  group      Group?           @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  
+  // Role for this assignment
+  roleName   String?          // For standard roles like "Vocalist", "Accompanist"
+  customRoleId String?
+  customRole   CustomRole?    @relation(fields: [customRoleId], references: [id])
+  
+  maxMusicians Int?           // For group assignments
+  status     AssignmentStatus @default(PENDING)
+  assignedAt DateTime         @default(now())
+  respondedAt DateTime?
+
+  @@map("event_assignments")
+}
+
+enum AssignmentStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELLED
+}
+
+// Music files attached to events
+model MusicFile {
+  id          String   @id @default(cuid())
+  filename    String
+  originalName String
+  fileUrl     String
+  fileSize    Int
+  mimeType    String
+  eventId     String
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  uploadedBy  String
+  uploader    User     @relation(fields: [uploadedBy], references: [id])
+  uploadedAt  DateTime @default(now())
+
+  @@map("music_files")
+}
+
+// Invitations to join parish
+model Invitation {
+  id        String           @id @default(cuid())
+  email     String
+  firstName String?
+  lastName  String?
+  phone     String?
+  role      UserRole         @default(MUSICIAN)
+  status    InvitationStatus @default(PENDING)
+  token     String           @unique @default(cuid())
+  expiresAt DateTime
+  parishId  String
+  parish    Parish           @relation(fields: [parishId], references: [id], onDelete: Cascade)
+  invitedBy String
+  createdAt DateTime         @default(now())
+
+  @@unique([email, parishId])
+  @@map("invitations")
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  CANCELLED
+}
+
+// Communication history
+model Communication {
+  id        String              @id @default(cuid())
+  subject   String
+  message   String
+  type      CommunicationType
+  
+  // Targeting
+  parishId  String
+  parish    Parish              @relation(fields: [parishId], references: [id], onDelete: Cascade)
+  
+  eventId   String?             // If related to specific event
+  event     Event?              @relation(fields: [eventId], references: [id])
+  
+  sentBy    String
+  sender    User                @relation(fields: [sentBy], references: [id])
+  
+  recipients String[]           // Array of user IDs or "all"
+  
+  sentAt    DateTime            @default(now())
+
+  @@map("communications")
+}
+
+enum CommunicationType {
+  EMAIL
+  SMS
+  BOTH
+}
+
+// Referral tracking
+model Referral {
+  id              String   @id @default(cuid())
+  referringParishId String
+  referringParish   Parish @relation(fields: [referringParishId], references: [id], onDelete: Cascade)
+  referredEmail     String
+  status            ReferralStatus @default(PENDING)
+  completedAt       DateTime?
+  createdAt         DateTime @default(now())
+
+  @@map("referrals")
+}
+
+enum ReferralStatus {
+  PENDING
+  COMPLETED
+  EXPIRED
+}
+
+// Templates for communications
+model CommunicationTemplate {
+  id        String              @id @default(cuid())
+  name      String
+  subject   String
+  message   String
+  type      CommunicationType
+  parishId  String
+  createdAt DateTime            @default(now())
+
+  @@map("communication_templates")
+}
+
+// Admin users for platform management
+model AdminUser {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String
+  email     String   @unique
+  createdAt DateTime @default(now())
+
+  @@map("admin_users")
+}
