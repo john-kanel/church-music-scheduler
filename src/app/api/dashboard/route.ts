@@ -55,11 +55,19 @@ export async function GET(request: NextRequest) {
         }
       })
 
+      const pendingInvitations = await prisma.invitation.count({
+        where: {
+          parishId,
+          status: 'PENDING'
+        }
+      })
+
       return NextResponse.json({
         userRole,
         stats: {
           totalMusicians,
-          upcomingEvents: upcomingEvents.length
+          upcomingEvents: upcomingEvents.length,
+          pendingInvitations
         },
         upcomingEvents
       })

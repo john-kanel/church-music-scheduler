@@ -42,6 +42,7 @@ interface DashboardData {
   stats: {
     totalMusicians: number
     upcomingEvents: number
+    pendingInvitations: number
   }
   upcomingEvents: any[]
 }
@@ -343,7 +344,7 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
               </div>
 
               {/* Stats Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                 <div className="bg-white rounded-xl shadow-sm p-6 border">
                   <div className="flex items-center justify-between">
                     <div>
@@ -390,6 +391,28 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                   </div>
                 </div>
 
+                <div className="bg-white rounded-xl shadow-sm p-6 border">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Pending Invitations</p>
+                      <p className="text-3xl font-bold text-gray-900">
+                        {dashboardData.stats.pendingInvitations}
+                      </p>
+                    </div>
+                    <div className="h-12 w-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                      <Mail className="h-6 w-6 text-yellow-600" />
+                    </div>
+                  </div>
+                  <div className="mt-4 flex items-center text-sm">
+                    <Clock className="h-4 w-4 text-gray-500 mr-1" />
+                    <span className="text-gray-600">
+                      {(dashboardData.stats.pendingInvitations === 0) 
+                        ? 'No pending invites' 
+                        : 'Awaiting responses'
+                      }
+                    </span>
+                  </div>
+                </div>
 
               </div>
 
