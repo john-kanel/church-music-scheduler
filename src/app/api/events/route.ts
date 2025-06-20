@@ -16,14 +16,27 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
+    const monthParam = searchParams.get('month')
+    const yearParam = searchParams.get('year')
 
     // Build date filter
     const dateFilter: any = {}
-    if (startDate) {
-      dateFilter.gte = new Date(startDate)
-    }
-    if (endDate) {
-      dateFilter.lte = new Date(endDate)
+    
+    if (monthParam && yearParam) {
+      // If month and year are provided, filter by that month
+      const targetDate = new Date(parseInt(yearParam), parseInt(monthParam) - 1, 1)
+      const startOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1)
+      const endOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59)
+      dateFilter.gte = startOfMonth
+      dateFilter.lte = endOfMonth
+    } else {
+      // Otherwise use startDate/endDate if provided
+      if (startDate) {
+        dateFilter.gte = new Date(startDate)
+      }
+      if (endDate) {
+        dateFilter.lte = new Date(endDate)
+      }
     }
 
     const events = await prisma.event.findMany({
@@ -155,14 +168,29 @@ export async function POST(request: NextRequest) {
 
       // Create role assignments if provided
       if (roles.length > 0) {
-        await tx.eventAssignment.createMany({
-          data: roles.map((role: any) => ({
-            eventId: event.id,
-            roleName: role.name,
-            maxMusicians: role.maxCount || 1,
-            status: 'PENDING'
-          }))
-        })
+        for (const role of roles) {
+          if (role.assignedMusicians && role.assignedMusicians.length > 0) {
+            // Create individual assignments for each assigned musician
+            await tx.eventAssignment.createMany({
+              data: role.assignedMusicians.map((musicianId: string) => ({
+                eventId: event.id,
+                userId: musicianId,
+                roleName: role.name,
+                status: 'PENDING'
+              }))
+            })
+          } else {
+            // Create open role assignment (no specific musician assigned)
+            await tx.eventAssignment.create({
+              data: {
+                eventId: event.id,
+                roleName: role.name,
+                maxMusicians: role.maxCount || 1,
+                status: 'PENDING'
+              }
+            })
+          }
+        }
       }
 
       return event

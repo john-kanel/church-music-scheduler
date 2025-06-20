@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { X, Plus, Upload, Trash2, Calendar, Users } from 'lucide-react'
+import { X, Plus, Upload, Trash2, Calendar, Users, ChevronDown } from 'lucide-react'
 
 interface CreateEventModalProps {
   isOpen: boolean
@@ -15,6 +15,15 @@ interface Role {
   name: string
   maxCount: number
   isRequired: boolean
+  assignedMusicians?: string[] // Array of musician IDs
+}
+
+interface Musician {
+  id: string
+  firstName: string
+  lastName: string
+  email: string
+  instrument?: string
 }
 
 interface Hymn {
@@ -29,6 +38,8 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [musicians, setMusicians] = useState<Musician[]>([])
+  const [loadingMusicians, setLoadingMusicians] = useState(false)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -42,12 +53,34 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
   })
 
   const [roles, setRoles] = useState<Role[]>([
-    { id: '1', name: 'Accompanist', maxCount: 1, isRequired: true },
-    { id: '2', name: 'Vocalist', maxCount: 4, isRequired: false }
+    { id: '1', name: 'Accompanist', maxCount: 1, isRequired: true, assignedMusicians: [] },
+    { id: '2', name: 'Vocalist', maxCount: 4, isRequired: false, assignedMusicians: [] }
   ])
 
   const [hymns, setHymns] = useState<Hymn[]>([])
   const [musicFiles, setMusicFiles] = useState<File[]>([])
+
+  // Fetch verified musicians when modal opens and assignment type is 'assigned'
+  useEffect(() => {
+    if (isOpen && formData.signupType === 'assigned') {
+      fetchMusicians()
+    }
+  }, [isOpen, formData.signupType])
+
+  const fetchMusicians = async () => {
+    setLoadingMusicians(true)
+    try {
+      const response = await fetch('/api/musicians?verified=true')
+      if (response.ok) {
+        const data = await response.json()
+        setMusicians(data.musicians || [])
+      }
+    } catch (error) {
+      console.error('Error fetching musicians:', error)
+    } finally {
+      setLoadingMusicians(false)
+    }
+  }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target
@@ -55,6 +88,11 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
       ...prev,
       [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
     }))
+    
+    // Fetch musicians when switching to assigned mode
+    if (name === 'signupType' && value === 'assigned') {
+      fetchMusicians()
+    }
   }
 
   const addRole = () => {
@@ -62,7 +100,8 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
       id: Date.now().toString(),
       name: '',
       maxCount: 1,
-      isRequired: false
+      isRequired: false,
+      assignedMusicians: []
     }
     setRoles([...roles, newRole])
   }
@@ -75,6 +114,28 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
 
   const removeRole = (id: string) => {
     setRoles(roles.filter(role => role.id !== id))
+  }
+
+  const assignMusicianToRole = (roleId: string, musicianId: string) => {
+    setRoles(roles.map(role => {
+      if (role.id === roleId) {
+        const currentAssigned = role.assignedMusicians || []
+        if (currentAssigned.includes(musicianId)) {
+          // Remove musician if already assigned
+          return {
+            ...role,
+            assignedMusicians: currentAssigned.filter(id => id !== musicianId)
+          }
+        } else if (currentAssigned.length < role.maxCount) {
+          // Add musician if under max count
+          return {
+            ...role,
+            assignedMusicians: [...currentAssigned, musicianId]
+          }
+        }
+      }
+      return role
+    }))
   }
 
   const addHymn = () => {
@@ -124,7 +185,8 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
         roles: roles.filter(role => role.name.trim() !== '').map(role => ({
           name: role.name,
           maxCount: role.maxCount,
-          isRequired: role.isRequired
+          isRequired: role.isRequired,
+          assignedMusicians: formData.signupType === 'assigned' ? role.assignedMusicians : undefined
         })),
         hymns: hymns.filter(hymn => hymn.title.trim() !== ''),
         notes: formData.notes
@@ -329,43 +391,99 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
                 Add Role
               </button>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-4">
               {roles.map((role) => (
-                <div key={role.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                  <input
-                    type="text"
-                    value={role.name}
-                    onChange={(e) => updateRole(role.id, 'name', e.target.value)}
-                    placeholder="Role name (e.g., Pianist, Cantor)"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                  />
-                  <div className="flex items-center space-x-2">
-                    <label className="text-sm text-gray-700">Max:</label>
+                <div key={role.id} className="p-4 bg-gray-50 rounded-lg space-y-3">
+                  <div className="flex items-center space-x-3">
                     <input
-                      type="number"
-                      value={role.maxCount}
-                      onChange={(e) => updateRole(role.id, 'maxCount', parseInt(e.target.value) || 1)}
-                      min="1"
-                      max="20"
-                      className="w-16 px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                      type="text"
+                      value={role.name}
+                      onChange={(e) => updateRole(role.id, 'name', e.target.value)}
+                      placeholder="Role name (e.g., Pianist, Cantor)"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                     />
+                    <div className="flex items-center space-x-2">
+                      <label className="text-sm text-gray-700">Max:</label>
+                      <input
+                        type="number"
+                        value={role.maxCount}
+                        onChange={(e) => updateRole(role.id, 'maxCount', parseInt(e.target.value) || 1)}
+                        min="1"
+                        max="20"
+                        className="w-16 px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                      />
+                    </div>
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={role.isRequired}
+                        onChange={(e) => updateRole(role.id, 'isRequired', e.target.checked)}
+                        className="mr-2"
+                      />
+                      <span className="text-sm text-gray-700">Required</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => removeRole(role.id)}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={role.isRequired}
-                      onChange={(e) => updateRole(role.id, 'isRequired', e.target.checked)}
-                      className="mr-2"
-                    />
-                    <span className="text-sm text-gray-700">Required</span>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => removeRole(role.id)}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  
+                  {/* Musician Assignment Section - Only show for Director Assignment */}
+                  {formData.signupType === 'assigned' && (
+                    <div className="mt-3 pt-3 border-t border-gray-200">
+                      <h4 className="text-sm font-medium text-gray-700 mb-2">
+                        Assign Musicians ({(role.assignedMusicians || []).length}/{role.maxCount})
+                      </h4>
+                      {loadingMusicians ? (
+                        <div className="text-sm text-gray-500">Loading musicians...</div>
+                      ) : musicians.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-32 overflow-y-auto">
+                          {musicians.map((musician) => {
+                            const isAssigned = (role.assignedMusicians || []).includes(musician.id)
+                            const canAssign = !isAssigned && (role.assignedMusicians || []).length < role.maxCount
+                            return (
+                              <label
+                                key={musician.id}
+                                className={`flex items-center p-2 rounded-lg border cursor-pointer transition-colors ${
+                                  isAssigned 
+                                    ? 'bg-blue-50 border-blue-200 text-blue-900' 
+                                    : canAssign
+                                    ? 'bg-white border-gray-200 hover:bg-gray-50'
+                                    : 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isAssigned}
+                                  onChange={() => assignMusicianToRole(role.id, musician.id)}
+                                  disabled={!canAssign && !isAssigned}
+                                  className="mr-2"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-sm font-medium truncate">
+                                    {musician.firstName} {musician.lastName}
+                                  </div>
+                                  <div className="text-xs text-gray-500 truncate">
+                                    {musician.instrument && (
+                                      <span className="mr-2">{musician.instrument}</span>
+                                    )}
+                                    {musician.email}
+                                  </div>
+                                </div>
+                              </label>
+                            )
+                          })}
+                        </div>
+                      ) : (
+                        <div className="text-sm text-gray-500">
+                          No verified musicians available. Musicians need to accept their invitations first.
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

@@ -15,11 +15,17 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')
     const role = searchParams.get('role')
+    const verified = searchParams.get('verified')
 
     // Build search filter
     const whereClause: any = {
       parishId: session.user.parishId,
       role: 'MUSICIAN' // Only return musicians, not directors/pastors
+    }
+
+    // Filter by verified status if requested
+    if (verified === 'true') {
+      whereClause.isVerified = true
     }
 
     if (search) {
@@ -91,6 +97,8 @@ export async function GET(request: NextRequest) {
     // Format the response
     const formattedMusicians = musicians.map(musician => ({
       id: musician.id,
+      firstName: musician.firstName,
+      lastName: musician.lastName,
       name: `${musician.firstName} ${musician.lastName}`.trim(),
       email: musician.email,
       phone: musician.phone,
@@ -98,6 +106,7 @@ export async function GET(request: NextRequest) {
       emailNotifications: musician.emailNotifications,
       smsNotifications: musician.smsNotifications,
       joinedAt: musician.createdAt,
+      instrument: 'Musician', // Placeholder - we can add proper instrument field later
       groups: musician.groupMemberships.map(gm => gm.group),
       upcomingEvents: musician.eventAssignments.map(ea => ({
         id: ea.event.id,

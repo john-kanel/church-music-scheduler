@@ -15,6 +15,15 @@ export async function GET(request: NextRequest) {
     const parishId = session.user.parishId
     const userId = session.user.id
 
+    // Get month and year from query params for calendar events
+    const { searchParams } = new URL(request.url)
+    const monthParam = searchParams.get('month')
+    const yearParam = searchParams.get('year')
+    
+    const targetDate = monthParam && yearParam 
+      ? new Date(parseInt(yearParam), parseInt(monthParam) - 1, 1)
+      : new Date()
+
     if (userRole === 'DIRECTOR' || userRole === 'PASTOR') {
       // Director Dashboard Data
       const now = new Date()
@@ -62,6 +71,26 @@ export async function GET(request: NextRequest) {
         }
       })
 
+      // Get events for target month (for calendar display)
+      const startOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1)
+      const endOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59)
+
+      const monthEvents = await prisma.event.findMany({
+        where: {
+          parishId,
+          startTime: {
+            gte: startOfMonth,
+            lte: endOfMonth
+          }
+        },
+        include: {
+          eventType: true
+        },
+        orderBy: {
+          startTime: 'asc'
+        }
+      })
+
       return NextResponse.json({
         userRole,
         stats: {
@@ -69,7 +98,8 @@ export async function GET(request: NextRequest) {
           upcomingEvents: upcomingEvents.length,
           pendingInvitations
         },
-        upcomingEvents
+        upcomingEvents,
+        events: monthEvents
       })
 
     } else {

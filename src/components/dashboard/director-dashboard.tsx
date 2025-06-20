@@ -48,6 +48,17 @@ interface DashboardData {
   }
   upcomingEvents: any[]
   activities: Activity[]
+  events: EventSnippet[]
+}
+
+interface EventSnippet {
+  id: string
+  name: string
+  startTime: string
+  eventType: {
+    name: string
+    color: string
+  }
 }
 
 interface Activity {
@@ -81,7 +92,9 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const response = await fetch('/api/dashboard')
+        const month = currentDate.getMonth() + 1 // JavaScript months are 0-indexed
+        const year = currentDate.getFullYear()
+        const response = await fetch(`/api/dashboard?month=${month}&year=${year}`)
         if (response.ok) {
           const data = await response.json()
           setDashboardData(data)
@@ -130,8 +143,10 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
 
   const refreshDashboardData = async () => {
     try {
+      const month = currentDate.getMonth() + 1 // JavaScript months are 0-indexed
+      const year = currentDate.getFullYear()
       const [dashboardResponse, activitiesResponse] = await Promise.all([
-        fetch('/api/dashboard'),
+        fetch(`/api/dashboard?month=${month}&year=${year}`),
         fetch('/api/activities')
       ])
       
@@ -203,11 +218,26 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
       }
       return newDate
     })
+    // Refetch dashboard data for the new month
+    refreshDashboardData()
   }
 
   const days = getDaysInMonth(currentDate)
   const today = new Date()
   const isCurrentMonth = currentDate.getMonth() === today.getMonth() && currentDate.getFullYear() === today.getFullYear()
+
+  // Get events for current calendar month
+  const getEventsForDay = (day: number) => {
+    if (!dashboardData?.events) return []
+    
+    const dayDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day)
+    return dashboardData.events.filter(event => {
+      const eventDate = new Date(event.startTime)
+      return eventDate.getDate() === day && 
+             eventDate.getMonth() === currentDate.getMonth() && 
+             eventDate.getFullYear() === currentDate.getFullYear()
+    })
+  }
 
   // Helper function to get activity icon and color
   const getActivityIcon = (type: Activity['type']) => {
@@ -559,39 +589,71 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
 
                   {/* Calendar Grid */}
                   <div className="grid grid-cols-7 gap-1">
-                    {days.map((day, index) => (
-                      <div
-                        key={index}
-                        className={`h-16 p-1 cursor-pointer rounded transition-colors border ${
-                          day === null 
-                            ? 'text-gray-300 border-transparent' 
-                            : day === today.getDate() && isCurrentMonth
-                            ? 'bg-blue-50 border-blue-200 text-blue-700'
-                            : 'text-gray-700 hover:bg-gray-50 border-gray-200'
-                        }`}
-                        onClick={() => day && setShowCreateEventModal(true)}
-                      >
-                        {day && (
-                          <div className="h-full flex flex-col">
-                            <div className={`text-xs font-medium mb-1 ${
-                              day === today.getDate() && isCurrentMonth
-                                ? 'text-blue-700'
-                                : 'text-gray-900'
-                            }`}>
-                              {day}
+                    {days.map((day, index) => {
+                      const dayEvents = day ? getEventsForDay(day) : []
+                      return (
+                        <div
+                          key={index}
+                          className={`h-20 p-1 cursor-pointer rounded transition-colors border ${
+                            day === null 
+                              ? 'text-gray-300 border-transparent' 
+                              : day === today.getDate() && isCurrentMonth
+                              ? 'bg-blue-50 border-blue-200 text-blue-700'
+                              : 'text-gray-700 hover:bg-gray-50 border-gray-200'
+                          }`}
+                          onClick={() => day && setShowCreateEventModal(true)}
+                        >
+                          {day && (
+                            <div className="h-full flex flex-col">
+                              <div className={`text-xs font-medium mb-1 ${
+                                day === today.getDate() && isCurrentMonth
+                                  ? 'text-blue-700'
+                                  : 'text-gray-900'
+                              }`}>
+                                {day}
+                              </div>
+                              <div className="flex-1 overflow-hidden space-y-0.5">
+                                {dayEvents.length > 0 ? (
+                                  dayEvents.slice(0, 2).map((event, eventIndex) => {
+                                    const eventTime = new Date(event.startTime)
+                                    const timeString = eventTime.toLocaleTimeString('en-US', {
+                                      hour: 'numeric',
+                                      minute: '2-digit',
+                                      hour12: true
+                                    })
+                                    return (
+                                      <div
+                                        key={event.id}
+                                        className="text-xs px-1 py-0.5 rounded truncate"
+                                        style={{
+                                          backgroundColor: event.eventType.color + '20',
+                                          color: event.eventType.color,
+                                          borderLeft: `3px solid ${event.eventType.color}`
+                                        }}
+                                        title={`${event.name} at ${timeString}`}
+                                      >
+                                        {timeString} {event.name}
+                                      </div>
+                                    )
+                                  })
+                                ) : (
+                                  day === today.getDate() && isCurrentMonth && (
+                                    <div className="text-xs text-gray-400 text-center">
+                                      No events
+                                    </div>
+                                  )
+                                )}
+                                {dayEvents.length > 2 && (
+                                  <div className="text-xs text-gray-500 text-center">
+                                    +{dayEvents.length - 2} more
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                            <div className="flex-1 overflow-hidden">
-                              {/* Event snippets would go here */}
-                              {day === today.getDate() && isCurrentMonth && (
-                                <div className="text-xs bg-blue-100 text-blue-700 px-1 py-0.5 rounded text-center">
-                                  No events
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
 
                   <div className="mt-4 text-center">
