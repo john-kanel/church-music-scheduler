@@ -21,7 +21,9 @@ import {
   Mail,
   ChevronLeft,
   ChevronRight,
-  CheckCircle
+  CheckCircle,
+  UserPlus,
+  Activity
 } from 'lucide-react'
 import Link from 'next/link'
 import { CreateEventModal } from '../events/create-event-modal'
@@ -45,6 +47,15 @@ interface DashboardData {
     pendingInvitations: number
   }
   upcomingEvents: any[]
+  activities: Activity[]
+}
+
+interface Activity {
+  id: string
+  type: 'EVENT_CREATED' | 'MUSICIAN_INVITED' | 'MUSICIAN_SIGNED_UP' | 'MESSAGE_SENT'
+  description: string
+  createdAt: string
+  metadata?: any
 }
 
 interface DirectorDashboardProps {
@@ -63,6 +74,8 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [showSeedModal, setShowSeedModal] = useState(false)
+  const [activities, setActivities] = useState<Activity[]>([])
+  const [activitiesLoading, setActivitiesLoading] = useState(true)
 
   // Fetch dashboard data
   useEffect(() => {
@@ -82,7 +95,24 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
       }
     }
 
+    const fetchActivities = async () => {
+      try {
+        const response = await fetch('/api/activities')
+        if (response.ok) {
+          const data = await response.json()
+          setActivities(data)
+        } else {
+          console.error('Failed to fetch activities')
+        }
+      } catch (error) {
+        console.error('Error fetching activities:', error)
+      } finally {
+        setActivitiesLoading(false)
+      }
+    }
+
     fetchDashboardData()
+    fetchActivities()
   }, [])
 
   // Show tour for new directors
@@ -100,10 +130,19 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
 
   const refreshDashboardData = async () => {
     try {
-      const response = await fetch('/api/dashboard')
-      if (response.ok) {
-        const data = await response.json()
+      const [dashboardResponse, activitiesResponse] = await Promise.all([
+        fetch('/api/dashboard'),
+        fetch('/api/activities')
+      ])
+      
+      if (dashboardResponse.ok) {
+        const data = await dashboardResponse.json()
         setDashboardData(data)
+      }
+      
+      if (activitiesResponse.ok) {
+        const activitiesData = await activitiesResponse.json()
+        setActivities(activitiesData)
       }
     } catch (error) {
       console.error('Error refreshing dashboard data:', error)
@@ -169,6 +208,40 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
   const days = getDaysInMonth(currentDate)
   const today = new Date()
   const isCurrentMonth = currentDate.getMonth() === today.getMonth() && currentDate.getFullYear() === today.getFullYear()
+
+  // Helper function to get activity icon and color
+  const getActivityIcon = (type: Activity['type']) => {
+    switch (type) {
+      case 'EVENT_CREATED':
+        return { icon: Calendar, color: 'text-blue-600', bgColor: 'bg-blue-100' }
+      case 'MUSICIAN_INVITED':
+        return { icon: UserPlus, color: 'text-yellow-600', bgColor: 'bg-yellow-100' }
+      case 'MUSICIAN_SIGNED_UP':
+        return { icon: UserCheck, color: 'text-green-600', bgColor: 'bg-green-100' }
+      case 'MESSAGE_SENT':
+        return { icon: Mail, color: 'text-pink-600', bgColor: 'bg-pink-100' }
+      default:
+        return { icon: Activity, color: 'text-gray-600', bgColor: 'bg-gray-100' }
+    }
+  }
+
+  // Helper function to format relative time
+  const formatRelativeTime = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diff = now.getTime() - date.getTime()
+    const minutes = Math.floor(diff / (1000 * 60))
+    const hours = Math.floor(diff / (1000 * 60 * 60))
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+
+    if (minutes < 60) {
+      return minutes <= 1 ? 'Just now' : `${minutes}m ago`
+    } else if (hours < 24) {
+      return `${hours}h ago`
+    } else {
+      return `${days}d ago`
+    }
+  }
 
   if (loading) {
     return (
@@ -323,22 +396,40 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                   </button>
                   {/* Development seed button - only show in development */}
                   {typeof window !== 'undefined' && window.location.hostname === 'localhost' && (
-                    <button 
-                      onClick={async () => {
-                        try {
-                          const response = await fetch('/api/dev/seed', { method: 'POST' })
-                          if (response.ok) {
-                            alert('Sample data created! Refresh to see the changes.')
-                            refreshDashboardData()
+                    <>
+                      <button 
+                        onClick={async () => {
+                          try {
+                            const response = await fetch('/api/dev/seed', { method: 'POST' })
+                            if (response.ok) {
+                              alert('Sample data created! Refresh to see the changes.')
+                              refreshDashboardData()
+                            }
+                          } catch (error) {
+                            alert('Error creating sample data')
                           }
-                        } catch (error) {
-                          alert('Error creating sample data')
-                        }
-                      }}
-                      className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                    >
-                      🛠️ Add Sample Data
-                    </button>
+                        }}
+                        className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                      >
+                        🛠️ Add Sample Data
+                      </button>
+                      <button 
+                        onClick={async () => {
+                          try {
+                            const response = await fetch('/api/dev/seed-activities', { method: 'POST' })
+                            if (response.ok) {
+                              alert('Sample activities created!')
+                              refreshDashboardData()
+                            }
+                          } catch (error) {
+                            alert('Error creating sample activities')
+                          }
+                        }}
+                        className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                      >
+                        📊 Add Sample Activities
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -376,8 +467,8 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                         {dashboardData.stats.upcomingEvents}
                       </p>
                     </div>
-                    <div className="h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                      <Calendar className="h-6 w-6 text-purple-600" />
+                    <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <Calendar className="h-6 w-6 text-blue-600" />
                     </div>
                   </div>
                   <div className="mt-4 flex items-center text-sm">
@@ -516,48 +607,49 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
 
                 {/* Recent Activity */}
                 <div className="bg-white rounded-xl shadow-sm p-6 border">
-                  <h2 className="text-xl font-bold text-gray-900 mb-6">Upcoming Events</h2>
-                  <div className="space-y-4">
-                    {dashboardData.upcomingEvents?.length > 0 ? (
-                      dashboardData.upcomingEvents.map((event: any) => (
-                        <div key={event.id} className="flex items-center p-3 bg-gray-50 rounded-lg">
-                          <div className="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                            <Calendar className="h-6 w-6 text-blue-600" />
-                          </div>
-                          <div className="ml-3 flex-1">
-                            <h4 className="font-medium text-gray-900">{event.name}</h4>
-                            <p className="text-sm text-gray-600">
-                              {new Date(event.startTime).toLocaleDateString()} at {' '}
-                              {new Date(event.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </p>
-                            <div className="flex items-center mt-1">
-                              <MapPin className="h-3 w-3 text-gray-400 mr-1" />
-                              <span className="text-xs text-gray-500">{event.location}</span>
-                              {event.assignmentsCount > 0 && (
-                                <>
-                                  <span className="mx-2 text-gray-300">•</span>
-                                  <Users className="h-3 w-3 text-gray-400 mr-1" />
-                                  <span className="text-xs text-gray-500">{event.assignmentsCount} assigned</span>
-                                </>
-                              )}
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl font-bold text-gray-900">Recent Activity</h2>
+                    <Link 
+                      href="/activity"
+                      className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      View All →
+                    </Link>
+                  </div>
+                  
+                  <div className="h-80 overflow-y-auto">
+                    {activitiesLoading ? (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                      </div>
+                    ) : activities.length > 0 ? (
+                      <div className="space-y-3">
+                        {activities.map((activity) => {
+                          const { icon: Icon, color, bgColor } = getActivityIcon(activity.type)
+                          return (
+                            <div key={activity.id} className="flex items-start p-3 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer">
+                              <div className={`flex-shrink-0 w-10 h-10 ${bgColor} rounded-lg flex items-center justify-center`}>
+                                <Icon className={`h-5 w-5 ${color}`} />
+                              </div>
+                              <div className="ml-3 flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-900 leading-5">
+                                  {activity.description}
+                                </p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  {formatRelativeTime(activity.createdAt)}
+                                </p>
+                              </div>
                             </div>
-                          </div>
-                        </div>
-                      ))
+                          )
+                        })}
+                      </div>
                     ) : (
-                      <div className="text-center py-12">
-                        <Calendar className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">No Upcoming Events</h3>
-                        <p className="text-gray-600 mb-4">
-                          Create your first event to start scheduling musicians.
+                      <div className="flex flex-col items-center justify-center h-full text-center">
+                        <Activity className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No Recent Activity</h3>
+                        <p className="text-gray-600 text-sm">
+                          Activity will appear here as you create events, invite musicians, and send messages.
                         </p>
-                        <button 
-                          onClick={() => setShowCreateEventModal(true)}
-                          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
-                        >
-                          <Plus className="h-4 w-4 mr-1" />
-                          Create Event
-                        </button>
                       </div>
                     )}
                   </div>

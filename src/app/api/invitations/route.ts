@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { sendInvitationEmail } from '@/lib/resend'
+import { logActivity } from '@/lib/activity'
 import bcrypt from 'bcryptjs'
 
 // GET /api/invitations - List invitations for the parish
@@ -176,6 +177,19 @@ export async function POST(request: NextRequest) {
         }
       })
 
+      // Log activity
+      await logActivity({
+        type: 'MUSICIAN_INVITED',
+        description: `Invited musician: ${firstName} ${lastName}`,
+        parishId: session.user.parishId,
+        userId: session.user.id,
+        metadata: {
+          musicianEmail: email,
+          musicianName: `${firstName} ${lastName}`,
+          invitationId: invitation.id
+        }
+      })
+
       return NextResponse.json({
         message: 'Invitation sent successfully! The musician can now sign in with their email and temporary password.',
         invitation,
@@ -319,6 +333,19 @@ export async function POST(request: NextRequest) {
               invitedBy: session.user.id,
               token: generateInvitationToken(),
               expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+            }
+          })
+
+          // Log activity for each successful invitation
+          await logActivity({
+            type: 'MUSICIAN_INVITED',
+            description: `Invited musician: ${firstName} ${lastName}`,
+            parishId: session.user.parishId,
+            userId: session.user.id,
+            metadata: {
+              musicianEmail: email,
+              musicianName: `${firstName} ${lastName}`,
+              invitationId: invitation.id
             }
           })
 

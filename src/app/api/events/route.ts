@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { logActivity } from '@/lib/activity'
 
 // GET /api/events - List events for the parish
 export async function GET(request: NextRequest) {
@@ -186,6 +187,19 @@ export async function POST(request: NextRequest) {
           }
         },
         musicFiles: true
+      }
+    })
+
+    // Log activity
+    await logActivity({
+      type: 'EVENT_CREATED',
+      description: `Created event: ${name}`,
+      parishId: session.user.parishId,
+      userId: session.user.id,
+      metadata: {
+        eventId: result.id,
+        eventName: name,
+        eventDate: startDateTime.toISOString()
       }
     })
 

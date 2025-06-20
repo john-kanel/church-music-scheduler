@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { sendMessageEmail } from '@/lib/resend'
+import { logActivity } from '@/lib/activity'
 
 // GET /api/messages - List communications for the parish
 export async function GET(request: NextRequest) {
@@ -237,6 +238,24 @@ export async function POST(request: NextRequest) {
 
     console.log(`Sent ${emailsSent} emails, ${emailsFailed} failed`)
     console.log(`Would send SMS to ${smsRecipients.length} recipients`)
+
+    // Log activity
+    const recipientCount = recipientDetails.length
+    const recipientText = finalRecipients === 'all' ? 'all musicians' : 
+      recipientCount === 1 ? '1 musician' : `${recipientCount} musicians`
+    
+    await logActivity({
+      type: 'MESSAGE_SENT',
+      description: `Sent message "${subject}" to ${recipientText}`,
+      parishId: session.user.parishId,
+      userId: session.user.id,
+      metadata: {
+        subject,
+        recipientCount,
+        messageType: type,
+        communicationId: communication.id
+      }
+    })
 
     return NextResponse.json({
       message: 'Communication sent successfully',

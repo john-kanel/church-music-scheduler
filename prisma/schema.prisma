@@ -39,6 +39,7 @@ model Parish {
   invitations Invitation[]
   communications Communication[]
   referrals   Referral[]
+  activities  Activity[]
 
   @@map("parishes")
 }
@@ -305,10 +306,34 @@ model CommunicationTemplate {
 // Admin users for platform management
 model AdminUser {
   id        String   @id @default(cuid())
-  username  String   @unique
-  password  String
   email     String   @unique
+  password  String
+  role      String   @default("admin")
   createdAt DateTime @default(now())
 
   @@map("admin_users")
+}
+
+// Activity tracking for dashboard recent activity
+model Activity {
+  id          String       @id @default(cuid())
+  type        ActivityType
+  description String
+  metadata    Json?        // Additional data like event name, musician name, etc.
+  createdAt   DateTime     @default(now())
+  
+  // Relations
+  parishId    String
+  parish      Parish       @relation(fields: [parishId], references: [id], onDelete: Cascade)
+  
+  userId      String?      // User who performed the action
+  
+  @@map("activities")
+}
+
+enum ActivityType {
+  EVENT_CREATED
+  MUSICIAN_INVITED
+  MUSICIAN_SIGNED_UP
+  MESSAGE_SENT
 }
