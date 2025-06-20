@@ -3,7 +3,12 @@ import Stripe from 'stripe'
 
 // Client-side Stripe
 export const getStripe = () => {
-  return loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
+  const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+  if (!publishableKey) {
+    console.warn('NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is not set')
+    return null
+  }
+  return loadStripe(publishableKey)
 }
 
 // Server-side Stripe
