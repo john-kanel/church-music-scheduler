@@ -113,7 +113,7 @@ export default function ActivityPage() {
           </div>
           <h1 className="text-3xl font-bold text-gray-900">Activity Feed</h1>
           <p className="text-gray-600 mt-2">
-            All recent activity at {session?.user?.parishName || 'your parish'}
+            All recent activity at {session?.user?.churchName || 'your church'}
           </p>
         </div>
 

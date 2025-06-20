@@ -4,12 +4,85 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { logActivity } from '@/lib/activity'
 
-// GET /api/events - List events for the parish
+// Helper function to generate recurring events
+function generateRecurringEvents(
+  baseEvent: any,
+  recurrencePattern: string,
+  recurrenceEnd: Date | null,
+  churchId: string
+) {
+  const events: any[] = []
+  const startDate = new Date(baseEvent.startTime)
+  const endDate = baseEvent.endTime ? new Date(baseEvent.endTime) : null
+  
+  // Default to 6 months if no end date specified
+  const finalEndDate = recurrenceEnd || new Date(Date.now() + 6 * 30 * 24 * 60 * 60 * 1000)
+  
+  let currentDate = new Date(startDate)
+  
+  // Skip the first occurrence (that's the original event)
+  switch (recurrencePattern) {
+    case 'weekly':
+      currentDate.setDate(currentDate.getDate() + 7)
+      break
+    case 'biweekly':
+      currentDate.setDate(currentDate.getDate() + 14)
+      break
+    case 'monthly':
+      currentDate.setMonth(currentDate.getMonth() + 1)
+      break
+    case 'quarterly':
+      currentDate.setMonth(currentDate.getMonth() + 3)
+      break
+    default:
+      return events // Unknown pattern
+  }
+  
+  // Generate recurring events
+  while (currentDate <= finalEndDate && events.length < 52) { // Max 52 occurrences
+    const eventStartTime = new Date(currentDate)
+    const eventEndTime = endDate ? new Date(currentDate.getTime() + (endDate.getTime() - startDate.getTime())) : null
+    
+    events.push({
+      name: baseEvent.name,
+      description: baseEvent.description,
+      location: baseEvent.location,
+      startTime: eventStartTime,
+      endTime: eventEndTime,
+      isRecurring: false, // Child events are not recurring themselves
+      recurrencePattern: null,
+      recurrenceEnd: null,
+      churchId: churchId,
+      eventTypeId: baseEvent.eventTypeId,
+      templateId: baseEvent.templateId
+    })
+    
+    // Increment for next occurrence
+    switch (recurrencePattern) {
+      case 'weekly':
+        currentDate.setDate(currentDate.getDate() + 7)
+        break
+      case 'biweekly':
+        currentDate.setDate(currentDate.getDate() + 14)
+        break
+      case 'monthly':
+        currentDate.setMonth(currentDate.getMonth() + 1)
+        break
+      case 'quarterly':
+        currentDate.setMonth(currentDate.getMonth() + 3)
+        break
+    }
+  }
+  
+  return events
+}
+
+// GET /api/events - List events for the church
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
-    if (!session?.user?.parishId) {
+    if (!session?.user?.churchId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -41,7 +114,7 @@ export async function GET(request: NextRequest) {
 
     const events = await prisma.event.findMany({
       where: {
-        parishId: session.user.parishId,
+        churchId: session.user.churchId,
         ...(Object.keys(dateFilter).length > 0 && { startTime: dateFilter })
       },
       include: {
@@ -87,7 +160,7 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
-    if (!session?.user?.parishId) {
+    if (!session?.user?.churchId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -105,6 +178,8 @@ export async function POST(request: NextRequest) {
       startTime,
       endTime,
       eventTypeId,
+      templateId,
+      templateColor,
       roles = [],
       hymns = [],
       isRecurring = false,
@@ -124,27 +199,52 @@ export async function POST(request: NextRequest) {
     const startDateTime = new Date(`${startDate}T${startTime}`)
     const endDateTime = endTime ? new Date(`${startDate}T${endTime}`) : null
 
-    // Find or create default event type
+    // Find or create event type
     let finalEventTypeId = eventTypeId
+    
     if (!finalEventTypeId) {
-      const defaultEventType = await prisma.eventType.findFirst({
-        where: {
-          parishId: session.user.parishId,
-          name: 'General'
-        }
-      })
-
-      if (!defaultEventType) {
-        const newEventType = await prisma.eventType.create({
-          data: {
-            name: 'General',
-            color: '#3B82F6',
-            parishId: session.user.parishId
+      // If we have a template with color, create/find event type with that color
+      if (templateId && templateColor) {
+        // Look for existing event type with the template name and color
+        let templateEventType = await prisma.eventType.findFirst({
+          where: {
+            churchId: session.user.churchId,
+            name: name,
+            color: templateColor
           }
         })
-        finalEventTypeId = newEventType.id
+
+        if (!templateEventType) {
+          templateEventType = await prisma.eventType.create({
+            data: {
+              name: name,
+              color: templateColor,
+              churchId: session.user.churchId
+            }
+          })
+        }
+        finalEventTypeId = templateEventType.id
       } else {
-        finalEventTypeId = defaultEventType.id
+        // Default event type
+        const defaultEventType = await prisma.eventType.findFirst({
+          where: {
+            churchId: session.user.churchId,
+            name: 'General'
+          }
+        })
+
+        if (!defaultEventType) {
+          const newEventType = await prisma.eventType.create({
+            data: {
+              name: 'General',
+              color: '#3B82F6',
+              churchId: session.user.churchId
+            }
+          })
+          finalEventTypeId = newEventType.id
+        } else {
+          finalEventTypeId = defaultEventType.id
+        }
       }
     }
 
@@ -161,8 +261,9 @@ export async function POST(request: NextRequest) {
           isRecurring,
           recurrencePattern,
           recurrenceEnd: recurrenceEnd ? new Date(recurrenceEnd) : null,
-          parishId: session.user.parishId,
-          eventTypeId: finalEventTypeId
+          churchId: session.user.churchId,
+          eventTypeId: finalEventTypeId,
+          templateId: templateId || null
         }
       })
 
@@ -180,15 +281,75 @@ export async function POST(request: NextRequest) {
               }))
             })
           } else {
-            // Create open role assignment (no specific musician assigned)
-            await tx.eventAssignment.create({
-              data: {
+            // Create multiple open role assignments based on maxCount
+            const maxCount = role.maxCount || 1
+            const assignmentsToCreate = []
+            
+            for (let i = 0; i < maxCount; i++) {
+              assignmentsToCreate.push({
                 eventId: event.id,
                 roleName: role.name,
-                maxMusicians: role.maxCount || 1,
-                status: 'PENDING'
-              }
+                maxMusicians: 1, // Each assignment is for 1 musician
+                status: 'PENDING' as const
+              })
+            }
+            
+            await tx.eventAssignment.createMany({
+              data: assignmentsToCreate
             })
+          }
+        }
+      }
+
+      // If this is a recurring event, create recurring instances
+      if (isRecurring && recurrencePattern) {
+        // Generate recurring events
+        const recurringEvents = generateRecurringEvents(
+          event,
+          recurrencePattern,
+          recurrenceEnd ? new Date(recurrenceEnd) : null,
+          session.user.churchId
+        )
+
+        // Create recurring events
+        for (const recurringEvent of recurringEvents) {
+          const createdEvent = await tx.event.create({
+            data: {
+              ...recurringEvent,
+              parentEventId: event.id
+            }
+          })
+
+          // Copy role assignments to recurring events
+          if (roles.length > 0) {
+            for (const role of roles) {
+              if (role.assignedMusicians && role.assignedMusicians.length > 0) {
+                await tx.eventAssignment.createMany({
+                  data: role.assignedMusicians.map((musicianId: string) => ({
+                    eventId: createdEvent.id,
+                    userId: musicianId,
+                    roleName: role.name,
+                    status: 'PENDING'
+                  }))
+                })
+              } else {
+                const maxCount = role.maxCount || 1
+                const assignmentsToCreate = []
+                
+                for (let i = 0; i < maxCount; i++) {
+                  assignmentsToCreate.push({
+                    eventId: createdEvent.id,
+                    roleName: role.name,
+                    maxMusicians: 1,
+                    status: 'PENDING' as const
+                  })
+                }
+                
+                await tx.eventAssignment.createMany({
+                  data: assignmentsToCreate
+                })
+              }
+            }
           }
         }
       }
@@ -222,7 +383,7 @@ export async function POST(request: NextRequest) {
     await logActivity({
       type: 'EVENT_CREATED',
       description: `Created event: ${name}`,
-      parishId: session.user.parishId,
+      churchId: session.user.churchId,
       userId: session.user.id,
       metadata: {
         eventId: result.id,

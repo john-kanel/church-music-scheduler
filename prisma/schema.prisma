@@ -14,8 +14,8 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Parish represents a church/organization
-model Parish {
+// Church represents a church/organization
+model Church {
   id          String   @id @default(cuid())
   name        String
   address     String?
@@ -26,7 +26,7 @@ model Parish {
   subscriptionStatus String @default("trial") // trial, active, suspended
   subscriptionEnds DateTime?
   referralCode String @unique @default(cuid())
-  referredBy  String? // Parish ID that referred this parish
+  referredBy  String? // Church ID that referred this church
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -40,6 +40,7 @@ model Parish {
   communications Communication[]
   referrals   Referral[]
   activities  Activity[]
+  eventTemplates EventTemplate[]
 
   @@map("parishes")
 }
@@ -60,8 +61,8 @@ model User {
   updatedAt    DateTime @updatedAt
 
   // Relations
-  parishId     String
-  parish       Parish @relation(fields: [parishId], references: [id], onDelete: Cascade)
+  churchId     String
+  church       Church @relation(fields: [churchId], references: [id], onDelete: Cascade)
   
   groupMemberships GroupMember[]
   eventAssignments EventAssignment[]
@@ -82,28 +83,28 @@ enum UserRole {
 model CustomRole {
   id        String   @id @default(cuid())
   name      String
-  parishId  String
-  parish    Parish   @relation(fields: [parishId], references: [id], onDelete: Cascade)
+  churchId  String
+  church    Church   @relation(fields: [churchId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 
   eventAssignments EventAssignment[]
 
-  @@unique([name, parishId])
+  @@unique([name, churchId])
   @@map("custom_roles")
 }
 
-// Event types defined by each parish
+// Event types defined by each church
 model EventType {
   id        String   @id @default(cuid())
   name      String
   color     String   @default("#3B82F6") // Hex color for calendar
-  parishId  String
-  parish    Parish   @relation(fields: [parishId], references: [id], onDelete: Cascade)
+  churchId  String
+  church    Church   @relation(fields: [churchId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 
   events Event[]
 
-  @@unique([name, parishId])
+  @@unique([name, churchId])
   @@map("event_types")
 }
 
@@ -119,15 +120,18 @@ model Event {
   recurrencePattern String? // JSON string for recurrence rules
   recurrenceEnd DateTime?
   parentEventId String? // For recurring events
+  templateId  String?   // Reference to EventTemplate if created from template
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
   // Relations
-  parishId    String
-  parish      Parish    @relation(fields: [parishId], references: [id], onDelete: Cascade)
+  churchId    String
+  church      Church    @relation(fields: [churchId], references: [id], onDelete: Cascade)
   
   eventTypeId String
   eventType   EventType @relation(fields: [eventTypeId], references: [id])
+  
+  template    EventTemplate? @relation(fields: [templateId], references: [id])
   
   assignments EventAssignment[]
   musicFiles  MusicFile[]
@@ -141,14 +145,14 @@ model Group {
   id          String   @id @default(cuid())
   name        String
   description String?
-  parishId    String
-  parish      Parish   @relation(fields: [parishId], references: [id], onDelete: Cascade)
+  churchId    String
+  church      Church   @relation(fields: [churchId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
 
   members GroupMember[]
   assignments EventAssignment[]
 
-  @@unique([name, parishId])
+  @@unique([name, churchId])
   @@map("groups")
 }
 
@@ -214,7 +218,7 @@ model MusicFile {
   @@map("music_files")
 }
 
-// Invitations to join parish
+// Invitations to join church
 model Invitation {
   id        String           @id @default(cuid())
   email     String
@@ -225,12 +229,12 @@ model Invitation {
   status    InvitationStatus @default(PENDING)
   token     String           @unique @default(cuid())
   expiresAt DateTime
-  parishId  String
-  parish    Parish           @relation(fields: [parishId], references: [id], onDelete: Cascade)
+  churchId  String
+  church    Church           @relation(fields: [churchId], references: [id], onDelete: Cascade)
   invitedBy String
   createdAt DateTime         @default(now())
 
-  @@unique([email, parishId])
+  @@unique([email, churchId])
   @@map("invitations")
 }
 
@@ -249,8 +253,8 @@ model Communication {
   type      CommunicationType
   
   // Targeting
-  parishId  String
-  parish    Parish              @relation(fields: [parishId], references: [id], onDelete: Cascade)
+  churchId  String
+  church    Church              @relation(fields: [churchId], references: [id], onDelete: Cascade)
   
   eventId   String?             // If related to specific event
   event     Event?              @relation(fields: [eventId], references: [id])
@@ -274,8 +278,8 @@ enum CommunicationType {
 // Referral tracking
 model Referral {
   id              String   @id @default(cuid())
-  referringParishId String
-  referringParish   Parish @relation(fields: [referringParishId], references: [id], onDelete: Cascade)
+  referringChurchId String
+  referringChurch   Church @relation(fields: [referringChurchId], references: [id], onDelete: Cascade)
   referredEmail     String
   status            ReferralStatus @default(PENDING)
   completedAt       DateTime?
@@ -297,7 +301,7 @@ model CommunicationTemplate {
   subject   String
   message   String
   type      CommunicationType
-  parishId  String
+  churchId  String
   createdAt DateTime            @default(now())
 
   @@map("communication_templates")
@@ -323,8 +327,8 @@ model Activity {
   createdAt   DateTime     @default(now())
   
   // Relations
-  parishId    String
-  parish      Parish       @relation(fields: [parishId], references: [id], onDelete: Cascade)
+  churchId    String
+  church      Church       @relation(fields: [churchId], references: [id], onDelete: Cascade)
   
   userId      String?      // User who performed the action
   
@@ -336,4 +340,55 @@ enum ActivityType {
   MUSICIAN_INVITED
   MUSICIAN_SIGNED_UP
   MESSAGE_SENT
+}
+
+// Event Templates - for reusable event creation
+model EventTemplate {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  duration        Int      @default(60) // Duration in minutes
+  color           String   @default("#3B82F6")
+  isRecurring     Boolean  @default(false)
+  recurrencePattern String? // JSON string for default recurrence
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  churchId        String
+  church          Church   @relation(fields: [churchId], references: [id], onDelete: Cascade)
+  
+  events          Event[]    // Events created from this template
+  roles           TemplateRole[]
+  hymns           TemplateHymn[]
+
+  @@unique([name, churchId])
+  @@map("event_templates")
+}
+
+// Template Roles - roles that should be filled for events created from template
+model TemplateRole {
+  id          String   @id @default(cuid())
+  name        String
+  maxCount    Int      @default(1)
+  isRequired  Boolean  @default(false)
+  templateId  String
+  template    EventTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@map("template_roles")
+}
+
+// Template Hymns - default hymns/music for events created from template
+model TemplateHymn {
+  id          String   @id @default(cuid())
+  title       String
+  composer    String?
+  notes       String?
+  templateId  String
+  template    EventTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@map("template_hymns")
 }

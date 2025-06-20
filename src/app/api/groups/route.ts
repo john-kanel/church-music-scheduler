@@ -3,18 +3,18 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 
-// GET /api/groups - List groups for the parish
+// GET /api/groups - List groups for the church
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
-    if (!session?.user?.parishId) {
+    if (!session?.user?.churchId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const groups = await prisma.group.findMany({
       where: {
-        parishId: session.user.parishId
+        churchId: session.user.churchId
       },
       include: {
         members: {
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
-    if (!session?.user?.parishId) {
+    if (!session?.user?.churchId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -94,11 +94,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if group name already exists in parish
+    // Check if group name already exists in church
     const existingGroup = await prisma.group.findFirst({
       where: {
         name: name.trim(),
-        parishId: session.user.parishId
+        churchId: session.user.churchId
       }
     })
 
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
       data: {
         name: name.trim(),
         description: description?.trim() || null,
-        parishId: session.user.parishId
+        churchId: session.user.churchId
       },
       include: {
         _count: {
@@ -153,7 +153,7 @@ export async function PUT(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
-    if (!session?.user?.parishId) {
+    if (!session?.user?.churchId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -173,11 +173,11 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    // Verify group belongs to parish
+    // Verify group belongs to church
     const existingGroup = await prisma.group.findFirst({
       where: {
         id: groupId,
-        parishId: session.user.parishId
+        churchId: session.user.churchId
       }
     })
 
@@ -215,23 +215,26 @@ export async function PUT(request: NextRequest) {
       }
     })
 
+    // Format response
+    const formattedGroup = {
+      id: updatedGroup.id,
+      name: updatedGroup.name,
+      description: updatedGroup.description,
+      createdAt: updatedGroup.createdAt,
+      members: updatedGroup.members.map(member => ({
+        id: member.user.id,
+        name: `${member.user.firstName} ${member.user.lastName}`,
+        email: member.user.email,
+        role: member.user.role,
+        joinedAt: member.joinedAt
+      })),
+      memberCount: updatedGroup._count.members,
+      assignmentCount: updatedGroup._count.assignments
+    }
+
     return NextResponse.json({
       message: 'Group updated successfully',
-      group: {
-        id: updatedGroup.id,
-        name: updatedGroup.name,
-        description: updatedGroup.description,
-        createdAt: updatedGroup.createdAt,
-        members: updatedGroup.members.map(member => ({
-          id: member.user.id,
-          name: `${member.user.firstName} ${member.user.lastName}`,
-          email: member.user.email,
-          role: member.user.role,
-          joinedAt: member.joinedAt
-        })),
-        memberCount: updatedGroup._count.members,
-        assignmentCount: updatedGroup._count.assignments
-      }
+      group: formattedGroup
     })
 
   } catch (error) {

@@ -1,83 +1,129 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
+import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 
 // PUT /api/assignments/[assignmentId] - Accept or decline assignment
 export async function PUT(
   request: NextRequest,
-  context: { params: Promise<{ assignmentId: string }> }
+  { params }: { params: Promise<{ assignmentId: string }> }
 ) {
-  const params = await context.params
   try {
     const session = await getServerSession(authOptions)
     
-    if (!session?.user?.id) {
+    if (!session?.user?.churchId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await request.json()
-    const { action } = body // 'accept' or 'decline'
+    const { assignmentId } = await params
+    const { musicianId } = await request.json()
 
-    if (!action || !['accept', 'decline'].includes(action)) {
-      return NextResponse.json(
-        { error: 'Action must be "accept" or "decline"' },
-        { status: 400 }
-      )
+    // Only directors and pastors can assign/unassign musicians
+    if (!['DIRECTOR', 'PASTOR'].includes(session.user.role)) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
-    // Find the assignment and verify it belongs to the user
+    // Verify the assignment exists and belongs to the church
     const assignment = await prisma.eventAssignment.findFirst({
       where: {
-        id: params.assignmentId,
-        userId: session.user.id
+        id: assignmentId,
+        event: {
+          churchId: session.user.churchId
+        }
       },
       include: {
-        event: {
-          select: {
-            id: true,
-            name: true,
-            startTime: true,
-            location: true
-          }
-        }
+        event: true
       }
     })
 
     if (!assignment) {
-      return NextResponse.json({ 
-        error: 'Assignment not found or not assigned to you' 
-      }, { status: 404 })
+      return NextResponse.json({ error: 'Assignment not found' }, { status: 404 })
     }
 
-    // Update assignment status
+    // If musicianId is null, we're unassigning the musician
+    if (musicianId === null) {
+      const updatedAssignment = await prisma.eventAssignment.update({
+        where: { id: assignmentId },
+        data: {
+          userId: null,
+          status: 'PENDING'
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true
+            }
+          },
+          event: {
+            select: {
+              id: true,
+              name: true,
+              startTime: true
+            }
+          }
+        }
+      })
+
+      return NextResponse.json({
+        message: 'Musician unassigned successfully',
+        assignment: updatedAssignment
+      })
+    }
+
+    // If we have a musicianId, verify the musician exists and belongs to the church
+    const musician = await prisma.user.findFirst({
+      where: {
+        id: musicianId,
+        churchId: session.user.churchId,
+        role: 'MUSICIAN',
+        isVerified: true
+      }
+    })
+
+    if (!musician) {
+      return NextResponse.json({ error: 'Musician not found' }, { status: 404 })
+    }
+
+    // Update the assignment
     const updatedAssignment = await prisma.eventAssignment.update({
-      where: { id: params.assignmentId },
+      where: { id: assignmentId },
       data: {
-        status: action === 'accept' ? 'ACCEPTED' : 'DECLINED',
-        respondedAt: new Date()
+        userId: musicianId,
+        status: 'PENDING' // Set to pending until musician confirms
       },
       include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true
+          }
+        },
         event: {
           select: {
             id: true,
             name: true,
-            startTime: true,
-            location: true
+            startTime: true
           }
         }
       }
     })
 
+    // TODO: Send notification email to the assigned musician
+    
     return NextResponse.json({
-      message: `Assignment ${action}ed successfully`,
+      message: 'Musician assigned successfully',
       assignment: updatedAssignment
     })
 
   } catch (error) {
-    console.error('Error updating assignment:', error)
+    console.error('Error assigning musician:', error)
     return NextResponse.json(
-      { error: 'Failed to update assignment' },
+      { error: 'Failed to assign musician' },
       { status: 500 }
     )
   }

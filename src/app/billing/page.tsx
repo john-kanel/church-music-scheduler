@@ -211,7 +211,7 @@ export default function BillingPage() {
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">Choose Your Plan</h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              Select the perfect plan for your parish. Upgrade or downgrade at any time.
+              Select the perfect plan for your church. Upgrade or downgrade at any time.
             </p>
           </div>
 

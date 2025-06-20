@@ -37,7 +37,7 @@ export default function InvitationsPage() {
             <div className="flex items-center">
               <Music className="h-8 w-8 text-blue-600" />
               <span className="ml-2 text-xl font-bold text-gray-900">
-                {session.user.parishName}
+                {session.user.churchName}
               </span>
             </div>
             <Link href="/dashboard" className="flex items-center text-gray-600 hover:text-blue-600 transition-colors">
@@ -56,7 +56,7 @@ export default function InvitationsPage() {
                 <UserPlus className="h-8 w-8 mr-3 text-blue-600" />
                 Invitations
               </h1>
-              <p className="text-gray-600 mt-2">Send invitations to musicians to join your parish</p>
+              <p className="text-gray-600 mt-2">Send invitations to musicians to join your church</p>
             </div>
             <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
               <Plus className="h-4 w-4 mr-2" />

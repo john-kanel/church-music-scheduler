@@ -5,7 +5,7 @@ export type ActivityType = 'EVENT_CREATED' | 'MUSICIAN_INVITED' | 'MUSICIAN_SIGN
 interface ActivityData {
   type: ActivityType;
   description: string;
-  parishId: string;
+  churchId: string;
   userId?: string;
   metadata?: any;
 }
@@ -16,7 +16,7 @@ export async function logActivity(data: ActivityData) {
       data: {
         type: data.type,
         description: data.description,
-        parishId: data.parishId,
+        churchId: data.churchId,
         userId: data.userId,
         metadata: data.metadata
       }

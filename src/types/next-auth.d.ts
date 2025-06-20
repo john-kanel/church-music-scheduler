@@ -8,8 +8,8 @@ declare module 'next-auth' {
       email: string
       name: string
       role: UserRole
-      parishId: string
-      parishName: string
+      churchId: string
+      churchName: string
     }
   }
 
@@ -18,15 +18,15 @@ declare module 'next-auth' {
     email: string
     name: string
     role: UserRole
-    parishId: string
-    parishName: string
+    churchId: string
+    churchName: string
   }
 }
 
 declare module 'next-auth/jwt' {
   interface JWT {
     role: UserRole
-    parishId: string
-    parishName: string
+    churchId: string
+    churchName: string
   }
 } 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { ArrowLeft, Users, Plus, Search, Filter, Mail, UserPlus, Music, Phone, Calendar } from 'lucide-react'
+import { ArrowLeft, Users, Plus, Search, UserPlus, Music, Phone, Calendar, Check, X, Edit2, Filter } from 'lucide-react'
 import Link from 'next/link'
 import { InviteModal } from '../../components/musicians/invite-modal'
 
@@ -14,6 +14,16 @@ interface Musician {
   phone?: string
   isVerified: boolean
   createdAt: string
+  status: 'active' | 'pending' | 'inactive'
+}
+
+interface EditingMusician {
+  id: string
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+  status: 'active' | 'pending' | 'inactive'
 }
 
 export default function MusiciansPage() {
@@ -22,10 +32,14 @@ export default function MusiciansPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [musicians, setMusicians] = useState<Musician[]>([])
   const [loading, setLoading] = useState(true)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingData, setEditingData] = useState<EditingMusician | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending' | 'inactive'>('all')
 
   // Fetch musicians
   useEffect(() => {
-    if (session?.user?.parishId) {
+    if (session?.user?.churchId) {
       fetchMusicians()
     }
   }, [session])
@@ -51,11 +65,88 @@ export default function MusiciansPage() {
     fetchMusicians()
   }
 
-  // Filter musicians based on search term
-  const filteredMusicians = musicians.filter(musician =>
-    `${musician.firstName} ${musician.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    musician.email.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const startEditing = (musician: Musician) => {
+    setEditingId(musician.id)
+    setEditingData({
+      id: musician.id,
+      firstName: musician.firstName,
+      lastName: musician.lastName,
+      email: musician.email,
+      phone: musician.phone || '',
+      status: musician.isVerified ? 'active' : 'pending'
+    })
+  }
+
+  const cancelEditing = () => {
+    setEditingId(null)
+    setEditingData(null)
+  }
+
+  const saveEdit = async () => {
+    if (!editingData) return
+
+    setSaving(true)
+    try {
+      const response = await fetch(`/api/musicians/${editingData.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          firstName: editingData.firstName,
+          lastName: editingData.lastName,
+          email: editingData.email,
+          phone: editingData.phone || null,
+          status: editingData.status
+        }),
+      })
+
+      if (response.ok) {
+        // Update the local state
+        setMusicians(prev => prev.map(musician => 
+          musician.id === editingData.id 
+            ? { ...musician, ...editingData, phone: editingData.phone || undefined }
+            : musician
+        ))
+        setEditingId(null)
+        setEditingData(null)
+      } else {
+        console.error('Failed to update musician')
+        alert('Failed to update musician. Please try again.')
+      }
+    } catch (error) {
+      console.error('Error updating musician:', error)
+      alert('Error updating musician. Please try again.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleEditingChange = (field: keyof EditingMusician, value: string) => {
+    if (editingData) {
+      setEditingData({ ...editingData, [field]: value })
+    }
+  }
+
+  // Filter musicians based on search term and status
+  const filteredMusicians = musicians.filter(musician => {
+    const matchesSearch = `${musician.firstName} ${musician.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      musician.email.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    // Determine the actual status of the musician
+    let musicianStatus: 'active' | 'pending' | 'inactive'
+    if (musician.status) {
+      // If status is explicitly set, use it
+      musicianStatus = musician.status
+    } else {
+      // Fall back to isVerified for legacy data
+      musicianStatus = musician.isVerified ? 'active' : 'pending'
+    }
+    
+    const matchesStatus = statusFilter === 'all' || musicianStatus === statusFilter
+    
+    return matchesSearch && matchesStatus
+  })
 
   if (!session) {
     return (
@@ -88,7 +179,7 @@ export default function MusiciansPage() {
                 <Users className="h-8 w-8 text-green-600 mr-3" />
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900">Musicians</h1>
-                  <p className="text-sm text-gray-600">{session.user?.parishName || 'Your Parish'}</p>
+                  <p className="text-sm text-gray-600">{session.user?.churchName || 'Your Church'}</p>
                 </div>
               </div>
             </div>
@@ -123,10 +214,6 @@ export default function MusiciansPage() {
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              <button className="flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                <Filter className="h-4 w-4 mr-2" />
-                Filter by Role
-              </button>
               <button 
                 onClick={() => setShowInviteModal(true)}
                 className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
@@ -143,7 +230,7 @@ export default function MusiciansPage() {
           {/* Musicians Header */}
           <div className="p-6 border-b">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900">Parish Musicians</h2>
+              <h2 className="text-xl font-bold text-gray-900">Church Musicians</h2>
               <span className="text-sm text-gray-600">
                 {loading ? 'Loading...' : `${filteredMusicians.length} musicians`}
               </span>
@@ -155,31 +242,24 @@ export default function MusiciansPage() {
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
               <p className="text-gray-600 mt-4">Loading musicians...</p>
             </div>
-          ) : filteredMusicians.length === 0 ? (
-            /* Empty State */
+          ) : musicians.length === 0 ? (
+            /* Empty State - No musicians at all */
             <div className="p-8 text-center">
               <Users className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-xl font-medium text-gray-900 mb-2">
-                {searchTerm ? 'No musicians found' : 'No Musicians Added Yet'}
-              </h3>
+              <h3 className="text-xl font-medium text-gray-900 mb-2">No Musicians Added Yet</h3>
               <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                {searchTerm 
-                  ? 'Try adjusting your search terms or clear the search to see all musicians.'
-                  : 'Start building your music ministry by inviting musicians to join your parish. You can add accompanists, vocalists, and other musicians.'
-                }
+                Start building your music ministry by inviting musicians to join your church. You can add accompanists, vocalists, and other musicians.
               </p>
-              {!searchTerm && (
-                <button 
-                  onClick={() => setShowInviteModal(true)}
-                  className="inline-flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                >
-                  <UserPlus className="h-5 w-5 mr-2" />
-                  Invite Your First Musicians
-                </button>
-              )}
+              <button 
+                onClick={() => setShowInviteModal(true)}
+                className="inline-flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                <UserPlus className="h-5 w-5 mr-2" />
+                Invite Your First Musicians
+              </button>
             </div>
           ) : (
-            /* Musicians Table */
+            /* Musicians Table - Always show headers */
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50">
@@ -191,7 +271,60 @@ export default function MusiciansPage() {
                       Contact
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
+                      <div className="flex items-center space-x-2">
+                        <span>Status</span>
+                        <div className="relative">
+                          <button
+                            onClick={() => {
+                              const filterElement = document.getElementById('status-filter')
+                              if (filterElement) {
+                                filterElement.classList.toggle('hidden')
+                              }
+                            }}
+                            className="p-1 hover:bg-gray-100 rounded"
+                          >
+                            <Filter className="h-4 w-4" />
+                          </button>
+                          <div id="status-filter" className="hidden absolute top-6 left-0 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[120px]">
+                            <button
+                              onClick={() => {
+                                setStatusFilter('all')
+                                document.getElementById('status-filter')?.classList.add('hidden')
+                              }}
+                              className={`block w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${statusFilter === 'all' ? 'bg-blue-50 text-blue-700' : ''}`}
+                            >
+                              All
+                            </button>
+                            <button
+                              onClick={() => {
+                                setStatusFilter('active')
+                                document.getElementById('status-filter')?.classList.add('hidden')
+                              }}
+                              className={`block w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${statusFilter === 'active' ? 'bg-blue-50 text-blue-700' : ''}`}
+                            >
+                              Active
+                            </button>
+                            <button
+                              onClick={() => {
+                                setStatusFilter('pending')
+                                document.getElementById('status-filter')?.classList.add('hidden')
+                              }}
+                              className={`block w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${statusFilter === 'pending' ? 'bg-blue-50 text-blue-700' : ''}`}
+                            >
+                              Pending
+                            </button>
+                            <button
+                              onClick={() => {
+                                setStatusFilter('inactive')
+                                document.getElementById('status-filter')?.classList.add('hidden')
+                              }}
+                              className={`block w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${statusFilter === 'inactive' ? 'bg-blue-50 text-blue-700' : ''}`}
+                            >
+                              Inactive
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Joined
@@ -202,8 +335,45 @@ export default function MusiciansPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredMusicians.map((musician) => (
-                    <tr key={musician.id} className="hover:bg-gray-50">
+                  {filteredMusicians.length === 0 ? (
+                    /* No results message */
+                    <tr>
+                      <td colSpan={5} className="px-6 py-12 text-center">
+                        <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">
+                          No musicians match this filter
+                        </h3>
+                        <p className="text-gray-600 mb-4">
+                          {searchTerm && statusFilter !== 'all' 
+                            ? `No musicians found matching "${searchTerm}" with status "${statusFilter}".`
+                            : searchTerm 
+                            ? `No musicians found matching "${searchTerm}".`
+                            : `No musicians have "${statusFilter}" status.`
+                          }
+                        </p>
+                        <div className="flex justify-center space-x-3">
+                          {searchTerm && (
+                            <button 
+                              onClick={() => setSearchTerm('')}
+                              className="px-4 py-2 text-sm text-blue-600 hover:text-blue-700"
+                            >
+                              Clear search
+                            </button>
+                          )}
+                          {statusFilter !== 'all' && (
+                            <button 
+                              onClick={() => setStatusFilter('all')}
+                              className="px-4 py-2 text-sm text-blue-600 hover:text-blue-700"
+                            >
+                              Show all statuses
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredMusicians.map((musician) => (
+                    <tr key={musician.id} className={`hover:bg-gray-50 ${editingId === musician.id ? 'bg-blue-50' : ''}`}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10">
@@ -213,33 +383,95 @@ export default function MusiciansPage() {
                               </span>
                             </div>
                           </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">
-                              {musician.firstName} {musician.lastName}
-                            </div>
+                          <div className="ml-4 min-w-0 flex-1">
+                            {editingId === musician.id && editingData ? (
+                              <div className="grid grid-cols-1 gap-1">
+                                <input
+                                  type="text"
+                                  value={editingData.firstName}
+                                  onChange={(e) => handleEditingChange('firstName', e.target.value)}
+                                  className="text-sm font-medium text-gray-900 border border-gray-300 rounded px-2 py-1 w-32"
+                                  placeholder="First Name"
+                                />
+                                <input
+                                  type="text"
+                                  value={editingData.lastName}
+                                  onChange={(e) => handleEditingChange('lastName', e.target.value)}
+                                  className="text-sm font-medium text-gray-900 border border-gray-300 rounded px-2 py-1 w-32"
+                                  placeholder="Last Name"
+                                />
+                              </div>
+                            ) : (
+                              <div className="text-sm font-medium text-gray-900">
+                                {musician.firstName} {musician.lastName}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900 flex items-center">
-                          <Mail className="h-4 w-4 text-gray-400 mr-2" />
-                          {musician.email}
-                        </div>
-                        {musician.phone && (
-                          <div className="text-sm text-gray-500 flex items-center mt-1">
-                            <Phone className="h-4 w-4 text-gray-400 mr-2" />
-                            {musician.phone}
+                        {editingId === musician.id && editingData ? (
+                          <div className="grid grid-cols-1 gap-1">
+                            <input
+                              type="email"
+                              value={editingData.email}
+                              onChange={(e) => handleEditingChange('email', e.target.value)}
+                              className="text-sm text-gray-900 border border-gray-300 rounded px-2 py-1 w-48"
+                              placeholder="Email"
+                            />
+                            <input
+                              type="tel"
+                              value={editingData.phone}
+                              onChange={(e) => handleEditingChange('phone', e.target.value)}
+                              className="text-sm text-gray-500 border border-gray-300 rounded px-2 py-1 w-36"
+                              placeholder="Phone (optional)"
+                            />
+                          </div>
+                        ) : (
+                          <div>
+                            <div className="text-sm text-gray-900 flex items-center">
+                              <span className="mr-2">📧</span>
+                              {musician.email}
+                            </div>
+                            {musician.phone && (
+                              <div className="text-sm text-gray-500 flex items-center mt-1">
+                                <Phone className="h-4 w-4 text-gray-400 mr-2" />
+                                {musician.phone}
+                              </div>
+                            )}
                           </div>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                          musician.isVerified 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {musician.isVerified ? 'Active' : 'Pending'}
-                        </span>
+                        {editingId === musician.id && editingData ? (
+                          <select
+                            value={editingData.status}
+                            onChange={(e) => setEditingData({
+                              ...editingData,
+                              status: e.target.value as 'active' | 'pending' | 'inactive'
+                            })}
+                            className="w-24 px-2 py-1 text-xs font-semibold border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="active">Active</option>
+                            <option value="pending">Pending</option>
+                            <option value="inactive">Inactive</option>
+                          </select>
+                        ) : (
+                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                            (musician.status === 'active' || (!musician.status && musician.isVerified))
+                              ? 'bg-green-100 text-green-800' 
+                              : musician.status === 'inactive'
+                              ? 'bg-red-100 text-red-800'
+                              : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {musician.status === 'active' || (!musician.status && musician.isVerified) 
+                              ? 'Active' 
+                              : musician.status === 'inactive'
+                              ? 'Inactive'
+                              : 'Pending'
+                            }
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <div className="flex items-center">
@@ -248,15 +480,37 @@ export default function MusiciansPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button className="text-blue-600 hover:text-blue-900 mr-3">
-                          Edit
-                        </button>
-                        <button className="text-green-600 hover:text-green-900">
-                          Message
-                        </button>
+                        {editingId === musician.id ? (
+                          <div className="flex items-center justify-end space-x-2">
+                            <button 
+                              onClick={saveEdit}
+                              disabled={saving}
+                              className="text-green-600 hover:text-green-900 disabled:opacity-50"
+                              title="Save changes"
+                            >
+                              <Check className="h-4 w-4" />
+                            </button>
+                            <button 
+                              onClick={cancelEditing}
+                              disabled={saving}
+                              className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                              title="Cancel editing"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => startEditing(musician)}
+                            className="inline-flex items-center px-2 py-1 text-sm font-medium text-blue-600 hover:text-blue-800"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </button>
+                        )}
                       </td>
                     </tr>
-                  ))}
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

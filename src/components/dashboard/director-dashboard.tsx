@@ -29,13 +29,14 @@ import Link from 'next/link'
 import { CreateEventModal } from '../events/create-event-modal'
 import { InviteModal } from '../musicians/invite-modal'
 import { SendMessageModal } from '../messages/send-message-modal'
+import { EventDetailsModal } from '../events/event-details-modal'
 
 interface User {
   id: string
   name: string
   email: string
   role: 'DIRECTOR' | 'MUSICIAN' | 'PASTOR' | 'ASSOCIATE_PASTOR'
-  parishName: string
+      churchName: string
   avatar?: string
 }
 
@@ -81,6 +82,8 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [showMessageModal, setShowMessageModal] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
+  const [selectedEvent, setSelectedEvent] = useState<any>(null)
+  const [showEventDetails, setShowEventDetails] = useState(false)
   const [currentDate, setCurrentDate] = useState(new Date())
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -177,6 +180,20 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
   const handleMessageSent = () => {
     // Refresh dashboard data to show updated communication history
     refreshDashboardData()
+  }
+
+  const handleEventClick = async (event: any) => {
+    try {
+      // Fetch complete event details
+      const response = await fetch(`/api/events/${event.id}`)
+      if (response.ok) {
+        const data = await response.json()
+        setSelectedEvent(data.event)
+        setShowEventDetails(true)
+      }
+    } catch (error) {
+      console.error('Error fetching event details:', error)
+    }
   }
 
   // Calendar helpers
@@ -297,7 +314,7 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
           <div className="bg-white rounded-xl p-8 max-w-md mx-4 shadow-2xl border">
             <h2 className="text-2xl font-bold mb-4 text-gray-900">Welcome to Church Music Scheduler!</h2>
             <p className="text-gray-700 mb-6 text-base">
-              Let's get you started with creating your first event and inviting musicians to your parish.
+              Let's get you started with creating your first event and inviting musicians to your church.
             </p>
             <button
               onClick={completeTour}
@@ -318,7 +335,7 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
               {/* Logo and Parish Name */}
               <Link href="/dashboard" className="flex items-center hover:opacity-80 transition-opacity">
                 <Music className="h-8 w-8 text-blue-600 mr-3" />
-                <h1 className="text-xl font-bold text-gray-900">{user.parishName}</h1>
+                <h1 className="text-xl font-bold text-gray-900">{user.churchName}</h1>
               </Link>
 
               {/* Search and Actions */}
@@ -400,7 +417,7 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
               <div className="flex justify-between items-center mb-8">
                 <div>
                   <h1 className="text-3xl font-bold text-gray-900">Welcome back, {session?.user?.name}!</h1>
-                  <p className="text-gray-600 mt-1">Here's what's happening at {session?.user?.parishName || 'your parish'}</p>
+                  <p className="text-gray-600 mt-1">Here's what's happening at {session?.user?.churchName || 'your church'}</p>
                 </div>
                 <div className="flex space-x-3">
                   <button 
@@ -624,13 +641,17 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                                     return (
                                       <div
                                         key={event.id}
-                                        className="text-xs px-1 py-0.5 rounded truncate"
+                                        className="text-xs px-1 py-0.5 rounded truncate cursor-pointer hover:opacity-80 transition-opacity"
                                         style={{
                                           backgroundColor: event.eventType.color + '20',
                                           color: event.eventType.color,
                                           borderLeft: `3px solid ${event.eventType.color}`
                                         }}
                                         title={`${event.name} at ${timeString}`}
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          handleEventClick(event)
+                                        }}
                                       >
                                         {timeString} {event.name}
                                       </div>
@@ -668,8 +689,8 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                 </div>
 
                 {/* Recent Activity */}
-                <div className="bg-white rounded-xl shadow-sm p-6 border">
-                  <div className="flex items-center justify-between mb-6">
+                <div className="bg-white rounded-xl shadow-sm border flex flex-col">
+                  <div className="flex items-center justify-between p-6 border-b flex-shrink-0">
                     <h2 className="text-xl font-bold text-gray-900">Recent Activity</h2>
                     <Link 
                       href="/activity"
@@ -679,41 +700,48 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                     </Link>
                   </div>
                   
-                  <div className="h-80 overflow-y-auto">
-                    {activitiesLoading ? (
-                      <div className="flex items-center justify-center h-full">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                      </div>
-                    ) : activities.length > 0 ? (
-                      <div className="space-y-3">
-                        {activities.map((activity) => {
-                          const { icon: Icon, color, bgColor } = getActivityIcon(activity.type)
-                          return (
-                            <div key={activity.id} className="flex items-start p-3 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer">
-                              <div className={`flex-shrink-0 w-10 h-10 ${bgColor} rounded-lg flex items-center justify-center`}>
-                                <Icon className={`h-5 w-5 ${color}`} />
+                  <div className="flex-1 min-h-0 p-6">
+                    <div className="h-full max-h-[500px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                      {activitiesLoading ? (
+                        <div className="flex items-center justify-center h-40">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        </div>
+                      ) : activities.length > 0 ? (
+                        <div className="space-y-3 pr-2">
+                          {activities.filter(activity => {
+                            const activityDate = new Date(activity.createdAt);
+                            const thirtyDaysAgo = new Date();
+                            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                            return activityDate >= thirtyDaysAgo;
+                          }).map((activity) => {
+                            const { icon: Icon, color, bgColor } = getActivityIcon(activity.type)
+                            return (
+                              <div key={activity.id} className="flex items-start p-3 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer">
+                                <div className={`flex-shrink-0 w-10 h-10 ${bgColor} rounded-lg flex items-center justify-center`}>
+                                  <Icon className={`h-5 w-5 ${color}`} />
+                                </div>
+                                <div className="ml-3 flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-gray-900 leading-5">
+                                    {activity.description}
+                                  </p>
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    {formatRelativeTime(activity.createdAt)}
+                                  </p>
+                                </div>
                               </div>
-                              <div className="ml-3 flex-1 min-w-0">
-                                <p className="text-sm font-medium text-gray-900 leading-5">
-                                  {activity.description}
-                                </p>
-                                <p className="text-xs text-gray-500 mt-1">
-                                  {formatRelativeTime(activity.createdAt)}
-                                </p>
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center h-full text-center">
-                        <Activity className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">No Recent Activity</h3>
-                        <p className="text-gray-600 text-sm">
-                          Activity will appear here as you create events, invite musicians, and send messages.
-                        </p>
-                      </div>
-                    )}
+                            )
+                          })}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center h-40 text-center">
+                          <Activity className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                          <h3 className="text-lg font-medium text-gray-900 mb-2">No Recent Activity</h3>
+                          <p className="text-gray-600 text-sm">
+                            Activity will appear here as you create events, invite musicians, and send messages.
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -778,6 +806,25 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
         isOpen={showMessageModal}
         onClose={() => setShowMessageModal(false)}
         onMessageSent={handleMessageSent}
+      />
+
+      <EventDetailsModal
+        isOpen={showEventDetails}
+        onClose={() => {
+          setShowEventDetails(false)
+          setSelectedEvent(null)
+        }}
+        event={selectedEvent}
+        onEventUpdated={() => {
+          refreshDashboardData()
+          setShowEventDetails(false)
+          setSelectedEvent(null)
+        }}
+        onEventDeleted={() => {
+          refreshDashboardData()
+          setShowEventDetails(false)
+          setSelectedEvent(null)
+        }}
       />
     </div>
   )

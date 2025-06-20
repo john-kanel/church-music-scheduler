@@ -8,6 +8,9 @@ import {
   Palette, Save, X
 } from 'lucide-react'
 import Link from 'next/link'
+import { EventDetailsModal } from '@/components/events/event-details-modal'
+import { CreateTemplateModal } from '@/components/events/create-template-modal'
+import { CreateEventModal } from '@/components/events/create-event-modal'
 
 interface EventTemplate {
   id: string
@@ -15,6 +18,8 @@ interface EventTemplate {
   description?: string
   duration: number // in minutes
   color: string
+  isRecurring: boolean
+  recurrencePattern?: string
   roles: {
     name: string
     maxCount: number
@@ -31,13 +36,33 @@ interface EventTemplate {
 interface CalendarEvent {
   id: string
   name: string
+  description?: string
+  location?: string
   startTime: string
   endTime?: string
   eventType: {
+    id: string
     name: string
     color: string
   }
   templateId?: string
+  status?: 'confirmed' | 'tentative' | 'cancelled'
+  assignments?: {
+    id: string
+    roleName: string
+    status: string
+    user?: {
+      id: string
+      firstName: string
+      lastName: string
+      email: string
+    }
+    group?: {
+      id: string
+      name: string
+    }
+  }[]
+  musicFiles?: any[]
 }
 
 const TEMPLATE_COLORS = [
@@ -68,6 +93,14 @@ export default function CalendarPage() {
   // Calendar events
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [loading, setLoading] = useState(true)
+  
+  // Event details modal
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
+  const [showEventDetails, setShowEventDetails] = useState(false)
+  const [isEditingEvent, setIsEditingEvent] = useState(false)
+  
+  // Create event modal
+  const [showCreateEvent, setShowCreateEvent] = useState(false)
   
   // Drag and drop
   const [draggedTemplate, setDraggedTemplate] = useState<EventTemplate | null>(null)
@@ -176,6 +209,7 @@ export default function CalendarPage() {
           startTime: dropDate.toTimeString().slice(0, 5),
           endTime: endDate.toTimeString().slice(0, 5),
           templateId: draggedTemplate.id,
+          templateColor: draggedTemplate.color,
           roles: draggedTemplate.roles,
           hymns: draggedTemplate.hymns
         })
@@ -189,6 +223,22 @@ export default function CalendarPage() {
     }
 
     setDraggedTemplate(null)
+  }
+
+  const handleEventClick = (event: CalendarEvent) => {
+    // Show modal immediately with no API call - instant response
+    setSelectedEvent(event)
+    setShowEventDetails(true)
+    setIsEditingEvent(false)
+  }
+
+  const handleDateClick = (day: number, e: React.MouseEvent) => {
+    // Only show create event modal if not clicking on an event
+    if ((e.target as HTMLElement).closest('[data-event]')) {
+      return
+    }
+    
+    setShowCreateEvent(true)
   }
 
   if (!session) {
@@ -209,7 +259,7 @@ export default function CalendarPage() {
   const isCurrentMonth = currentDate.getMonth() === today.getMonth() && currentDate.getFullYear() === today.getFullYear()
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-8">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -226,7 +276,7 @@ export default function CalendarPage() {
                 <Calendar className="h-8 w-8 text-blue-600 mr-3" />
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900">Calendar & Events</h1>
-                  <p className="text-sm text-gray-600">{session.user?.parishName || 'Your Parish'}</p>
+                  <p className="text-sm text-gray-600">{session.user?.churchName || 'Your Church'}</p>
                 </div>
               </div>
             </div>
@@ -243,19 +293,19 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 h-[calc(100vh-12rem)]">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 min-h-[750px]">
           {/* Left Sidebar - Templates (30%) */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl shadow-sm border h-full flex flex-col">
+            <div className="bg-white rounded-xl shadow-sm border max-h-[850px] flex flex-col">
               <div className="p-6 border-b flex items-center justify-between">
                 <h2 className="text-lg font-bold text-gray-900">Event Templates</h2>
                 <button
                   onClick={() => setShowCreateTemplate(true)}
-                  className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                  className="flex items-center justify-center w-8 h-8 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  title="Create new template"
                 >
-                  <Plus className="h-4 w-4 mr-1" />
-                  New
+                  <Plus className="h-4 w-4" />
                 </button>
               </div>
               
@@ -278,8 +328,12 @@ export default function CalendarPage() {
                         <h3 className="font-medium text-gray-900 text-sm">{template.name}</h3>
                       </div>
                       <button
-                        onClick={() => setEditingTemplate(template)}
+                        onClick={() => {
+                          setEditingTemplate(template)
+                          setShowCreateTemplate(true)
+                        }}
                         className="p-1 text-gray-400 hover:text-gray-600"
+                        title="Edit template"
                       >
                         <Edit className="h-3 w-3" />
                       </button>
@@ -313,7 +367,7 @@ export default function CalendarPage() {
           {/* Right Side - Calendar or List View (70%) */}
           <div className="lg:col-span-3">
             {viewMode === 'calendar' ? (
-              <div className="bg-white rounded-xl shadow-sm border h-full flex flex-col">
+              <div className="bg-white rounded-xl shadow-sm border flex flex-col" style={{ maxHeight: '868px' }}>
                 {/* Calendar Header */}
                 <div className="p-6 border-b">
                   <div className="flex items-center justify-between">
@@ -364,7 +418,7 @@ export default function CalendarPage() {
                     return (
                       <div
                         key={index}
-                        className={`border-r border-b last:border-r-0 min-h-[120px] p-2 ${
+                        className={`border-r border-b last:border-r-0 min-h-[140px] p-2 cursor-pointer ${
                           day === null 
                             ? 'bg-gray-50' 
                             : isToday
@@ -373,6 +427,7 @@ export default function CalendarPage() {
                         } ${draggedTemplate ? 'transition-colors' : ''}`}
                         onDragOver={(e) => e.preventDefault()}
                         onDrop={() => day && handleDrop(day)}
+                        onClick={(e) => day && handleDateClick(day, e)}
                       >
                         {day && (
                           <>
@@ -392,13 +447,18 @@ export default function CalendarPage() {
                                 return (
                                   <div
                                     key={event.id}
-                                    className="text-xs px-2 py-1 rounded truncate cursor-pointer"
+                                    data-event="true"
+                                    className="text-xs px-2 py-1 rounded truncate cursor-pointer hover:opacity-80 transition-opacity"
                                     style={{
                                       backgroundColor: event.eventType.color + '20',
                                       color: event.eventType.color,
                                       borderLeft: `3px solid ${event.eventType.color}`
                                     }}
                                     title={`${event.name} at ${timeString}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleEventClick(event)
+                                    }}
                                   >
                                     {timeString} {event.name}
                                   </div>
@@ -463,13 +523,184 @@ export default function CalendarPage() {
 
                 {/* List Content */}
                 <div className="flex-1 overflow-y-auto">
-                  <div className="p-6 text-center">
-                    <Calendar className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">Coming Soon</h3>
-                    <p className="text-gray-600">
-                      Event list view is being built. Use the calendar view to see and manage your events.
-                    </p>
-                  </div>
+                  {(() => {
+                    const now = new Date()
+                    
+                    // Filter events based on upcoming/past
+                    const filteredEvents = events.filter(event => {
+                      const eventDate = new Date(event.startTime)
+                      if (listFilter === 'upcoming') {
+                        return eventDate >= now
+                      } else {
+                        return eventDate < now
+                      }
+                    })
+                    
+                    // Filter by search term
+                    const searchFilteredEvents = filteredEvents.filter(event => {
+                      if (!searchTerm) return true
+                      const searchLower = searchTerm.toLowerCase()
+                      return (
+                        event.name.toLowerCase().includes(searchLower) ||
+                        event.location?.toLowerCase().includes(searchLower) ||
+                        event.description?.toLowerCase().includes(searchLower) ||
+                        event.eventType.name.toLowerCase().includes(searchLower)
+                      )
+                    })
+                    
+                    // Sort events by date
+                    const sortedEvents = searchFilteredEvents.sort((a, b) => {
+                      const dateA = new Date(a.startTime)
+                      const dateB = new Date(b.startTime)
+                      return listFilter === 'upcoming' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime()
+                    })
+                    
+                    if (sortedEvents.length === 0) {
+                      return (
+                        <div className="p-6 text-center">
+                          <Calendar className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                          <h3 className="text-lg font-medium text-gray-900 mb-2">
+                            {searchTerm ? 'No events found' : `No ${listFilter} events`}
+                          </h3>
+                          <p className="text-gray-600">
+                            {searchTerm 
+                              ? 'Try adjusting your search terms or filters.'
+                              : listFilter === 'upcoming' 
+                                ? 'No upcoming events scheduled. Create an event to get started.'
+                                : 'No past events to display.'
+                            }
+                          </p>
+                        </div>
+                      )
+                    }
+                    
+                    return (
+                      <div className="divide-y divide-gray-200">
+                        {sortedEvents.map((event) => {
+                          const eventDate = new Date(event.startTime)
+                          const eventEndDate = event.endTime ? new Date(event.endTime) : null
+                          const isToday = eventDate.toDateString() === now.toDateString()
+                          const isPast = eventDate < now
+                          
+                          return (
+                            <div
+                              key={event.id}
+                              className="p-6 hover:bg-gray-50 cursor-pointer transition-colors"
+                              onClick={() => handleEventClick(event)}
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center mb-2">
+                                    <div
+                                      className="w-3 h-3 rounded-full mr-3"
+                                      style={{ backgroundColor: event.eventType.color }}
+                                    />
+                                    <h3 className="text-lg font-medium text-gray-900">
+                                      {event.name}
+                                    </h3>
+                                    {event.templateId && (
+                                      <span className="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">
+                                        Template
+                                      </span>
+                                    )}
+                                    {isToday && (
+                                      <span className="ml-2 px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full">
+                                        Today
+                                      </span>
+                                    )}
+                                    {isPast && listFilter === 'upcoming' && (
+                                      <span className="ml-2 px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
+                                        Past
+                                      </span>
+                                    )}
+                                  </div>
+                                  
+                                  <div className="flex items-center text-sm text-gray-600 mb-2">
+                                    <Calendar className="h-4 w-4 mr-2" />
+                                    <span>
+                                      {eventDate.toLocaleDateString('en-US', {
+                                        weekday: 'long',
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric'
+                                      })}
+                                    </span>
+                                  </div>
+                                  
+                                  <div className="flex items-center text-sm text-gray-600 mb-2">
+                                    <Clock className="h-4 w-4 mr-2" />
+                                    <span>
+                                      {eventDate.toLocaleTimeString('en-US', {
+                                        hour: 'numeric',
+                                        minute: '2-digit',
+                                        hour12: true
+                                      })}
+                                      {eventEndDate && (
+                                        <span>
+                                          {' - '}
+                                          {eventEndDate.toLocaleTimeString('en-US', {
+                                            hour: 'numeric',
+                                            minute: '2-digit',
+                                            hour12: true
+                                          })}
+                                        </span>
+                                      )}
+                                    </span>
+                                  </div>
+                                  
+                                  {event.location && (
+                                    <div className="flex items-center text-sm text-gray-600 mb-2">
+                                      <MapPin className="h-4 w-4 mr-2" />
+                                      <span>{event.location}</span>
+                                    </div>
+                                  )}
+                                  
+                                  {event.description && (
+                                    <p className="text-sm text-gray-600 mt-2 line-clamp-2">
+                                      {event.description}
+                                    </p>
+                                  )}
+                                  
+                                  {event.assignments && event.assignments.length > 0 && (
+                                    <div className="flex items-center text-sm text-gray-500 mt-3">
+                                      <Users className="h-4 w-4 mr-2" />
+                                      <span>
+                                        {event.assignments.filter(a => a.user).length} assigned, {event.assignments.filter(a => !a.user).length} open
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                                
+                                <div className="ml-4 flex flex-col items-end">
+                                  <span
+                                    className="px-3 py-1 text-xs font-medium rounded-full"
+                                    style={{
+                                      backgroundColor: event.eventType.color + '20',
+                                      color: event.eventType.color
+                                    }}
+                                  >
+                                    {event.eventType.name}
+                                  </span>
+                                  
+                                  {event.status && (
+                                    <span className={`mt-2 px-2 py-1 text-xs rounded-full ${
+                                      event.status === 'confirmed' 
+                                        ? 'bg-green-100 text-green-700'
+                                        : event.status === 'tentative'
+                                        ? 'bg-yellow-100 text-yellow-700'
+                                        : 'bg-red-100 text-red-700'
+                                    }`}>
+                                      {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )
+                  })()}
                 </div>
               </div>
             )}
@@ -477,35 +708,54 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* Create Template Modal - Coming Soon */}
-      {showCreateTemplate && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-900">Create Template</h3>
-              <button
-                onClick={() => setShowCreateTemplate(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="h-5 w-5 text-gray-700" />
-              </button>
-            </div>
-            <div className="text-center py-8">
-              <Settings className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <h4 className="text-lg font-medium text-gray-900 mb-2">Template Builder Coming Soon</h4>
-              <p className="text-gray-600 text-sm">
-                We're building an advanced template system. For now, you can create events directly using the "Create Event" button on the dashboard.
-              </p>
-              <button
-                onClick={() => setShowCreateTemplate(false)}
-                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Got it
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Create Template Modal */}
+      <CreateTemplateModal
+        isOpen={showCreateTemplate}
+        onClose={() => {
+          setShowCreateTemplate(false)
+          setEditingTemplate(null)
+        }}
+        editingTemplate={editingTemplate}
+        onTemplateCreated={() => {
+          fetchTemplates()
+          setShowCreateTemplate(false)
+          setEditingTemplate(null)
+        }}
+      />
+
+      {/* Create Event Modal */}
+      <CreateEventModal
+        isOpen={showCreateEvent}
+        onClose={() => {
+          setShowCreateEvent(false)
+        }}
+        onEventCreated={() => {
+          fetchEvents()
+          setShowCreateEvent(false)
+        }}
+      />
+
+      {/* Event Details Modal */}
+      <EventDetailsModal
+        isOpen={showEventDetails}
+        onClose={() => {
+          setShowEventDetails(false)
+          setSelectedEvent(null)
+          setIsEditingEvent(false)
+        }}
+        event={selectedEvent}
+        onEventUpdated={() => {
+          // Just refresh the calendar events, don't close the modal
+          fetchEvents()
+        }}
+        onEventDeleted={() => {
+          // Only close modal when event is deleted
+          fetchEvents()
+          setShowEventDetails(false)
+          setSelectedEvent(null)
+          setIsEditingEvent(false)
+        }}
+      />
     </div>
   )
 } 

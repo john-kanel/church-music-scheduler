@@ -5,10 +5,10 @@ import { UserRole } from '@/generated/prisma'
 
 export async function POST(request: NextRequest) {
   try {
-    const { name, email, password, parishName, role } = await request.json()
+    const { name, email, password, churchName, role } = await request.json()
 
     // Validation
-    if (!name || !email || !password || !parishName || !role) {
+    if (!name || !email || !password || !churchName || !role) {
       return NextResponse.json(
         { error: 'All fields are required' },
         { status: 400 }
@@ -52,10 +52,10 @@ export async function POST(request: NextRequest) {
 
     // Create parish and user in a transaction
     const result = await prisma.$transaction(async (tx) => {
-      // Create the parish first
-      const parish = await tx.parish.create({
+      // Create the church first
+      const church = await tx.church.create({
         data: {
-          name: parishName.trim(),
+          name: churchName.trim(),
           address: '', // Default empty, can be updated later
           email: email,
           phone: '', // Default empty, can be updated later
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
           email: email.toLowerCase().trim(),
           password: hashedPassword,
           role: role as UserRole,
-          parishId: parish.id,
+          churchId: church.id,
         },
         select: {
           id: true,
@@ -78,8 +78,8 @@ export async function POST(request: NextRequest) {
           lastName: true,
           email: true,
           role: true,
-          parishId: true,
-          parish: {
+          churchId: true,
+          church: {
             select: {
               id: true,
               name: true
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
         }
       })
 
-      return { user, parish }
+      return { user, church }
     })
 
     return NextResponse.json(
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
           name: `${result.user.firstName} ${result.user.lastName}`.trim(),
           email: result.user.email,
           role: result.user.role,
-          parish: result.user.parish
+          church: result.user.church
         }
       },
       { status: 201 }

@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     await logActivity({
       type: 'MUSICIAN_SIGNED_UP',
       description: `${user.firstName} ${user.lastName} completed account setup`,
-      parishId: user.parishId,
+      churchId: user.churchId,
       userId: user.id,
       metadata: {
         musicianName: `${user.firstName} ${user.lastName}`,

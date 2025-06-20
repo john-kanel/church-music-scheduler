@@ -37,7 +37,7 @@ export default function ReportsPage() {
             <div className="flex items-center">
               <Music className="h-8 w-8 text-blue-600" />
               <span className="ml-2 text-xl font-bold text-gray-900">
-                {session.user.parishName}
+                {session.user.churchName}
               </span>
             </div>
             <Link href="/dashboard" className="flex items-center text-gray-600 hover:text-blue-600 transition-colors">

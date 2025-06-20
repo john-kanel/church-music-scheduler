@@ -42,7 +42,7 @@ export default function MessagesPage() {
                 <MessageSquare className="h-8 w-8 text-purple-600 mr-3" />
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
-                  <p className="text-sm text-gray-600">{session.user?.parishName || 'Your Parish'}</p>
+                  <p className="text-sm text-gray-600">{session.user?.churchName || 'Your Church'}</p>
                 </div>
               </div>
             </div>

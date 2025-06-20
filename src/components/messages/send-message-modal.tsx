@@ -28,7 +28,7 @@ export function SendMessageModal({ isOpen, onClose, onMessageSent }: SendMessage
   })
 
   const recipientOptions = [
-    { value: 'all', label: 'All Parish Members' },
+    { value: 'all', label: 'All Church Members' },
     { value: 'musicians', label: 'All Musicians' },
     { value: 'directors', label: 'Directors & Pastors' },
     { value: 'accompanists', label: 'Accompanists Only' },

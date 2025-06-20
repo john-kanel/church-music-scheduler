@@ -12,7 +12,7 @@ export default function SignUpPage() {
     email: '',
     password: '',
     confirmPassword: '',
-    parishName: '',
+    churchName: '',
     role: 'DIRECTOR' as 'DIRECTOR' | 'PASTOR'
   })
   const [loading, setLoading] = useState(false)
@@ -53,7 +53,7 @@ export default function SignUpPage() {
           name: formData.name,
           email: formData.email,
           password: formData.password,
-          parishName: formData.parishName,
+          churchName: formData.churchName,
           role: formData.role
         }),
       })
@@ -162,18 +162,18 @@ export default function SignUpPage() {
 
             {/* Parish Information */}
             <div>
-              <label htmlFor="parishName" className="block text-sm font-medium text-gray-700 mb-2">
-                Church/Parish Name
+              <label htmlFor="churchName" className="block text-sm font-medium text-gray-700 mb-2">
+                Church Name
               </label>
               <input
                 type="text"
-                id="parishName"
-                name="parishName"
-                value={formData.parishName}
+                id="churchName"
+                name="churchName"
+                value={formData.churchName}
                 onChange={handleInputChange}
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                placeholder="St. Mary's Catholic Church"
+                                  placeholder="First Baptist Church"
               />
             </div>
 

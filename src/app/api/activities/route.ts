@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session?.user?.parishId) {
+    if (!session?.user?.churchId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
 
     const activities = await prisma.activity.findMany({
       where: {
-        parishId: session.user.parishId,
+        churchId: session.user.churchId,
         createdAt: {
           gte: sevenDaysAgo
         }

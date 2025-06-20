@@ -133,9 +133,17 @@ export function InviteModal({ isOpen, onClose, onInvitesSent }: InviteModalProps
 
       const result = await response.json()
       
-      setSuccess(`Invitation sent successfully to ${singleInvite.email}! They can now sign in with their email and temporary password.`)
+      // Show appropriate success message based on environment
+      let successMessage = result.message || `Invitation sent successfully to ${singleInvite.email}! They can now sign in with their email and temporary password.`
       
-      // Wait a moment to show success message, then close
+      if (result.isDevelopmentMode) {
+        successMessage = `Development mode: User created for ${singleInvite.email}! Login: ${result.credentials.email} / ${result.credentials.temporaryPassword} (Email simulated - check console)`
+      }
+      
+      setSuccess(successMessage)
+      
+      // Wait longer for development mode messages
+      const timeout = result.isDevelopmentMode ? 5000 : 2000
       setTimeout(() => {
         onInvitesSent?.()
         onClose()
@@ -147,7 +155,7 @@ export function InviteModal({ isOpen, onClose, onInvitesSent }: InviteModalProps
           role: 'musician'
         })
         setSuccess('')
-      }, 2000)
+      }, timeout)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send invitation. Please try again.')
     } finally {
@@ -384,7 +392,7 @@ export function InviteModal({ isOpen, onClose, onInvitesSent }: InviteModalProps
                   onChange={(e) => setBulkText(e.target.value)}
                   rows={6}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900"
-                  placeholder="Paste emails here, one per line:&#10;john@example.com&#10;Jane Smith <jane@example.com>&#10;mike.wilson@example.com"
+                  placeholder="Enter one email per line. You can include names or just email addresses:&#10;&#10;john.smith@example.com&#10;Jane Doe &lt;jane@example.com&gt;&#10;mike.wilson@church.org&#10;Sarah Johnson &lt;sarah@gmail.com&gt;&#10;&#10;Click 'Parse List' when done to review before sending."
                 />
                 <div className="flex justify-between items-center mt-2">
                   <p className="text-xs text-gray-500">

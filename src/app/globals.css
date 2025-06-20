@@ -20,7 +20,96 @@
 }
 
 body {
-  background: var(--background);
+  background: #f9fafb; /* Force light gray background */
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Make placeholder text darker/more visible - using darker charcoal gray */
+::placeholder {
+  color: #374151 !important; /* text-gray-700 equivalent - charcoal gray */
+  opacity: 1 !important;
+}
+
+::-webkit-input-placeholder {
+  color: #374151 !important;
+  opacity: 1 !important;
+}
+
+::-moz-placeholder {
+  color: #374151 !important;
+  opacity: 1 !important;
+}
+
+:-ms-input-placeholder {
+  color: #374151 !important;
+  opacity: 1 !important;
+}
+
+/* Make regular input text dark black for better visibility */
+input,
+textarea,
+select {
+  color: #000000 !important; /* Pure black for maximum contrast */
+}
+
+input:not(:placeholder-shown),
+textarea:not(:placeholder-shown),
+select:not(:placeholder-shown) {
+  color: #000000 !important; /* Ensure typed text is always black */
+}
+
+/* Style input fields to have better contrast */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="tel"],
+input[type="url"],
+input[type="search"],
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+input[type="number"],
+textarea,
+select {
+  color: #000000 !important;
+  background-color: #ffffff !important;
+}
+
+/* Override any Tailwind classes that might make text too light */
+.text-gray-400,
+.text-gray-500 {
+  color: #374151 !important; /* Use darker gray instead */
+}
+
+/* Ensure form labels are also dark */
+label {
+  color: #1f2937 !important; /* text-gray-800 equivalent */
+}
+
+/* Custom scrollbar styles */
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+
+.scrollbar-thumb-gray-300::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 0.375rem;
+}
+
+.scrollbar-track-gray-100::-webkit-scrollbar-track {
+  background-color: #f3f4f6;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 0.375rem;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background-color: #f3f4f6;
 }

@@ -22,8 +22,8 @@ interface User {
   email: string
   name: string
   role: string
-  parishId: string
-  parishName: string
+  churchId: string
+  churchName: string
 }
 
 interface MusicianDashboardProps {
@@ -94,7 +94,7 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
             <div className="flex items-center">
               <Music className="h-8 w-8 text-blue-600" />
               <span className="ml-2 text-xl font-bold text-gray-900">
-                {user.parishName}
+                {user.churchName}
               </span>
             </div>
 

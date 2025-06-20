@@ -2,21 +2,27 @@
 
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { LoginForm } from '@/components/auth/login-form'
 import { Music } from 'lucide-react'
 
 export default function HomePage() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const [isClient, setIsClient] = useState(false)
 
   useEffect(() => {
-    if (session) {
+    setIsClient(true)
+  }, [])
+
+  useEffect(() => {
+    if (session && isClient) {
       router.push('/dashboard')
     }
-  }, [session, router])
+  }, [session, router, isClient])
 
-  if (status === 'loading') {
+  // Show loading during hydration to prevent mismatch
+  if (!isClient || status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
@@ -104,7 +110,7 @@ export default function HomePage() {
             <div className="bg-white rounded-2xl shadow-xl p-8">
               <div className="text-center mb-8">
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  Sign In to Your Parish
+                  Sign In to Your Church
                 </h2>
                 <p className="text-gray-600">
                   Welcome back! Enter your credentials to continue.

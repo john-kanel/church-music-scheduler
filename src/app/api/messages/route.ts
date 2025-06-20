@@ -2,69 +2,64 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { sendMessageEmail } from '@/lib/resend'
+import { sendNotificationEmail } from '@/lib/resend'
 import { logActivity } from '@/lib/activity'
 
-// GET /api/messages - List communications for the parish
+// GET /api/messages - List communications for the church
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
-    if (!session?.user?.parishId) {
+    if (!session?.user?.churchId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const { searchParams } = new URL(request.url)
-    const limit = parseInt(searchParams.get('limit') || '50')
-    const offset = parseInt(searchParams.get('offset') || '0')
+    const type = searchParams.get('type') // BROADCAST, INDIVIDUAL, ANNOUNCEMENT
 
-    const communications = await prisma.communication.findMany({
-      where: {
-        parishId: session.user.parishId
-      },
+    // Build filter
+    const whereClause: any = {
+      churchId: session.user.churchId
+    }
+
+    if (type) {
+      whereClause.type = type
+    }
+
+    const messages = await prisma.communication.findMany({
+      where: whereClause,
       include: {
         sender: {
           select: {
             id: true,
             firstName: true,
-            lastName: true
-          }
-        },
-        event: {
-          select: {
-            id: true,
-            name: true,
-            startTime: true
+            lastName: true,
+            email: true
           }
         }
       },
       orderBy: {
         sentAt: 'desc'
-      },
-      take: limit,
-      skip: offset
-    })
-
-    // Get total count for pagination
-    const totalCount = await prisma.communication.count({
-      where: {
-        parishId: session.user.parishId
       }
     })
 
-    return NextResponse.json({ 
-      communications,
-      pagination: {
-        total: totalCount,
-        limit,
-        offset,
-        hasMore: offset + limit < totalCount
-      }
-    })
+    // Format the response
+    const formattedMessages = messages.map(message => ({
+      id: message.id,
+      subject: message.subject,
+      content: message.message,
+      type: message.type,
+      sender: message.sender,
+      recipientCount: message.recipients.length,
+      recipients: message.recipients, // Array of user IDs
+      sentAt: message.sentAt
+    }))
+
+    return NextResponse.json({ messages: formattedMessages })
   } catch (error) {
-    console.error('Error fetching communications:', error)
+    console.error('Error fetching messages:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch communications' },
+      { error: 'Failed to fetch messages' },
       { status: 500 }
     )
   }
@@ -75,7 +70,7 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
-    if (!session?.user?.parishId) {
+    if (!session?.user?.churchId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -85,188 +80,133 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const {
-      subject,
-      message,
-      type, // EMAIL, SMS, BOTH
-      recipients, // Array of user IDs or "all"
-      eventId
-    } = body
+    const { subject, content, type, recipientIds } = body
 
     // Validation
-    if (!subject || !message || !type) {
+    if (!subject || !content || !type) {
       return NextResponse.json(
-        { error: 'Subject, message, and type are required' },
+        { error: 'Subject, content, and type are required' },
         { status: 400 }
       )
     }
 
-    if (!recipients || (!Array.isArray(recipients) && recipients !== 'all')) {
+    if (type === 'INDIVIDUAL' && (!recipientIds || recipientIds.length === 0)) {
       return NextResponse.json(
-        { error: 'Recipients must be an array of user IDs or "all"' },
+        { error: 'Recipients are required for individual messages' },
         { status: 400 }
       )
     }
 
-    // If specific recipients, validate they belong to the parish
-    let finalRecipients = recipients
-    if (Array.isArray(recipients)) {
-      const validUsers = await prisma.user.findMany({
+    // Get recipients based on type
+    let recipients: any[] = []
+    
+    if (type === 'BROADCAST') {
+      // Send to all church members
+      recipients = await prisma.user.findMany({
         where: {
-          id: { in: recipients },
-          parishId: session.user.parishId
+          churchId: session.user.churchId,
+          id: { not: session.user.id } // Don't send to self
         },
-        select: { id: true }
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          emailNotifications: true
+        }
+      })
+    } else if (type === 'INDIVIDUAL' && recipientIds) {
+      // If specific recipients, validate they belong to the church
+      recipients = await prisma.user.findMany({
+        where: {
+          id: { in: recipientIds },
+          churchId: session.user.churchId
+        },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          emailNotifications: true
+        }
       })
 
-      if (validUsers.length !== recipients.length) {
+      if (recipients.length !== recipientIds.length) {
         return NextResponse.json(
-          { error: 'Some recipients do not belong to your parish' },
+          { error: 'Some recipients do not belong to your church' },
           { status: 400 }
         )
       }
-      finalRecipients = validUsers.map(u => u.id)
     }
 
-    // Create communication record
+    // Create the communication record
     const communication = await prisma.communication.create({
       data: {
         subject,
-        message,
-        type,
-        recipients: finalRecipients === 'all' ? ['all'] : finalRecipients,
-        parishId: session.user.parishId,
+        message: content,
+        type: 'EMAIL', // Map to the enum value
+        churchId: session.user.churchId,
         sentBy: session.user.id,
-        ...(eventId && { eventId })
-      },
-      include: {
-        sender: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true
-          }
-        },
-        event: {
-          select: {
-            id: true,
-            name: true
-          }
-        }
+        recipients: recipients.map(r => r.id)
       }
     })
 
-    // Get actual recipient details for sending
-    let recipientDetails: any[] = []
-    if (finalRecipients === 'all') {
-      recipientDetails = await prisma.user.findMany({
-        where: {
-          parishId: session.user.parishId,
-          role: 'MUSICIAN'
-        },
-        select: {
-          id: true,
-          email: true,
-          phone: true,
-          firstName: true,
-          lastName: true,
-          emailNotifications: true,
-          smsNotifications: true
-        }
+    // Send email notifications to recipients who have email notifications enabled
+    const emailRecipients = recipients.filter(r => r.emailNotifications)
+    
+    if (emailRecipients.length > 0) {
+      // Get church and sender info for email templates
+      const church = await prisma.church.findUnique({
+        where: { id: session.user.churchId },
+        select: { name: true }
       })
-    } else {
-      recipientDetails = await prisma.user.findMany({
-        where: {
-          id: { in: finalRecipients },
-          parishId: session.user.parishId
-        },
-        select: {
-          id: true,
-          email: true,
-          phone: true,
-          firstName: true,
-          lastName: true,
-          emailNotifications: true,
-          smsNotifications: true
-        }
+
+      const sender = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { firstName: true, lastName: true }
       })
+
+      const churchName = church?.name || 'Church Music Ministry'
+      const senderName = sender ? `${sender.firstName} ${sender.lastName}` : 'Music Director'
+
+      // Send emails
+      for (const recipient of emailRecipients) {
+        try {
+          await sendNotificationEmail(
+            recipient.email,
+            `${recipient.firstName} ${recipient.lastName}`,
+            subject,
+            content,
+            senderName,
+            churchName
+          )
+        } catch (emailError) {
+          console.error(`Failed to send email to ${recipient.email}:`, emailError)
+          // Continue sending to other recipients even if one fails
+        }
+      }
     }
 
-    // Send actual emails/SMS
-    // Filter recipients based on their notification preferences
-    const emailRecipients = recipientDetails.filter(r => 
-      r.emailNotifications && (type === 'EMAIL' || type === 'BOTH')
-    )
-    const smsRecipients = recipientDetails.filter(r => 
-      r.smsNotifications && r.phone && (type === 'SMS' || type === 'BOTH')
-    )
-
-    // Get parish and sender info for email templates
-    const parish = await prisma.parish.findUnique({
-      where: { id: session.user.parishId },
-      select: { name: true }
-    })
-
-    const sender = communication.sender
-    const senderName = `${sender.firstName} ${sender.lastName}`
-    const parishName = parish?.name || 'Church Music Ministry'
-
-    // Send emails
-    let emailsSent = 0
-    let emailsFailed = 0
-    
-    for (const recipient of emailRecipients) {
-      try {
-        await sendMessageEmail(
-          recipient.email,
-          `${recipient.firstName} ${recipient.lastName}`,
+    // Create activity log
+    await prisma.activity.create({
+      data: {
+        type: 'MESSAGE_SENT',
+        description: `Sent message: ${subject}`,
+        churchId: session.user.churchId,
+        userId: session.user.id,
+        metadata: {
           subject,
-          message,
-          senderName,
-          parishName
-        )
-        emailsSent++
-      } catch (emailError) {
-        console.error(`Failed to send email to ${recipient.email}:`, emailError)
-        emailsFailed++
-      }
-    }
-
-    // TODO: Implement SMS sending with Twilio
-    // For now, just count SMS recipients
-    const smsSent = 0 // Will be implemented with Twilio
-
-    console.log(`Sent ${emailsSent} emails, ${emailsFailed} failed`)
-    console.log(`Would send SMS to ${smsRecipients.length} recipients`)
-
-    // Log activity
-    const recipientCount = recipientDetails.length
-    const recipientText = finalRecipients === 'all' ? 'all musicians' : 
-      recipientCount === 1 ? '1 musician' : `${recipientCount} musicians`
-    
-    await logActivity({
-      type: 'MESSAGE_SENT',
-      description: `Sent message "${subject}" to ${recipientText}`,
-      parishId: session.user.parishId,
-      userId: session.user.id,
-      metadata: {
-        subject,
-        recipientCount,
-        messageType: type,
-        communicationId: communication.id
+          recipientCount: recipients.length,
+          messageType: type
+        }
       }
     })
 
     return NextResponse.json({
-      message: 'Communication sent successfully',
-      communication,
-      stats: {
-        totalRecipients: recipientDetails.length,
-        emailsSent: emailsSent,
-        emailsFailed: emailsFailed,
-        smsSent: smsSent,
-        smsQueued: smsRecipients.length
-      }
+      message: 'Message sent successfully',
+      communication: communication,
+      recipientCount: recipients.length,
+      emailsSent: emailRecipients.length
     }, { status: 201 })
 
   } catch (error) {

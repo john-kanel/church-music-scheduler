@@ -1,10 +1,11 @@
 import { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 import { prisma } from './db'
 import { UserRole } from '@/generated/prisma'
 
 export const authOptions: NextAuthOptions = {
+  secret: process.env.NEXTAUTH_SECRET || 'your-secret-key-change-this-in-production',
   providers: [
     CredentialsProvider({
       name: 'credentials',
@@ -22,7 +23,7 @@ export const authOptions: NextAuthOptions = {
             email: credentials.email
           },
           include: {
-            parish: true
+            church: true
           }
         })
 
@@ -39,13 +40,21 @@ export const authOptions: NextAuthOptions = {
           return null
         }
 
+        // Mark user as verified on successful login if not already verified
+        if (!user.isVerified) {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { isVerified: true }
+          })
+        }
+
         return {
           id: user.id,
           email: user.email,
           name: `${user.firstName} ${user.lastName}`,
           role: user.role,
-          parishId: user.parishId,
-          parishName: user.parish.name
+          churchId: user.churchId,
+          churchName: user.church.name
         }
       }
     })
@@ -57,8 +66,8 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.role = user.role
-        token.parishId = user.parishId
-        token.parishName = user.parishName
+        token.churchId = user.churchId
+        token.churchName = user.churchName
       }
       return token
     },
@@ -66,8 +75,8 @@ export const authOptions: NextAuthOptions = {
       if (token) {
         session.user.id = token.sub!
         session.user.role = token.role as UserRole
-        session.user.parishId = token.parishId as string
-        session.user.parishName = token.parishName as string
+        session.user.churchId = token.churchId as string
+        session.user.churchName = token.churchName as string
       }
       return session
     }

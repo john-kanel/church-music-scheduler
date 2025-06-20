@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
 
     const session = await getServerSession(authOptions);
     
-    if (!session?.user?.parishId) {
+    if (!session?.user?.churchId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -25,79 +25,66 @@ export async function POST(request: NextRequest) {
     // Create sample activities
     const sampleActivities = [
       {
+        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 6), // 6 days ago
         type: 'EVENT_CREATED' as const,
-        description: 'Created event: Sunday Morning Mass',
-        parishId: session.user.parishId,
+        description: 'Created event: Sunday Morning Service',
+        churchId: session.user.churchId,
         userId: session.user.id,
         metadata: {
-          eventName: 'Sunday Morning Mass',
-          eventDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+          eventName: 'Sunday Morning Service',
+          eventDate: new Date().toISOString()
         }
       },
       {
+        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5), // 5 days ago
         type: 'MUSICIAN_INVITED' as const,
-        description: 'Invited musician: Sarah Johnson',
-        parishId: session.user.parishId,
+        description: 'Invited musician: John Smith',
+        churchId: session.user.churchId,
         userId: session.user.id,
-        metadata: {
-          musicianName: 'Sarah Johnson',
-          musicianEmail: 'sarah@example.com'
-        }
-      },
-      {
-        type: 'MUSICIAN_SIGNED_UP' as const,
-        description: 'John Smith completed account setup',
-        parishId: session.user.parishId,
         metadata: {
           musicianName: 'John Smith',
           musicianEmail: 'john@example.com'
         }
       },
       {
-        type: 'MESSAGE_SENT' as const,
-        description: 'Sent message "Rehearsal Reminder" to 5 musicians',
-        parishId: session.user.parishId,
+        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 4), // 4 days ago
+        type: 'MUSICIAN_SIGNED_UP' as const,
+        description: 'John Smith signed up for Sunday Morning Service',
+        churchId: session.user.churchId,
         userId: session.user.id,
         metadata: {
-          subject: 'Rehearsal Reminder',
-          recipientCount: 5,
-          messageType: 'EMAIL'
+          musicianName: 'John Smith',
+          eventName: 'Sunday Morning Service'
         }
       },
       {
-        type: 'EVENT_CREATED' as const,
-        description: 'Created event: Christmas Eve Service',
-        parishId: session.user.parishId,
+        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3), // 3 days ago
+        type: 'MESSAGE_SENT' as const,
+        description: 'Sent message to all musicians: "Rehearsal this Thursday"',
+        churchId: session.user.churchId,
         userId: session.user.id,
         metadata: {
-          eventName: 'Christmas Eve Service',
-          eventDate: new Date('2024-12-24').toISOString()
+          subject: 'Rehearsal this Thursday',
+          recipientCount: 5,
+          messageType: 'BROADCAST'
         }
       }
     ];
 
-    // Insert activities with different timestamps
-    for (let i = 0; i < sampleActivities.length; i++) {
-      const activity = sampleActivities[i];
-      const createdAt = new Date(Date.now() - (i * 2 * 60 * 60 * 1000)); // Each activity 2 hours apart
-
-      await prisma.activity.create({
-        data: {
-          ...activity,
-          createdAt
-        }
-      });
-    }
+    // Create all activities
+    await prisma.activity.createMany({
+      data: sampleActivities
+    });
 
     return NextResponse.json({
-      message: 'Sample activities created successfully',
-      count: sampleActivities.length
+      message: `Created ${sampleActivities.length} sample activities`,
+      activities: sampleActivities
     });
 
   } catch (error) {
-    console.error('Error creating sample activities:', error);
+    console.error('Error seeding activities:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to seed activities' },
       { status: 500 }
     );
   }

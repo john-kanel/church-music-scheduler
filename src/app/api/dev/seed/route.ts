@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
-    if (!session?.user?.parishId) {
+    if (!session?.user?.churchId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -18,44 +18,44 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
-    const parishId = session.user.parishId
+    const churchId = session.user.churchId
 
     // Create sample event types
     const eventTypes = await Promise.all([
       prisma.eventType.upsert({
-        where: { name_parishId: { name: 'Sunday Mass', parishId } },
+        where: { name_churchId: { name: 'Sunday Mass', churchId } },
         update: {},
         create: {
           name: 'Sunday Mass',
           color: '#3B82F6',
-          parishId
+          churchId
         }
       }),
       prisma.eventType.upsert({
-        where: { name_parishId: { name: 'Wedding', parishId } },
+        where: { name_churchId: { name: 'Wedding', churchId } },
         update: {},
         create: {
           name: 'Wedding',
           color: '#10B981',
-          parishId
+          churchId
         }
       }),
       prisma.eventType.upsert({
-        where: { name_parishId: { name: 'Funeral', parishId } },
+        where: { name_churchId: { name: 'Funeral', churchId } },
         update: {},
         create: {
           name: 'Funeral',
           color: '#6B7280',
-          parishId
+          churchId
         }
       }),
       prisma.eventType.upsert({
-        where: { name_parishId: { name: 'Special Event', parishId } },
+        where: { name_churchId: { name: 'Special Event', churchId } },
         update: {},
         create: {
           name: 'Special Event',
           color: '#F59E0B',
-          parishId
+          churchId
         }
       })
     ])
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
           password: hashedPassword,
           role: 'MUSICIAN',
           isVerified: true,
-          parishId
+          churchId
         }
       }),
       prisma.user.upsert({
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
           password: hashedPassword,
           role: 'MUSICIAN',
           isVerified: true,
-          parishId
+          churchId
         }
       }),
       prisma.user.upsert({
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
           password: hashedPassword,
           role: 'MUSICIAN',
           isVerified: true,
-          parishId
+          churchId
         }
       }),
       prisma.user.upsert({
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
           password: hashedPassword,
           role: 'MUSICIAN',
           isVerified: true,
-          parishId
+          churchId
         }
       }),
       prisma.user.upsert({
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
           password: hashedPassword,
           role: 'MUSICIAN',
           isVerified: true,
-          parishId
+          churchId
         }
       })
     ])
@@ -139,21 +139,21 @@ export async function POST(request: NextRequest) {
     // Create sample groups
     const groups = await Promise.all([
       prisma.group.upsert({
-        where: { name_parishId: { name: 'Choir', parishId } },
+        where: { name_churchId: { name: 'Choir', churchId } },
         update: {},
         create: {
           name: 'Choir',
-          description: 'Main parish choir',
-          parishId
+          description: 'Main church choir',
+          churchId
         }
       }),
       prisma.group.upsert({
-        where: { name_parishId: { name: 'Instrumentalists', parishId } },
+        where: { name_churchId: { name: 'Instrumentalists', churchId } },
         update: {},
         create: {
           name: 'Instrumentalists',
           description: 'Musicians who play instruments',
-          parishId
+          churchId
         }
       })
     ])
@@ -198,88 +198,71 @@ export async function POST(request: NextRequest) {
           description: 'Weekly Sunday morning mass',
           location: 'Main Sanctuary',
           startTime: eventDate,
-          endTime: new Date(eventDate.getTime() + 60 * 60 * 1000), // 1 hour later
-          parishId,
-          eventTypeId: eventTypes[0].id // Sunday Mass
+          endTime: new Date(eventDate.getTime() + 60 * 60 * 1000), // 1 hour duration
+          eventTypeId: eventTypes[0].id,
+          churchId
         }
       })
 
       events.push(event)
 
-      // Create assignments for each event
-      await Promise.all([
-        prisma.eventAssignment.create({
-          data: {
-            eventId: event.id,
-            userId: musicians[i % musicians.length].id,
-            roleName: 'Cantor',
-            status: i < 3 ? 'ACCEPTED' : 'PENDING'
-          }
-        }),
-        prisma.eventAssignment.create({
-          data: {
-            eventId: event.id,
-            userId: musicians[(i + 1) % musicians.length].id,
-            roleName: 'Accompanist',
-            status: i < 2 ? 'ACCEPTED' : 'PENDING'
-          }
-        })
-      ])
+      // Assign musicians to some events (alternating pattern)
+      const musiciansToAssign = i % 2 === 0 ? musicians.slice(0, 3) : musicians.slice(2, 5)
+      
+      await Promise.all(
+                 musiciansToAssign.map(musician =>
+           prisma.eventAssignment.create({
+             data: {
+               eventId: event.id,
+               userId: musician.id,
+               status: 'ACCEPTED'
+             }
+           })
+         )
+      )
     }
 
     // Create a few special events
-    const weddingDate = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000)
-    weddingDate.setHours(14, 0, 0, 0) // 2 PM
-
-    const wedding = await prisma.event.create({
+    const specialEvent = await prisma.event.create({
       data: {
-        name: 'Johnson Wedding',
-        description: 'Wedding ceremony for Tom and Lisa Johnson',
+        name: 'Christmas Concert',
+        description: 'Annual Christmas concert featuring choir and instrumentalists',
         location: 'Main Sanctuary',
-        startTime: weddingDate,
-        endTime: new Date(weddingDate.getTime() + 90 * 60 * 1000), // 1.5 hours
-        parishId,
-        eventTypeId: eventTypes[1].id // Wedding
+        startTime: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+        endTime: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000), // 2 hours
+        eventTypeId: eventTypes[3].id, // Special Event
+        churchId
       }
     })
 
-    await prisma.eventAssignment.create({
-      data: {
-        eventId: wedding.id,
-        userId: musicians[0].id,
-        roleName: 'Soloist',
-        status: 'PENDING'
-      }
-    })
-
-    // Create some sample communications
-    await prisma.communication.create({
-      data: {
-        subject: 'Welcome to the Music Ministry!',
-        message: 'Thank you for joining our music ministry. We look forward to making beautiful music together.',
-        type: 'EMAIL',
-        recipients: ['all'],
-        parishId,
-        sentBy: session.user.id
-      }
-    })
+    // Assign all musicians to the special event
+    await Promise.all(
+             musicians.map(musician =>
+         prisma.eventAssignment.create({
+           data: {
+             eventId: specialEvent.id,
+             userId: musician.id,
+             status: 'PENDING'
+           }
+         })
+       )
+    )
 
     return NextResponse.json({
       message: 'Sample data created successfully',
-      summary: {
+      data: {
         eventTypes: eventTypes.length,
         musicians: musicians.length,
         groups: groups.length,
-        events: events.length + 1, // +1 for wedding
-        assignments: events.length * 2 + 1, // 2 per event + 1 for wedding
-        communications: 1
+        events: events.length + 1,
+        assignments: (events.length * 3) + musicians.length
       }
-    })
+    }, { status: 201 })
 
   } catch (error) {
     console.error('Error seeding data:', error)
     return NextResponse.json(
-      { error: 'Failed to seed data: ' + (error instanceof Error ? error.message : 'Unknown error') },
+      { error: 'Failed to seed data' },
       { status: 500 }
     )
   }

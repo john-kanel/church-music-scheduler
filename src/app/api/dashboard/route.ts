@@ -7,12 +7,12 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
-    if (!session?.user?.parishId) {
+    if (!session?.user?.churchId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const userRole = session.user.role
-    const parishId = session.user.parishId
+    const churchId = session.user.churchId
     const userId = session.user.id
 
     // Get month and year from query params for calendar events
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
 
       const upcomingEvents = await prisma.event.findMany({
         where: {
-          parishId,
+          churchId,
           startTime: {
             gte: now,
             lte: oneWeekFromNow
@@ -59,14 +59,14 @@ export async function GET(request: NextRequest) {
 
       const totalMusicians = await prisma.user.count({
         where: {
-          parishId,
+          churchId,
           role: 'MUSICIAN'
         }
       })
 
       const pendingInvitations = await prisma.invitation.count({
         where: {
-          parishId,
+          churchId,
           status: 'PENDING'
         }
       })
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
 
       const monthEvents = await prisma.event.findMany({
         where: {
-          parishId,
+          churchId,
           startTime: {
             gte: startOfMonth,
             lte: endOfMonth

@@ -16,11 +16,28 @@ function generateTemporaryPassword(): string {
   return password
 }
 
+// Development mode email simulation
+function simulateEmailInDev(emailData: any, tempPassword: string) {
+  console.log('\n=== DEVELOPMENT MODE: EMAIL SIMULATION ===')
+  console.log('To:', emailData.to)
+  console.log('From:', emailData.from)
+  console.log('Subject:', emailData.subject)
+  console.log('Temporary Password:', tempPassword)
+  console.log('=== EMAIL CONTENT ===')
+  console.log(emailData.text)
+  console.log('=== END EMAIL SIMULATION ===\n')
+  
+  return {
+    data: { id: `dev-email-${Date.now()}` },
+    temporaryPassword: tempPassword
+  }
+}
+
 // Send invitation email with auto-generated credentials
 export async function sendInvitationEmail(
   to: string,
   recipientName: string,
-  parishName: string,
+  churchName: string,
   inviteLink: string,
   inviterName: string,
   temporaryPassword?: string
@@ -28,16 +45,19 @@ export async function sendInvitationEmail(
   try {
     const tempPassword = temporaryPassword || generateTemporaryPassword()
     
-    const { data, error } = await resend.emails.send({
-      from: 'Church Music Scheduler <onboarding@resend.dev>',
+    // Use verified domain for all environments
+    const fromAddress = 'Church Music Scheduler <noreply@churchmusicscheduler.com>'
+    
+    const emailData = {
+      from: fromAddress,
       to,
-      subject: `You're invited to join ${parishName}'s Music Ministry`,
+      subject: `You're invited to join ${churchName}'s Music Ministry`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <!-- Logo Section - Space for Parish Logo -->
           <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; border-bottom: 3px solid #667eea;">
             <div style="height: 80px; background: #e9ecef; border: 2px dashed #adb5bd; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
-              <span style="color: #6c757d; font-size: 14px;">Parish Logo Will Appear Here</span>
+              <span style="color: #6c757d; font-size: 14px;">Church Logo Will Appear Here</span>
             </div>
             <h1 style="color: #333; margin: 0; font-size: 28px;">🎵 Music Ministry Invitation</h1>
           </div>
@@ -46,7 +66,7 @@ export async function sendInvitationEmail(
             <h2 style="color: #333; margin-bottom: 20px;">Hello ${recipientName}!</h2>
             
             <p style="color: #666; line-height: 1.6; font-size: 16px;">
-              ${inviterName} has invited you to join <strong>${parishName}'s Music Ministry</strong>. 
+              ${inviterName} has invited you to join <strong>${churchName}'s Music Ministry</strong>. 
               We're excited to have you be part of our musical worship community!
             </p>
 
@@ -111,7 +131,7 @@ export async function sendInvitationEmail(
       text: `
 Hello ${recipientName}!
 
-${inviterName} has invited you to join ${parishName}'s Music Ministry.
+${inviterName} has invited you to join ${churchName}'s Music Ministry.
 
 LOGIN CREDENTIALS:
 Username: ${to}
@@ -140,10 +160,19 @@ This invitation will expire in 7 days. If you have any questions, please contact
 ---
 Sent by Church Music Scheduler
       `
-    })
+    }
+
+    // Send the email using verified domain
+    const { data, error } = await resend.emails.send(emailData)
 
     if (error) {
       console.error('Error sending invitation email:', error)
+      
+      // Provide more helpful error messages
+      if (error.message?.includes('You can only send testing emails')) {
+        throw new Error('Email sending failed: Domain verification issue. Please check your Resend domain configuration.')
+      }
+      
       throw error
     }
 
@@ -161,17 +190,20 @@ export async function sendMessageEmail(
   subject: string,
   message: string,
   senderName: string,
-  parishName: string
+  churchName: string
 ) {
   try {
-    const { data, error } = await resend.emails.send({
-      from: 'Church Music Scheduler <onboarding@resend.dev>',
+    // Use verified domain for all environments
+    const fromAddress = 'Church Music Scheduler <noreply@churchmusicscheduler.com>'
+    
+    const emailData = {
+      from: fromAddress,
       to,
       subject,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background: #667eea; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
-            <h1 style="color: white; margin: 0; font-size: 24px;">${parishName}</h1>
+            <h1 style="color: white; margin: 0; font-size: 24px;">${churchName}</h1>
             <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0;">Music Ministry</p>
           </div>
           
@@ -184,7 +216,7 @@ ${message}
             
             <div style="border-top: 1px solid #eee; margin-top: 30px; padding-top: 20px;">
               <p style="color: #999; font-size: 14px; margin: 0;">
-                Sent by <strong>${senderName}</strong> from ${parishName}
+                Sent by <strong>${senderName}</strong> from ${churchName}
               </p>
             </div>
           </div>
@@ -198,12 +230,21 @@ Hello ${recipientName},
 ${message}
 
 ---
-Sent by ${senderName} from ${parishName}
+Sent by ${senderName} from ${churchName}
       `
-    })
+    }
+
+    // Send the email using verified domain
+    const { data, error } = await resend.emails.send(emailData)
 
     if (error) {
       console.error('Error sending message email:', error)
+      
+      // Provide more helpful error messages
+      if (error.message?.includes('You can only send testing emails')) {
+        throw new Error('Email sending failed: Domain verification issue. Please check your Resend domain configuration.')
+      }
+      
       throw error
     }
 
@@ -212,4 +253,7 @@ Sent by ${senderName} from ${parishName}
     console.error('Failed to send message email:', error)
     throw error
   }
-} 
+}
+
+// Alias for sendMessageEmail to maintain compatibility
+export const sendNotificationEmail = sendMessageEmail; 

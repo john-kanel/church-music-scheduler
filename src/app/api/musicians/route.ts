@@ -3,12 +3,12 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 
-// GET /api/musicians - List musicians for the parish
+// GET /api/musicians - List musicians for the church
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
-    if (!session?.user?.parishId) {
+    if (!session?.user?.churchId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 
     // Build search filter
     const whereClause: any = {
-      parishId: session.user.parishId,
+      churchId: session.user.churchId,
       role: 'MUSICIAN' // Only return musicians, not directors/pastors
     }
 
@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
       isVerified: musician.isVerified,
       emailNotifications: musician.emailNotifications,
       smsNotifications: musician.smsNotifications,
-      joinedAt: musician.createdAt,
+      createdAt: musician.createdAt.toISOString(), // Convert Date to ISO string
       instrument: 'Musician', // Placeholder - we can add proper instrument field later
       groups: musician.groupMemberships.map(gm => gm.group),
       upcomingEvents: musician.eventAssignments.map(ea => ({
@@ -133,7 +133,7 @@ export async function PUT(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
-    if (!session?.user?.parishId) {
+    if (!session?.user?.churchId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -153,11 +153,11 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    // Verify musician belongs to parish
+    // Verify musician belongs to church
     const existingMusician = await prisma.user.findFirst({
       where: {
         id: musicianId,
-        parishId: session.user.parishId
+        churchId: session.user.churchId
       }
     })
 
@@ -173,7 +173,7 @@ export async function PUT(request: NextRequest) {
         // Prevent updating sensitive fields
         email: undefined,
         password: undefined,
-        parishId: undefined,
+        churchId: undefined,
         role: undefined
       },
       select: {
