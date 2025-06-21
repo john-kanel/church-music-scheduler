@@ -1,22 +1,35 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Music, ArrowLeft } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Music, ArrowLeft, GiftIcon } from 'lucide-react'
 import Link from 'next/link'
 
 export default function SignUpPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
     confirmPassword: '',
     churchName: '',
-    role: 'DIRECTOR' as 'DIRECTOR' | 'PASTOR'
+    role: 'DIRECTOR' as 'DIRECTOR' | 'PASTOR',
+    referralCode: ''
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  // Pre-fill referral code from URL parameter
+  useEffect(() => {
+    const refCode = searchParams.get('ref')
+    if (refCode) {
+      setFormData(prev => ({
+        ...prev,
+        referralCode: refCode.toUpperCase()
+      }))
+    }
+  }, [searchParams])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -54,7 +67,8 @@ export default function SignUpPage() {
           email: formData.email,
           password: formData.password,
           churchName: formData.churchName,
-          role: formData.role
+          role: formData.role,
+          referralCode: formData.referralCode || undefined
         }),
       })
 
@@ -210,6 +224,29 @@ export default function SignUpPage() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                 placeholder="Confirm your password"
               />
+            </div>
+
+            {/* Referral Code */}
+            <div>
+              <label htmlFor="referralCode" className="block text-sm font-medium text-gray-700 mb-2">
+                <div className="flex items-center">
+                  <GiftIcon className="h-4 w-4 mr-1 text-green-600" />
+                  Referral Code (Optional)
+                </div>
+              </label>
+              <input
+                type="text"
+                id="referralCode"
+                name="referralCode"
+                value={formData.referralCode}
+                onChange={(e) => setFormData(prev => ({ ...prev, referralCode: e.target.value.toUpperCase() }))}
+                maxLength={8}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900"
+                placeholder="Enter 8-character code"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                🎁 Have a referral code? Enter it here to get your first month free!
+              </p>
             </div>
 
             <button

@@ -190,7 +190,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto md:grid-rows-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto md:grid-rows-1 pt-4">
             {/* Monthly Plan */}
                           <div className="bg-white rounded-2xl shadow-xl p-8 flex flex-col h-full">
               <div className="text-center flex-1">

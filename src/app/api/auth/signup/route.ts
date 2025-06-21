@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcrypt'
 import { prisma } from '@/lib/db'
 import { UserRole } from '@/generated/prisma'
+import { generateReferralCode, isValidReferralCode } from '@/lib/utils'
 
 export async function POST(request: NextRequest) {
   try {
-    const { name, email, password, churchName, role } = await request.json()
+    const { name, email, password, churchName, role, referralCode } = await request.json()
 
     // Validation
     if (!name || !email || !password || !churchName || !role) {
@@ -27,6 +28,31 @@ export async function POST(request: NextRequest) {
         { error: 'Invalid role specified' },
         { status: 400 }
       )
+    }
+
+    // Validate referral code if provided
+    let referringChurch = null
+    if (referralCode && referralCode.trim()) {
+      const trimmedCode = referralCode.trim().toUpperCase()
+      
+      if (!isValidReferralCode(trimmedCode)) {
+        return NextResponse.json(
+          { error: 'Invalid referral code format. Code must be 8 characters.' },
+          { status: 400 }
+        )
+      }
+
+      referringChurch = await prisma.church.findUnique({
+        where: { referralCode: trimmedCode },
+        select: { id: true, name: true }
+      })
+
+      if (!referringChurch) {
+        return NextResponse.json(
+          { error: 'Invalid referral code. Please check and try again.' },
+          { status: 400 }
+        )
+      }
     }
 
     // Check if user already exists
@@ -52,6 +78,9 @@ export async function POST(request: NextRequest) {
 
     // Create parish and user in a transaction
     const result = await prisma.$transaction(async (tx) => {
+      // Generate unique referral code for new church
+      const newReferralCode = await generateReferralCode()
+      
       // Create the church first
       const church = await tx.church.create({
         data: {
@@ -59,6 +88,8 @@ export async function POST(request: NextRequest) {
           address: '', // Default empty, can be updated later
           email: email,
           phone: '', // Default empty, can be updated later
+          referralCode: newReferralCode,
+          referredBy: referringChurch?.id || null
         }
       })
 
@@ -87,6 +118,20 @@ export async function POST(request: NextRequest) {
           }
         }
       })
+
+      // Create referral record if there was a referring church
+      if (referringChurch && referralCode) {
+        await tx.referral.create({
+          data: {
+            referringChurchId: referringChurch.id,
+            referredChurchId: church.id,
+            referredEmail: email.toLowerCase().trim(),
+            referredPersonName: name.trim(),
+            referralCode: referralCode.trim().toUpperCase(),
+            status: 'PENDING' // Will be updated to COMPLETED when they make first payment
+          }
+        })
+      }
 
       return { user, church }
     })
