@@ -67,6 +67,10 @@ export default function EventsPage() {
             <ArrowRight className="h-4 w-4 ml-2" />
           </Link>
           
+          <div className="text-center text-xs text-gray-500 mt-2">
+            The new calendar includes a "Print PDF" button for generating schedule reports
+          </div>
+          
           <Link 
             href="/dashboard"
             className="inline-flex items-center px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors w-full justify-center text-sm"

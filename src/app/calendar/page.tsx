@@ -5,9 +5,10 @@ import { useSession } from 'next-auth/react'
 import { 
   ArrowLeft, Calendar, Plus, Search, Filter, Users, Clock, MapPin, 
   ChevronLeft, ChevronRight, Settings, Trash2, Edit, Eye, EyeOff,
-  Palette, Save, X
+  Palette, Save, X, FileText
 } from 'lucide-react'
 import Link from 'next/link'
+import jsPDF from 'jspdf'
 import { EventDetailsModal } from '@/components/events/event-details-modal'
 import { CreateTemplateModal } from '@/components/events/create-template-modal'
 import { CreateEventModal } from '@/components/events/create-event-modal'
@@ -241,6 +242,162 @@ export default function CalendarPage() {
     setShowCreateEvent(true)
   }
 
+  const generatePDF = () => {
+    try {
+      const pdf = new jsPDF()
+      const pageWidth = pdf.internal.pageSize.getWidth()
+      const pageHeight = pdf.internal.pageSize.getHeight()
+      let yPosition = 20
+
+    // Header
+    pdf.setFontSize(20)
+    pdf.setFont('helvetica', 'bold')
+    const title = `${session?.user?.churchName || 'Church'} Music Schedule`
+    pdf.text(title, pageWidth / 2, yPosition, { align: 'center' })
+    
+    yPosition += 10
+    pdf.setFontSize(14)
+    pdf.setFont('helvetica', 'normal')
+    const dateRange = viewMode === 'calendar' 
+      ? `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`
+      : listFilter === 'upcoming' ? 'Upcoming Events' : 'Past Events'
+    pdf.text(dateRange, pageWidth / 2, yPosition, { align: 'center' })
+    
+    yPosition += 20
+
+    // Get events to display
+    const now = new Date()
+    let eventsToShow = events
+
+    if (viewMode === 'list') {
+      eventsToShow = events.filter(event => {
+        const eventDate = new Date(event.startTime)
+        return listFilter === 'upcoming' ? eventDate >= now : eventDate < now
+      })
+    }
+
+    // Sort events by date
+    eventsToShow = eventsToShow.sort((a, b) => {
+      const dateA = new Date(a.startTime)
+      const dateB = new Date(b.startTime)
+      return dateA.getTime() - dateB.getTime()
+    })
+
+    if (eventsToShow.length === 0) {
+      pdf.setFontSize(12)
+      pdf.text('No events to display', pageWidth / 2, yPosition, { align: 'center' })
+    } else {
+      // Events list
+      pdf.setFontSize(12)
+      pdf.setFont('helvetica', 'bold')
+      
+      eventsToShow.forEach((event, index) => {
+        // Check if we need a new page
+        if (yPosition > pageHeight - 40) {
+          pdf.addPage()
+          yPosition = 20
+        }
+
+        const eventDate = new Date(event.startTime)
+        const eventEndDate = event.endTime ? new Date(event.endTime) : null
+        
+        // Event title
+        pdf.setFont('helvetica', 'bold')
+        pdf.text(event.name, 20, yPosition)
+        yPosition += 7
+
+        // Date and time
+        pdf.setFont('helvetica', 'normal')
+        const dateStr = eventDate.toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        })
+        const timeStr = eventDate.toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        }) + (eventEndDate ? ` - ${eventEndDate.toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        })}` : '')
+        
+        pdf.text(`Date: ${dateStr}`, 25, yPosition)
+        yPosition += 5
+        pdf.text(`Time: ${timeStr}`, 25, yPosition)
+        yPosition += 5
+
+        // Location
+        if (event.location) {
+          pdf.text(`Location: ${event.location}`, 25, yPosition)
+          yPosition += 5
+        }
+
+        // Event type
+        pdf.text(`Type: ${event.eventType.name}`, 25, yPosition)
+        yPosition += 5
+
+        // Assignments summary
+        if (event.assignments && event.assignments.length > 0) {
+          const assignedCount = event.assignments.filter(a => a.user).length
+          const openCount = event.assignments.filter(a => !a.user).length
+          const totalSpots = event.assignments.length
+          
+          pdf.text(`Assignments: ${assignedCount}/${totalSpots} filled (${openCount} open)`, 25, yPosition)
+          yPosition += 5
+
+          // List assignments
+          event.assignments.forEach((assignment) => {
+            if (yPosition > pageHeight - 20) {
+              pdf.addPage()
+              yPosition = 20
+            }
+            
+            const assigneeText = assignment.user 
+              ? `${assignment.user.firstName} ${assignment.user.lastName}`
+              : assignment.group?.name || 'Open'
+            
+            pdf.text(`  • ${assignment.roleName}: ${assigneeText}`, 30, yPosition)
+            yPosition += 4
+          })
+        }
+
+        // Description
+        if (event.description) {
+          yPosition += 2
+          const lines = pdf.splitTextToSize(event.description, pageWidth - 50)
+          pdf.text(`Description: ${lines[0]}`, 25, yPosition)
+          if (lines.length > 1) {
+            for (let i = 1; i < lines.length; i++) {
+              yPosition += 4
+              pdf.text(lines[i], 25, yPosition)
+            }
+          }
+          yPosition += 5
+        }
+
+        yPosition += 10 // Space between events
+      })
+    }
+
+    // Footer
+    const footerY = pageHeight - 15
+    pdf.setFontSize(8)
+    pdf.setFont('helvetica', 'normal')
+    pdf.text(`Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, 20, footerY)
+    pdf.text(`Page 1 of ${pdf.getNumberOfPages()}`, pageWidth - 20, footerY, { align: 'right' })
+
+    // Save the PDF
+    const filename = `${session?.user?.churchName?.replace(/[^a-zA-Z0-9]/g, '_') || 'Church'}_Schedule_${new Date().toISOString().split('T')[0]}.pdf`
+    pdf.save(filename)
+    } catch (error) {
+      console.error('Error generating PDF:', error)
+      alert('Failed to generate PDF. Please try again.')
+    }
+  }
+
   if (!session) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -281,6 +438,13 @@ export default function CalendarPage() {
               </div>
             </div>
             <div className="flex items-center space-x-3">
+              <button
+                onClick={generatePDF}
+                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Print PDF
+              </button>
               <button
                 onClick={() => setViewMode(viewMode === 'calendar' ? 'list' : 'calendar')}
                 className="flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"

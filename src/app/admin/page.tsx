@@ -188,6 +188,32 @@ export default function AdminPage() {
     }
   }
 
+  const deleteChurch = async (churchId: string, churchName: string, userCount: number) => {
+    if (!confirm(`Are you sure you want to delete church "${churchName}"? This will permanently delete:\n\n• The church and all its settings\n• ${userCount} users\n• All events and assignments\n• All groups and communications\n• All related data\n\nThis action cannot be undone!`)) {
+      return
+    }
+
+    try {
+      const response = await fetch('/api/admin/churches', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ churchId })
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        alert(`Church "${churchName}" and all related data deleted successfully!`)
+        loadAdminData()
+      } else {
+        const error = await response.json()
+        alert(`Failed to delete church: ${error.error || 'Unknown error'}`)
+      }
+    } catch (error) {
+      console.error('Error deleting church:', error)
+      alert('Error deleting church')
+    }
+  }
+
   const logout = () => {
     document.cookie = 'admin-auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
     window.location.href = '/admin/login'
@@ -508,6 +534,14 @@ export default function AdminPage() {
                               <option value="suspended">Suspended</option>
                               <option value="cancelled">Cancelled</option>
                             </select>
+                            <button
+                              onClick={() => deleteChurch(church.id, church.name, church.userCount)}
+                              className="flex items-center px-2 py-1 text-xs bg-red-100 text-red-800 rounded hover:bg-red-200"
+                              title="Delete Church"
+                            >
+                              <Trash2 className="h-3 w-3 mr-1" />
+                              Delete
+                            </button>
                           </div>
                         </td>
                       </tr>
