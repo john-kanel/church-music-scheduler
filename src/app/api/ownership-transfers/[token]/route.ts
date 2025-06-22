@@ -5,11 +5,13 @@ const prisma = new PrismaClient()
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { token: string } }
+  { params }: { params: Promise<{ token: string }> }
 ) {
   try {
+    const { token } = await params
+    
     const transfer = await prisma.ownershipTransfer.findUnique({
-      where: { token: params.token },
+      where: { token },
       include: {
         church: {
           select: { name: true }

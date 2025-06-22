@@ -9,9 +9,10 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { token: string } }
+  { params }: { params: Promise<{ token: string }> }
 ) {
   try {
+    const { token } = await params
     const session = await getServerSession(authOptions)
     
     if (!session?.user?.id) {
@@ -20,7 +21,7 @@ export async function POST(
 
     // Find the ownership transfer
     const transfer = await prisma.ownershipTransfer.findUnique({
-      where: { token: params.token },
+      where: { token },
       include: {
         church: true
       }

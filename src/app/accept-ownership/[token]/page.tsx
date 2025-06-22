@@ -34,7 +34,13 @@ interface OwnershipTransfer {
   }
 }
 
-export default function AcceptOwnershipPage({ params }: { params: { token: string } }) {
+export default async function AcceptOwnershipPage({ params }: { params: Promise<{ token: string }> }) {
+  const { token } = await params
+  
+  return <AcceptOwnershipClient token={token} />
+}
+
+function AcceptOwnershipClient({ token }: { token: string }) {
   const router = useRouter()
   const { data: session, status } = useSession()
   const [transfer, setTransfer] = useState<OwnershipTransfer | null>(null)
@@ -52,7 +58,7 @@ export default function AcceptOwnershipPage({ params }: { params: { token: strin
   useEffect(() => {
     const fetchTransfer = async () => {
       try {
-        const response = await fetch(`/api/ownership-transfers/${params.token}`)
+        const response = await fetch(`/api/ownership-transfers/${token}`)
         if (response.ok) {
           const data = await response.json()
           setTransfer(data.transfer)
@@ -76,7 +82,7 @@ export default function AcceptOwnershipPage({ params }: { params: { token: strin
     }
 
     fetchTransfer()
-  }, [params.token])
+  }, [token])
 
   useEffect(() => {
     if (transfer && status !== 'loading') {
@@ -133,7 +139,7 @@ export default function AcceptOwnershipPage({ params }: { params: { token: strin
           firstName,
           lastName,
           password,
-          ownershipToken: params.token
+          ownershipToken: token
         })
       })
 
@@ -164,7 +170,7 @@ export default function AcceptOwnershipPage({ params }: { params: { token: strin
 
   const handleSignIn = async () => {
     await signIn('credentials', { 
-      callbackUrl: `/accept-ownership/${params.token}`,
+      callbackUrl: `/accept-ownership/${token}`,
       email: transfer?.inviteeEmail 
     })
   }
@@ -173,7 +179,7 @@ export default function AcceptOwnershipPage({ params }: { params: { token: strin
     setAccepting(true)
     
     try {
-      const response = await fetch(`/api/ownership-transfers/${params.token}/accept`, {
+      const response = await fetch(`/api/ownership-transfers/${token}/accept`, {
         method: 'POST'
       })
 
