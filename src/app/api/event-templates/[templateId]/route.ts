@@ -16,7 +16,7 @@ export async function PUT(
     }
 
     // Only directors and pastors can update templates
-    if (!['DIRECTOR', 'PASTOR'].includes(session.user.role)) {
+    if (!['DIRECTOR', 'ASSOCIATE_DIRECTOR', 'PASTOR'].includes(session.user.role)) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
@@ -139,7 +139,7 @@ export async function DELETE(
     }
 
     // Only directors and pastors can delete templates
-    if (!['DIRECTOR', 'PASTOR'].includes(session.user.role)) {
+    if (!['DIRECTOR', 'ASSOCIATE_DIRECTOR', 'PASTOR'].includes(session.user.role)) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 

@@ -16,7 +16,7 @@ export async function PUT(
     }
 
     // Only directors, pastors, and associate pastors can update musician details
-    if (!['DIRECTOR', 'PASTOR', 'ASSOCIATE_PASTOR'].includes(session.user.role)) {
+    if (!['DIRECTOR', 'ASSOCIATE_DIRECTOR', 'PASTOR', 'ASSOCIATE_PASTOR'].includes(session.user.role)) {
       return NextResponse.json({ 
         error: `Insufficient permissions. Only directors, pastors, and associate pastors can edit musicians. Your role: ${session.user.role}` 
       }, { status: 403 })

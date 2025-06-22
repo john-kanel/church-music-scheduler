@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Only directors and pastors can create events
-    if (!['DIRECTOR', 'PASTOR'].includes(session.user.role)) {
+    if (!['DIRECTOR', 'ASSOCIATE_DIRECTOR', 'PASTOR'].includes(session.user.role)) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 

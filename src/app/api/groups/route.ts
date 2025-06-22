@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Only directors and pastors can create groups
-    if (!['DIRECTOR', 'PASTOR'].includes(session.user.role)) {
+    if (!['DIRECTOR', 'ASSOCIATE_DIRECTOR', 'PASTOR'].includes(session.user.role)) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
@@ -158,7 +158,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Only directors and pastors can update groups
-    if (!['DIRECTOR', 'PASTOR'].includes(session.user.role)) {
+    if (!['DIRECTOR', 'ASSOCIATE_DIRECTOR', 'PASTOR'].includes(session.user.role)) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 

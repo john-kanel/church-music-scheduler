@@ -327,7 +327,7 @@ async function sendReferrerNotificationEmail(
     const referringUser = await prisma.user.findFirst({
       where: { 
         churchId: referringChurch.id,
-        role: { in: ['DIRECTOR', 'PASTOR', 'ASSOCIATE_PASTOR'] }
+        role: { in: ['DIRECTOR', 'ASSOCIATE_DIRECTOR', 'PASTOR', 'ASSOCIATE_PASTOR'] }
       },
       orderBy: { createdAt: 'asc' }
     })

@@ -139,7 +139,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Only directors and pastors can update musician settings
-    if (!['DIRECTOR', 'PASTOR'].includes(session.user.role)) {
+    if (!['DIRECTOR', 'ASSOCIATE_DIRECTOR', 'PASTOR'].includes(session.user.role)) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 

@@ -32,7 +32,7 @@ export default function DashboardPage() {
     return null
   }
 
-  const isDirector = ['DIRECTOR', 'PASTOR', 'ASSOCIATE_PASTOR'].includes(session.user.role)
+  const isDirector = ['DIRECTOR', 'ASSOCIATE_DIRECTOR', 'PASTOR', 'ASSOCIATE_PASTOR'].includes(session.user.role)
 
   return (
     <div className="min-h-screen bg-gray-50">

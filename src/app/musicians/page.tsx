@@ -147,7 +147,7 @@ export default function MusiciansPage() {
   }
 
   // Check if user can edit musicians
-  const canEditMusicians = session?.user?.role && ['DIRECTOR', 'PASTOR', 'ASSOCIATE_PASTOR'].includes(session.user.role)
+  const canEditMusicians = session?.user?.role && ['DIRECTOR', 'ASSOCIATE_DIRECTOR', 'PASTOR', 'ASSOCIATE_PASTOR'].includes(session.user.role)
 
   // Filter musicians based on search term and status
   const filteredMusicians = musicians.filter(musician => {

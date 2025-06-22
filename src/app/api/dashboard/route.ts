@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       ? new Date(parseInt(yearParam), parseInt(monthParam) - 1, 1)
       : new Date()
 
-    if (userRole === 'DIRECTOR' || userRole === 'PASTOR') {
+    if (userRole === 'DIRECTOR' || userRole === 'ASSOCIATE_DIRECTOR' || userRole === 'PASTOR') {
       // Director Dashboard Data
       const now = new Date()
       const oneWeekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)

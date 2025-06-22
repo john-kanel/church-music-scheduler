@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!['DIRECTOR', 'PASTOR'].includes(role)) {
+    if (!['DIRECTOR', 'ASSOCIATE_DIRECTOR', 'PASTOR'].includes(role)) {
       return NextResponse.json(
         { error: 'Invalid role specified' },
         { status: 400 }

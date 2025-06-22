@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
       include: { church: true }
     })
 
-    if (!user || (user.role !== 'DIRECTOR' && user.role !== 'PASTOR')) {
+    if (!user || (user.role !== 'DIRECTOR' && user.role !== 'ASSOCIATE_DIRECTOR' && user.role !== 'PASTOR')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
       include: { church: true }
     })
 
-    if (!user || (user.role !== 'DIRECTOR' && user.role !== 'PASTOR')) {
+    if (!user || (user.role !== 'DIRECTOR' && user.role !== 'ASSOCIATE_DIRECTOR' && user.role !== 'PASTOR')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
