@@ -9,7 +9,6 @@ import {
   Calendar, 
   Settings, 
   Bell, 
-  Search,
   ChevronDown,
   TrendingUp,
   Clock,
@@ -333,22 +332,17 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
         <nav className="bg-white shadow-sm border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
-              {/* Logo and Parish Name */}
+              {/* Logo and App Name Placeholder */}
               <Link href="/dashboard" className="flex items-center hover:opacity-80 transition-opacity">
                 <Music className="h-8 w-8 text-blue-600 mr-3" />
-                <h1 className="text-xl font-bold text-gray-900">{user.churchName}</h1>
+                <h1 className="text-xl font-bold text-gray-900">Church Music Scheduler</h1>
               </Link>
 
-              {/* Search and Actions */}
+              {/* Church Name and Actions */}
               <div className="flex items-center space-x-4">
-                {/* Search */}
-                <div className="relative hidden md:block">
-                  <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search events, musicians..."
-                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                  />
+                {/* Church Name */}
+                <div className="hidden md:block">
+                  <h2 className="text-lg font-medium text-gray-700">{user.churchName}</h2>
                 </div>
 
                 {/* Notifications */}

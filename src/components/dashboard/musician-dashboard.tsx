@@ -95,11 +95,16 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
             <div className="flex items-center">
               <Music className="h-8 w-8 text-blue-600" />
               <span className="ml-2 text-xl font-bold text-gray-900">
-                {user.churchName}
+                Church Music Scheduler
               </span>
             </div>
 
             <div className="flex items-center space-x-4">
+              {/* Church Name */}
+              <div className="hidden md:block">
+                <h2 className="text-lg font-medium text-gray-700">{user.churchName}</h2>
+              </div>
+
               <button className="relative p-2 text-gray-400 hover:text-gray-600">
                 <Bell className="h-6 w-6" />
                 <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full"></span>
