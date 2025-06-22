@@ -6,9 +6,103 @@ import { generateReferralCode, isValidReferralCode } from '@/lib/utils'
 
 export async function POST(request: NextRequest) {
   try {
-    const { name, email, password, churchName, role, referralCode } = await request.json()
+    const { name, email, password, churchName, role, referralCode, ownershipToken, firstName, lastName } = await request.json()
 
-    // Validation
+    // Handle ownership token signup (different validation)
+    if (ownershipToken) {
+      // For ownership transfers, we need firstName, lastName, email, password
+      if (!firstName || !lastName || !email || !password) {
+        return NextResponse.json(
+          { error: 'First name, last name, email, and password are required' },
+          { status: 400 }
+        )
+      }
+
+      if (password.length < 8) {
+        return NextResponse.json(
+          { error: 'Password must be at least 8 characters long' },
+          { status: 400 }
+        )
+      }
+
+      // Verify ownership token
+      const transfer = await prisma.ownershipTransfer.findUnique({
+        where: { token: ownershipToken },
+        include: { church: true }
+      })
+
+      if (!transfer || transfer.status !== 'PENDING' || new Date() > transfer.expiresAt) {
+        return NextResponse.json(
+          { error: 'Invalid or expired ownership invitation' },
+          { status: 400 }
+        )
+      }
+
+      if (transfer.inviteeEmail !== email.toLowerCase().trim()) {
+        return NextResponse.json(
+          { error: 'Email must match the invitation' },
+          { status: 400 }
+        )
+      }
+
+      // Check if user already exists
+      const existingUser = await prisma.user.findUnique({
+        where: { email: email.toLowerCase().trim() }
+      })
+
+      if (existingUser) {
+        return NextResponse.json(
+          { error: 'A user with this email already exists' },
+          { status: 409 }
+        )
+      }
+
+      // Hash password
+      const saltRounds = 12
+      const hashedPassword = await bcrypt.hash(password, saltRounds)
+
+      // Create user for ownership transfer
+      const user = await prisma.user.create({
+        data: {
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          email: email.toLowerCase().trim(),
+          password: hashedPassword,
+          role: transfer.inviteeRole as UserRole,
+          churchId: transfer.churchId,
+        },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          role: true,
+          churchId: true,
+          church: {
+            select: {
+              id: true,
+              name: true
+            }
+          }
+        }
+      })
+
+      return NextResponse.json(
+        {
+          message: 'Account created successfully',
+          user: {
+            id: user.id,
+            name: `${user.firstName} ${user.lastName}`.trim(),
+            email: user.email,
+            role: user.role,
+            church: user.church
+          }
+        },
+        { status: 201 }
+      )
+    }
+
+    // Regular signup validation
     if (!name || !email || !password || !churchName || !role) {
       return NextResponse.json(
         { error: 'All fields are required' },
@@ -73,8 +167,8 @@ export async function POST(request: NextRequest) {
 
     // Split name into firstName and lastName
     const nameParts = name.trim().split(' ')
-    const firstName = nameParts[0] || ''
-    const lastName = nameParts.slice(1).join(' ') || ''
+    const userFirstName = nameParts[0] || ''
+    const userLastName = nameParts.slice(1).join(' ') || ''
 
     // Create parish and user in a transaction
     const result = await prisma.$transaction(async (tx) => {
@@ -96,8 +190,8 @@ export async function POST(request: NextRequest) {
       // Create the user with the parish connection
       const user = await tx.user.create({
         data: {
-          firstName: firstName,
-          lastName: lastName,
+          firstName: userFirstName,
+          lastName: userLastName,
           email: email.toLowerCase().trim(),
           password: hashedPassword,
           role: role as UserRole,

@@ -15,9 +15,11 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Only directors and pastors can update musician details
-    if (!['DIRECTOR', 'PASTOR'].includes(session.user.role)) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
+    // Only directors, pastors, and associate pastors can update musician details
+    if (!['DIRECTOR', 'PASTOR', 'ASSOCIATE_PASTOR'].includes(session.user.role)) {
+      return NextResponse.json({ 
+        error: `Insufficient permissions. Only directors, pastors, and associate pastors can edit musicians. Your role: ${session.user.role}` 
+      }, { status: 403 })
     }
 
     const { musicianId } = await params
@@ -71,7 +73,7 @@ export async function PUT(
         phone: phone ? phone.trim() : null,
         ...(typeof isVerified === 'boolean' && { isVerified }),
         ...(status && { 
-          isVerified: status === 'active' ? true : status === 'pending' ? false : false
+          isVerified: status === 'active'
         })
       },
       select: {
@@ -87,7 +89,10 @@ export async function PUT(
 
     return NextResponse.json({
       message: 'Musician updated successfully',
-      musician: updatedMusician
+      musician: {
+        ...updatedMusician,
+        status: updatedMusician.isVerified ? 'active' : 'pending'
+      }
     })
 
   } catch (error) {

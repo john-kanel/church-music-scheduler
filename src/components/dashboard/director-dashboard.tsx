@@ -24,7 +24,8 @@ import {
   UserPlus,
   Activity,
   GiftIcon,
-  LifeBuoy
+  LifeBuoy,
+  HandHeart
 } from 'lucide-react'
 import Link from 'next/link'
 import { CreateEventModal } from '../events/create-event-modal'
@@ -91,6 +92,11 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
   const [showSeedModal, setShowSeedModal] = useState(false)
   const [activities, setActivities] = useState<Activity[]>([])
   const [activitiesLoading, setActivitiesLoading] = useState(true)
+  
+  // Dropdown states for new navigation
+  const [showEventsDropdown, setShowEventsDropdown] = useState(false)
+  const [showMusiciansDropdown, setShowMusiciansDropdown] = useState(false)
+  const [showMessagesDropdown, setShowMessagesDropdown] = useState(false)
 
   // Fetch dashboard data
   useEffect(() => {
@@ -196,6 +202,25 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
       console.error('Error fetching event details:', error)
     }
   }
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement
+      
+      // Don't close if clicking on dropdown buttons or dropdown content
+      if (target.closest('[data-dropdown]')) {
+        return
+      }
+      
+      setShowEventsDropdown(false)
+      setShowMusiciansDropdown(false)
+      setShowMessagesDropdown(false)
+    }
+
+    document.addEventListener('click', handleClickOutside)
+    return () => document.removeEventListener('click', handleClickOutside)
+  }, [])
 
   // Calendar helpers
   const monthNames = [
@@ -395,6 +420,12 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                         <CreditCard className="h-4 w-4 inline mr-2" />
                         Billing
                       </Link>
+                      {(user.role === 'DIRECTOR' || user.role === 'PASTOR') && (
+                        <Link href="/transfer-ownership" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                          <HandHeart className="h-4 w-4 inline mr-2" />
+                          Transfer Ownership
+                        </Link>
+                      )}
                       <Link href="/support" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                         <LifeBuoy className="h-4 w-4 inline mr-2" />
                         Support
@@ -423,28 +454,124 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                   <h1 className="text-3xl font-bold text-gray-900">Welcome back, {session?.user?.name}!</h1>
                   <p className="text-gray-600 mt-1">Here's what's happening at {session?.user?.churchName || 'your church'}</p>
                 </div>
-                <div className="flex space-x-3">
-                  <button 
-                    onClick={() => setShowCreateEventModal(true)}
-                    className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Event
-                  </button>
-                  <button 
-                    onClick={() => setShowInviteModal(true)}
-                    className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                  >
-                    <Users className="h-4 w-4 mr-2" />
-                    Invite Musicians
-                  </button>
-                  <button 
-                    onClick={() => setShowMessageModal(true)}
-                    className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-                  >
-                    <Mail className="h-4 w-4 mr-2" />
-                    Send Message
-                  </button>
+                <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
+                  {/* Events Navigation Button */}
+                  <div className="relative" data-dropdown>
+                    <div className="flex">
+                      <Link 
+                        href="/calendar"
+                        className="flex items-center px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-l-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
+                      >
+                        <Calendar className="h-4 w-4 mr-1 sm:mr-2" />
+                        <span className="hidden sm:inline">Events</span>
+                        <span className="sm:hidden">Events</span>
+                      </Link>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setShowMusiciansDropdown(false)
+                          setShowMessagesDropdown(false)
+                          setShowEventsDropdown(!showEventsDropdown)
+                        }}
+                        className="px-2 py-2 bg-blue-600 text-white border-l border-blue-500 rounded-r-lg hover:bg-blue-700 transition-colors"
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                      </button>
+                    </div>
+                    {showEventsDropdown && (
+                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border py-1 z-20">
+                        <button
+                          onClick={() => {
+                            setShowCreateEventModal(true)
+                            setShowEventsDropdown(false)
+                          }}
+                          className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        >
+                          <Plus className="h-4 w-4 inline mr-2" />
+                          Create Event
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Musicians Navigation Button */}
+                  <div className="relative" data-dropdown>
+                    <div className="flex">
+                      <Link 
+                        href="/musicians"
+                        className="flex items-center px-3 sm:px-4 py-2 bg-green-600 text-white rounded-l-lg hover:bg-green-700 transition-colors text-sm sm:text-base"
+                      >
+                        <Users className="h-4 w-4 mr-1 sm:mr-2" />
+                        <span className="hidden sm:inline">Musicians</span>
+                        <span className="sm:hidden">Musicians</span>
+                      </Link>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setShowEventsDropdown(false)
+                          setShowMessagesDropdown(false)
+                          setShowMusiciansDropdown(!showMusiciansDropdown)
+                        }}
+                        className="px-2 py-2 bg-green-600 text-white border-l border-green-500 rounded-r-lg hover:bg-green-700 transition-colors"
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                      </button>
+                    </div>
+                    {showMusiciansDropdown && (
+                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border py-1 z-20">
+                        <button
+                          onClick={() => {
+                            setShowInviteModal(true)
+                            setShowMusiciansDropdown(false)
+                          }}
+                          className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        >
+                          <UserPlus className="h-4 w-4 inline mr-2" />
+                          Invite Musician
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Messages Navigation Button */}
+                  <div className="relative" data-dropdown>
+                    <div className="flex">
+                      <Link 
+                        href="/messages"
+                        className="flex items-center px-3 sm:px-4 py-2 bg-purple-600 text-white rounded-l-lg hover:bg-purple-700 transition-colors text-sm sm:text-base"
+                      >
+                        <MessageSquare className="h-4 w-4 mr-1 sm:mr-2" />
+                        <span className="hidden sm:inline">Messages</span>
+                        <span className="sm:hidden">Messages</span>
+                      </Link>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setShowEventsDropdown(false)
+                          setShowMusiciansDropdown(false)
+                          setShowMessagesDropdown(!showMessagesDropdown)
+                        }}
+                        className="px-2 py-2 bg-purple-600 text-white border-l border-purple-500 rounded-r-lg hover:bg-purple-700 transition-colors"
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                      </button>
+                    </div>
+                    {showMessagesDropdown && (
+                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border py-1 z-20">
+                        <button
+                          onClick={() => {
+                            setShowMessageModal(true)
+                            setShowMessagesDropdown(false)
+                          }}
+                          className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        >
+                          <Mail className="h-4 w-4 inline mr-2" />
+                          Send Message
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
                   {/* Development seed button - only show in development */}
                   {typeof window !== 'undefined' && window.location.hostname === 'localhost' && (
                     <>
@@ -750,44 +877,7 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                 </div>
               </div>
 
-              {/* Navigation Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Link 
-                  href="/events"
-                  className="bg-white rounded-xl shadow-sm p-6 border hover:border-blue-300 transition-colors text-center"
-                >
-                  <Calendar className="h-8 w-8 text-blue-600 mx-auto mb-3" />
-                  <h3 className="font-medium text-gray-900">Events</h3>
-                  <p className="text-sm text-gray-600 mt-1">Manage services</p>
-                </Link>
 
-                <Link 
-                  href="/musicians"
-                  className="bg-white rounded-xl shadow-sm p-6 border hover:border-green-300 transition-colors text-center"
-                >
-                  <Users className="h-8 w-8 text-green-600 mx-auto mb-3" />
-                  <h3 className="font-medium text-gray-900">Musicians</h3>
-                  <p className="text-sm text-gray-600 mt-1">View roster</p>
-                </Link>
-
-                <Link 
-                  href="/messages"
-                  className="bg-white rounded-xl shadow-sm p-6 border hover:border-purple-300 transition-colors text-center"
-                >
-                  <MessageSquare className="h-8 w-8 text-purple-600 mx-auto mb-3" />
-                  <h3 className="font-medium text-gray-900">Messages</h3>
-                  <p className="text-sm text-gray-600 mt-1">Communications</p>
-                </Link>
-
-                <Link 
-                  href="/reports"
-                  className="bg-white rounded-xl shadow-sm p-6 border hover:border-indigo-300 transition-colors text-center"
-                >
-                  <BarChart3 className="h-8 w-8 text-indigo-600 mx-auto mb-3" />
-                  <h3 className="font-medium text-gray-900">Reports</h3>
-                  <p className="text-sm text-gray-600 mt-1">Analytics</p>
-                </Link>
-              </div>
             </div>
           </main>
         </div>

@@ -14,7 +14,7 @@ interface Musician {
   phone?: string
   isVerified: boolean
   createdAt: string
-  status: 'active' | 'pending' | 'inactive'
+  status?: 'active' | 'pending' | 'inactive'
 }
 
 interface EditingMusician {
@@ -73,7 +73,7 @@ export default function MusiciansPage() {
       lastName: musician.lastName,
       email: musician.email,
       phone: musician.phone || '',
-      status: musician.isVerified ? 'active' : 'pending'
+      status: musician.status || (musician.isVerified ? 'active' : 'pending')
     })
   }
 
@@ -84,6 +84,10 @@ export default function MusiciansPage() {
 
   const saveEdit = async () => {
     if (!editingData) return
+
+    // Debug: Log user role
+    console.log('Current user role:', session?.user?.role)
+    console.log('Current user church ID:', session?.user?.churchId)
 
     setSaving(true)
     try {
@@ -102,20 +106,34 @@ export default function MusiciansPage() {
       })
 
       if (response.ok) {
+        const result = await response.json()
         // Update the local state
         setMusicians(prev => prev.map(musician => 
           musician.id === editingData.id 
-            ? { ...musician, ...editingData, phone: editingData.phone || undefined }
+            ? { 
+                ...musician, 
+                firstName: editingData.firstName,
+                lastName: editingData.lastName,
+                email: editingData.email,
+                phone: editingData.phone || undefined,
+                status: editingData.status,
+                isVerified: editingData.status === 'active'
+              }
             : musician
         ))
         setEditingId(null)
         setEditingData(null)
       } else {
-        console.error('Failed to update musician')
-        alert('Failed to update musician. Please try again.')
+        console.error('Failed to update musician - Response status:', response.status)
+        try {
+          const errorData = await response.json()
+          alert(`Failed to update musician: ${errorData.error || 'Please try again.'}`)
+        } catch {
+          alert('Failed to update musician. Please try again.')
+        }
       }
     } catch (error) {
-      console.error('Error updating musician:', error)
+      console.error('Error updating musician:', error?.toString?.() || 'Unknown error')
       alert('Error updating musician. Please try again.')
     } finally {
       setSaving(false)
@@ -127,6 +145,9 @@ export default function MusiciansPage() {
       setEditingData({ ...editingData, [field]: value })
     }
   }
+
+  // Check if user can edit musicians
+  const canEditMusicians = session?.user?.role && ['DIRECTOR', 'PASTOR', 'ASSOCIATE_PASTOR'].includes(session.user.role)
 
   // Filter musicians based on search term and status
   const filteredMusicians = musicians.filter(musician => {
@@ -198,42 +219,27 @@ export default function MusiciansPage() {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Search and Filter Bar */}
-        <div className="bg-white rounded-xl shadow-sm border p-6 mb-8">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
-            <div className="flex-1 max-w-lg">
-              <div className="relative">
-                <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search musicians..."
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                />
-              </div>
-            </div>
-            <div className="flex items-center space-x-3">
-              <button 
-                onClick={() => setShowInviteModal(true)}
-                className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Musicians
-              </button>
-            </div>
-          </div>
-        </div>
-
         {/* Musicians List */}
         <div className="bg-white rounded-xl shadow-sm border">
           {/* Musicians Header */}
           <div className="p-6 border-b">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold text-gray-900">Church Musicians</h2>
-              <span className="text-sm text-gray-600">
-                {loading ? 'Loading...' : `${filteredMusicians.length} musicians`}
-              </span>
+              <div className="flex items-center space-x-4">
+                <div className="relative">
+                  <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Search musicians..."
+                    className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 w-64"
+                  />
+                </div>
+                <span className="text-sm text-gray-600">
+                  {loading ? 'Loading...' : `${filteredMusicians.length} musicians`}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -260,7 +266,19 @@ export default function MusiciansPage() {
             </div>
           ) : (
             /* Musicians Table - Always show headers */
-            <div className="overflow-x-auto">
+            <>
+              {!canEditMusicians && (
+                <div className="p-4 bg-yellow-50 border-l-4 border-yellow-400 mb-4">
+                  <div className="flex">
+                    <div className="ml-3">
+                      <p className="text-sm text-yellow-700">
+                        <strong>Note:</strong> You have view-only access. Only Directors, Pastors, and Associate Pastors can edit musician information.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
@@ -499,13 +517,18 @@ export default function MusiciansPage() {
                               <X className="h-4 w-4" />
                             </button>
                           </div>
-                        ) : (
+                        ) : canEditMusicians ? (
                           <button
                             onClick={() => startEditing(musician)}
                             className="inline-flex items-center px-2 py-1 text-sm font-medium text-blue-600 hover:text-blue-800"
+                            title="Edit musician"
                           >
                             <Edit2 className="h-4 w-4" />
                           </button>
+                        ) : (
+                          <span className="text-xs text-gray-400" title="Insufficient permissions to edit">
+                            View only
+                          </span>
                         )}
                       </td>
                     </tr>
@@ -514,6 +537,7 @@ export default function MusiciansPage() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </div>
 

@@ -103,6 +103,7 @@ export async function GET(request: NextRequest) {
       email: musician.email,
       phone: musician.phone,
       isVerified: musician.isVerified,
+      status: musician.isVerified ? 'active' : 'pending',
       emailNotifications: musician.emailNotifications,
       smsNotifications: musician.smsNotifications,
       createdAt: musician.createdAt.toISOString(), // Convert Date to ISO string

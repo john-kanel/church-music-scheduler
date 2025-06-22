@@ -15,9 +15,12 @@ import {
   MapPin,
   X,
   GiftIcon,
-  LifeBuoy
+  LifeBuoy,
+  Users,
+  MessageSquare
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 
 interface User {
   id: string
@@ -157,13 +160,43 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">
-            Welcome, {user.name.split(' ')[0]}!
-          </h1>
-          <p className="text-gray-600 mt-2">
-            Here are your upcoming assignments and available opportunities
-          </p>
+        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-8 space-y-4 lg:space-y-0">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Welcome, {user.name.split(' ')[0]}!
+            </h1>
+            <p className="text-gray-600 mt-2">
+              Here are your upcoming assignments and available opportunities
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
+            {/* Events Navigation Button */}
+            <Link 
+              href="/calendar"
+              className="flex items-center justify-center px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
+            >
+              <Calendar className="h-4 w-4 mr-1 sm:mr-2" />
+              Events
+            </Link>
+
+            {/* Musicians Navigation Button */}
+            <Link 
+              href="/musicians"
+              className="flex items-center justify-center px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm sm:text-base"
+            >
+              <Users className="h-4 w-4 mr-1 sm:mr-2" />
+              Musicians
+            </Link>
+
+            {/* Messages Navigation Button */}
+            <Link 
+              href="/messages"
+              className="flex items-center justify-center px-3 sm:px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm sm:text-base"
+            >
+              <MessageSquare className="h-4 w-4 mr-1 sm:mr-2" />
+              Messages
+            </Link>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

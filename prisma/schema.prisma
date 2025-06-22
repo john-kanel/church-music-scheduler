@@ -32,9 +32,10 @@ model Church {
   events                Event[]
   groups                Group[]
   invitations           Invitation[]
-  referredChurches      Referral[]      @relation("ReferredChurch")
-  referrals             Referral[]      @relation("ReferringChurch")
+  referredChurches      Referral[]           @relation("ReferredChurch")
+  referrals             Referral[]           @relation("ReferringChurch")
   users                 User[]
+  ownershipTransfers    OwnershipTransfer[]
 
   @@map("parishes")
 }
@@ -307,8 +308,33 @@ model TemplateHymn {
   @@map("template_hymns")
 }
 
+model OwnershipTransfer {
+  id                    String                     @id @default(cuid())
+  inviteeEmail          String
+  inviteeFirstName      String?
+  inviteeLastName       String?
+  inviteeRole           UserRole                   // The role they'll have (DIRECTOR, PASTOR, etc.)
+  status                OwnershipTransferStatus    @default(PENDING)
+  token                 String                     @unique @default(cuid())
+  expiresAt             DateTime                   // 30 days from creation
+  retireCurrentOwner    Boolean                    @default(false)
+  currentOwnerRetireAt  DateTime?                  // Set if retireCurrentOwner is true
+  acceptedAt            DateTime?
+  completedAt           DateTime?
+  createdAt             DateTime                   @default(now())
+  updatedAt             DateTime                   @updatedAt
+  churchId              String
+  invitedBy             String                     // User ID of who sent the invite
+  reminderSentAt        DateTime?                  // Track when 20-day reminder was sent
+  church                Church                     @relation(fields: [churchId], references: [id], onDelete: Cascade)
+
+  @@unique([inviteeEmail, churchId])
+  @@map("ownership_transfers")
+}
+
 enum UserRole {
   DIRECTOR
+  ASSOCIATE_DIRECTOR
   PASTOR
   ASSOCIATE_PASTOR
   MUSICIAN
@@ -345,4 +371,12 @@ enum ActivityType {
   MUSICIAN_INVITED
   MUSICIAN_SIGNED_UP
   MESSAGE_SENT
+}
+
+enum OwnershipTransferStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  CANCELLED
+  COMPLETED
 }

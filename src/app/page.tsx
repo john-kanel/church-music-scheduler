@@ -4,12 +4,13 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { LoginForm } from '@/components/auth/login-form'
-import { Music } from 'lucide-react'
+import { Music, Menu, X } from 'lucide-react'
 
 export default function HomePage() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [isClient, setIsClient] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     setIsClient(true)
@@ -42,15 +43,67 @@ export default function HomePage() {
                 Church Music Scheduler
               </span>
             </div>
-            <div className="flex space-x-4">
+            
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center space-x-6">
               <a href="#features" className="text-gray-700 hover:text-blue-600 transition-colors">
                 Features
               </a>
               <a href="#pricing" className="text-gray-700 hover:text-blue-600 transition-colors">
                 Pricing
               </a>
+              <a 
+                href="/auth/signin" 
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              >
+                Sign In
+              </a>
+            </div>
+
+            {/* Mobile Menu Button */}
+            <div className="md:hidden">
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="text-gray-700 hover:text-blue-600 transition-colors p-2"
+                aria-label="Toggle mobile menu"
+              >
+                {isMobileMenuOpen ? (
+                  <X className="h-6 w-6" />
+                ) : (
+                  <Menu className="h-6 w-6" />
+                )}
+              </button>
             </div>
           </div>
+
+          {/* Mobile Menu */}
+          {isMobileMenuOpen && (
+            <div className="md:hidden border-t border-gray-200 py-4">
+              <div className="flex flex-col space-y-4">
+                <a 
+                  href="#features" 
+                  className="text-gray-700 hover:text-blue-600 transition-colors px-2 py-1"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Features
+                </a>
+                <a 
+                  href="#pricing" 
+                  className="text-gray-700 hover:text-blue-600 transition-colors px-2 py-1"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Pricing
+                </a>
+                <a 
+                  href="/auth/signin" 
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors text-center mx-2"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Sign In
+                </a>
+              </div>
+            </div>
+          )}
         </div>
       </nav>
 

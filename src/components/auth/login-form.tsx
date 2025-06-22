@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, Loader2, Mail, Lock } from 'lucide-react'
@@ -11,7 +11,12 @@ export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const [mounted, setMounted] = useState(false)
   const router = useRouter()
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -35,6 +40,22 @@ export function LoginForm() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  if (!mounted) {
+    return (
+      <div className="space-y-6">
+        <div className="animate-pulse">
+          <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
+          <div className="h-12 bg-gray-200 rounded"></div>
+        </div>
+        <div className="animate-pulse">
+          <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
+          <div className="h-12 bg-gray-200 rounded"></div>
+        </div>
+        <div className="h-12 bg-gray-200 rounded animate-pulse"></div>
+      </div>
+    )
   }
 
   return (
