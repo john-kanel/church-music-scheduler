@@ -23,7 +23,8 @@ import {
   CheckCircle,
   UserPlus,
   Activity,
-  GiftIcon
+  GiftIcon,
+  LifeBuoy
 } from 'lucide-react'
 import Link from 'next/link'
 import { CreateEventModal } from '../events/create-event-modal'
@@ -393,6 +394,10 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                       <Link href="/billing" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                         <CreditCard className="h-4 w-4 inline mr-2" />
                         Billing
+                      </Link>
+                      <Link href="/support" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                        <LifeBuoy className="h-4 w-4 inline mr-2" />
+                        Support
                       </Link>
                       <button
                         onClick={() => signOut()}

@@ -14,7 +14,8 @@ import {
   AlertCircle,
   MapPin,
   X,
-  GiftIcon
+  GiftIcon,
+  LifeBuoy
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
@@ -133,6 +134,10 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
                     <a href="/profile" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                       <Home className="h-4 w-4 mr-2" />
                       Profile
+                    </a>
+                    <a href="/support" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                      <LifeBuoy className="h-4 w-4 mr-2" />
+                      Support
                     </a>
                     <button
                       onClick={handleSignOut}
