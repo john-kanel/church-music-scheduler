@@ -73,32 +73,42 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
       return
     }
 
-    // Calculate subscription end date
+    // Calculate subscription end date based on trial or billing period
     let subscriptionEnds: Date | null = null
-    if ((subscription as any).current_period_end) {
-      subscriptionEnds = new Date((subscription as any).current_period_end * 1000)
-    } else if ((subscription as any).trial_end) {
-      subscriptionEnds = new Date((subscription as any).trial_end * 1000)
-    }
-
-    // Map Stripe status to our status
     let status = 'inactive'
-    switch (subscription.status) {
-      case 'active':
-      case 'trialing':
-        status = 'active'
-        break
-      case 'past_due':
-        status = 'past_due'
-        break
-      case 'canceled':
-      case 'unpaid':
-        status = 'canceled'
-        break
-      case 'incomplete':
-      case 'incomplete_expired':
-        status = 'inactive'
-        break
+    
+    // For trialing subscriptions, use trial_end
+    if (subscription.status === 'trialing' && subscription.trial_end) {
+      subscriptionEnds = new Date(subscription.trial_end * 1000)
+      status = 'trial'
+    } 
+    // For active subscriptions, use current_period_end
+    else if (subscription.status === 'active' && (subscription as any).current_period_end) {
+      subscriptionEnds = new Date((subscription as any).current_period_end * 1000)
+      status = 'active'
+    }
+    // For other active statuses without explicit periods
+    else if (subscription.status === 'active') {
+      status = 'active'
+    }
+    // Map other Stripe statuses
+    else {
+      switch (subscription.status) {
+        case 'past_due':
+          status = 'past_due'
+          if ((subscription as any).current_period_end) {
+            subscriptionEnds = new Date((subscription as any).current_period_end * 1000)
+          }
+          break
+        case 'canceled':
+        case 'unpaid':
+          status = 'canceled'
+          break
+        case 'incomplete':
+        case 'incomplete_expired':
+          status = 'inactive'
+          break
+      }
     }
 
     console.log(`Updating church ${churchId}: status=${status}, ends=${subscriptionEnds}`)

@@ -124,6 +124,21 @@ export async function POST(request: NextRequest) {
     const userFirstName = nameParts[0] || ''
     const userLastName = nameParts.slice(1).join(' ') || ''
 
+    // Get trial end date from Stripe subscription
+    let trialEndDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // Default to 30 days from now
+    
+    if (session.subscription) {
+      try {
+        const subscription = await stripe.subscriptions.retrieve(session.subscription as string)
+        if (subscription.trial_end) {
+          trialEndDate = new Date(subscription.trial_end * 1000)
+          console.log('Using Stripe trial end date:', trialEndDate.toISOString())
+        }
+      } catch (error) {
+        console.error('Error fetching subscription for trial date:', error)
+      }
+    }
+
     // Create church and user in a transaction
     const result = await prisma.$transaction(async (tx) => {
       // Generate unique referral code for new church
@@ -138,8 +153,8 @@ export async function POST(request: NextRequest) {
           phone: '',
           referralCode: newReferralCode,
           referredBy: referringChurch?.id || null,
-          subscriptionStatus: 'trialing',
-          subscriptionEnds: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+          subscriptionStatus: 'trial',
+          subscriptionEnds: trialEndDate, // Use actual Stripe trial end date
           stripeCustomerId: session.customer as string
         }
       })

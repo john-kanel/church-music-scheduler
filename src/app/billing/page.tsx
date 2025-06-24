@@ -1,14 +1,26 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { ArrowLeft, CreditCard, Check, Zap, Star, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
+
+interface SubscriptionData {
+  status: string
+  isTrialActive: boolean
+  trialDaysRemaining: number
+  trialEndsAt: string | null
+  subscriptionEnds: string | null
+  stripePlan: string | null
+  stripeStatus: string | null
+}
 
 export default function BillingPage() {
   const { data: session } = useSession()
   const [loading, setLoading] = useState(false)
   const [currentPlan, setCurrentPlan] = useState('free') // free, monthly, annual
+  const [subscriptionData, setSubscriptionData] = useState<SubscriptionData | null>(null)
+  const [subscriptionLoading, setSubscriptionLoading] = useState(true)
 
   const plans = [
     {
@@ -57,6 +69,40 @@ export default function BillingPage() {
       savingsPercent: 52 // (420-200)/420 * 100
     }
   ]
+
+  // Fetch real subscription data
+  useEffect(() => {
+    if (session?.user?.id) {
+      fetchSubscriptionData()
+    }
+  }, [session?.user?.id])
+
+  const fetchSubscriptionData = async () => {
+    try {
+      setSubscriptionLoading(true)
+      const response = await fetch('/api/subscription-status')
+      
+      if (response.ok) {
+        const data = await response.json()
+        setSubscriptionData(data.subscription)
+        
+        // Update current plan based on subscription data
+        if (data.subscription.status === 'trial') {
+          setCurrentPlan('free')
+        } else if (data.subscription.stripePlan === 'price_1RbkRKDKZUjfTbRbPIstDXUV') {
+          setCurrentPlan('monthly')
+        } else if (data.subscription.stripePlan === 'price_1RbkgaDKZUjfTbRbrVKLe5Hq') {
+          setCurrentPlan('annual')
+        }
+      } else {
+        console.error('Failed to fetch subscription data')
+      }
+    } catch (error) {
+      console.error('Error fetching subscription data:', error)
+    } finally {
+      setSubscriptionLoading(false)
+    }
+  }
 
   const handleUpgrade = async (planId: string) => {
     setLoading(true)
@@ -173,7 +219,12 @@ export default function BillingPage() {
                 </h3>
                 <p className="text-sm text-gray-500">
                   {currentPlan === 'free' 
-                    ? 'Full access - 23 days remaining' 
+                    ? (subscriptionLoading 
+                        ? 'Loading trial info...' 
+                        : subscriptionData?.isTrialActive 
+                          ? `Full access - ${subscriptionData.trialDaysRemaining} day${subscriptionData.trialDaysRemaining !== 1 ? 's' : ''} remaining`
+                          : 'Trial expired'
+                      )
                     : `$${plans.find(p => p.id === currentPlan)?.price}/${plans.find(p => p.id === currentPlan)?.interval}`}
                 </p>
               </div>
@@ -194,12 +245,33 @@ export default function BillingPage() {
               <div className="flex items-center">
                 <AlertCircle className="h-5 w-5 text-blue-600 mr-2" />
                 <div>
-                  <p className="text-sm text-blue-700 font-medium">
-                    You're in your 30-day free trial with full access to all features!
-                  </p>
-                  <p className="text-sm text-blue-600 mt-1">
-                    Choose a plan below to continue after your trial expires.
-                  </p>
+                  {subscriptionLoading ? (
+                    <p className="text-sm text-blue-700 font-medium">
+                      Loading trial information...
+                    </p>
+                  ) : subscriptionData?.isTrialActive ? (
+                    <>
+                      <p className="text-sm text-blue-700 font-medium">
+                        You're in your 30-day free trial with full access to all features!
+                      </p>
+                      <p className="text-sm text-blue-600 mt-1">
+                        {subscriptionData.trialDaysRemaining} day{subscriptionData.trialDaysRemaining !== 1 ? 's' : ''} remaining
+                        {subscriptionData.trialEndsAt && ` - trial ends ${new Date(subscriptionData.trialEndsAt).toLocaleDateString()}`}
+                      </p>
+                      <p className="text-sm text-blue-600 mt-1">
+                        Choose a plan below to continue after your trial expires.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm text-red-700 font-medium">
+                        Your free trial has expired.
+                      </p>
+                      <p className="text-sm text-red-600 mt-1">
+                        Please choose a plan below to continue using all features.
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
