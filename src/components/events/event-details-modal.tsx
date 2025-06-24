@@ -165,7 +165,7 @@ export function EventDetailsModal({
     startDate: '',
     startTime: '',
     endTime: '',
-    status: 'confirmed' as 'confirmed' | 'tentative' | 'cancelled',
+    status: 'confirmed' as 'confirmed' | 'tentative' | 'cancelled' | 'pending' | 'error',
     isRecurring: false,
     recurrencePattern: '',
     recurrenceEnd: ''
@@ -191,7 +191,9 @@ export function EventDetailsModal({
         startDate: startDate.toISOString().split('T')[0],
         startTime: startDate.toTimeString().slice(0, 5),
         endTime: endDate ? endDate.toTimeString().slice(0, 5) : '',
-        status: currentEvent.status || 'confirmed',
+        status: (currentEvent.status && ['confirmed', 'tentative', 'cancelled', 'pending', 'error'].includes(currentEvent.status)) 
+          ? currentEvent.status as 'confirmed' | 'tentative' | 'cancelled' | 'pending' | 'error'
+          : 'confirmed',
         isRecurring: currentEvent.isRecurring || false,
         recurrencePattern: currentEvent.recurrencePattern || '',
         recurrenceEnd: '' // Note: recurrenceEnd is not stored in event yet, but ready for future enhancement
