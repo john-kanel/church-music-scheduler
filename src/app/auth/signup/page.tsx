@@ -95,9 +95,6 @@ function SignUpForm() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Start Your 30-Day Free Trial
           </h1>
-          <p className="text-gray-600">
-            Enter your details below. No credit card required to start!
-          </p>
           <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-3">
             <p className="text-green-800 text-sm font-medium">
               ✓ 30 days completely free<br/>
