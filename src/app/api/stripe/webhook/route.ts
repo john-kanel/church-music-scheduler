@@ -6,6 +6,7 @@ import Stripe from 'stripe'
 import { Resend } from 'resend'
 import { ReferralSuccessNotification } from '@/components/emails/referral-success-notification'
 import { render } from '@react-email/render'
+import { sendPaymentConfirmationEmail, sendReferralPromotionEmail } from '@/lib/resend'
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -156,9 +157,17 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
   try {
     const customerId = invoice.customer as string
     
-    // Find church by Stripe customer ID
+    // Find church by Stripe customer ID with user data
     const church = await prisma.church.findFirst({
-      where: { stripeCustomerId: customerId }
+      where: { stripeCustomerId: customerId },
+      include: {
+        users: {
+          where: {
+            role: { in: ['DIRECTOR', 'ASSOCIATE_DIRECTOR'] }
+          },
+          take: 1
+        }
+      }
     })
 
     if (!church) {
@@ -167,6 +176,70 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
     }
 
     console.log(`✅ Payment succeeded for church ${church.id}, invoice ${invoice.id}`)
+
+    // Check if this is their first payment (conversion from trial)
+    const isFirstPayment = !church.paymentEmailSentAt && church.subscriptionStatus === 'trial'
+    
+    if (isFirstPayment && church.users.length > 0) {
+      const primaryUser = church.users[0]
+      
+      try {
+        // Get subscription details for payment confirmation email
+        const subscription = await stripe.subscriptions.retrieve((invoice as any).subscription as string)
+        const priceId = subscription.items.data[0]?.price.id
+        
+        let planName = 'Monthly Plan'
+        let planPrice = 35
+        let planInterval = 'month'
+        
+        if (priceId === 'price_1RbkgaDKZUjfTbRbrVKLe5Hq') {
+          planName = 'Annual Plan'
+          planPrice = 200
+          planInterval = 'year'
+        }
+        
+        const nextBillingDate = new Date((subscription as any).current_period_end * 1000).toLocaleDateString()
+        
+        // Send payment confirmation email
+        await sendPaymentConfirmationEmail(
+          primaryUser.email,
+          `${primaryUser.firstName} ${primaryUser.lastName}`.trim(),
+          church.name,
+          planName,
+          planPrice,
+          planInterval,
+          nextBillingDate
+        )
+        
+        // Mark payment email as sent and schedule referral email for 24 hours later
+        await prisma.$transaction(async (tx) => {
+          await tx.church.update({
+            where: { id: church.id },
+            data: { paymentEmailSentAt: new Date() }
+          })
+          
+          // Schedule referral promotion email for 24 hours later
+          await tx.emailSchedule.create({
+            data: {
+              churchId: church.id,
+              userId: primaryUser.id,
+              emailType: 'REFERRAL_PROMOTION',
+              scheduledFor: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
+              metadata: {
+                churchName: church.name,
+                referralCode: church.referralCode
+              }
+            }
+          })
+        })
+        
+        console.log(`✅ Payment confirmation email sent to ${primaryUser.email}`)
+        console.log(`📅 Referral promotion email scheduled for 24 hours`)
+        
+      } catch (emailError) {
+        console.error('Failed to send payment confirmation email:', emailError)
+      }
+    }
 
     // Process referral rewards if this is their first successful payment
     await processReferralRewards(church.id, invoice)

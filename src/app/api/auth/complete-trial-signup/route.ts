@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db'
 import { UserRole } from '@/generated/prisma'
 import { generateReferralCode, isValidReferralCode } from '@/lib/utils'
 import { stripe } from '@/lib/stripe'
+import { sendWelcomeEmail } from '@/lib/resend'
 
 export async function POST(request: NextRequest) {
   try {
@@ -206,6 +207,28 @@ export async function POST(request: NextRequest) {
 
       return { user, church }
     })
+
+    // Send welcome email immediately after account creation
+    try {
+      const trialDaysRemaining = Math.ceil((trialEndDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+      await sendWelcomeEmail(
+        result.user.email,
+        `${result.user.firstName} ${result.user.lastName}`.trim(),
+        result.church.name,
+        Math.max(trialDaysRemaining, 1) // Ensure at least 1 day
+      )
+      
+      // Mark welcome email as sent
+      await prisma.church.update({
+        where: { id: result.church.id },
+        data: { welcomeEmailSentAt: new Date() }
+      })
+      
+      console.log(`✅ Welcome email sent to ${result.user.email}`)
+    } catch (emailError) {
+      console.error('Failed to send welcome email:', emailError)
+      // Don't fail the signup if email fails
+    }
 
     return NextResponse.json(
       {

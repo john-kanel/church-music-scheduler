@@ -24,6 +24,9 @@ model Church {
   updatedAt             DateTime        @updatedAt
   referralRewardsEarned Int             @default(0)
   referralRewardsSaved  Decimal         @default(0.00)
+  welcomeEmailSentAt    DateTime?
+  paymentEmailSentAt    DateTime?
+  referralEmailSentAt   DateTime?
   activities            Activity[]
   communications        Communication[]
   customRoles           CustomRole[]
@@ -38,6 +41,7 @@ model Church {
   ownershipTransfers    OwnershipTransfer[]
   automationSettings    AutomationSettings?
   notificationLogs      NotificationLog[]
+  emailSchedules        EmailSchedule[]
 
   @@map("parishes")
 }
@@ -63,6 +67,7 @@ model User {
   uploadedFiles      MusicFile[]
   church             Church            @relation(fields: [churchId], references: [id], onDelete: Cascade)
   pastorSettings     PastorSettings?
+  emailSchedules     EmailSchedule[]
 
   @@map("users")
 }
@@ -399,6 +404,25 @@ model NotificationLog {
   @@map("notification_logs")
 }
 
+model EmailSchedule {
+  id                String    @id @default(cuid())
+  churchId          String
+  userId            String
+  emailType         EmailType
+  scheduledFor      DateTime
+  sentAt            DateTime?
+  attempts          Int       @default(0)
+  maxAttempts       Int       @default(3)
+  lastAttemptAt     DateTime?
+  errorReason       String?
+  metadata          Json?
+  createdAt         DateTime  @default(now())
+  church            Church    @relation(fields: [churchId], references: [id], onDelete: Cascade)
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("email_schedules")
+}
+
 enum UserRole {
   DIRECTOR
   ASSOCIATE_DIRECTOR
@@ -456,4 +480,10 @@ enum NotificationType {
   PASTOR_MONTHLY_REPORT
   EVENT_CANCELLED
   EVENT_UPDATED
+}
+
+enum EmailType {
+  WELCOME
+  PAYMENT_CONFIRMATION
+  REFERRAL_PROMOTION
 }

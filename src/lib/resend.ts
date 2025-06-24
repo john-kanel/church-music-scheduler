@@ -256,4 +256,459 @@ Sent by ${senderName} from ${churchName}
 }
 
 // Alias for sendMessageEmail to maintain compatibility
-export const sendNotificationEmail = sendMessageEmail; 
+export const sendNotificationEmail = sendMessageEmail;
+
+// Send welcome email after trial signup
+export async function sendWelcomeEmail(
+  to: string,
+  recipientName: string,
+  churchName: string,
+  trialDaysRemaining: number = 30
+) {
+  try {
+    const fromAddress = 'Church Music Scheduler <support@churchmusicscheduler.com>'
+    
+    const emailData = {
+      from: fromAddress,
+      to,
+      subject: 'Welcome to Church Music Scheduler - Your 30-Day Trial Starts Now!',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <!-- Logo Section -->
+          <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; border-bottom: 3px solid #667eea;">
+            <div style="height: 80px; background: #e9ecef; border: 2px dashed #adb5bd; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
+              <span style="color: #6c757d; font-size: 14px;">Church Music Scheduler Logo</span>
+            </div>
+            <h1 style="color: #333; margin: 0; font-size: 28px;">🎵 Welcome to Church Music Scheduler!</h1>
+          </div>
+          
+          <div style="background: white; padding: 40px 20px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+            <h2 style="color: #333; margin-bottom: 20px;">Hello ${recipientName}!</h2>
+            
+            <p style="color: #666; line-height: 1.6; font-size: 16px;">
+              Congratulations on signing up for Church Music Scheduler! We're excited to help ${churchName} streamline your music ministry.
+            </p>
+
+            <!-- Trial Information Box -->
+            <div style="margin: 30px 0; padding: 25px; background: #dbeafe; border-radius: 8px; border-left: 4px solid #3b82f6;">
+              <h3 style="margin: 0 0 15px 0; color: #1e40af; font-size: 20px;">🚀 Your Free Trial is Active!</h3>
+              <div style="background: white; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
+                <p style="margin: 5px 0; color: #374151; font-size: 16px;"><strong>✅ No credit card required</strong></p>
+                <p style="margin: 5px 0; color: #374151; font-size: 16px;"><strong>✅ ${trialDaysRemaining} days of full access</strong></p>
+                <p style="margin: 5px 0; color: #374151; font-size: 16px;"><strong>✅ All features unlocked</strong></p>
+              </div>
+              <div style="background: #f0f9ff; padding: 12px; border-radius: 6px; border-left: 3px solid #0ea5e9;">
+                <p style="margin: 0; color: #0c4a6e; font-size: 14px;">
+                  💡 <strong>Perfect timing:</strong> You have plenty of time to explore all features and see how Church Music Scheduler can transform your music ministry!
+                </p>
+              </div>
+            </div>
+            
+            <!-- Getting Started Section -->
+            <div style="margin: 30px 0; padding: 20px; background: #f0fdf4; border-radius: 8px; border-left: 4px solid #22c55e;">
+              <h3 style="margin: 0 0 15px 0; color: #15803d; font-size: 18px;">🎯 Great Starting Tip</h3>
+              <p style="color: #166534; margin: 0 0 10px 0; font-size: 16px;">
+                <strong>Invite all the members of your music ministry</strong> - they can join your trial and start collaborating immediately!
+              </p>
+              <p style="color: #166534; margin: 0; font-size: 14px;">
+                The more people you invite during your trial, the better you'll understand how powerful Church Music Scheduler can be for your team.
+              </p>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/dashboard" 
+                 style="background: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; margin-bottom: 10px; font-size: 16px;">
+                Start Exploring Your Dashboard →
+              </a>
+            </div>
+            
+            <!-- What you can do -->
+            <div style="margin: 30px 0; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+              <h3 style="margin: 0 0 15px 0; color: #333;">What you can do right now:</h3>
+              <ul style="color: #666; margin: 0; padding-left: 20px; line-height: 1.8;">
+                <li><strong>Schedule events</strong> - Add your upcoming services and rehearsals</li>
+                <li><strong>Invite musicians</strong> - Build your music ministry team</li>
+                <li><strong>Share music files</strong> - Upload and organize your sheet music</li>
+                <li><strong>Send messages</strong> - Communicate with your team instantly</li>
+                <li><strong>Create groups</strong> - Organize your choir, instrumentalists, and more</li>
+              </ul>
+            </div>
+            
+            <!-- Support Section -->
+            <div style="background: #fef2f2; padding: 15px; border-radius: 6px; border-left: 3px solid #ef4444; margin: 20px 0;">
+              <h4 style="margin: 0 0 10px 0; color: #dc2626;">Need Help?</h4>
+              <p style="color: #991b1b; margin: 0; font-size: 14px;">
+                If you have any questions or run into any issues, please don't hesitate to reach out to us at 
+                <a href="mailto:support@churchmusicscheduler.com" style="color: #dc2626; font-weight: bold;">support@churchmusicscheduler.com</a>
+              </p>
+            </div>
+            
+            <p style="color: #666; font-size: 16px; text-align: center; margin-top: 30px;">
+              Welcome to the Church Music Scheduler family! 🎵
+            </p>
+            
+            <div style="border-top: 1px solid #eee; margin-top: 30px; padding-top: 20px; text-align: center;">
+              <p style="color: #999; font-size: 12px; margin: 0;">
+                Sent by Church Music Scheduler
+              </p>
+            </div>
+          </div>
+        </div>
+      `,
+      text: `
+Welcome to Church Music Scheduler!
+
+Hello ${recipientName}!
+
+Congratulations on signing up for Church Music Scheduler! We're excited to help ${churchName} streamline your music ministry.
+
+YOUR FREE TRIAL IS ACTIVE!
+✅ No credit card required
+✅ ${trialDaysRemaining} days of full access  
+✅ All features unlocked
+
+GREAT STARTING TIP:
+Invite all the members of your music ministry - they can join your trial and start collaborating immediately! The more people you invite during your trial, the better you'll understand how powerful Church Music Scheduler can be for your team.
+
+WHAT YOU CAN DO RIGHT NOW:
+• Schedule events - Add your upcoming services and rehearsals
+• Invite musicians - Build your music ministry team
+• Share music files - Upload and organize your sheet music
+• Send messages - Communicate with your team instantly
+• Create groups - Organize your choir, instrumentalists, and more
+
+NEED HELP?
+If you have any questions or run into any issues, please don't hesitate to reach out to us at support@churchmusicscheduler.com
+
+Start exploring: ${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/dashboard
+
+Welcome to the Church Music Scheduler family! 🎵
+
+---
+Sent by Church Music Scheduler
+      `
+    }
+
+    const { data, error } = await resend.emails.send(emailData)
+
+    if (error) {
+      console.error('Error sending welcome email:', error)
+      throw error
+    }
+
+    return data
+  } catch (error) {
+    console.error('Failed to send welcome email:', error)
+    throw error
+  }
+}
+
+// Send payment confirmation email after subscription conversion
+export async function sendPaymentConfirmationEmail(
+  to: string,
+  recipientName: string,
+  churchName: string,
+  planName: string,
+  planPrice: number,
+  planInterval: string,
+  nextBillingDate: string
+) {
+  try {
+    const fromAddress = 'Church Music Scheduler <support@churchmusicscheduler.com>'
+    
+    const emailData = {
+      from: fromAddress,
+      to,
+      subject: 'Payment Confirmed - Welcome to Your Full Subscription!',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <!-- Logo Section -->
+          <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; border-bottom: 3px solid #22c55e;">
+            <div style="height: 80px; background: #e9ecef; border: 2px dashed #adb5bd; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
+              <span style="color: #6c757d; font-size: 14px;">Church Music Scheduler Logo</span>
+            </div>
+            <h1 style="color: #333; margin: 0; font-size: 28px;">✅ Payment Confirmed!</h1>
+          </div>
+          
+          <div style="background: white; padding: 40px 20px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+            <h2 style="color: #333; margin-bottom: 20px;">Thank you, ${recipientName}!</h2>
+            
+            <p style="color: #666; line-height: 1.6; font-size: 16px;">
+              Your payment has been successfully processed and ${churchName} now has full access to Church Music Scheduler. Thank you for choosing us to support your music ministry!
+            </p>
+
+            <!-- Subscription Details Box -->
+            <div style="margin: 30px 0; padding: 25px; background: #f0fdf4; border-radius: 8px; border-left: 4px solid #22c55e;">
+              <h3 style="margin: 0 0 15px 0; color: #15803d; font-size: 20px;">📋 Your Subscription Details</h3>
+              <div style="background: white; padding: 15px; border-radius: 6px;">
+                <p style="margin: 5px 0; color: #374151; font-size: 16px;"><strong>Plan:</strong> ${planName}</p>
+                <p style="margin: 5px 0; color: #374151; font-size: 16px;"><strong>Price:</strong> $${planPrice}/${planInterval}</p>
+                <p style="margin: 5px 0; color: #374151; font-size: 16px;"><strong>Next billing date:</strong> ${nextBillingDate}</p>
+              </div>
+            </div>
+            
+            <!-- Manage Billing -->
+            <div style="margin: 30px 0; padding: 20px; background: #f1f5f9; border-radius: 8px; border-left: 4px solid #3b82f6;">
+              <h3 style="margin: 0 0 15px 0; color: #1e40af; font-size: 18px;">💳 Manage Your Billing</h3>
+              <p style="color: #1e40af; margin: 0 0 15px 0; font-size: 14px;">
+                You can view invoices, update payment methods, or change plans anytime through your billing portal.
+              </p>
+              <div style="text-align: center;">
+                <a href="${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/billing" 
+                   style="background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 14px;">
+                  Manage Billing →
+                </a>
+              </div>
+            </div>
+            
+            <!-- What's Next -->
+            <div style="margin: 30px 0; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+              <h3 style="margin: 0 0 15px 0; color: #333;">What's next:</h3>
+              <ul style="color: #666; margin: 0; padding-left: 20px; line-height: 1.8;">
+                <li><strong>Continue building your team</strong> - Invite more musicians to join</li>
+                <li><strong>Explore advanced features</strong> - Set up automation and templates</li>
+                <li><strong>Organize your music library</strong> - Upload and categorize your sheet music</li>
+                <li><strong>Schedule upcoming events</strong> - Plan your services and rehearsals</li>
+              </ul>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/dashboard" 
+                 style="background: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; margin-bottom: 10px; font-size: 16px;">
+                Continue to Dashboard →
+              </a>
+            </div>
+            
+            <!-- Support Section -->
+            <div style="background: #fef2f2; padding: 15px; border-radius: 6px; border-left: 3px solid #ef4444; margin: 20px 0;">
+              <h4 style="margin: 0 0 10px 0; color: #dc2626;">Questions or Need Support?</h4>
+              <p style="color: #991b1b; margin: 0; font-size: 14px;">
+                We're here to help! Contact us anytime at 
+                <a href="mailto:support@churchmusicscheduler.com" style="color: #dc2626; font-weight: bold;">support@churchmusicscheduler.com</a>
+              </p>
+            </div>
+            
+            <p style="color: #666; font-size: 16px; text-align: center; margin-top: 30px;">
+              Thank you for being part of the Church Music Scheduler family! 🎵
+            </p>
+            
+            <div style="border-top: 1px solid #eee; margin-top: 30px; padding-top: 20px; text-align: center;">
+              <p style="color: #999; font-size: 12px; margin: 0;">
+                Sent by Church Music Scheduler
+              </p>
+            </div>
+          </div>
+        </div>
+      `,
+      text: `
+Payment Confirmed!
+
+Thank you, ${recipientName}!
+
+Your payment has been successfully processed and ${churchName} now has full access to Church Music Scheduler. Thank you for choosing us to support your music ministry!
+
+YOUR SUBSCRIPTION DETAILS:
+Plan: ${planName}
+Price: $${planPrice}/${planInterval}
+Next billing date: ${nextBillingDate}
+
+MANAGE YOUR BILLING:
+You can view invoices, update payment methods, or change plans anytime through your billing portal.
+Visit: ${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/billing
+
+WHAT'S NEXT:
+• Continue building your team - Invite more musicians to join
+• Explore advanced features - Set up automation and templates  
+• Organize your music library - Upload and categorize your sheet music
+• Schedule upcoming events - Plan your services and rehearsals
+
+QUESTIONS OR NEED SUPPORT?
+We're here to help! Contact us anytime at support@churchmusicscheduler.com
+
+Continue to dashboard: ${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/dashboard
+
+Thank you for being part of the Church Music Scheduler family! 🎵
+
+---
+Sent by Church Music Scheduler
+      `
+    }
+
+    const { data, error } = await resend.emails.send(emailData)
+
+    if (error) {
+      console.error('Error sending payment confirmation email:', error)
+      throw error
+    }
+
+    return data
+  } catch (error) {
+    console.error('Failed to send payment confirmation email:', error)
+    throw error
+  }
+}
+
+// Send referral promotion email (24 hours after payment)
+export async function sendReferralPromotionEmail(
+  to: string,
+  recipientName: string,
+  churchName: string,
+  referralCode: string
+) {
+  try {
+    const fromAddress = 'Church Music Scheduler <support@churchmusicscheduler.com>'
+    const referralUrl = `${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/auth/signup?ref=${referralCode}`
+    
+    const emailData = {
+      from: fromAddress,
+      to,
+      subject: 'Earn Free Months - Refer Other Churches!',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <!-- Logo Section -->
+          <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; border-bottom: 3px solid #f59e0b;">
+            <div style="height: 80px; background: #e9ecef; border: 2px dashed #adb5bd; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
+              <span style="color: #6c757d; font-size: 14px;">Church Music Scheduler Logo</span>
+            </div>
+            <h1 style="color: #333; margin: 0; font-size: 28px;">💰 Earn Free Months!</h1>
+          </div>
+          
+          <div style="background: white; padding: 40px 20px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+            <h2 style="color: #333; margin-bottom: 20px;">Hi ${recipientName}!</h2>
+            
+            <p style="color: #666; line-height: 1.6; font-size: 16px;">
+              Now that ${churchName} is enjoying Church Music Scheduler, we'd love your help spreading the word to other churches in your community!
+            </p>
+
+            <!-- Referral Reward Box -->
+            <div style="margin: 30px 0; padding: 25px; background: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b;">
+              <h3 style="margin: 0 0 15px 0; color: #92400e; font-size: 20px;">🎁 Referral Rewards</h3>
+              <div style="background: white; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
+                <p style="margin: 5px 0; color: #374151; font-size: 16px;"><strong>✨ Get 1 month free</strong> for each church you refer</p>
+                <p style="margin: 5px 0; color: #374151; font-size: 16px;"><strong>🎯 No limit</strong> on referrals or free months</p>
+                <p style="margin: 5px 0; color: #374151; font-size: 16px;"><strong>💸 Instant credit</strong> applied to your account</p>
+              </div>
+              <div style="background: #fef9c3; padding: 12px; border-radius: 6px; border-left: 3px solid #eab308;">
+                <p style="margin: 0; color: #854d0e; font-size: 14px;">
+                  💡 <strong>Your referral code:</strong> <code style="background: #fbbf24; padding: 2px 6px; border-radius: 3px; font-family: monospace; font-size: 16px; color: white;">${referralCode}</code>
+                </p>
+              </div>
+            </div>
+            
+            <!-- Who to Share With -->
+            <div style="margin: 30px 0; padding: 20px; background: #f0fdf4; border-radius: 8px; border-left: 4px solid #22c55e;">
+              <h3 style="margin: 0 0 15px 0; color: #15803d; font-size: 18px;">🤝 Perfect for sharing with:</h3>
+              <ul style="color: #166534; margin: 0; padding-left: 20px; line-height: 1.8;">
+                <li><strong>Pastor friends</strong> at neighboring churches</li>
+                <li><strong>Music directors</strong> in your denomination</li>
+                <li><strong>Worship leaders</strong> from conferences and events</li>
+                <li><strong>Church staff</strong> who struggle with music coordination</li>
+                <li><strong>Anyone</strong> who could benefit from better music ministry organization</li>
+              </ul>
+            </div>
+            
+            <!-- Referral Link Section -->
+            <div style="margin: 30px 0; padding: 20px; background: #f1f5f9; border-radius: 8px; border-left: 4px solid #3b82f6;">
+              <h3 style="margin: 0 0 15px 0; color: #1e40af; font-size: 18px;">🔗 Your Personal Referral Link</h3>
+              <div style="background: white; padding: 15px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #e5e7eb;">
+                <p style="margin: 0; color: #6b7280; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Share this link:</p>
+                <p style="margin: 5px 0 0 0; color: #374151; font-family: monospace; font-size: 14px; word-break: break-all; background: #f9fafb; padding: 8px; border-radius: 4px;">
+                  ${referralUrl}
+                </p>
+              </div>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/rewards" 
+                 style="background: #f59e0b; color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; margin-bottom: 10px; font-size: 16px;">
+                Track Your Referrals →
+              </a>
+            </div>
+            
+            <!-- How It Works -->
+            <div style="margin: 30px 0; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+              <h3 style="margin: 0 0 15px 0; color: #333;">How it works:</h3>
+              <ol style="color: #666; margin: 0; padding-left: 20px; line-height: 1.8;">
+                <li>Share your referral link or code with other churches</li>
+                <li>They sign up using your code and complete their trial</li>
+                <li>When they become a paying customer, you get 1 month free!</li>
+                <li>Your next billing is automatically reduced</li>
+              </ol>
+            </div>
+            
+            <!-- Support Section -->
+            <div style="background: #fef2f2; padding: 15px; border-radius: 6px; border-left: 3px solid #ef4444; margin: 20px 0;">
+              <h4 style="margin: 0 0 10px 0; color: #dc2626;">Questions About Referrals?</h4>
+              <p style="color: #991b1b; margin: 0; font-size: 14px;">
+                We're happy to help explain how our referral program works! Contact us at 
+                <a href="mailto:support@churchmusicscheduler.com" style="color: #dc2626; font-weight: bold;">support@churchmusicscheduler.com</a>
+              </p>
+            </div>
+            
+            <p style="color: #666; font-size: 16px; text-align: center; margin-top: 30px;">
+              Thank you for helping us serve more churches! 🎵
+            </p>
+            
+            <div style="border-top: 1px solid #eee; margin-top: 30px; padding-top: 20px; text-align: center;">
+              <p style="color: #999; font-size: 12px; margin: 0;">
+                Sent by Church Music Scheduler
+              </p>
+            </div>
+          </div>
+        </div>
+      `,
+      text: `
+Earn Free Months - Refer Other Churches!
+
+Hi ${recipientName}!
+
+Now that ${churchName} is enjoying Church Music Scheduler, we'd love your help spreading the word to other churches in your community!
+
+REFERRAL REWARDS:
+✨ Get 1 month free for each church you refer
+🎯 No limit on referrals or free months  
+💸 Instant credit applied to your account
+
+Your referral code: ${referralCode}
+
+PERFECT FOR SHARING WITH:
+• Pastor friends at neighboring churches
+• Music directors in your denomination
+• Worship leaders from conferences and events
+• Church staff who struggle with music coordination
+• Anyone who could benefit from better music ministry organization
+
+YOUR PERSONAL REFERRAL LINK:
+${referralUrl}
+
+HOW IT WORKS:
+1. Share your referral link or code with other churches
+2. They sign up using your code and complete their trial
+3. When they become a paying customer, you get 1 month free!
+4. Your next billing is automatically reduced
+
+Track your referrals: ${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/rewards
+
+QUESTIONS ABOUT REFERRALS?
+We're happy to help explain how our referral program works! Contact us at support@churchmusicscheduler.com
+
+Thank you for helping us serve more churches! 🎵
+
+---
+Sent by Church Music Scheduler
+      `
+    }
+
+    const { data, error } = await resend.emails.send(emailData)
+
+    if (error) {
+      console.error('Error sending referral promotion email:', error)
+      throw error
+    }
+
+    return data
+  } catch (error) {
+    console.error('Failed to send referral promotion email:', error)
+    throw error
+  }
+} 
