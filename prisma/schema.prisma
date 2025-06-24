@@ -36,6 +36,8 @@ model Church {
   referrals             Referral[]           @relation("ReferringChurch")
   users                 User[]
   ownershipTransfers    OwnershipTransfer[]
+  automationSettings    AutomationSettings?
+  notificationLogs      NotificationLog[]
 
   @@map("parishes")
 }
@@ -51,6 +53,7 @@ model User {
   isVerified         Boolean           @default(false)
   emailNotifications Boolean           @default(true)
   smsNotifications   Boolean           @default(true)
+  timezone           String            @default("America/Chicago")
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
   churchId           String
@@ -59,6 +62,7 @@ model User {
   groupMemberships   GroupMember[]
   uploadedFiles      MusicFile[]
   church             Church            @relation(fields: [churchId], references: [id], onDelete: Cascade)
+  pastorSettings     PastorSettings?
 
   @@map("users")
 }
@@ -110,6 +114,7 @@ model Event {
   eventType         EventType         @relation(fields: [eventTypeId], references: [id])
   template          EventTemplate?    @relation(fields: [templateId], references: [id])
   musicFiles        MusicFile[]
+  notificationLogs  NotificationLog[]
 
   @@map("events")
 }
@@ -332,6 +337,68 @@ model OwnershipTransfer {
   @@map("ownership_transfers")
 }
 
+model AutomationSettings {
+  id                        String                  @id @default(cuid())
+  churchId                  String                  @unique
+  
+  // Musician Notification Settings
+  musicianNotifications     MusicianNotification[]
+  
+  // Pastor Notification Settings  
+  pastorEmailEnabled        Boolean                 @default(true)
+  pastorMonthlyReportDay    Int                     @default(27) // Day of month to send monthly report
+  pastorDailyDigestEnabled  Boolean                 @default(true)
+  pastorDailyDigestTime     String                  @default("08:00") // Time to send daily digest (24hr format)
+  
+  createdAt                 DateTime                @default(now())
+  updatedAt                 DateTime                @updatedAt
+  church                    Church                  @relation(fields: [churchId], references: [id], onDelete: Cascade)
+
+  @@map("automation_settings")
+}
+
+model MusicianNotification {
+  id                   String              @id @default(cuid())
+  automationSettingsId String
+  hoursBeforeEvent     Int                 // Hours before event to send notification
+  isEnabled            Boolean             @default(true)
+  createdAt            DateTime            @default(now())
+  automationSettings   AutomationSettings  @relation(fields: [automationSettingsId], references: [id], onDelete: Cascade)
+
+  @@map("musician_notifications")
+}
+
+model PastorSettings {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  dailyDigestEnabled    Boolean  @default(true)
+  monthlyReportEnabled  Boolean  @default(true)
+  timezone              String   @default("America/Chicago")
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("pastor_settings")
+}
+
+model NotificationLog {
+  id              String           @id @default(cuid())
+  type            NotificationType
+  churchId        String
+  eventId         String?
+  recipientEmail  String
+  recipientName   String
+  subject         String
+  content         String?
+  sentAt          DateTime         @default(now())
+  status          String           @default("sent")
+  metadata        Json?            // Store additional data like hours_before_event, etc.
+  church          Church           @relation(fields: [churchId], references: [id], onDelete: Cascade)
+  event           Event?           @relation(fields: [eventId], references: [id])
+
+  @@map("notification_logs")
+}
+
 enum UserRole {
   DIRECTOR
   ASSOCIATE_DIRECTOR
@@ -371,6 +438,8 @@ enum ActivityType {
   MUSICIAN_INVITED
   MUSICIAN_SIGNED_UP
   MESSAGE_SENT
+  AUTOMATED_NOTIFICATION_SENT
+  AUTOMATION_SETTINGS_UPDATED
 }
 
 enum OwnershipTransferStatus {
@@ -379,4 +448,12 @@ enum OwnershipTransferStatus {
   EXPIRED
   CANCELLED
   COMPLETED
+}
+
+enum NotificationType {
+  MUSICIAN_EVENT_REMINDER
+  PASTOR_DAILY_DIGEST
+  PASTOR_MONTHLY_REPORT
+  EVENT_CANCELLED
+  EVENT_UPDATED
 }

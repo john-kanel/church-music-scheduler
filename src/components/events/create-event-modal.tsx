@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { X, Plus, Upload, Trash2, Calendar, Users, ChevronDown } from 'lucide-react'
+import { X, Plus, Upload, Trash2, Calendar, Users, ChevronDown, RefreshCw } from 'lucide-react'
 
 interface CreateEventModalProps {
   isOpen: boolean
@@ -33,6 +33,14 @@ interface Hymn {
   notes?: string
 }
 
+const RECURRENCE_PATTERNS = [
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'biweekly', label: 'Every 2 weeks' },
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'quarterly', label: 'Quarterly' },
+  { value: 'custom', label: 'Custom pattern' }
+]
+
 export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEventModalProps) {
   const { data: session } = useSession()
   const [loading, setLoading] = useState(false)
@@ -49,7 +57,10 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
     startTime: '',
     endTime: '',
     signupType: 'open', // 'open' or 'assigned'
-    notes: ''
+    notes: '',
+    isRecurring: false,
+    recurrencePattern: '',
+    recurrenceEnd: ''
   })
 
   const [roles, setRoles] = useState<Role[]>([
@@ -175,6 +186,12 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
     setSuccess('')
 
     try {
+      // Additional validation for recurring events
+      if (formData.isRecurring && !formData.recurrencePattern) {
+        setError('Please select a recurrence pattern for recurring events.')
+        return
+      }
+
       const eventData = {
         name: formData.name,
         description: formData.description,
@@ -182,6 +199,9 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
         startDate: formData.startDate,
         startTime: formData.startTime,
         endTime: formData.endTime,
+        isRecurring: formData.isRecurring,
+        recurrencePattern: formData.isRecurring ? formData.recurrencePattern : undefined,
+        recurrenceEnd: formData.isRecurring && formData.recurrenceEnd ? formData.recurrenceEnd : undefined,
         roles: roles.filter(role => role.name.trim() !== '').map(role => ({
           name: role.name,
           maxCount: role.maxCount,
@@ -223,7 +243,10 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
           startTime: '',
           endTime: '',
           signupType: 'open',
-          notes: ''
+          notes: '',
+          isRecurring: false,
+          recurrencePattern: '',
+          recurrenceEnd: ''
         })
         setRoles([
           { id: '1', name: 'Accompanist', maxCount: 1, isRequired: true },
@@ -243,7 +266,7 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-gray-500 bg-opacity-10 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-gray-500 bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b">
           <h2 className="text-2xl font-bold text-gray-900">Create New Event</h2>
@@ -353,6 +376,74 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                 />
               </div>
+            </div>
+          </section>
+
+          {/* Recurring Event Settings */}
+          <section>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <RefreshCw className="h-5 w-5 mr-2 text-blue-600" />
+              Recurring Event Settings
+            </h3>
+            <div className="space-y-4">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="isRecurring"
+                  name="isRecurring"
+                  checked={formData.isRecurring}
+                  onChange={handleInputChange}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="isRecurring" className="ml-2 text-sm text-gray-700">
+                  Make this a recurring event
+                </label>
+              </div>
+
+                             {formData.isRecurring && (
+                 <div className="space-y-4">
+                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                     <p className="text-sm text-blue-800">
+                       <strong>Recurring Events:</strong> This will automatically create multiple instances of this event based on your selected pattern. 
+                       All roles, assignments, and settings will be copied to each occurrence.
+                     </p>
+                   </div>
+                   
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6 border-l-2 border-blue-200">
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 mb-2">Recurrence Pattern *</label>
+                       <select
+                         name="recurrencePattern"
+                         value={formData.recurrencePattern}
+                         onChange={handleInputChange}
+                         required={formData.isRecurring}
+                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                       >
+                         <option value="">Select pattern...</option>
+                         {RECURRENCE_PATTERNS.map((pattern) => (
+                           <option key={pattern.value} value={pattern.value}>
+                             {pattern.label}
+                           </option>
+                         ))}
+                       </select>
+                     </div>
+
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 mb-2">End Date (Optional)</label>
+                       <input
+                         type="date"
+                         name="recurrenceEnd"
+                         value={formData.recurrenceEnd}
+                         onChange={handleInputChange}
+                         min={formData.startDate}
+                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                         title="If left empty, the event will recur indefinitely"
+                       />
+                       <p className="text-xs text-gray-500 mt-1">Leave empty to recur indefinitely</p>
+                     </div>
+                   </div>
+                 </div>
+               )}
             </div>
           </section>
 

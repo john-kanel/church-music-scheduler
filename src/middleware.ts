@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { getToken } from 'next-auth/jwt'
+import { prisma } from '@/lib/db'
 
-export function middleware(request: NextRequest) {
-  // Only apply middleware to admin routes
+export async function middleware(request: NextRequest) {
+  // Handle admin routes first
   if (request.nextUrl.pathname.startsWith('/admin') || 
       request.nextUrl.pathname.startsWith('/api/admin')) {
     
@@ -19,11 +21,81 @@ export function middleware(request: NextRequest) {
     if (!adminAuth || adminAuth !== 'authenticated') {
       return NextResponse.redirect(new URL('/admin/login', request.url))
     }
+    
+    return NextResponse.next()
+  }
+
+  // Define paths that should always be accessible (even for expired accounts)
+  const alwaysAccessiblePaths = [
+    '/',
+    '/auth/signin',
+    '/auth/signup', 
+    '/auth/trial-success',
+    '/trial-expired',
+    '/billing',
+    '/settings',
+    '/support',
+    '/api/auth',
+    '/api/stripe',
+    '/api/support'
+  ]
+
+  // Check if current path should always be accessible
+  const isAlwaysAccessible = alwaysAccessiblePaths.some(path => 
+    request.nextUrl.pathname.startsWith(path)
+  )
+
+  if (isAlwaysAccessible) {
+    return NextResponse.next()
+  }
+
+  // Get the user's session
+  const token = await getToken({ 
+    req: request, 
+    secret: process.env.NEXTAUTH_SECRET 
+  })
+
+  // If no session, redirect to sign in
+  if (!token || !token.churchId) {
+    return NextResponse.redirect(new URL('/auth/signin', request.url))
+  }
+
+  // Check subscription status
+  try {
+    const church = await prisma.church.findUnique({
+      where: { id: token.churchId as string },
+      select: {
+        subscriptionStatus: true,
+        subscriptionEnds: true
+      }
+    })
+
+    if (!church) {
+      return NextResponse.redirect(new URL('/auth/signin', request.url))
+    }
+
+    // Check if subscription is expired
+    const now = new Date()
+    const isExpired = church.subscriptionEnds && now > church.subscriptionEnds
+    const isInactive = !['active', 'trialing'].includes(church.subscriptionStatus)
+
+    if (isExpired || isInactive) {
+      // Redirect to trial expired page
+      return NextResponse.redirect(new URL('/trial-expired', request.url))
+    }
+
+  } catch (error) {
+    console.error('Middleware subscription check error:', error)
+    // On error, allow access but log the issue
+    return NextResponse.next()
   }
 
   return NextResponse.next()
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/api/admin/:path*']
+  matcher: [
+    // Match all routes except static files and API routes that should be excluded
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ]
 } 

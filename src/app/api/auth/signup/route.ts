@@ -227,6 +227,31 @@ export async function POST(request: NextRequest) {
         })
       }
 
+      // Create default automation settings for new church
+      if (role === 'DIRECTOR' || role === 'ASSOCIATE_DIRECTOR') {
+        await tx.automationSettings.create({
+          data: {
+            churchId: church.id,
+            pastorEmailEnabled: true,
+            pastorMonthlyReportDay: 27,
+            pastorDailyDigestEnabled: true,
+            pastorDailyDigestTime: '08:00',
+            musicianNotifications: {
+              create: [
+                {
+                  hoursBeforeEvent: 168, // 1 week
+                  isEnabled: true
+                },
+                {
+                  hoursBeforeEvent: 24, // 24 hours
+                  isEnabled: true
+                }
+              ]
+            }
+          }
+        })
+      }
+
       return { user, church }
     })
 

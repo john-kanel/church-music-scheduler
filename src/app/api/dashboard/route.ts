@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { checkSubscriptionStatus, createSubscriptionErrorResponse } from '@/lib/subscription-check'
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,6 +10,12 @@ export async function GET(request: NextRequest) {
     
     if (!session?.user?.churchId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Check subscription status
+    const subscriptionStatus = await checkSubscriptionStatus(session.user.churchId)
+    if (!subscriptionStatus.isActive) {
+      return createSubscriptionErrorResponse()
     }
 
     const userRole = session.user.role

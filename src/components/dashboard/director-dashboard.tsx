@@ -137,7 +137,7 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
 
     fetchDashboardData()
     fetchActivities()
-  }, [])
+  }, [currentDate])
 
   // Show tour for new directors
   useEffect(() => {
@@ -152,10 +152,11 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
     setShowTour(false)
   }
 
-  const refreshDashboardData = async () => {
+  const refreshDashboardData = async (date?: Date) => {
     try {
-      const month = currentDate.getMonth() + 1 // JavaScript months are 0-indexed
-      const year = currentDate.getFullYear()
+      const targetDate = date || currentDate
+      const month = targetDate.getMonth() + 1 // JavaScript months are 0-indexed
+      const year = targetDate.getFullYear()
       const [dashboardResponse, activitiesResponse] = await Promise.all([
         fetch(`/api/dashboard?month=${month}&year=${year}`),
         fetch('/api/activities')
@@ -262,8 +263,7 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
       }
       return newDate
     })
-    // Refetch dashboard data for the new month
-    refreshDashboardData()
+    // Remove the immediate call to refreshDashboardData() - useEffect will handle it
   }
 
   const days = getDaysInMonth(currentDate)
@@ -911,9 +911,8 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
         }}
         event={selectedEvent}
         onEventUpdated={() => {
+          // Just refresh the data, don't close the modal so user can continue editing
           refreshDashboardData()
-          setShowEventDetails(false)
-          setSelectedEvent(null)
         }}
         onEventDeleted={() => {
           refreshDashboardData()

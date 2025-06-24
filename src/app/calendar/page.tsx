@@ -64,6 +64,7 @@ interface CalendarEvent {
     }
   }[]
   musicFiles?: any[]
+  _tempState?: 'pending' | 'error' // Internal state for UI feedback
 }
 
 const TEMPLATE_COLORS = [
@@ -105,6 +106,8 @@ export default function CalendarPage() {
   
   // Drag and drop
   const [draggedTemplate, setDraggedTemplate] = useState<EventTemplate | null>(null)
+  const [draggedEvent, setDraggedEvent] = useState<CalendarEvent | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
 
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -199,31 +202,132 @@ export default function CalendarPage() {
       const dropDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day, hour, 0)
       const endDate = new Date(dropDate.getTime() + draggedTemplate.duration * 60000)
 
+      // Optimistic UI update
+      const newEvent = {
+        id: 'temp-' + Date.now(),
+        name: draggedTemplate.name,
+        description: draggedTemplate.description,
+        location: 'TBD', // Default location
+        startTime: dropDate.toISOString(),
+        endTime: endDate.toISOString(),
+        eventType: {
+          id: 'temp',
+          name: draggedTemplate.name,
+          color: draggedTemplate.color
+        },
+        templateId: draggedTemplate.id
+      }
+      
+      setEvents(prev => [...prev, newEvent])
+
       const response = await fetch('/api/events', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           name: draggedTemplate.name,
           description: draggedTemplate.description,
-          location: 'Church', // Default location
+          location: 'TBD', // Default location required by API
           startDate: dropDate.toISOString().split('T')[0],
           startTime: dropDate.toTimeString().slice(0, 5),
           endTime: endDate.toTimeString().slice(0, 5),
+          eventTypeId: null,
           templateId: draggedTemplate.id,
           templateColor: draggedTemplate.color,
           roles: draggedTemplate.roles,
-          hymns: draggedTemplate.hymns
-        })
+          hymns: draggedTemplate.hymns,
+          isRecurring: draggedTemplate.isRecurring,
+          recurrencePattern: draggedTemplate.recurrencePattern
+        }),
       })
 
-      if (response.ok) {
-        fetchEvents() // Refresh events
+      if (!response.ok) {
+        // Remove optimistic update if failed
+        setEvents(prev => prev.filter(e => e.id !== newEvent.id))
+        throw new Error('Failed to create event')
       }
+
+      // Refresh events to get the real data
+      fetchEvents()
     } catch (error) {
       console.error('Error creating event from template:', error)
     }
+  }
 
-    setDraggedTemplate(null)
+  const handleEventDrag = async (day: number, event: CalendarEvent) => {
+    if (!draggedEvent || draggedEvent.id !== event.id) return
+
+    try {
+      const newDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day)
+      const eventDate = new Date(event.startTime)
+      const timeDiff = eventDate.getTime() - new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate()).getTime()
+      
+      // Preserve the original time
+      newDate.setTime(newDate.getTime() + timeDiff)
+      
+      const endDate = event.endTime ? new Date(event.endTime) : null
+      let newEndDate = null
+      if (endDate) {
+        const endTimeDiff = endDate.getTime() - eventDate.getTime()
+        newEndDate = new Date(newDate.getTime() + endTimeDiff)
+      }
+
+      // Store original event for rollback
+      const originalEvent = { ...event }
+
+      // Optimistic UI update
+      setEvents(prevEvents => prevEvents.map(ev =>
+        ev.id === event.id
+          ? { 
+              ...ev, 
+              startTime: newDate.toISOString(), 
+              endTime: newEndDate ? newEndDate.toISOString() : undefined,
+              _tempState: 'pending'
+            }
+          : ev
+      ))
+
+      const response = await fetch(`/api/events/${event.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: event.name,
+          description: event.description,
+          location: event.location,
+          startDate: newDate.toISOString().split('T')[0],
+          startTime: newDate.toTimeString().slice(0, 5),
+          endTime: newEndDate ? newEndDate.toTimeString().slice(0, 5) : null,
+          eventTypeId: event.eventType.id,
+          isPastEvent: newDate < new Date()
+        }),
+      })
+
+      if (!response.ok) {
+        // Revert optimistic update if failed
+        setEvents(prevEvents => prevEvents.map(ev =>
+          ev.id === event.id ? originalEvent : ev
+        ))
+        throw new Error('Failed to update event')
+      }
+
+      // Fetch fresh data to ensure consistency
+      fetchEvents()
+    } catch (error) {
+      console.error('Error moving event:', error)
+      // Show error state briefly
+      setEvents(prevEvents => prevEvents.map(ev =>
+        ev.id === event.id ? { ...event, _tempState: 'error' } : ev
+      ))
+      // Then revert to original after a short delay
+      setTimeout(() => {
+        setEvents(prevEvents => prevEvents.map(ev =>
+          ev.id === event.id ? event : ev
+        ))
+      }, 2000)
+    }
   }
 
   const handleEventClick = (event: CalendarEvent) => {
@@ -478,7 +582,10 @@ export default function CalendarPage() {
                   <div
                     key={template.id}
                     draggable
-                    onDragStart={() => setDraggedTemplate(template)}
+                    onDragStart={() => {
+                      setDraggedTemplate(template)
+                      setDraggedEvent(null)
+                    }}
                     onDragEnd={() => setDraggedTemplate(null)}
                     className="p-4 rounded-lg border-2 border-dashed border-gray-200 hover:border-gray-300 cursor-move transition-colors"
                     style={{ borderColor: template.color + '40', backgroundColor: template.color + '10' }}
@@ -588,9 +695,19 @@ export default function CalendarPage() {
                             : isToday
                             ? 'bg-blue-50'
                             : 'bg-white hover:bg-gray-50'
-                        } ${draggedTemplate ? 'transition-colors' : ''}`}
+                        } ${draggedTemplate || draggedEvent ? 'transition-colors' : ''} ${
+                          draggedEvent && day ? 'hover:bg-blue-100 hover:border-blue-300' : ''
+                        }`}
                         onDragOver={(e) => e.preventDefault()}
-                        onDrop={() => day && handleDrop(day)}
+                        onDrop={() => {
+                          if (day) {
+                            if (draggedTemplate) {
+                              handleDrop(day)
+                            } else if (draggedEvent) {
+                              handleEventDrag(day, draggedEvent)
+                            }
+                          }
+                        }}
                         onClick={(e) => day && handleDateClick(day, e)}
                       >
                         {day && (
@@ -602,8 +719,8 @@ export default function CalendarPage() {
                             </div>
                             <div className="space-y-1">
                               {dayEvents.slice(0, 3).map((event) => {
-                                const eventTime = new Date(event.startTime)
-                                const timeString = eventTime.toLocaleTimeString('en-US', {
+                                const eventDate = new Date(event.startTime)
+                                const timeString = eventDate.toLocaleTimeString('en-US', {
                                   hour: 'numeric',
                                   minute: '2-digit',
                                   hour12: true
@@ -612,19 +729,44 @@ export default function CalendarPage() {
                                   <div
                                     key={event.id}
                                     data-event="true"
-                                    className="text-xs px-2 py-1 rounded truncate cursor-pointer hover:opacity-80 transition-opacity"
+                                    draggable
+                                    onDragStart={(e) => {
+                                      setDraggedEvent(event)
+                                      setDraggedTemplate(null)
+                                      setIsDragging(true)
+                                      e.dataTransfer.effectAllowed = 'move'
+                                      e.dataTransfer.setData('text/plain', event.id)
+                                    }}
+                                    onDragEnd={() => {
+                                      setDraggedEvent(null)
+                                      setIsDragging(false)
+                                    }}
+                                    className={`text-xs px-2 py-1 rounded truncate cursor-move hover:opacity-80 transition-all duration-200 ${
+                                      isDragging && draggedEvent?.id === event.id 
+                                        ? 'opacity-50 scale-95 shadow-lg' 
+                                        : 'hover:scale-105'
+                                    } ${
+                                      event._tempState === 'pending'
+                                        ? 'animate-pulse'
+                                        : event._tempState === 'error'
+                                        ? 'border-red-500 border-2'
+                                        : ''
+                                    }`}
                                     style={{
                                       backgroundColor: event.eventType.color + '20',
                                       color: event.eventType.color,
-                                      borderLeft: `3px solid ${event.eventType.color}`
+                                      borderLeft: `3px solid ${event.eventType.color}`,
+                                      transform: isDragging && draggedEvent?.id === event.id ? 'rotate(2deg)' : 'none'
                                     }}
-                                    title={`${event.name} at ${timeString}`}
+                                    title={`${event.name} at ${timeString} - Drag to move`}
                                     onClick={(e) => {
                                       e.stopPropagation()
                                       handleEventClick(event)
                                     }}
                                   >
                                     {timeString} {event.name}
+                                    {event._tempState === 'pending' && ' (Saving...)'}
+                                    {event._tempState === 'error' && ' (Failed to save)'}
                                   </div>
                                 )
                               })}

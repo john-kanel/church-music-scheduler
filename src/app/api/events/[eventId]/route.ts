@@ -175,7 +175,8 @@ export async function PUT(
       roles = [],
       isRecurring,
       recurrencePattern,
-      recurrenceEnd
+      recurrenceEnd,
+      isPastEvent
     } = body
 
     // Validation
@@ -186,9 +187,16 @@ export async function PUT(
       )
     }
 
-    // Combine date and time
-    const startDateTime = new Date(`${startDate}T${startTime}`)
-    const endDateTime = endTime ? new Date(`${startDate}T${endTime}`) : null
+    // Combine date and time - treat as local time to avoid timezone issues
+    const [year, month, day] = startDate.split('-').map(Number)
+    const [startHour, startMinute] = startTime.split(':').map(Number)
+    const startDateTime = new Date(year, month - 1, day, startHour, startMinute)
+    
+    let endDateTime = null
+    if (endTime) {
+      const [endHour, endMinute] = endTime.split(':').map(Number)
+      endDateTime = new Date(year, month - 1, day, endHour, endMinute)
+    }
 
     // Update event in transaction
     const result = await prisma.$transaction(async (tx) => {
@@ -239,6 +247,15 @@ export async function PUT(
           }
         })
 
+        // Get existing role assignments to copy to recurring events
+        const existingAssignments = await tx.eventAssignment.findMany({
+          where: {
+            eventId: params.eventId,
+            userId: null,
+            groupId: null
+          }
+        })
+
         // Generate recurring events
         const recurringEvents = generateRecurringEvents(
           updatedEvent,
@@ -256,13 +273,13 @@ export async function PUT(
             }
           })
 
-          // Copy role assignments to recurring events
-          if (roles.length > 0) {
+          // Copy existing role assignments to recurring events
+          if (existingAssignments.length > 0) {
             await tx.eventAssignment.createMany({
-              data: roles.map((role: any) => ({
+              data: existingAssignments.map((assignment) => ({
                 eventId: createdEvent.id,
-                roleName: role.name,
-                maxMusicians: role.maxCount || 1,
+                roleName: assignment.roleName,
+                maxMusicians: assignment.maxMusicians,
                 status: 'PENDING'
               }))
             })
@@ -301,6 +318,12 @@ export async function PUT(
         musicFiles: true
       }
     })
+
+    // Schedule automated notifications for updated event (skip for past events)
+    if (!isPastEvent) {
+      const { scheduleEventNotifications } = await import('@/lib/automation-helpers')
+      await scheduleEventNotifications(params.eventId, session.user.churchId)
+    }
 
     return NextResponse.json({ 
       message: 'Event updated successfully',

@@ -31,7 +31,7 @@ interface CalendarEvent {
     color: string
   }
   templateId?: string
-  status?: 'confirmed' | 'tentative' | 'cancelled'
+  status?: 'confirmed' | 'tentative' | 'cancelled' | 'pending' | 'error'
   isRecurring?: boolean
   recurrencePattern?: string
   assignments?: {
@@ -167,7 +167,8 @@ export function EventDetailsModal({
     endTime: '',
     status: 'confirmed' as 'confirmed' | 'tentative' | 'cancelled',
     isRecurring: false,
-    recurrencePattern: ''
+    recurrencePattern: '',
+    recurrenceEnd: ''
   })
 
   // Initialize current event when modal opens or event prop changes
@@ -192,7 +193,8 @@ export function EventDetailsModal({
         endTime: endDate ? endDate.toTimeString().slice(0, 5) : '',
         status: currentEvent.status || 'confirmed',
         isRecurring: currentEvent.isRecurring || false,
-        recurrencePattern: currentEvent.recurrencePattern || ''
+        recurrencePattern: currentEvent.recurrencePattern || '',
+        recurrenceEnd: '' // Note: recurrenceEnd is not stored in event yet, but ready for future enhancement
       })
     }
   }, [currentEvent, isEditing])
@@ -268,6 +270,28 @@ export function EventDetailsModal({
   const handleSave = async () => {
     if (!currentEvent) return
     
+    // Additional validation for recurring events
+    if (editData.isRecurring && !editData.recurrencePattern) {
+      setError('Please select a recurrence pattern for recurring events.')
+      showToast('error', 'Please select a recurrence pattern for recurring events.')
+      return
+    }
+
+    // Check if this is a past event
+    const eventDateTime = new Date(`${editData.startDate}T${editData.startTime}`)
+    const now = new Date()
+    const isPastEvent = eventDateTime < now
+
+    // Show warning for past events
+    if (isPastEvent) {
+      const confirmEdit = window.confirm(
+        'This event has already occurred. Editing past events will not trigger notifications to musicians or pastors. Do you want to continue?'
+      )
+      if (!confirmEdit) {
+        return
+      }
+    }
+    
     setLoading(true)
     setError('')
     setSuccess('')
@@ -276,7 +300,10 @@ export function EventDetailsModal({
       const response = await fetch(`/api/events/${currentEvent.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editData)
+        body: JSON.stringify({
+          ...editData,
+          isPastEvent // Include this flag so the API knows to skip notifications
+        })
       })
 
       if (!response.ok) {
@@ -284,7 +311,7 @@ export function EventDetailsModal({
         throw new Error(errorData.error || 'Failed to update event')
       }
 
-      showToast('success', 'Event updated successfully!')
+      showToast('success', `Event updated successfully!${isPastEvent ? ' (No notifications sent for past event)' : ''}`)
       setIsEditing(false)
       
       // Refresh the event data and parent calendar
@@ -377,10 +404,18 @@ export function EventDetailsModal({
       setLoading(true)
       setError('')
       
+      // Check if this is a past event
+      const eventDateTime = new Date(currentEvent?.startTime || '')
+      const now = new Date()
+      const isPastEvent = eventDateTime < now
+      
       const response = await fetch(`/api/assignments/${assignmentId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ musicianId })
+        body: JSON.stringify({ 
+          musicianId,
+          isPastEvent // Include this flag so the API knows to skip notifications
+        })
       })
 
       if (!response.ok) {
@@ -388,7 +423,7 @@ export function EventDetailsModal({
         throw new Error(errorData.error || 'Failed to assign musician')
       }
 
-      showToast('success', 'Musician assigned successfully!')
+      showToast('success', `Musician assigned successfully!${isPastEvent ? ' (No notifications sent for past event)' : ''}`)
       // Close the dropdown and clear search text
       setOpenDropdowns(prev => ({ ...prev, [assignmentId]: false }))
       setSearchTexts(prev => ({ ...prev, [assignmentId]: '' }))
@@ -552,7 +587,7 @@ export function EventDetailsModal({
   })
 
   return (
-    <div className="fixed inset-0 bg-gray-500 bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-gray-500 bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b">
@@ -607,6 +642,22 @@ export function EventDetailsModal({
         </div>
 
         <div className="p-6 space-y-6">
+          {/* Past Event Warning */}
+          {(() => {
+            const eventDateTime = new Date(currentEvent.startTime)
+            const now = new Date()
+            const isPastEvent = eventDateTime < now
+            
+            return isPastEvent && isEditing ? (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <p className="text-amber-800 text-sm flex items-center">
+                  <AlertTriangle className="h-4 w-4 mr-2" />
+                  <strong>Past Event:</strong> This event has already occurred. Edits will not trigger notifications to musicians or pastors.
+                </p>
+              </div>
+            ) : null
+          })()}
+
           {/* Status Messages */}
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -734,60 +785,92 @@ export function EventDetailsModal({
             )}
           </div>
 
-          {/* Recurring Events - Only show for template-based events */}
-          {currentEvent.templateId && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                  <RefreshCw className="h-5 w-5 mr-2 text-blue-600" />
-                  Recurring Event Settings
-                </h3>
-                {isEditing && (
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={editData.isRecurring}
-                      onChange={(e) => setEditData(prev => ({ ...prev, isRecurring: e.target.checked }))}
-                      className="mr-2"
-                    />
-                    <span className="text-sm text-gray-700">Make this event recurring</span>
+          {/* Recurring Event Settings */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+              <RefreshCw className="h-5 w-5 mr-2 text-blue-600" />
+              Recurring Event Settings
+            </h3>
+            
+            {isEditing ? (
+              <div className="space-y-4">
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="isRecurringEdit"
+                    checked={editData.isRecurring}
+                    onChange={(e) => setEditData(prev => ({ ...prev, isRecurring: e.target.checked }))}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="isRecurringEdit" className="ml-2 text-sm text-gray-700">
+                    Make this event recurring
                   </label>
+                </div>
+
+                {editData.isRecurring && (
+                  <div className="space-y-4">
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <p className="text-sm text-blue-800">
+                        <strong>Recurring Events:</strong> This will automatically create multiple instances of this event based on your selected pattern. 
+                        All roles, assignments, and settings will be copied to each occurrence.
+                      </p>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6 border-l-2 border-blue-200">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Recurrence Pattern *</label>
+                        <select
+                          value={editData.recurrencePattern}
+                          onChange={(e) => setEditData(prev => ({ ...prev, recurrencePattern: e.target.value }))}
+                          required={editData.isRecurring}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          <option value="">Select pattern...</option>
+                          {RECURRENCE_PATTERNS.map((pattern) => (
+                            <option key={pattern.value} value={pattern.value}>
+                              {pattern.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">End Date (Optional)</label>
+                        <input
+                          type="date"
+                          value={editData.recurrenceEnd}
+                          onChange={(e) => setEditData(prev => ({ ...prev, recurrenceEnd: e.target.value }))}
+                          min={editData.startDate}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          title="If left empty, the event will recur indefinitely"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Leave empty to recur indefinitely</p>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
-              
-              {isEditing ? (
-                editData.isRecurring && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Recurrence Pattern</label>
-                    <select
-                      value={editData.recurrencePattern}
-                      onChange={(e) => setEditData(prev => ({ ...prev, recurrencePattern: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="">Select pattern...</option>
-                      {RECURRENCE_PATTERNS.map((pattern) => (
-                        <option key={pattern.value} value={pattern.value}>
-                          {pattern.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )
-              ) : (
-                <div className="space-y-2">
-                  <div className="flex items-center text-gray-700">
-                    <RefreshCw className="h-4 w-4 mr-2 text-blue-600" />
-                    <span>{currentEvent.isRecurring ? 'Yes' : 'No'}</span>
-                    {currentEvent.isRecurring && currentEvent.recurrencePattern && (
-                      <span className="text-gray-500 ml-2">
-                        ({RECURRENCE_PATTERNS.find(p => p.value === currentEvent.recurrencePattern)?.label})
-                      </span>
-                    )}
-                  </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex items-center text-gray-700">
+                  <RefreshCw className="h-4 w-4 mr-2 text-blue-600" />
+                  <span className="font-medium">
+                    {currentEvent.isRecurring ? 'Yes' : 'No'}
+                  </span>
+                  {currentEvent.isRecurring && currentEvent.recurrencePattern && (
+                    <span className="text-gray-500 ml-2">
+                      ({RECURRENCE_PATTERNS.find(p => p.value === currentEvent.recurrencePattern)?.label})
+                    </span>
+                  )}
                 </div>
-              )}
-            </div>
-          )}
+                {currentEvent.isRecurring && (
+                  <div className="text-sm text-gray-600 pl-6">
+                    This event repeats based on the selected pattern. Changes to this event may affect future occurrences.
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Assigned Musicians */}
           <div className="space-y-4">
@@ -1147,7 +1230,7 @@ export function EventDetailsModal({
 
         {/* Delete Confirmation Modal */}
         {showDeleteConfirm && (
-          <div className="absolute inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-500 bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-white rounded-lg p-6 max-w-md w-full">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Delete Event</h3>
               <p className="text-sm text-gray-600 mb-6">

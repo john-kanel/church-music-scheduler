@@ -31,7 +31,8 @@ export function InviteModal({ isOpen, onClose, onInvitesSent }: InviteModalProps
   })
 
   const [bulkInvites, setBulkInvites] = useState<Invitation[]>([])
-  const [bulkText, setBulkText] = useState('')
+  const [csvFile, setCsvFile] = useState<File | null>(null)
+  const [csvError, setCsvError] = useState('')
 
   const roles = [
     'musician',
@@ -67,36 +68,76 @@ export function InviteModal({ isOpen, onClose, onInvitesSent }: InviteModalProps
     setBulkInvites(bulkInvites.filter(invite => invite.id !== id))
   }
 
-  const parseBulkText = () => {
-    const lines = bulkText.trim().split('\n')
+  const handleCsvUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.name.endsWith('.csv')) {
+      setCsvError('Please select a CSV file')
+      return
+    }
+
+    setCsvFile(file)
+    setCsvError('')
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const text = e.target?.result as string
+      parseCsvData(text)
+    }
+    reader.readAsText(file)
+  }
+
+  const parseCsvData = (csvText: string) => {
+    const lines = csvText.trim().split('\n')
     const newInvites: Invitation[] = []
 
-    lines.forEach((line, index) => {
+    // Skip header row if it exists
+    const dataLines = lines[0].toLowerCase().includes('first name') || 
+                     lines[0].toLowerCase().includes('last name') || 
+                     lines[0].toLowerCase().includes('email') 
+                     ? lines.slice(1) 
+                     : lines
+
+    dataLines.forEach((line, index) => {
       const trimmedLine = line.trim()
       if (trimmedLine) {
-        // Try to parse email and name from various formats
-        const emailRegex = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/
-        const emailMatch = trimmedLine.match(emailRegex)
+        const columns = trimmedLine.split(',').map(col => col.trim().replace(/^["']|["']$/g, ''))
         
-        if (emailMatch) {
-          const email = emailMatch[1]
-          let name = trimmedLine.replace(email, '').replace(/[,\t]/g, '').trim()
+        if (columns.length >= 3) {
+          const firstName = columns[0]
+          const lastName = columns[1]
+          const email = columns[2]
           
-          // Remove common separators and quotes
-          name = name.replace(/^["']|["']$/g, '').trim()
-          
-          newInvites.push({
-            id: (Date.now() + index).toString(),
-            email,
-            name: name || '',
-            role: 'musician'
-          })
+          // Basic email validation
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+          if (emailRegex.test(email)) {
+            newInvites.push({
+              id: (Date.now() + index).toString(),
+              email,
+              name: `${firstName} ${lastName}`.trim(),
+              role: 'musician'
+            })
+          }
         }
       }
     })
 
     setBulkInvites(newInvites)
-    setBulkText('')
+  }
+
+  const downloadCsvTemplate = () => {
+    const csvContent = 'First Name,Last Name,Email\nJohn,Smith,john.smith@example.com\nJane,Doe,jane.doe@example.com'
+    const blob = new Blob([csvContent], { type: 'text/csv' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'musician_invites_template.csv'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
   }
 
   const handleSingleSubmit = async (e: React.FormEvent) => {
@@ -227,7 +268,7 @@ export function InviteModal({ isOpen, onClose, onInvitesSent }: InviteModalProps
           
           // Reset form
           setBulkInvites([])
-          setBulkText('')
+          setCsvFile(null)
           setSuccess('')
         }, 2500)
       }
@@ -241,7 +282,7 @@ export function InviteModal({ isOpen, onClose, onInvitesSent }: InviteModalProps
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-gray-500 bg-opacity-10 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-gray-500 bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b">
           <h2 className="text-2xl font-bold text-gray-900">Invite Musicians</h2>
@@ -382,34 +423,58 @@ export function InviteModal({ isOpen, onClose, onInvitesSent }: InviteModalProps
           {/* Bulk Invites */}
           {inviteMode === 'bulk' && (
             <div className="space-y-6">
-              {/* Bulk Text Input */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Paste Email List
+              {/* CSV Upload */}
+              <div className="flex items-center space-x-4 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-0">
+                  Upload CSV
                 </label>
-                <textarea
-                  value={bulkText}
-                  onChange={(e) => setBulkText(e.target.value)}
-                  rows={6}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900"
-                  placeholder="Enter one email per line. You can include names or just email addresses:&#10;&#10;john.smith@example.com&#10;Jane Doe &lt;jane@example.com&gt;&#10;mike.wilson@church.org&#10;Sarah Johnson &lt;sarah@gmail.com&gt;&#10;&#10;Click 'Parse List' when done to review before sending."
-                />
-                <div className="flex justify-between items-center mt-2">
-                  <p className="text-xs text-gray-500">
-                    Supported formats: email@domain.com or "Name" &lt;email@domain.com&gt;
-                  </p>
-                  <button
-                    type="button"
-                    onClick={parseBulkText}
-                    disabled={!bulkText.trim()}
-                    className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors disabled:opacity-50"
-                  >
-                    Parse List
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={downloadCsvTemplate}
+                  className="text-green-600 hover:underline text-sm font-semibold bg-transparent border-none p-0 focus:outline-none"
+                  style={{ background: 'none', boxShadow: 'none' }}
+                >
+                  Download CSV Template
+                </button>
               </div>
+              <input
+                type="file"
+                accept=".csv"
+                onChange={handleCsvUpload}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900"
+              />
+              {csvError && (
+                <p className="text-red-500 text-sm mt-2">{csvError}</p>
+              )}
 
-              {bulkInvites.length > 0 && (
+              {/* Show review section and submit button as soon as file is uploaded */}
+              <div className="space-y-4 mt-6">
+                {bulkInvites.length > 0 && (
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="text-sm font-medium text-gray-900 mb-3">
+                      Review Invitations ({bulkInvites.length} musicians)
+                    </h3>
+                    <div className="max-h-48 overflow-y-auto space-y-2">
+                      {bulkInvites.map((invite) => (
+                        <div key={invite.id} className="flex items-center justify-between p-2 bg-white rounded border">
+                          <div className="flex-1">
+                            <div className="text-sm font-medium text-gray-900">{invite.name}</div>
+                            <div className="text-xs text-gray-600">{invite.email}</div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeBulkInvite(invite.id)}
+                            className="p-1 text-red-500 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Always show the form with submit button */}
                 <form onSubmit={handleBulkSubmit}>
                   <div className="flex justify-end space-x-4 pt-6 border-t">
                     <button
@@ -421,7 +486,7 @@ export function InviteModal({ isOpen, onClose, onInvitesSent }: InviteModalProps
                     </button>
                     <button
                       type="submit"
-                      disabled={loading}
+                      disabled={loading || bulkInvites.length === 0}
                       className="flex items-center px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
                     >
                       <Mail className="h-4 w-4 mr-2" />
@@ -429,7 +494,7 @@ export function InviteModal({ isOpen, onClose, onInvitesSent }: InviteModalProps
                     </button>
                   </div>
                 </form>
-              )}
+              </div>
             </div>
           )}
         </div>

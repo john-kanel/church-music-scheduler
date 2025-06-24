@@ -57,7 +57,8 @@ function SignUpForm() {
     setLoading(true)
 
     try {
-      const response = await fetch('/api/auth/signup', {
+      // Create Stripe trial checkout session
+      const response = await fetch('/api/stripe/trial-checkout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -74,11 +75,11 @@ function SignUpForm() {
 
       const result = await response.json()
 
-      if (response.ok) {
-        // Success - redirect to login or dashboard
-        router.push('/auth/signin?message=Account created successfully')
+      if (response.ok && result.url) {
+        // Redirect to Stripe checkout
+        window.location.href = result.url
       } else {
-        setError(result.error || 'Something went wrong')
+        setError(result.error || 'Failed to start trial checkout')
       }
     } catch (err) {
       setError('Network error. Please try again.')
@@ -92,11 +93,18 @@ function SignUpForm() {
       <div className="bg-white rounded-2xl shadow-xl p-8">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Start Your Free Trial
+            Start Your 30-Day Free Trial
           </h1>
           <p className="text-gray-600">
-            Create your church account and begin organizing your music ministry.
+            Enter your details below. No credit card required to start!
           </p>
+          <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-3">
+            <p className="text-green-800 text-sm font-medium">
+              ✓ 30 days completely free<br/>
+              ✓ No credit card required now<br/>
+              ✓ Cancel anytime during trial
+            </p>
+          </div>
         </div>
 
         {error && (
@@ -235,7 +243,7 @@ function SignUpForm() {
             disabled={loading}
             className="w-full bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50"
           >
-            {loading ? 'Creating Account...' : 'Start Free Trial'}
+            {loading ? 'Redirecting to checkout...' : 'Continue to Free Trial Setup'}
           </button>
         </form>
 
@@ -249,18 +257,15 @@ function SignUpForm() {
         </div>
 
         <div className="mt-8 pt-6 border-t border-gray-200">
-          <div className="grid grid-cols-3 gap-4 text-center text-sm text-gray-600">
-            <div>
-              <div className="font-semibold text-green-600">30 Days</div>
-              <div>Free Trial</div>
-            </div>
-            <div>
-              <div className="font-semibold text-blue-600">$34</div>
-              <div>Per Month</div>
-            </div>
-            <div>
-              <div className="font-semibold text-purple-600">Unlimited</div>
-              <div>Musicians</div>
+          <div className="text-center text-sm text-gray-600">
+            <p className="mb-2">
+              <strong>What happens next:</strong>
+            </p>
+            <div className="space-y-1 text-left">
+              <p>• Setup your trial account (no payment required)</p>
+              <p>• Enjoy 30 days of full access</p>
+              <p>• Add payment details only when you're ready to continue</p>
+              <p>• Only $35/month after trial ends</p>
             </div>
           </div>
         </div>

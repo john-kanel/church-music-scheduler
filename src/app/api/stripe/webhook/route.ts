@@ -35,6 +35,10 @@ export async function POST(req: NextRequest) {
         await handleSubscriptionChange(event.data.object as Stripe.Subscription)
         break
       
+      case 'checkout.session.completed':
+        await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session)
+        break
+      
       case 'customer.created':
       case 'customer.updated':
         await handleCustomerChange(event.data.object as Stripe.Customer)
@@ -384,5 +388,24 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
     console.log(`⚠️ Payment failed for church ${church.id}, invoice ${invoice.id}`)
   } catch (error) {
     console.error('Error handling payment failed:', error)
+  }
+}
+
+async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
+  try {
+    console.log(`Processing checkout session: ${session.id}`)
+    
+    // Check if this is a trial signup checkout
+    if (session.metadata?.isTrialSignup === 'true') {
+      console.log('Trial signup checkout completed, account creation will be handled by complete-trial-signup API')
+      return
+    }
+    
+    // Handle regular subscription checkouts if needed
+    console.log(`Regular checkout completed for customer: ${session.customer}`)
+    
+  } catch (error) {
+    console.error('Error handling checkout completion:', error)
+    throw error
   }
 } 

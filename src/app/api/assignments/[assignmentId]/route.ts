@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { scheduleEventNotifications } from '@/lib/automation-helpers'
 
 // PUT /api/assignments/[assignmentId] - Accept or decline assignment
 export async function PUT(
@@ -16,7 +17,7 @@ export async function PUT(
     }
 
     const { assignmentId } = await params
-    const { musicianId } = await request.json()
+    const { musicianId, isPastEvent } = await request.json()
 
     // Only directors and pastors can assign/unassign musicians
     if (!['DIRECTOR', 'ASSOCIATE_DIRECTOR', 'PASTOR'].includes(session.user.role)) {
@@ -113,7 +114,10 @@ export async function PUT(
       }
     })
 
-    // TODO: Send notification email to the assigned musician
+    // Schedule automated notifications for this musician (skip for past events)
+    if (!isPastEvent) {
+      await scheduleEventNotifications(assignment.event.id, session.user.churchId)
+    }
     
     return NextResponse.json({
       message: 'Musician assigned successfully',

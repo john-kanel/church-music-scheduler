@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { logActivity } from '@/lib/activity'
+import { checkSubscriptionStatus, createSubscriptionErrorResponse } from '@/lib/subscription-check'
 
 // Helper function to generate recurring events
 function generateRecurringEvents(
@@ -86,6 +87,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Check subscription status
+    const subscriptionStatus = await checkSubscriptionStatus(session.user.churchId)
+    if (!subscriptionStatus.isActive) {
+      return createSubscriptionErrorResponse()
+    }
+
     const { searchParams } = new URL(request.url)
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
@@ -164,6 +171,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Check subscription status
+    const subscriptionStatus = await checkSubscriptionStatus(session.user.churchId)
+    if (!subscriptionStatus.isActive) {
+      return createSubscriptionErrorResponse()
+    }
+
     // Only directors and pastors can create events
     if (!['DIRECTOR', 'ASSOCIATE_DIRECTOR', 'PASTOR'].includes(session.user.role)) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
@@ -195,9 +208,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Combine date and time
-    const startDateTime = new Date(`${startDate}T${startTime}`)
-    const endDateTime = endTime ? new Date(`${startDate}T${endTime}`) : null
+    // Combine date and time - treat as local time to avoid timezone issues
+    const [year, month, day] = startDate.split('-').map(Number)
+    const [startHour, startMinute] = startTime.split(':').map(Number)
+    const startDateTime = new Date(year, month - 1, day, startHour, startMinute)
+    
+    let endDateTime = null
+    if (endTime) {
+      const [endHour, endMinute] = endTime.split(':').map(Number)
+      endDateTime = new Date(year, month - 1, day, endHour, endMinute)
+    }
 
     // Find or create event type
     let finalEventTypeId = eventTypeId
@@ -391,6 +411,10 @@ export async function POST(request: NextRequest) {
         eventDate: startDateTime.toISOString()
       }
     })
+
+    // Schedule automated notifications for this new event
+    const { scheduleEventNotifications } = await import('@/lib/automation-helpers')
+    await scheduleEventNotifications(result.id, session.user.churchId)
 
     return NextResponse.json({ 
       message: 'Event created successfully',

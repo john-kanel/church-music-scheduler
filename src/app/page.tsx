@@ -291,7 +291,7 @@ export default function HomePage() {
 
                 <div className="mt-auto">
                   <a href="/auth/signup" className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 transition-colors block text-center">
-                    Start Free Trial
+                    Start 30-Day Free Trial
                   </a>
                 </div>
               </div>
@@ -350,7 +350,7 @@ export default function HomePage() {
                     href="/auth/signup"
                     className="w-full bg-green-600 text-white font-medium py-3 px-6 rounded-lg hover:bg-green-700 transition-colors inline-block text-center"
                   >
-                    Start Free Trial
+                    Start 30-Day Free Trial
                   </a>
                 </div>
               </div>
