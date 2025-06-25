@@ -138,14 +138,78 @@ export async function GET(request: NextRequest) {
       })
 
       const pendingCount = upcomingAssignments.filter(a => a.status === 'PENDING').length
+      const acceptedCount = upcomingAssignments.filter(a => a.status === 'ACCEPTED').length
+
+      // Get events for target month (for calendar display) - all church events
+      const startOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1)
+      const endOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59)
+
+      const monthEvents = await prisma.event.findMany({
+        where: {
+          churchId,
+          startTime: {
+            gte: startOfMonth,
+            lte: endOfMonth
+          }
+        },
+        include: {
+          eventType: true,
+          assignments: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true
+                }
+              }
+            }
+          }
+        },
+        orderBy: {
+          startTime: 'asc'
+        }
+      })
+
+      // Get this month's assignments count
+      const thisMonthAssignments = await prisma.eventAssignment.count({
+        where: {
+          userId,
+          event: {
+            startTime: {
+              gte: startOfMonth,
+              lte: endOfMonth
+            }
+          }
+        }
+      })
+
+      // Get music director contact info
+      const musicDirector = await prisma.user.findFirst({
+        where: {
+          churchId,
+          role: 'DIRECTOR'
+        },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          phone: true
+        }
+      })
 
       return NextResponse.json({
         userRole,
         stats: {
           upcomingAssignments: upcomingAssignments.length,
-          pendingResponses: pendingCount
+          pendingResponses: pendingCount,
+          acceptedAssignments: acceptedCount,
+          thisMonthAssignments
         },
-        upcomingAssignments
+        upcomingAssignments,
+        events: monthEvents,
+        musicDirector
       })
     }
 
