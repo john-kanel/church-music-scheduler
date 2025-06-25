@@ -110,7 +110,7 @@ export default function HomePage() {
           {/* Left Column - Marketing Content */}
           <div className="space-y-8">
             <div className="space-y-4">
-              <h1 className="text-4xl md:text-5xl font-bold text-gray-900 leading-tight">
+              <h1 className="text-3xl md:text-5xl font-bold text-gray-900 leading-tight">
                 Simple Music Scheduling for Your 
                 <span className="text-brand-600"> Church</span>
               </h1>
@@ -185,7 +185,7 @@ export default function HomePage() {
       <div id="features" className="bg-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
               Everything You Need to Organize Your Music Ministry
             </h2>
             <p className="text-lg text-gray-600">
@@ -231,7 +231,7 @@ export default function HomePage() {
       <div id="pricing" className="bg-gray-50 py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
               Simple, Affordable Pricing
             </h2>
             <p className="text-lg text-gray-600">
