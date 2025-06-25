@@ -28,7 +28,7 @@ export async function checkSubscriptionStatus(churchId: string): Promise<Subscri
 
     const now = new Date()
     const isExpired = church.subscriptionEnds ? now > church.subscriptionEnds : false
-    const isInactive = !['active', 'trialing'].includes(church.subscriptionStatus)
+    const isInactive = !['active', 'trialing', 'trial'].includes(church.subscriptionStatus)
     const isActive = !isExpired && !isInactive
 
     return {
