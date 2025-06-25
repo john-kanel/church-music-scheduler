@@ -174,13 +174,13 @@ export default function TrialExpiredPage() {
                     <span className="text-5xl font-bold text-gray-900">${plan.price}</span>
                     <span className="text-gray-500 text-lg">/{plan.interval}</span>
                     {plan.savingsPercent && (
-                      <span className="bg-green-100 text-green-800 text-sm font-medium px-3 py-1 rounded-full">
+                      <span className="bg-success-100 text-success-800 text-sm font-medium px-3 py-1 rounded-full">
                         Save {plan.savingsPercent}%
                       </span>
                     )}
                   </div>
                   {plan.savings && (
-                    <div className="text-green-600 font-medium mt-2">
+                    <div className="text-success-600 font-medium mt-2">
                       Save ${plan.savings} per year
                     </div>
                   )}
@@ -191,7 +191,7 @@ export default function TrialExpiredPage() {
               <ul className="space-y-4 mb-8">
                 {plan.features.map((feature, index) => (
                   <li key={index} className="flex items-center">
-                    <Check className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
+                    <Check className="h-5 w-5 text-success-500 mr-3 flex-shrink-0" />
                     <span className="text-gray-700">{feature}</span>
                   </li>
                 ))}

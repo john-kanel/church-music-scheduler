@@ -4,7 +4,8 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { LoginForm } from '@/components/auth/login-form'
-import { Music, Menu, X } from 'lucide-react'
+import { Menu, X, Calendar, Music2, MessageSquare } from 'lucide-react'
+import { Logo } from '@/components/ui/logo'
 
 export default function HomePage() {
   const { data: session, status } = useSession()
@@ -26,7 +27,7 @@ export default function HomePage() {
   if (!isClient || status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+                    <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-brand-600"></div>
       </div>
     )
   }
@@ -37,24 +38,19 @@ export default function HomePage() {
       <nav className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <Music className="h-8 w-8 text-blue-600" />
-              <span className="ml-2 text-xl font-bold text-gray-900">
-                Church Music Scheduler
-              </span>
-            </div>
+            <Logo size="xl" />
             
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-6">
-              <a href="#features" className="text-gray-700 hover:text-blue-600 transition-colors">
+              <a href="#features" className="text-gray-700 hover:text-brand-600 transition-colors">
                 Features
               </a>
-              <a href="#pricing" className="text-gray-700 hover:text-blue-600 transition-colors">
+              <a href="#pricing" className="text-gray-700 hover:text-brand-600 transition-colors">
                 Pricing
               </a>
               <a 
                 href="/auth/signin" 
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                className="bg-brand-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-brand-700 transition-colors"
               >
                 Sign In
               </a>
@@ -64,7 +60,7 @@ export default function HomePage() {
             <div className="md:hidden">
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="text-gray-700 hover:text-blue-600 transition-colors p-2"
+                className="text-gray-700 hover:text-brand-600 transition-colors p-2"
                 aria-label="Toggle mobile menu"
               >
                 {isMobileMenuOpen ? (
@@ -80,23 +76,23 @@ export default function HomePage() {
           {isMobileMenuOpen && (
             <div className="md:hidden border-t border-gray-200 py-4">
               <div className="flex flex-col space-y-4">
-                <a 
-                  href="#features" 
-                  className="text-gray-700 hover:text-blue-600 transition-colors px-2 py-1"
+                                  <a 
+                    href="#features"
+                    className="text-gray-700 hover:text-brand-600 transition-colors px-2 py-1"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Features
                 </a>
-                <a 
-                  href="#pricing" 
-                  className="text-gray-700 hover:text-blue-600 transition-colors px-2 py-1"
+                                  <a 
+                    href="#pricing"
+                    className="text-gray-700 hover:text-brand-600 transition-colors px-2 py-1"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Pricing
                 </a>
                 <a 
                   href="/auth/signin" 
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors text-center mx-2"
+                  className="bg-brand-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-brand-700 transition-colors text-center mx-2"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Sign In
@@ -116,7 +112,7 @@ export default function HomePage() {
             <div className="space-y-4">
               <h1 className="text-4xl md:text-5xl font-bold text-gray-900 leading-tight">
                 Simple Music Scheduling for Your 
-                <span className="text-blue-600"> Church</span>
+                <span className="text-brand-600"> Church</span>
               </h1>
               <p className="text-xl text-gray-600 leading-relaxed">
                 Effortlessly coordinate musicians, manage events, and keep your music ministry organized. 
@@ -126,16 +122,16 @@ export default function HomePage() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="text-center p-4 bg-white rounded-lg shadow-sm">
-                <div className="text-3xl font-bold text-blue-600">$35</div>
+                <div className="text-3xl font-bold text-brand-600">$35</div>
                 <div className="text-sm text-gray-600">per month</div>
               </div>
               <div className="text-center p-4 bg-white rounded-lg shadow-sm">
-                <div className="text-3xl font-bold text-green-600">30</div>
+                <div className="text-3xl font-bold text-success-600">30</div>
                 <div className="text-sm text-gray-600">day free trial</div>
               </div>
-              <div className="text-center p-4 bg-white rounded-lg shadow-sm border-2 border-green-400">
-                <div className="text-2xl font-bold text-green-600">$200</div>
-                <div className="text-xs text-green-700 font-medium">annually (save $220!)</div>
+              <div className="text-center p-4 bg-white rounded-lg shadow-sm border-2 border-success-400">
+                <div className="text-2xl font-bold text-success-600">$200</div>
+                <div className="text-xs text-success-700 font-medium">annually (save $220!)</div>
               </div>
             </div>
 
@@ -143,15 +139,15 @@ export default function HomePage() {
               <h3 className="text-lg font-semibold text-gray-900">Perfect for:</h3>
               <div className="space-y-2">
                 <div className="flex items-center">
-                  <div className="w-2 h-2 bg-blue-600 rounded-full mr-3"></div>
+                  <div className="w-2 h-2 bg-brand-600 rounded-full mr-3"></div>
                   <span className="text-gray-700">Catholic & Protestant Churches</span>
                 </div>
                 <div className="flex items-center">
-                  <div className="w-2 h-2 bg-blue-600 rounded-full mr-3"></div>
+                  <div className="w-2 h-2 bg-brand-600 rounded-full mr-3"></div>
                   <span className="text-gray-700">Music Directors & Worship Leaders</span>
                 </div>
                 <div className="flex items-center">
-                  <div className="w-2 h-2 bg-blue-600 rounded-full mr-3"></div>
+                  <div className="w-2 h-2 bg-brand-600 rounded-full mr-3"></div>
                   <span className="text-gray-700">Volunteer Musicians & Choirs</span>
                 </div>
               </div>
@@ -175,7 +171,7 @@ export default function HomePage() {
               <div className="mt-6 text-center">
                 <p className="text-sm text-gray-600">
                   Don't have an account?{' '}
-                  <a href="/auth/signup" className="text-blue-600 hover:text-blue-700 font-medium">
+                  <a href="/auth/signup" className="text-brand-600 hover:text-brand-700 font-medium">
                     Start your free trial
                   </a>
                 </p>
@@ -199,8 +195,8 @@ export default function HomePage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="text-center p-6">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <Music className="h-6 w-6 text-blue-600" />
+              <div className="w-12 h-12 bg-brand-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <Calendar className="h-6 w-6 text-brand-600" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Smart Scheduling</h3>
               <p className="text-gray-600">
@@ -209,8 +205,8 @@ export default function HomePage() {
             </div>
 
             <div className="text-center p-6">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <Music className="h-6 w-6 text-green-600" />
+              <div className="w-12 h-12 bg-success-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <Music2 className="h-6 w-6 text-success-600" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Music Library</h3>
               <p className="text-gray-600">
@@ -219,8 +215,8 @@ export default function HomePage() {
             </div>
 
             <div className="text-center p-6">
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <Music className="h-6 w-6 text-purple-600" />
+              <div className="w-12 h-12 bg-secondary-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <MessageSquare className="h-6 w-6 text-secondary-600" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Team Communication</h3>
               <p className="text-gray-600">
@@ -249,13 +245,13 @@ export default function HomePage() {
               <div className="text-center flex-1">
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">Monthly Plan</h3>
                 <div className="mb-4">
-                  <span className="text-4xl font-bold text-blue-600">$35</span>
+                  <span className="text-4xl font-bold text-brand-600">$35</span>
                   <span className="text-gray-600">/month</span>
                 </div>
                 <p className="text-gray-600 mb-4">
                   Complete church music scheduling solution
                 </p>
-                <div className="bg-blue-50 text-blue-700 text-sm font-medium px-3 py-1 rounded-full inline-block mb-4">
+                <div className="bg-brand-50 text-brand-700 text-sm font-medium px-3 py-1 rounded-full inline-block mb-4">
                   One month free trial included!
                 </div>
                 <p className="text-gray-600 mb-6">
@@ -264,33 +260,33 @@ export default function HomePage() {
 
                 <div className="space-y-3 mb-8 min-h-[144px] flex flex-col justify-between">
                   <div className="flex items-center">
-                    <div className="w-2 h-2 bg-blue-600 rounded-full mr-3"></div>
+                    <div className="w-2 h-2 bg-brand-600 rounded-full mr-3"></div>
                     <span className="text-gray-700">One month free trial</span>
                   </div>
                   <div className="flex items-center">
-                    <div className="w-2 h-2 bg-blue-600 rounded-full mr-3"></div>
+                    <div className="w-2 h-2 bg-brand-600 rounded-full mr-3"></div>
                     <span className="text-gray-700">Unlimited musicians</span>
                   </div>
                   <div className="flex items-center">
-                    <div className="w-2 h-2 bg-blue-600 rounded-full mr-3"></div>
+                    <div className="w-2 h-2 bg-brand-600 rounded-full mr-3"></div>
                     <span className="text-gray-700">Unlimited events</span>
                   </div>
                   <div className="flex items-center">
-                    <div className="w-2 h-2 bg-blue-600 rounded-full mr-3"></div>
+                    <div className="w-2 h-2 bg-brand-600 rounded-full mr-3"></div>
                     <span className="text-gray-700">Email & SMS messaging</span>
                   </div>
                   <div className="flex items-center">
-                    <div className="w-2 h-2 bg-blue-600 rounded-full mr-3"></div>
+                    <div className="w-2 h-2 bg-brand-600 rounded-full mr-3"></div>
                     <span className="text-gray-700">Music file sharing</span>
                   </div>
                   <div className="flex items-center">
-                    <div className="w-2 h-2 bg-blue-600 rounded-full mr-3"></div>
+                    <div className="w-2 h-2 bg-brand-600 rounded-full mr-3"></div>
                     <span className="text-gray-700">Priority support</span>
                   </div>
                 </div>
 
                 <div className="mt-auto">
-                  <a href="/auth/signup" className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 transition-colors block text-center">
+                  <a href="/auth/signup" className="w-full bg-brand-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-brand-700 transition-colors block text-center">
                     Start 30-Day Free Trial
                   </a>
                 </div>
@@ -298,9 +294,9 @@ export default function HomePage() {
             </div>
 
             {/* Annual Plan */}
-            <div className="bg-white rounded-2xl shadow-xl p-8 border-2 border-green-500 relative flex flex-col h-full">
-              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                <span className="bg-green-500 text-white px-4 py-1 rounded-full text-sm font-medium">
+            <div className="bg-white rounded-2xl shadow-xl p-8 border-2 border-success-500 relative flex flex-col h-full overflow-visible md:overflow-hidden pt-12 md:pt-8">
+              <div className="absolute -top-5 md:-top-3 left-1/2 transform -translate-x-1/2 z-10">
+                <span className="bg-success-500 text-white px-4 py-1 rounded-full text-sm font-medium">
                   Best Value - Save 52%
                 </span>
               </div>
@@ -308,10 +304,10 @@ export default function HomePage() {
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">Annual Plan</h3>
                 <div className="mb-2">
                   <div className="text-lg text-gray-500 line-through">$420/year</div>
-                  <div className="text-4xl font-bold text-green-600">$200</div>
+                  <div className="text-4xl font-bold text-success-600">$200</div>
                   <div className="text-gray-600">/year</div>
                 </div>
-                <div className="bg-green-50 text-green-700 text-sm font-medium px-3 py-1 rounded-full inline-block mb-4">
+                <div className="bg-success-50 text-success-700 text-sm font-medium px-3 py-1 rounded-full inline-block mb-4">
                   Save $220 per year!
                 </div>
                 <p className="text-gray-600 mb-6">
@@ -320,27 +316,27 @@ export default function HomePage() {
 
                 <div className="space-y-3 mb-8 min-h-[144px] flex flex-col justify-between">
                   <div className="flex items-center">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
+                    <div className="w-2 h-2 bg-success-500 rounded-full mr-3"></div>
                     <span className="text-gray-700">Two month free trial</span>
                   </div>
                   <div className="flex items-center">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
+                    <div className="w-2 h-2 bg-success-500 rounded-full mr-3"></div>
                     <span className="text-gray-700">Unlimited musicians</span>
                   </div>
                   <div className="flex items-center">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
+                    <div className="w-2 h-2 bg-success-500 rounded-full mr-3"></div>
                     <span className="text-gray-700">Unlimited events</span>
                   </div>
                   <div className="flex items-center">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
+                    <div className="w-2 h-2 bg-success-500 rounded-full mr-3"></div>
                     <span className="text-gray-700">Email & SMS messaging</span>
                   </div>
                   <div className="flex items-center">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
+                    <div className="w-2 h-2 bg-success-500 rounded-full mr-3"></div>
                     <span className="text-gray-700">Music file sharing</span>
                   </div>
                   <div className="flex items-center">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
+                    <div className="w-2 h-2 bg-success-500 rounded-full mr-3"></div>
                     <span className="text-gray-700">Priority support</span>
                   </div>
                 </div>
@@ -348,7 +344,7 @@ export default function HomePage() {
                 <div className="mt-auto -mb-1">
                   <a
                     href="/auth/signup"
-                    className="w-full bg-green-600 text-white font-medium py-3 px-6 rounded-lg hover:bg-green-700 transition-colors inline-block text-center"
+                    className="w-full bg-success-600 text-white font-medium py-3 px-6 rounded-lg hover:bg-success-700 transition-colors inline-block text-center"
                   >
                     Start 30-Day Free Trial
                   </a>
@@ -364,8 +360,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <div className="flex items-center justify-center mb-4">
-              <Music className="h-6 w-6 text-blue-400" />
-              <span className="ml-2 text-lg font-semibold">Church Music Scheduler</span>
+                              <Logo size="sm" textClassName="text-brand-400" />
             </div>
             <p className="text-gray-400">
               © 2024 Church Music Scheduler. All rights reserved.

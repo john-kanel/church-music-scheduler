@@ -197,7 +197,7 @@ export default function MusiciansPage() {
                 Back to Dashboard
               </Link>
               <div className="flex items-center">
-                <Users className="h-8 w-8 text-green-600 mr-3" />
+                <Users className="h-8 w-8 text-success-600 mr-3" />
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900">Musicians</h1>
                   <p className="text-sm text-gray-600">{session.user?.churchName || 'Your Church'}</p>
@@ -207,7 +207,7 @@ export default function MusiciansPage() {
             <div className="flex items-center space-x-3">
               <button 
                 onClick={() => setShowInviteModal(true)}
-                className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                className="flex items-center px-4 py-2 bg-success-600 text-white rounded-lg hover:bg-success-700 transition-colors"
               >
                 <UserPlus className="h-4 w-4 mr-2" />
                 Invite Musicians
@@ -245,7 +245,7 @@ export default function MusiciansPage() {
 
           {loading ? (
             <div className="p-8 text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-success-600 mx-auto"></div>
               <p className="text-gray-600 mt-4">Loading musicians...</p>
             </div>
           ) : musicians.length === 0 ? (
@@ -258,7 +258,7 @@ export default function MusiciansPage() {
               </p>
               <button 
                 onClick={() => setShowInviteModal(true)}
-                className="inline-flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                className="inline-flex items-center px-6 py-3 bg-success-600 text-white rounded-lg hover:bg-success-700 transition-colors"
               >
                 <UserPlus className="h-5 w-5 mr-2" />
                 Invite Your First Musicians
@@ -395,8 +395,8 @@ export default function MusiciansPage() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10">
-                            <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                              <span className="text-green-600 font-medium text-sm">
+                            <div className="h-10 w-10 rounded-full bg-success-100 flex items-center justify-center">
+                              <span className="text-success-600 font-medium text-sm">
                                 {musician.firstName.charAt(0)}{musician.lastName.charAt(0)}
                               </span>
                             </div>
@@ -477,7 +477,7 @@ export default function MusiciansPage() {
                         ) : (
                           <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
                             (musician.status === 'active' || (!musician.status && musician.isVerified))
-                              ? 'bg-green-100 text-green-800' 
+                              ? 'bg-success-100 text-success-800' 
                               : musician.status === 'inactive'
                               ? 'bg-red-100 text-red-800'
                               : 'bg-yellow-100 text-yellow-800'
@@ -503,7 +503,7 @@ export default function MusiciansPage() {
                             <button 
                               onClick={saveEdit}
                               disabled={saving}
-                              className="text-green-600 hover:text-green-900 disabled:opacity-50"
+                              className="text-success-600 hover:text-success-900 disabled:opacity-50"
                               title="Save changes"
                             >
                               <Check className="h-4 w-4" />
@@ -545,10 +545,10 @@ export default function MusiciansPage() {
         <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
           <button 
             onClick={() => setShowInviteModal(true)}
-            className="bg-white rounded-xl shadow-sm border p-6 hover:border-green-300 hover:shadow-md transition-all text-left"
+            className="bg-white rounded-xl shadow-sm border p-6 hover:border-success-300 hover:shadow-md transition-all text-left"
           >
             <div className="flex items-center mb-4">
-              <UserPlus className="h-8 w-8 text-green-600 mr-3" />
+              <UserPlus className="h-8 w-8 text-success-600 mr-3" />
               <h3 className="font-medium text-gray-900">Individual Invite</h3>
             </div>
             <p className="text-sm text-gray-600">Send a personal invitation to a specific musician</p>
@@ -567,10 +567,10 @@ export default function MusiciansPage() {
 
           <Link 
             href="/groups"
-            className="bg-white rounded-xl shadow-sm border p-6 hover:border-purple-300 hover:shadow-md transition-all text-left"
+            className="bg-white rounded-xl shadow-sm border p-6 hover:border-secondary-300 hover:shadow-md transition-all text-left"
           >
             <div className="flex items-center mb-4">
-              <Music className="h-8 w-8 text-purple-600 mr-3" />
+              <Music className="h-8 w-8 text-secondary-600 mr-3" />
               <h3 className="font-medium text-gray-900">Create Groups</h3>
             </div>
             <p className="text-sm text-gray-600">Organize musicians into choirs or ensembles</p>

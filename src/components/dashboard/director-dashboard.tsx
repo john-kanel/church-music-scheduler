@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { signOut, useSession } from 'next-auth/react'
 import { 
-  Music, 
   Plus, 
   Users, 
   Calendar, 
@@ -27,6 +26,7 @@ import {
   LifeBuoy,
   HandHeart
 } from 'lucide-react'
+import { Logo } from '@/components/ui/logo'
 import Link from 'next/link'
 import { CreateEventModal } from '../events/create-event-modal'
 import { InviteModal } from '../musicians/invite-modal'
@@ -291,7 +291,7 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
       case 'MUSICIAN_INVITED':
         return { icon: UserPlus, color: 'text-yellow-600', bgColor: 'bg-yellow-100' }
       case 'MUSICIAN_SIGNED_UP':
-        return { icon: UserCheck, color: 'text-green-600', bgColor: 'bg-green-100' }
+        return { icon: UserCheck, color: 'text-success-600', bgColor: 'bg-success-100' }
       case 'MESSAGE_SENT':
         return { icon: Mail, color: 'text-pink-600', bgColor: 'bg-pink-100' }
       default:
@@ -359,10 +359,9 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
         <nav className="bg-white shadow-sm border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
-              {/* Logo and App Name Placeholder */}
-              <Link href="/dashboard" className="flex items-center hover:opacity-80 transition-opacity">
-                <Music className="h-8 w-8 text-blue-600 mr-3" />
-                <h1 className="text-xl font-bold text-gray-900">Church Music Scheduler</h1>
+              {/* Logo and App Name */}
+              <Link href="/dashboard" className="hover:opacity-80 transition-opacity">
+                <Logo />
               </Link>
 
               {/* Church Name and Actions */}
@@ -461,7 +460,7 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                     <div className="flex">
                       <Link 
                         href="/calendar"
-                        className="flex items-center px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-l-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
+                        className="flex items-center px-3 sm:px-4 py-2 bg-secondary-600 text-white rounded-l-lg hover:bg-secondary-700 transition-colors text-sm sm:text-base"
                       >
                         <Calendar className="h-4 w-4 mr-1 sm:mr-2" />
                         <span className="hidden sm:inline">Events</span>
@@ -474,7 +473,7 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                           setShowMessagesDropdown(false)
                           setShowEventsDropdown(!showEventsDropdown)
                         }}
-                        className="px-2 py-2 bg-blue-600 text-white border-l border-blue-500 rounded-r-lg hover:bg-blue-700 transition-colors"
+                        className="px-2 py-2 bg-secondary-600 text-white border-l border-secondary-800 rounded-r-lg hover:bg-secondary-700 transition-colors"
                       >
                         <ChevronDown className="h-4 w-4" />
                       </button>
@@ -500,7 +499,7 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                     <div className="flex">
                       <Link 
                         href="/musicians"
-                        className="flex items-center px-3 sm:px-4 py-2 bg-green-600 text-white rounded-l-lg hover:bg-green-700 transition-colors text-sm sm:text-base"
+                        className="flex items-center px-3 sm:px-4 py-2 bg-success-600 text-white rounded-l-lg hover:bg-success-700 transition-colors text-sm sm:text-base"
                       >
                         <Users className="h-4 w-4 mr-1 sm:mr-2" />
                         <span className="hidden sm:inline">Musicians</span>
@@ -513,7 +512,7 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                           setShowMessagesDropdown(false)
                           setShowMusiciansDropdown(!showMusiciansDropdown)
                         }}
-                        className="px-2 py-2 bg-green-600 text-white border-l border-green-500 rounded-r-lg hover:bg-green-700 transition-colors"
+                        className="px-2 py-2 bg-success-600 text-white border-l border-success-800 rounded-r-lg hover:bg-success-700 transition-colors"
                       >
                         <ChevronDown className="h-4 w-4" />
                       </button>
@@ -539,7 +538,7 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                     <div className="flex">
                       <Link 
                         href="/messages"
-                        className="flex items-center px-3 sm:px-4 py-2 bg-purple-600 text-white rounded-l-lg hover:bg-purple-700 transition-colors text-sm sm:text-base"
+                        className="flex items-center px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-l-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
                       >
                         <MessageSquare className="h-4 w-4 mr-1 sm:mr-2" />
                         <span className="hidden sm:inline">Messages</span>
@@ -552,7 +551,7 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                           setShowMusiciansDropdown(false)
                           setShowMessagesDropdown(!showMessagesDropdown)
                         }}
-                        className="px-2 py-2 bg-purple-600 text-white border-l border-purple-500 rounded-r-lg hover:bg-purple-700 transition-colors"
+                        className="px-2 py-2 bg-blue-600 text-white border-l border-blue-800 rounded-r-lg hover:bg-blue-700 transition-colors"
                       >
                         <ChevronDown className="h-4 w-4" />
                       </button>
@@ -623,8 +622,8 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                         {dashboardData.stats.totalMusicians}
                       </p>
                     </div>
-                    <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
-                      <Users className="h-6 w-6 text-green-600" />
+                    <div className="h-12 w-12 bg-success-100 rounded-lg flex items-center justify-center">
+                      <Users className="h-6 w-6 text-success-600" />
                     </div>
                   </div>
                   <div className="mt-4 flex items-center text-sm">
@@ -651,8 +650,8 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                     </div>
                   </div>
                   <div className="mt-4 flex items-center text-sm">
-                    <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-                    <span className="text-green-600 font-medium">
+                    <TrendingUp className="h-4 w-4 text-success-500 mr-1" />
+                    <span className="text-success-600 font-medium">
                       {(dashboardData.stats.upcomingEvents === 0) 
                         ? 'Ready to create your first event' 
                         : 'Events scheduled'

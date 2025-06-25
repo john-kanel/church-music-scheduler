@@ -2,8 +2,9 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Music, ArrowLeft, GiftIcon } from 'lucide-react'
+import { ArrowLeft, GiftIcon } from 'lucide-react'
 import Link from 'next/link'
+import { Logo } from '@/components/ui/logo'
 
 function SignUpForm() {
   const router = useRouter()
@@ -95,8 +96,8 @@ function SignUpForm() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Start Your 30-Day Free Trial
           </h1>
-          <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-3">
-            <p className="text-green-800 text-sm font-medium">
+          <div className="mt-4 bg-success-50 border border-success-200 rounded-lg p-3">
+            <p className="text-success-800 text-sm font-medium">
               ✓ 30 days completely free<br/>
               ✓ No credit card required now<br/>
               ✓ Cancel anytime during trial
@@ -216,7 +217,7 @@ function SignUpForm() {
           <div>
             <label htmlFor="referralCode" className="block text-sm font-medium text-gray-700 mb-2">
               <div className="flex items-center">
-                <GiftIcon className="h-4 w-4 mr-1 text-green-600" />
+                <GiftIcon className="h-4 w-4 mr-1 text-success-600" />
                 Referral Code (Optional)
               </div>
             </label>
@@ -227,7 +228,7 @@ function SignUpForm() {
               value={formData.referralCode}
               onChange={(e) => setFormData(prev => ({ ...prev, referralCode: e.target.value.toUpperCase() }))}
               maxLength={8}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-success-500 focus:border-transparent text-gray-900"
               placeholder="Enter 8-character code"
             />
             <p className="text-xs text-gray-500 mt-1">
@@ -304,10 +305,7 @@ export default function SignUpPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link href="/" className="flex items-center">
-              <Music className="h-8 w-8 text-blue-600" />
-              <span className="ml-2 text-xl font-bold text-gray-900">
-                Church Music Scheduler
-              </span>
+              <Logo />
             </Link>
             <Link href="/" className="flex items-center text-gray-600 hover:text-blue-600 transition-colors">
               <ArrowLeft className="h-4 w-4 mr-1" />

@@ -79,8 +79,8 @@ export default function SupportPage() {
         {/* Success Message */}
         <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="bg-white rounded-xl shadow-sm p-8 text-center">
-            <div className="h-16 w-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Send className="h-8 w-8 text-green-600" />
+            <div className="h-16 w-16 bg-success-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Send className="h-8 w-8 text-success-600" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Message Sent Successfully!</h2>
             <p className="text-gray-600 mb-6">

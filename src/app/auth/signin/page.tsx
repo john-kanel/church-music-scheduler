@@ -3,8 +3,9 @@
 import { Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { LoginForm } from '@/components/auth/login-form'
-import { Music, ArrowLeft } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import { Logo } from '@/components/ui/logo'
 
 function SignInContent() {
   const searchParams = useSearchParams()
@@ -17,10 +18,7 @@ function SignInContent() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link href="/" className="flex items-center">
-              <Music className="h-8 w-8 text-blue-600" />
-              <span className="ml-2 text-xl font-bold text-gray-900">
-                Church Music Scheduler
-              </span>
+              <Logo />
             </Link>
             <Link href="/" className="flex items-center text-gray-600 hover:text-blue-600 transition-colors">
               <ArrowLeft className="h-4 w-4 mr-1" />
@@ -42,8 +40,8 @@ function SignInContent() {
           </div>
 
           {message && (
-            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-green-600 text-sm">{message}</p>
+            <div className="mb-6 p-4 bg-success-50 border border-success-200 rounded-lg">
+              <p className="text-success-600 text-sm">{message}</p>
             </div>
           )}
 

@@ -24,21 +24,16 @@ export function ReferralInvitationEmail({
       }}>
         <div style={{
           height: '80px',
-          backgroundColor: '#FFFFFF',
-          border: '2px dashed #D1D5DB',
-          borderRadius: '8px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           marginBottom: '20px'
         }}>
-          <span style={{
-            color: '#9CA3AF',
-            fontSize: '14px',
-            fontWeight: '500'
-          }}>
-            Church Logo Will Appear Here
-          </span>
+          <img 
+            src={`${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/logo.png`}
+            alt="Church Music Scheduler" 
+            style={{ height: '60px', width: 'auto' }} 
+          />
         </div>
         <div style={{ 
           fontSize: '18px',

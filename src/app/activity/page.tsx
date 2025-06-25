@@ -59,7 +59,7 @@ export default function ActivityPage() {
       case 'MUSICIAN_INVITED':
         return { icon: UserPlus, color: 'text-yellow-600', bgColor: 'bg-yellow-100' }
       case 'MUSICIAN_SIGNED_UP':
-        return { icon: UserCheck, color: 'text-green-600', bgColor: 'bg-green-100' }
+        return { icon: UserCheck, color: 'text-success-600', bgColor: 'bg-success-100' }
       case 'MESSAGE_SENT':
         return { icon: Mail, color: 'text-pink-600', bgColor: 'bg-pink-100' }
       default:
@@ -169,7 +169,7 @@ export default function ActivityPage() {
                 </Link>
                 <Link 
                   href="/musicians"
-                  className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors"
+                  className="inline-flex items-center px-4 py-2 bg-success-600 text-white text-sm rounded-lg hover:bg-success-700 transition-colors"
                 >
                   <UserPlus className="h-4 w-4 mr-2" />
                   Invite Musicians

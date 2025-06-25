@@ -2,7 +2,6 @@
 
 import { signOut } from 'next-auth/react'
 import { 
-  Music, 
   Calendar, 
   FileText, 
   Bell,
@@ -19,6 +18,7 @@ import {
   Users,
   MessageSquare
 } from 'lucide-react'
+import { Logo } from '@/components/ui/logo'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
@@ -96,12 +96,9 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
       <nav className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <Music className="h-8 w-8 text-blue-600" />
-              <span className="ml-2 text-xl font-bold text-gray-900">
-                Church Music Scheduler
-              </span>
-            </div>
+            <Link href="/dashboard" className="hover:opacity-80 transition-opacity">
+              <Logo />
+            </Link>
 
             <div className="flex items-center space-x-4">
               {/* Church Name */}
@@ -173,7 +170,7 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
             {/* Events Navigation Button */}
             <Link 
               href="/calendar"
-              className="flex items-center justify-center px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
+              className="flex items-center justify-center px-3 sm:px-4 py-2 bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors text-sm sm:text-base"
             >
               <Calendar className="h-4 w-4 mr-1 sm:mr-2" />
               Events
@@ -182,7 +179,7 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
             {/* Musicians Navigation Button */}
             <Link 
               href="/musicians"
-              className="flex items-center justify-center px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm sm:text-base"
+              className="flex items-center justify-center px-3 sm:px-4 py-2 bg-success-600 text-white rounded-lg hover:bg-success-700 transition-colors text-sm sm:text-base"
             >
               <Users className="h-4 w-4 mr-1 sm:mr-2" />
               Musicians
@@ -191,7 +188,7 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
             {/* Messages Navigation Button */}
             <Link 
               href="/messages"
-              className="flex items-center justify-center px-3 sm:px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm sm:text-base"
+              className="flex items-center justify-center px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
             >
               <MessageSquare className="h-4 w-4 mr-1 sm:mr-2" />
               Messages
@@ -216,7 +213,7 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
               </div>
 
               <div className="flex space-x-4">
-                <button className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
+                <button className="flex-1 bg-secondary-600 text-white py-2 px-4 rounded-lg hover:bg-secondary-700 transition-colors">
                   View Full Calendar
                 </button>
                 <button className="flex-1 border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50 transition-colors">
@@ -242,7 +239,7 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
                       key={assignment.id} 
                       className={`flex items-center justify-between p-4 rounded-lg border ${
                         assignment.status === 'ACCEPTED' 
-                          ? 'bg-green-50 border-green-200' 
+                          ? 'bg-success-50 border-success-200' 
                           : assignment.status === 'PENDING'
                           ? 'bg-yellow-50 border-yellow-200'
                           : 'bg-gray-50 border-gray-200'
@@ -250,7 +247,7 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
                     >
                       <div className="flex items-center">
                         {assignment.status === 'ACCEPTED' ? (
-                          <CheckCircle className="h-6 w-6 text-green-600 mr-3" />
+                          <CheckCircle className="h-6 w-6 text-success-600 mr-3" />
                         ) : assignment.status === 'PENDING' ? (
                           <Clock className="h-6 w-6 text-yellow-600 mr-3" />
                         ) : (
@@ -270,7 +267,7 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
                           </div>
                           <p className={`text-xs font-medium ${
                             assignment.status === 'ACCEPTED' 
-                              ? 'text-green-600' 
+                              ? 'text-success-600' 
                               : assignment.status === 'PENDING'
                               ? 'text-yellow-600'
                               : 'text-gray-600'
@@ -284,7 +281,7 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
                           <>
                             <button 
                               onClick={() => handleAssignmentAction(assignment.id, 'accept')}
-                              className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
+                              className="bg-success-600 text-white px-3 py-1 rounded text-sm hover:bg-success-700"
                             >
                               Accept
                             </button>
@@ -341,21 +338,21 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
                     </div>
                     <AlertCircle className="h-4 w-4 text-orange-600 mt-1" />
                   </div>
-                  <button className="w-full mt-2 bg-blue-600 text-white py-1 px-3 rounded text-xs hover:bg-blue-700">
+                  <button className="w-full mt-2 bg-secondary-600 text-white py-1 px-3 rounded text-xs hover:bg-secondary-700">
                     Sign Up
                   </button>
                 </div>
 
-                <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                <div className="p-3 bg-secondary-50 rounded-lg border border-secondary-200">
                   <div className="flex items-start justify-between">
                     <div>
                       <h3 className="font-medium text-gray-900 text-sm">Ash Wednesday Service</h3>
                       <p className="text-xs text-gray-600">Feb 14, 7:00 PM</p>
-                      <p className="text-xs text-purple-600 font-medium">Need: Vocalist</p>
+                      <p className="text-xs text-secondary-600 font-medium">Need: Vocalist</p>
                     </div>
-                    <AlertCircle className="h-4 w-4 text-purple-600 mt-1" />
+                    <AlertCircle className="h-4 w-4 text-secondary-600 mt-1" />
                   </div>
-                  <button className="w-full mt-2 bg-blue-600 text-white py-1 px-3 rounded text-xs hover:bg-blue-700">
+                  <button className="w-full mt-2 bg-secondary-600 text-white py-1 px-3 rounded text-xs hover:bg-secondary-700">
                     Sign Up
                   </button>
                 </div>
@@ -381,7 +378,7 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Accepted Total</span>
-                  <span className="text-lg font-bold text-green-600">
+                  <span className="text-lg font-bold text-success-600">
                     {loading ? '...' : dashboardData?.stats?.acceptedAssignments || 0}
                   </span>
                 </div>
@@ -393,7 +390,7 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">This Month</span>
-                  <span className="text-lg font-bold text-purple-600">
+                  <span className="text-lg font-bold text-secondary-600">
                     {loading ? '...' : dashboardData?.stats?.thisMonthAssignments || 0}
                   </span>
                 </div>
@@ -410,7 +407,7 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
                   <p className="text-xs text-gray-500">2 hours ago</p>
                 </div>
                 
-                <div className="p-3 bg-green-50 rounded-lg">
+                <div className="p-3 bg-success-50 rounded-lg">
                   <p className="text-sm text-gray-900">Music files updated for Sunday Mass</p>
                   <p className="text-xs text-gray-500">1 day ago</p>
                 </div>

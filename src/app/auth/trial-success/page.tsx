@@ -120,15 +120,15 @@ function TrialSuccessContent() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="max-w-md mx-auto px-4">
         <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
-          <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-6" />
+          <CheckCircle className="h-16 w-16 text-success-600 mx-auto mb-6" />
           <h1 className="text-2xl font-bold text-gray-900 mb-4">
             Welcome to Church Music Scheduler!
           </h1>
           <p className="text-gray-600 mb-6">
             Your 30-day free trial has started successfully. You'll be redirected to sign in shortly.
           </p>
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-            <p className="text-green-800 text-sm">
+          <div className="bg-success-50 border border-success-200 rounded-lg p-4 mb-6">
+            <p className="text-success-800 text-sm">
               ✓ Account created<br/>
               ✓ 30-day trial activated<br/>
               ✓ No payment required until {new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}

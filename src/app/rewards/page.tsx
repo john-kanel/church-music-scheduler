@@ -137,7 +137,7 @@ export default function RewardsPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'COMPLETED':
-        return 'text-green-600 bg-green-100'
+        return 'text-success-600 bg-success-100'
       case 'PENDING':
         return 'text-yellow-600 bg-yellow-100'
       case 'EXPIRED':
@@ -313,8 +313,8 @@ export default function RewardsPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-xl shadow-sm border p-6">
             <div className="flex items-center">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <GiftIcon className="h-6 w-6 text-green-600" />
+              <div className="p-2 bg-success-100 rounded-lg">
+                <GiftIcon className="h-6 w-6 text-success-600" />
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Free Months Earned</p>
@@ -337,8 +337,8 @@ export default function RewardsPage() {
 
           <div className="bg-white rounded-xl shadow-sm border p-6">
             <div className="flex items-center">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <CheckCircle className="h-6 w-6 text-purple-600" />
+                              <div className="p-2 bg-secondary-100 rounded-lg">
+                  <CheckCircle className="h-6 w-6 text-secondary-600" />
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Money Saved</p>
@@ -427,7 +427,7 @@ export default function RewardsPage() {
               <button
                 type="submit"
                 disabled={sendingEmail}
-                className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                className="flex items-center px-4 py-2 bg-success-600 text-white rounded-lg hover:bg-success-700 transition-colors disabled:opacity-50"
               >
                 <Send className="h-4 w-4 mr-2" />
                 {sendingEmail ? 'Sending...' : 'Send Invitation'}
@@ -517,7 +517,7 @@ export default function RewardsPage() {
                     <button
                       type="submit"
                       disabled={sendingEmail}
-                      className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                      className="flex items-center px-4 py-2 bg-success-600 text-white rounded-lg hover:bg-success-700 transition-colors disabled:opacity-50"
                     >
                       <Send className="h-4 w-4 mr-2" />
                       {sendingEmail ? 'Sending...' : 'Send All Invitations'}
@@ -537,11 +537,11 @@ export default function RewardsPage() {
             {bulkResults.successful.length > 0 && (
               <div className="mb-4">
                 <div className="flex items-center mb-2">
-                  <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                  <h4 className="font-medium text-green-800">Successfully Sent ({bulkResults.successful.length})</h4>
+                  <CheckCircle className="h-5 w-5 text-success-600 mr-2" />
+                  <h4 className="font-medium text-success-800">Successfully Sent ({bulkResults.successful.length})</h4>
                 </div>
-                <div className="bg-green-50 rounded-lg p-3">
-                  <ul className="text-sm text-green-800 space-y-1">
+                <div className="bg-success-50 rounded-lg p-3">
+                  <ul className="text-sm text-success-800 space-y-1">
                     {bulkResults.successful.map((result: any, index: number) => (
                       <li key={index}>
                         {result.name} ({result.email})
@@ -586,7 +586,7 @@ export default function RewardsPage() {
                   <div className="text-right">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                       referral.status === 'COMPLETED' 
-                        ? 'bg-green-100 text-green-800'
+                        ? 'bg-success-100 text-success-800'
                         : referral.status === 'PENDING'
                         ? 'bg-yellow-100 text-yellow-800'
                         : 'bg-gray-100 text-gray-800'

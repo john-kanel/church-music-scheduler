@@ -246,7 +246,7 @@ export default function AdminPage() {
   const getStatusBadge = (status: string) => {
     const badges = {
       trial: 'bg-blue-100 text-blue-800',
-      active: 'bg-green-100 text-green-800',
+      active: 'bg-success-100 text-success-800',
       suspended: 'bg-red-100 text-red-800',
       cancelled: 'bg-gray-100 text-gray-800'
     }
@@ -358,7 +358,7 @@ export default function AdminPage() {
 
               <div className="bg-white rounded-xl shadow-sm border p-6">
                 <div className="flex items-center">
-                  <Users className="h-8 w-8 text-green-600" />
+                  <Users className="h-8 w-8 text-success-600" />
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">Total Users</p>
                     <p className="text-2xl font-bold text-gray-900">{stats.totalUsers}</p>
@@ -388,7 +388,7 @@ export default function AdminPage() {
 
               <div className="bg-white rounded-xl shadow-sm border p-6">
                 <div className="flex items-center">
-                  <CreditCard className="h-8 w-8 text-purple-600" />
+                  <CreditCard className="h-8 w-8 text-secondary-600" />
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">Monthly Revenue</p>
                     <p className="text-2xl font-bold text-gray-900">${stats.totalRevenue}</p>
@@ -512,7 +512,7 @@ export default function AdminPage() {
                           <div className="flex items-center space-x-2">
                             <button
                               onClick={() => grantFreeAccess(church.id, 1)}
-                              className="flex items-center px-2 py-1 text-xs bg-green-100 text-green-800 rounded hover:bg-green-200"
+                              className="flex items-center px-2 py-1 text-xs bg-success-100 text-success-800 rounded hover:bg-success-200"
                             >
                               <Gift className="h-3 w-3 mr-1" />
                               Grant 1mo
@@ -640,7 +640,7 @@ export default function AdminPage() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             {user.isVerified ? (
-                              <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
+                              <CheckCircle className="h-4 w-4 text-success-500 mr-1" />
                             ) : (
                               <XCircle className="h-4 w-4 text-red-500 mr-1" />
                             )}
@@ -754,7 +754,7 @@ export default function AdminPage() {
                   <div className="text-sm text-gray-600">Trial Accounts</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">
+                  <div className="text-2xl font-bold text-success-600">
                     {churches.filter(p => p.subscriptionStatus === 'active').length}
                   </div>
                   <div className="text-sm text-gray-600">Active Subscriptions</div>
@@ -791,7 +791,7 @@ export default function AdminPage() {
                 </div>
                 <div className="flex justify-between items-center py-2 font-bold text-lg">
                   <span>Total Monthly Recurring Revenue</span>
-                  <span className="text-green-600">
+                  <span className="text-success-600">
                     ${churches.filter(p => p.subscriptionStatus === 'active').length * 35}
                   </span>
                 </div>

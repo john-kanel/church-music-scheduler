@@ -303,8 +303,8 @@ export function InviteModal({ isOpen, onClose, onInvitesSent }: InviteModalProps
           )}
 
           {success && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-              <p className="text-green-600 text-sm flex items-center">
+            <div className="bg-success-50 border border-success-200 rounded-lg p-4 mb-6">
+              <p className="text-success-600 text-sm flex items-center">
                 <svg className="h-4 w-4 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
@@ -320,7 +320,7 @@ export function InviteModal({ isOpen, onClose, onInvitesSent }: InviteModalProps
               disabled={loading}
               className={`flex items-center px-4 py-2 rounded-lg transition-colors disabled:opacity-50 ${
                 inviteMode === 'individual'
-                  ? 'bg-green-600 text-white'
+                  ? 'bg-success-600 text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
@@ -332,7 +332,7 @@ export function InviteModal({ isOpen, onClose, onInvitesSent }: InviteModalProps
               disabled={loading}
               className={`flex items-center px-4 py-2 rounded-lg transition-colors disabled:opacity-50 ${
                 inviteMode === 'bulk'
-                  ? 'bg-green-600 text-white'
+                  ? 'bg-success-600 text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
@@ -351,7 +351,7 @@ export function InviteModal({ isOpen, onClose, onInvitesSent }: InviteModalProps
                   value={singleInvite.email}
                   onChange={(e) => setSingleInvite(prev => ({ ...prev, email: e.target.value }))}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-success-500 focus:border-transparent text-gray-900"
                   placeholder="musician@example.com"
                 />
               </div>
@@ -363,7 +363,7 @@ export function InviteModal({ isOpen, onClose, onInvitesSent }: InviteModalProps
                   value={singleInvite.name}
                   onChange={(e) => setSingleInvite(prev => ({ ...prev, name: e.target.value }))}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-success-500 focus:border-transparent text-gray-900"
                   placeholder="John Smith"
                 />
               </div>
@@ -373,7 +373,7 @@ export function InviteModal({ isOpen, onClose, onInvitesSent }: InviteModalProps
                 <select
                   value={singleInvite.role}
                   onChange={(e) => setSingleInvite(prev => ({ ...prev, role: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-success-500 focus:border-transparent text-gray-900"
                 >
                   {roles.map(role => (
                     <option key={role} value={role}>
@@ -395,7 +395,7 @@ export function InviteModal({ isOpen, onClose, onInvitesSent }: InviteModalProps
                 <button
                   type="submit"
                   disabled={loading || !!success}
-                  className="flex items-center px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                  className="flex items-center px-6 py-2 bg-success-600 text-white rounded-lg hover:bg-success-700 transition-colors disabled:opacity-50"
                 >
                   {loading ? (
                     <>
@@ -431,7 +431,7 @@ export function InviteModal({ isOpen, onClose, onInvitesSent }: InviteModalProps
                 <button
                   type="button"
                   onClick={downloadCsvTemplate}
-                  className="text-green-600 hover:underline text-sm font-semibold bg-transparent border-none p-0 focus:outline-none"
+                  className="text-success-600 hover:underline text-sm font-semibold bg-transparent border-none p-0 focus:outline-none"
                   style={{ background: 'none', boxShadow: 'none' }}
                 >
                   Download CSV Template
@@ -441,7 +441,7 @@ export function InviteModal({ isOpen, onClose, onInvitesSent }: InviteModalProps
                 type="file"
                 accept=".csv"
                 onChange={handleCsvUpload}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-success-500 focus:border-transparent text-gray-900"
               />
               {csvError && (
                 <p className="text-red-500 text-sm mt-2">{csvError}</p>
@@ -487,7 +487,7 @@ export function InviteModal({ isOpen, onClose, onInvitesSent }: InviteModalProps
                     <button
                       type="submit"
                       disabled={loading || bulkInvites.length === 0}
-                      className="flex items-center px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                      className="flex items-center px-6 py-2 bg-success-600 text-white rounded-lg hover:bg-success-700 transition-colors disabled:opacity-50"
                     >
                       <Mail className="h-4 w-4 mr-2" />
                       {loading ? 'Sending...' : `Send ${bulkInvites.filter(i => i.email.trim()).length} Invitations`}

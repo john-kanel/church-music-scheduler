@@ -289,8 +289,8 @@ export default function SettingsPage() {
         </div>
 
         {success && (
-          <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
-            <p className="text-green-600 text-sm">{success}</p>
+          <div className="mb-6 bg-success-50 border border-success-200 rounded-lg p-4">
+            <p className="text-success-600 text-sm">{success}</p>
           </div>
         )}
 

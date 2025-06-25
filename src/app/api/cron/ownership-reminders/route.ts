@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
             subject: `Reminder: Ownership invitation still pending`,
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h2 style="color: #2563eb;">Ownership Invitation Reminder</h2>
+                <h2 style="color: #660033;">Ownership Invitation Reminder</h2>
                 
                 <p>Hello ${inviter.firstName},</p>
                 
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
                 <p>If you need to resend the invitation or have questions, you can manage your invitations in your dashboard.</p>
                 
                 <div style="text-align: center; margin: 30px 0;">
-                  <a href="${process.env.NEXTAUTH_URL}/transfer-ownership" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                  <a href="${process.env.NEXTAUTH_URL}/transfer-ownership" style="background-color: #660033; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
                     Manage Invitations
                   </a>
                 </div>

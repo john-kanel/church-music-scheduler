@@ -544,7 +544,7 @@ export default function CalendarPage() {
             <div className="flex items-center space-x-3">
               <button
                 onClick={generatePDF}
-                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="flex items-center px-4 py-2 bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors"
               >
                 <FileText className="h-4 w-4 mr-2" />
                 Print PDF
@@ -570,7 +570,7 @@ export default function CalendarPage() {
                 <h2 className="text-lg font-bold text-gray-900">Event Templates</h2>
                 <button
                   onClick={() => setShowCreateTemplate(true)}
-                  className="flex items-center justify-center w-8 h-8 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="flex items-center justify-center w-8 h-8 bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors"
                   title="Create new template"
                 >
                   <Plus className="h-4 w-4" />
@@ -654,7 +654,7 @@ export default function CalendarPage() {
                       </button>
                       <button
                         onClick={() => setCurrentDate(new Date())}
-                        className="px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        className="px-3 py-2 text-sm bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors"
                       >
                         Today
                       </button>
@@ -910,7 +910,7 @@ export default function CalendarPage() {
                                       </span>
                                     )}
                                     {isToday && (
-                                      <span className="ml-2 px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full">
+                                      <span className="ml-2 px-2 py-1 text-xs bg-success-100 text-success-700 rounded-full">
                                         Today
                                       </span>
                                     )}
@@ -991,7 +991,7 @@ export default function CalendarPage() {
                                   {event.status && (
                                     <span className={`mt-2 px-2 py-1 text-xs rounded-full ${
                                       event.status === 'confirmed' 
-                                        ? 'bg-green-100 text-green-700'
+                                        ? 'bg-success-100 text-success-700'
                                         : event.status === 'tentative'
                                         ? 'bg-yellow-100 text-yellow-700'
                                         : 'bg-red-100 text-red-700'

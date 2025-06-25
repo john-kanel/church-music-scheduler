@@ -422,7 +422,7 @@ function AcceptOwnershipClient({ token }: { token: string }) {
               <button
                 onClick={acceptTransfer}
                 disabled={accepting}
-                className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full px-4 py-2 bg-success-600 text-white rounded-lg hover:bg-success-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {accepting ? 'Accepting...' : 'Accept Invitation'}
               </button>

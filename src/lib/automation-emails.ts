@@ -18,7 +18,7 @@ export async function sendMusicianEventNotification(
 
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #2563eb;">Event Reminder</h2>
+                      <h2 style="color: #660033;">Event Reminder</h2>
       
       <p>Hi ${firstName},</p>
       
@@ -67,7 +67,7 @@ export async function sendPastorMonthlyReport(
 
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #2563eb;">Monthly Music Schedule Report</h2>
+                      <h2 style="color: #660033;">Monthly Music Schedule Report</h2>
       
       <p>Dear ${firstName},</p>
       
@@ -75,7 +75,7 @@ export async function sendPastorMonthlyReport(
       
       <div style="margin: 20px 0;">
         ${events.map(event => `
-          <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #2563eb;">
+          <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #660033;">
             <h4 style="margin: 0 0 10px 0; color: #1f2937;">${event.name}</h4>
             <p style="margin: 5px 0;"><strong>Date:</strong> ${new Date(event.startTime).toLocaleDateString()}</p>
             <p style="margin: 5px 0;"><strong>Time:</strong> ${new Date(event.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
@@ -118,7 +118,7 @@ export async function sendPastorDailyDigest(
 
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #2563eb;">Daily Music Ministry Update</h2>
+                      <h2 style="color: #660033;">Daily Music Ministry Update</h2>
       
       <p>Dear ${firstName},</p>
       

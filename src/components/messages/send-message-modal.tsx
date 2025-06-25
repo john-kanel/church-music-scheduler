@@ -167,7 +167,7 @@ export function SendMessageModal({ isOpen, onClose, onMessageSent }: SendMessage
                   name="recipients"
                   value={messageData.recipients}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent text-gray-900"
                 >
                   {recipientOptions.map(option => (
                     <option key={option.value} value={option.value}>
@@ -216,7 +216,7 @@ export function SendMessageModal({ isOpen, onClose, onMessageSent }: SendMessage
                     value={messageData.specificEmails}
                     onChange={handleInputChange}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent text-gray-900"
                     placeholder="Enter email addresses separated by commas&#10;john@example.com, jane@example.com"
                   />
                 </div>
@@ -226,7 +226,7 @@ export function SendMessageModal({ isOpen, onClose, onMessageSent }: SendMessage
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Select Event</label>
                   <select
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent text-gray-900"
                   >
                     <option value="">No events created yet</option>
                   </select>
@@ -241,7 +241,7 @@ export function SendMessageModal({ isOpen, onClose, onMessageSent }: SendMessage
           {/* Send Method */}
           <section>
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <MessageSquare className="h-5 w-5 mr-2 text-purple-600" />
+                              <MessageSquare className="h-5 w-5 mr-2 text-secondary-600" />
               Communication Method
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -250,7 +250,7 @@ export function SendMessageModal({ isOpen, onClose, onMessageSent }: SendMessage
                 onClick={() => setMessageData(prev => ({ ...prev, sendMethod: 'email' }))}
                 className={`flex flex-col items-center p-4 border-2 rounded-lg transition-colors ${
                   messageData.sendMethod === 'email'
-                    ? 'border-purple-500 bg-purple-50 text-purple-700'
+                    ? 'border-secondary-500 bg-secondary-50 text-secondary-700'
                     : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
@@ -264,7 +264,7 @@ export function SendMessageModal({ isOpen, onClose, onMessageSent }: SendMessage
                 onClick={() => setMessageData(prev => ({ ...prev, sendMethod: 'sms' }))}
                 className={`flex flex-col items-center p-4 border-2 rounded-lg transition-colors ${
                   messageData.sendMethod === 'sms'
-                    ? 'border-purple-500 bg-purple-50 text-purple-700'
+                    ? 'border-secondary-500 bg-secondary-50 text-secondary-700'
                     : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
@@ -278,7 +278,7 @@ export function SendMessageModal({ isOpen, onClose, onMessageSent }: SendMessage
                 onClick={() => setMessageData(prev => ({ ...prev, sendMethod: 'both' }))}
                 className={`flex flex-col items-center p-4 border-2 rounded-lg transition-colors ${
                   messageData.sendMethod === 'both'
-                    ? 'border-purple-500 bg-purple-50 text-purple-700'
+                    ? 'border-secondary-500 bg-secondary-50 text-secondary-700'
                     : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
@@ -304,7 +304,7 @@ export function SendMessageModal({ isOpen, onClose, onMessageSent }: SendMessage
                   value={messageData.subject}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent text-gray-900"
                   placeholder="Message subject..."
                 />
               </div>
@@ -317,7 +317,7 @@ export function SendMessageModal({ isOpen, onClose, onMessageSent }: SendMessage
                   onChange={handleInputChange}
                   required
                   rows={6}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent text-gray-900"
                   placeholder="Write your message here..."
                 />
                 <p className="text-sm text-gray-500 mt-1">
@@ -370,7 +370,7 @@ export function SendMessageModal({ isOpen, onClose, onMessageSent }: SendMessage
                       name="scheduleDate"
                       value={messageData.scheduleDate}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent text-gray-900"
                     />
                   </div>
                   <div>
@@ -380,7 +380,7 @@ export function SendMessageModal({ isOpen, onClose, onMessageSent }: SendMessage
                       name="scheduleTime"
                       value={messageData.scheduleTime}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent text-gray-900"
                     />
                   </div>
                 </div>
@@ -400,7 +400,7 @@ export function SendMessageModal({ isOpen, onClose, onMessageSent }: SendMessage
             <button
               type="submit"
               disabled={loading}
-              className="flex items-center px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
+                              className="flex items-center px-6 py-2 bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors disabled:opacity-50"
             >
               <Send className="h-4 w-4 mr-2" />
               {loading ? 'Sending...' : messageData.scheduleSend ? 'Schedule Message' : 'Send Message'}

@@ -123,7 +123,7 @@ export async function POST(
         subject: `Welcome to ${transfer.church.name}!`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #2563eb;">Welcome to ${transfer.church.name}!</h2>
+            <h2 style="color: #660033;">Welcome to ${transfer.church.name}!</h2>
             
             <p>Congratulations! You've successfully accepted your invitation to join ${transfer.church.name} as a ${transfer.inviteeRole.toLowerCase().replace('_', ' ')}.</p>
             
@@ -145,7 +145,7 @@ export async function POST(
             ` : ''}
             
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${process.env.NEXTAUTH_URL}/dashboard" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+              <a href="${process.env.NEXTAUTH_URL}/dashboard" style="background-color: #660033; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
                 Go to Dashboard
               </a>
             </div>
@@ -174,7 +174,7 @@ export async function POST(
           subject: `${user.firstName} ${user.lastName} accepted your ownership invitation`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2 style="color: #2563eb;">Ownership Invitation Accepted</h2>
+              <h2 style="color: #660033;">Ownership Invitation Accepted</h2>
               
               <p>Great news! ${user.firstName} ${user.lastName} has accepted your invitation to join ${transfer.church.name} as a ${transfer.inviteeRole.toLowerCase().replace('_', ' ')}.</p>
               

@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
         subject: `Invitation to join ${churchName} as ${role.toLowerCase().replace('_', ' ')}`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #2563eb;">You've been invited to join ${churchName}</h2>
+            <h2 style="color: #660033;">You've been invited to join ${churchName}</h2>
             
             <p>Hello${firstName ? ` ${firstName}` : ''},</p>
             
@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
             ` : ''}
             
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${inviteLink}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+              <a href="${inviteLink}" style="background-color: #660033; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
                 Accept Invitation
               </a>
             </div>

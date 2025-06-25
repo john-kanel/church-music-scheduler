@@ -253,8 +253,8 @@ export function CreateTemplateModal({
           )}
 
           {success && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-              <p className="text-green-600 text-sm flex items-center">
+            <div className="bg-success-50 border border-success-200 rounded-lg p-4 mb-6">
+              <p className="text-success-600 text-sm flex items-center">
                 <Save className="h-4 w-4 mr-2" />
                 {success}
               </p>
@@ -336,7 +336,7 @@ export function CreateTemplateModal({
                 <h3 className="text-lg font-semibold text-gray-900">Musical Roles</h3>
                 <button
                   onClick={addRole}
-                  className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="flex items-center px-3 py-2 bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors"
                 >
                   <Plus className="h-4 w-4 mr-1" />
                   Add Role
@@ -407,7 +407,7 @@ export function CreateTemplateModal({
                 <h3 className="text-lg font-semibold text-gray-900">Default Music & Hymns</h3>
                 <button
                   onClick={addHymn}
-                  className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="flex items-center px-3 py-2 bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors"
                 >
                   <Plus className="h-4 w-4 mr-1" />
                   Add Music
@@ -536,7 +536,7 @@ export function CreateTemplateModal({
           <button
             onClick={handleSubmit}
             disabled={loading || !templateData.name.trim()}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center"
+            className="px-6 py-2 bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors disabled:opacity-50 flex items-center"
           >
             {loading ? (
               <>

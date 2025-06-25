@@ -78,7 +78,7 @@ export default function DevTestPage() {
                 <button
                   onClick={() => testExpiry('restore')}
                   disabled={loading}
-                  className="flex items-center justify-center bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+                  className="flex items-center justify-center bg-success-600 text-white px-4 py-3 rounded-lg hover:bg-success-700 disabled:opacity-50 transition-colors"
                 >
                   <CheckCircle className="h-5 w-5 mr-2" />
                   {loading ? 'Processing...' : 'Restore to Active Trial (30 days)'}

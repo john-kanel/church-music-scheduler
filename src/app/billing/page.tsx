@@ -294,7 +294,7 @@ export default function BillingPage() {
                 className={`relative bg-white rounded-xl shadow-sm border p-6 ${
                   plan.popular ? 'border-blue-500 ring-2 ring-blue-200' : ''
                 } ${
-                  currentPlan === plan.id ? 'ring-2 ring-green-200 border-green-500' : ''
+                  currentPlan === plan.id ? 'ring-2 ring-success-200 border-success-500' : ''
                 }`}
               >
                 {plan.popular && (
@@ -308,7 +308,7 @@ export default function BillingPage() {
 
                 {currentPlan === plan.id && (
                   <div className="absolute -top-3 right-4">
-                    <span className="bg-green-600 text-white px-3 py-1 rounded-full text-sm font-medium">
+                    <span className="bg-success-600 text-white px-3 py-1 rounded-full text-sm font-medium">
                       Current Plan
                     </span>
                   </div>
@@ -326,13 +326,13 @@ export default function BillingPage() {
                       <span className="text-4xl font-bold text-gray-900">${plan.price}</span>
                       <span className="text-gray-500">/{plan.interval}</span>
                       {plan.savingsPercent && (
-                        <span className="bg-green-100 text-green-800 text-sm font-medium px-2 py-1 rounded-full">
+                        <span className="bg-success-100 text-success-800 text-sm font-medium px-2 py-1 rounded-full">
                           Save {plan.savingsPercent}%
                         </span>
                       )}
                     </div>
                     {plan.savings && (
-                      <div className="text-green-600 font-medium text-sm mt-1">
+                      <div className="text-success-600 font-medium text-sm mt-1">
                         Save ${plan.savings} per year
                       </div>
                     )}
@@ -343,7 +343,7 @@ export default function BillingPage() {
                 <ul className="space-y-3 mb-6">
                   {plan.features.map((feature, index) => (
                     <li key={index} className="flex items-center">
-                      <Check className="h-4 w-4 text-green-500 mr-3 flex-shrink-0" />
+                      <Check className="h-4 w-4 text-success-500 mr-3 flex-shrink-0" />
                       <span className="text-sm text-gray-700">{feature}</span>
                     </li>
                   ))}

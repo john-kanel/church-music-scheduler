@@ -39,7 +39,7 @@ export default function MessagesPage() {
                 Back to Dashboard
               </Link>
               <div className="flex items-center">
-                <MessageSquare className="h-8 w-8 text-purple-600 mr-3" />
+                <MessageSquare className="h-8 w-8 text-secondary-600 mr-3" />
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
                   <p className="text-sm text-gray-600">{session.user?.churchName || 'Your Church'}</p>
@@ -49,7 +49,7 @@ export default function MessagesPage() {
             <div className="flex items-center space-x-3">
               <button 
                 onClick={() => setShowMessageModal(true)}
-                className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                className="flex items-center px-4 py-2 bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors"
               >
                 <Send className="h-4 w-4 mr-2" />
                 Send Message
@@ -83,7 +83,7 @@ export default function MessagesPage() {
               </button>
               <button 
                 onClick={() => setShowMessageModal(true)}
-                className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                className="flex items-center px-4 py-2 bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 New Message
@@ -108,7 +108,7 @@ export default function MessagesPage() {
             </p>
             <button 
               onClick={() => setShowMessageModal(true)}
-              className="inline-flex items-center px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              className="inline-flex items-center px-6 py-3 bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors"
             >
               <Send className="h-5 w-5 mr-2" />
               Send Your First Message
@@ -131,10 +131,10 @@ export default function MessagesPage() {
 
           <button 
             onClick={() => setShowMessageModal(true)}
-            className="bg-white rounded-xl shadow-sm border p-6 hover:border-green-300 hover:shadow-md transition-all text-left"
+            className="bg-white rounded-xl shadow-sm border p-6 hover:border-success-300 hover:shadow-md transition-all text-left"
           >
             <div className="flex items-center mb-4">
-              <Phone className="h-8 w-8 text-green-600 mr-3" />
+              <Phone className="h-8 w-8 text-success-600 mr-3" />
               <h3 className="font-medium text-gray-900">SMS Alert</h3>
             </div>
             <p className="text-sm text-gray-600">Send quick text messages for urgent updates</p>
@@ -142,10 +142,10 @@ export default function MessagesPage() {
 
           <button 
             onClick={() => setShowMessageModal(true)}
-            className="bg-white rounded-xl shadow-sm border p-6 hover:border-purple-300 hover:shadow-md transition-all text-left"
+            className="bg-white rounded-xl shadow-sm border p-6 hover:border-secondary-300 hover:shadow-md transition-all text-left"
           >
             <div className="flex items-center mb-4">
-              <Send className="h-8 w-8 text-purple-600 mr-3" />
+              <Send className="h-8 w-8 text-secondary-600 mr-3" />
               <h3 className="font-medium text-gray-900">Broadcast</h3>
             </div>
             <p className="text-sm text-gray-600">Send to everyone via email and SMS</p>
