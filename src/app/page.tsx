@@ -294,9 +294,9 @@ export default function HomePage() {
             </div>
 
             {/* Annual Plan */}
-            <div className="bg-white rounded-2xl shadow-xl p-8 border-2 border-success-500 relative flex flex-col h-full overflow-visible md:overflow-hidden pt-12 md:pt-8">
-              <div className="absolute -top-5 md:-top-3 left-1/2 transform -translate-x-1/2 z-10">
-                <span className="bg-success-500 text-white px-4 py-1 rounded-full text-sm font-medium">
+            <div className="bg-white rounded-2xl shadow-xl p-8 border-2 border-success-500 relative flex flex-col h-full overflow-visible pt-12 md:pt-10">
+              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
+                <span className="bg-success-500 text-white px-4 py-1 rounded-full text-sm font-medium whitespace-nowrap">
                   Best Value - Save 52%
                 </span>
               </div>

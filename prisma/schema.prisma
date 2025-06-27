@@ -58,6 +58,9 @@ model User {
   emailNotifications Boolean           @default(true)
   smsNotifications   Boolean           @default(true)
   timezone           String            @default("America/Chicago")
+  instruments        String[]          @default([])
+  skillLevel         SkillLevel        @default(INTERMEDIATE)
+  yearsExperience    Int?
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
   churchId           String
@@ -486,4 +489,11 @@ enum EmailType {
   WELCOME
   PAYMENT_CONFIRMATION
   REFERRAL_PROMOTION
+}
+
+enum SkillLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  PROFESSIONAL
 }

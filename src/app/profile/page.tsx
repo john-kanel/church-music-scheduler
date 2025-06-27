@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { 
   ArrowLeft, User, Mail, Phone, Settings, Save, Edit2, 
-  Clock, Church, Check, X, AlertCircle, Music, Award, Calendar 
+  Clock, Church, Check, X, Music, Award, Calendar 
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -18,6 +18,9 @@ interface UserProfile {
   emailNotifications: boolean
   smsNotifications: boolean
   timezone: string
+  instruments: string[]
+  skillLevel: string
+  yearsExperience?: number
   createdAt: string
   church: {
     name: string
@@ -40,7 +43,10 @@ export default function ProfilePage() {
     phone: '',
     emailNotifications: true,
     smsNotifications: true,
-    timezone: 'America/Chicago'
+    timezone: 'America/Chicago',
+    instruments: [] as string[],
+    skillLevel: 'INTERMEDIATE',
+    yearsExperience: ''
   })
 
   useEffect(() => {
@@ -61,7 +67,10 @@ export default function ProfilePage() {
           phone: data.user.phone || '',
           emailNotifications: data.user.emailNotifications,
           smsNotifications: data.user.smsNotifications,
-          timezone: data.user.timezone
+          timezone: data.user.timezone,
+          instruments: data.user.instruments || [],
+          skillLevel: data.user.skillLevel || 'INTERMEDIATE',
+          yearsExperience: data.user.yearsExperience ? data.user.yearsExperience.toString() : ''
         })
       } else {
         setError('Failed to load profile')
@@ -112,7 +121,10 @@ export default function ProfilePage() {
         phone: profile.phone || '',
         emailNotifications: profile.emailNotifications,
         smsNotifications: profile.smsNotifications,
-        timezone: profile.timezone
+        timezone: profile.timezone,
+        instruments: profile.instruments || [],
+        skillLevel: profile.skillLevel || 'INTERMEDIATE',
+        yearsExperience: profile.yearsExperience ? profile.yearsExperience.toString() : ''
       })
     }
     setEditing(false)
@@ -333,34 +345,111 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* Musical Skills (Placeholder for future implementation) */}
+            {/* Musical Skills */}
             <div className="bg-white rounded-lg shadow-sm p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-6">Musical Skills</h2>
               
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                <div className="flex items-center">
-                  <AlertCircle className="h-5 w-5 text-blue-600 mr-2" />
-                  <p className="text-blue-800 text-sm">
-                    Musical skills tracking is coming soon! This feature will allow you to specify your instruments and skill levels.
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-4">
+              <div className="space-y-6">
+                {/* Instruments */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Instruments (Preview)
+                    Instruments
                   </label>
-                  <div className="flex flex-wrap gap-2">
-                    {['Piano', 'Guitar', 'Voice', 'Organ'].map(instrument => (
-                      <span key={instrument} className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm">
-                        {instrument}
-                      </span>
-                    ))}
-                    <span className="px-3 py-1 bg-gray-200 text-gray-500 rounded-full text-sm">
-                      Coming Soon
+                  {editing ? (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        {['Piano', 'Organ', 'Guitar', 'Violin', 'Flute', 'Clarinet', 'Trumpet', 
+                          'Trombone', 'Drums', 'Bass Guitar', 'Saxophone', 'Cello', 'Voice'].map(instrument => (
+                          <label key={instrument} className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={formData.instruments.includes(instrument)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setFormData({ 
+                                    ...formData, 
+                                    instruments: [...formData.instruments, instrument] 
+                                  })
+                                } else {
+                                  setFormData({ 
+                                    ...formData, 
+                                    instruments: formData.instruments.filter(i => i !== instrument) 
+                                  })
+                                }
+                              }}
+                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mr-2"
+                            />
+                            <span className="text-sm text-gray-700">{instrument}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {profile?.instruments && profile.instruments.length > 0 ? (
+                        profile.instruments.map(instrument => (
+                          <span key={instrument} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                            {instrument}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-gray-500 text-sm">No instruments specified</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Skill Level */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Overall Skill Level
+                  </label>
+                  {editing ? (
+                    <select
+                      value={formData.skillLevel}
+                      onChange={(e) => setFormData({ ...formData, skillLevel: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="BEGINNER">Beginner</option>
+                      <option value="INTERMEDIATE">Intermediate</option>
+                      <option value="ADVANCED">Advanced</option>
+                      <option value="PROFESSIONAL">Professional</option>
+                    </select>
+                  ) : (
+                    <span className={`px-3 py-1 rounded-full text-sm ${
+                      profile?.skillLevel === 'BEGINNER' ? 'bg-gray-100 text-gray-800' :
+                      profile?.skillLevel === 'INTERMEDIATE' ? 'bg-blue-100 text-blue-800' :
+                      profile?.skillLevel === 'ADVANCED' ? 'bg-green-100 text-green-800' :
+                      'bg-purple-100 text-purple-800'
+                    }`}>
+                      {profile?.skillLevel === 'BEGINNER' && 'Beginner'}
+                      {profile?.skillLevel === 'INTERMEDIATE' && 'Intermediate'}
+                      {profile?.skillLevel === 'ADVANCED' && 'Advanced'}
+                      {profile?.skillLevel === 'PROFESSIONAL' && 'Professional'}
                     </span>
-                  </div>
+                  )}
+                </div>
+
+                {/* Years of Experience */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Years of Experience
+                  </label>
+                  {editing ? (
+                    <input
+                      type="number"
+                      min="0"
+                      max="80"
+                      value={formData.yearsExperience}
+                      onChange={(e) => setFormData({ ...formData, yearsExperience: e.target.value })}
+                      placeholder="Optional"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  ) : (
+                    <span className="text-gray-900">
+                      {profile?.yearsExperience ? `${profile.yearsExperience} years` : 'Not specified'}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

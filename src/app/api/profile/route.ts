@@ -24,6 +24,9 @@ export async function GET() {
         emailNotifications: true,
         smsNotifications: true,
         timezone: true,
+        instruments: true,
+        skillLevel: true,
+        yearsExperience: true,
         createdAt: true,
         church: {
           select: {
@@ -63,7 +66,10 @@ export async function PUT(request: NextRequest) {
       phone,
       emailNotifications,
       smsNotifications,
-      timezone
+      timezone,
+      instruments,
+      skillLevel,
+      yearsExperience
     } = body
 
     // Validate required fields
@@ -83,7 +89,10 @@ export async function PUT(request: NextRequest) {
         phone: phone || null,
         emailNotifications: emailNotifications ?? true,
         smsNotifications: smsNotifications ?? true,
-        timezone: timezone || 'America/Chicago'
+        timezone: timezone || 'America/Chicago',
+        instruments: instruments || [],
+        skillLevel: skillLevel || 'INTERMEDIATE',
+        yearsExperience: yearsExperience ? parseInt(yearsExperience) : null
       },
       select: {
         id: true,
@@ -95,6 +104,9 @@ export async function PUT(request: NextRequest) {
         emailNotifications: true,
         smsNotifications: true,
         timezone: true,
+        instruments: true,
+        skillLevel: true,
+        yearsExperience: true,
         church: {
           select: {
             name: true
