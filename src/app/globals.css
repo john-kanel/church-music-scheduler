@@ -119,24 +119,24 @@ body {
   font-family: 'Montserrat', Arial, Helvetica, sans-serif;
 }
 
-/* Make placeholder text darker/more visible - using darker charcoal gray */
+/* Make placeholder text lighter and subtle - using light gray */
 ::placeholder {
-  color: #374151 !important; /* text-gray-700 equivalent - charcoal gray */
+  color: #9CA3AF !important; /* text-gray-400 equivalent - much lighter gray */
   opacity: 1 !important;
 }
 
 ::-webkit-input-placeholder {
-  color: #374151 !important;
+  color: #9CA3AF !important;
   opacity: 1 !important;
 }
 
 ::-moz-placeholder {
-  color: #374151 !important;
+  color: #9CA3AF !important;
   opacity: 1 !important;
 }
 
 :-ms-input-placeholder {
-  color: #374151 !important;
+  color: #9CA3AF !important;
   opacity: 1 !important;
 }
 
