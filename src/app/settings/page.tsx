@@ -59,7 +59,29 @@ export default function SettingsPage() {
     if (session?.user?.role === 'DIRECTOR' || session?.user?.role === 'ASSOCIATE_DIRECTOR') {
       fetchAutomationSettings()
     }
+    fetchUserProfile()
   }, [session])
+
+  const fetchUserProfile = async () => {
+    try {
+      const response = await fetch('/api/profile')
+      if (response.ok) {
+        const data = await response.json()
+        const user = data.user
+        setFormData(prev => ({
+          ...prev,
+          name: `${user.firstName} ${user.lastName}`,
+          email: user.email,
+          phone: user.phone || '',
+          emailNotifications: user.emailNotifications,
+          smsNotifications: user.smsNotifications,
+          timeZone: user.timezone
+        }))
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error)
+    }
+  }
 
   const fetchAutomationSettings = async () => {
     try {
@@ -137,6 +159,8 @@ export default function SettingsPage() {
     try {
       if (activeTab === 'automations') {
         await saveAutomationSettings()
+      } else if (activeTab === 'personal') {
+        await savePersonalSettings()
       } else {
         // For now, simulate saving other settings
         await new Promise(resolve => setTimeout(resolve, 1500))
@@ -160,6 +184,31 @@ export default function SettingsPage() {
     
     if (!response.ok) {
       throw new Error('Failed to save automation settings')
+    }
+  }
+
+  const savePersonalSettings = async () => {
+    // Extract first and last name from the full name
+    const names = formData.name.trim().split(' ')
+    const firstName = names[0] || ''
+    const lastName = names.slice(1).join(' ') || ''
+
+    const response = await fetch('/api/profile', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        firstName,
+        lastName,
+        phone: formData.phone,
+        emailNotifications: formData.emailNotifications,
+        smsNotifications: formData.smsNotifications,
+        timezone: formData.timeZone
+      })
+    })
+    
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || 'Failed to save personal settings')
     }
   }
 
