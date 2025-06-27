@@ -607,17 +607,19 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
                       {dashboardData.musicDirector.email}
                     </a>
                   </div>
-                  {dashboardData.musicDirector.phone && (
-                    <div className="flex items-center">
-                      <Phone className="h-5 w-5 text-gray-400 mr-2" />
+                  <div className="flex items-center">
+                    <Phone className="h-5 w-5 text-gray-400 mr-2" />
+                    {dashboardData.musicDirector.phone ? (
                       <a 
                         href={`tel:${dashboardData.musicDirector.phone}`}
                         className="text-sm text-blue-600 hover:text-blue-700"
                       >
                         {dashboardData.musicDirector.phone}
                       </a>
-                    </div>
-                  )}
+                    ) : (
+                      <span className="text-sm text-gray-500">No phone number provided</span>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
