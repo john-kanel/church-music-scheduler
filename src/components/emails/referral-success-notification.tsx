@@ -26,15 +26,29 @@ export function ReferralSuccessNotification({
       margin: '0 auto',
       backgroundColor: '#ffffff'
     }}>
-      {/* Header */}
+      {/* Logo Section */}
       <div style={{ 
-        backgroundColor: '#10B981', 
-        padding: '30px 20px', 
+        background: '#f8f9fa', 
+        padding: '20px', 
         textAlign: 'center', 
-        borderRadius: '8px 8px 0 0' 
+        borderRadius: '8px 8px 0 0', 
+        borderBottom: '3px solid #10B981' 
       }}>
+        <div style={{
+          height: '80px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: '20px'
+        }}>
+          <img 
+            src={`${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/BIG Logo Maroon.png`}
+            alt="Church Music Scheduler" 
+            style={{ height: '60px', width: 'auto' }} 
+          />
+        </div>
         <h1 style={{ 
-          color: 'white', 
+          color: '#333', 
           margin: '0', 
           fontSize: '28px',
           fontWeight: 'bold'
@@ -42,7 +56,7 @@ export function ReferralSuccessNotification({
           🎉 Congratulations!
         </h1>
         <p style={{ 
-          color: 'rgba(255,255,255,0.9)', 
+          color: '#6B7280', 
           margin: '10px 0 0 0',
           fontSize: '16px'
         }}>

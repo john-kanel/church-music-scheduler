@@ -56,8 +56,8 @@ export async function sendInvitationEmail(
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <!-- Logo Section - Space for Parish Logo -->
           <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; border-bottom: 3px solid #667eea;">
-            <div style="height: 80px; background: #e9ecef; border: 2px dashed #adb5bd; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
-              <span style="color: #6c757d; font-size: 14px;">Church Logo Will Appear Here</span>
+            <div style="height: 80px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
+              <img src="${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/BIG Logo Maroon.png" alt="Church Music Scheduler" style="height: 60px; width: auto;" />
             </div>
             <h1 style="color: #333; margin: 0; font-size: 28px;">🎵 Music Ministry Invitation</h1>
           </div>
@@ -202,9 +202,12 @@ export async function sendMessageEmail(
       subject,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background: #667eea; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
-            <h1 style="color: white; margin: 0; font-size: 24px;">${churchName}</h1>
-            <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0;">Music Ministry</p>
+          <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; border-bottom: 3px solid #667eea;">
+            <div style="height: 80px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
+              <img src="${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/BIG Logo Maroon.png" alt="Church Music Scheduler" style="height: 60px; width: auto;" />
+            </div>
+            <h1 style="color: #333; margin: 0; font-size: 24px;">${churchName}</h1>
+            <p style="color: #6B7280; margin: 5px 0 0 0;">Music Ministry</p>
           </div>
           
           <div style="background: white; padding: 30px 20px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
@@ -277,7 +280,7 @@ export async function sendWelcomeEmail(
           <!-- Logo Section -->
           <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; border-bottom: 3px solid #667eea;">
             <div style="height: 80px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
-              <img src="${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/logo.png" alt="Church Music Scheduler" style="height: 60px; width: auto;" />
+              <img src="${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/BIG Logo Maroon.png" alt="Church Music Scheduler" style="height: 60px; width: auto;" />
             </div>
             <h1 style="color: #333; margin: 0; font-size: 28px;">🎵 Welcome to Church Music Scheduler!</h1>
           </div>
@@ -425,7 +428,7 @@ export async function sendPaymentConfirmationEmail(
           <!-- Logo Section -->
           <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; border-bottom: 3px solid #22c55e;">
             <div style="height: 80px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
-              <img src="${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/logo.png" alt="Church Music Scheduler" style="height: 60px; width: auto;" />
+              <img src="${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/BIG Logo Maroon.png" alt="Church Music Scheduler" style="height: 60px; width: auto;" />
             </div>
             <h1 style="color: #333; margin: 0; font-size: 28px;">✅ Payment Confirmed!</h1>
           </div>
@@ -568,7 +571,7 @@ export async function sendReferralPromotionEmail(
           <!-- Logo Section -->
           <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; border-bottom: 3px solid #f59e0b;">
             <div style="height: 80px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
-              <img src="${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/logo.png" alt="Church Music Scheduler" style="height: 60px; width: auto;" />
+              <img src="${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/BIG Logo Maroon.png" alt="Church Music Scheduler" style="height: 60px; width: auto;" />
             </div>
             <h1 style="color: #333; margin: 0; font-size: 28px;">💰 Earn Free Months!</h1>
           </div>

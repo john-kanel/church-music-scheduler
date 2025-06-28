@@ -30,7 +30,7 @@ export function ReferralInvitationEmail({
           marginBottom: '20px'
         }}>
           <img 
-            src={`${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/logo.png`}
+            src={`${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/BIG Logo Maroon.png`}
             alt="Church Music Scheduler" 
             style={{ height: '60px', width: 'auto' }} 
           />

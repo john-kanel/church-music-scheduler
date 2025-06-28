@@ -18,7 +18,15 @@ export async function sendMusicianEventNotification(
 
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                      <h2 style="color: #660033;">Event Reminder</h2>
+      <!-- Logo Section -->
+      <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; border-bottom: 3px solid #660033;">
+        <div style="height: 80px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
+          <img src="${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/BIG Logo Maroon.png" alt="Church Music Scheduler" style="height: 60px; width: auto;" />
+        </div>
+        <h1 style="color: #333; margin: 0; font-size: 24px;">🎵 Event Reminder</h1>
+      </div>
+      
+      <div style="background: white; padding: 30px 20px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
       
       <p>Hi ${firstName},</p>
       
@@ -44,6 +52,7 @@ export async function sendMusicianEventNotification(
       <p style="color: #6b7280; font-size: 14px;">
         This is an automated reminder. If you have any questions, please contact your music director.
       </p>
+      </div>
     </div>
   `
 
@@ -67,7 +76,15 @@ export async function sendPastorMonthlyReport(
 
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                      <h2 style="color: #660033;">Monthly Music Schedule Report</h2>
+      <!-- Logo Section -->
+      <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; border-bottom: 3px solid #660033;">
+        <div style="height: 80px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
+          <img src="${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/BIG Logo Maroon.png" alt="Church Music Scheduler" style="height: 60px; width: auto;" />
+        </div>
+        <h1 style="color: #333; margin: 0; font-size: 24px;">📊 Monthly Music Schedule Report</h1>
+      </div>
+      
+      <div style="background: white; padding: 30px 20px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
       
       <p>Dear ${firstName},</p>
       
@@ -95,6 +112,7 @@ export async function sendPastorMonthlyReport(
         This report is automatically generated on the 27th of each month. 
         If you have any questions about the music schedule, please contact your music director.
       </p>
+      </div>
     </div>
   `
 
@@ -118,7 +136,15 @@ export async function sendPastorDailyDigest(
 
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                      <h2 style="color: #660033;">Daily Music Ministry Update</h2>
+      <!-- Logo Section -->
+      <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; border-bottom: 3px solid #660033;">
+        <div style="height: 80px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
+          <img src="${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/BIG Logo Maroon.png" alt="Church Music Scheduler" style="height: 60px; width: auto;" />
+        </div>
+        <h1 style="color: #333; margin: 0; font-size: 24px;">📰 Daily Music Ministry Update</h1>
+      </div>
+      
+      <div style="background: white; padding: 30px 20px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
       
       <p>Dear ${firstName},</p>
       
@@ -139,6 +165,7 @@ export async function sendPastorDailyDigest(
         This digest is sent daily when there are changes to the music schedule. 
         You can unsubscribe from these notifications in your account settings.
       </p>
+      </div>
     </div>
   `
 
