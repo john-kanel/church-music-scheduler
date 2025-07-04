@@ -7,7 +7,7 @@ import path from 'path'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string; documentId: string } }
+  { params }: { params: Promise<{ id: string; documentId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -15,7 +15,8 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id: eventId, documentId } = params
+    const resolvedParams = await params
+    const { id: eventId, documentId } = resolvedParams
 
     // Fetch the document from database
     const document = await prisma.eventDocument.findFirst({

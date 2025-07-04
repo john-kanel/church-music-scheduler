@@ -131,14 +131,16 @@ IMPORTANT: Look closely at the actual content of the PDF. If it contains musical
     console.log('About to call retrieve with threadId:', threadId, 'runId:', runId);
     console.log('Types:', typeof threadId, typeof runId);
     
-    // Use the correct OpenAI SDK method signature (threadId, runId)
-    // @ts-ignore - OpenAI SDK TypeScript definitions are inconsistent between versions
-    let runStatus = await openai.beta.threads.runs.retrieve(threadId, runId);
+    // Use the correct OpenAI SDK v5+ method signature
+    let runStatus = await openai.beta.threads.runs.retrieve(runId, {
+      thread_id: threadId
+    });
     
     while (runStatus.status === 'queued' || runStatus.status === 'in_progress') {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      // @ts-ignore - OpenAI SDK TypeScript definitions are inconsistent between versions
-      runStatus = await openai.beta.threads.runs.retrieve(threadId, runId);
+      runStatus = await openai.beta.threads.runs.retrieve(runId, {
+        thread_id: threadId
+      });
     }
 
     if (runStatus.status !== 'completed') {
