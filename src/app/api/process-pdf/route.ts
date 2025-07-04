@@ -132,13 +132,15 @@ IMPORTANT: Look closely at the actual content of the PDF. If it contains musical
     console.log('Types:', typeof threadId, typeof runId);
     
     // Use the correct OpenAI SDK v5.8.2 method signature
-    // @ts-ignore - OpenAI SDK method signature inconsistency
-    let runStatus = await openai.beta.threads.runs.retrieve(threadId, runId);
+    let runStatus = await openai.beta.threads.runs.retrieve(runId, {
+      thread_id: threadId
+    });
     
     while (runStatus.status === 'queued' || runStatus.status === 'in_progress') {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      // @ts-ignore - OpenAI SDK method signature inconsistency
-      runStatus = await openai.beta.threads.runs.retrieve(threadId, runId);
+      runStatus = await openai.beta.threads.runs.retrieve(runId, {
+        thread_id: threadId
+      });
     }
 
     if (runStatus.status !== 'completed') {

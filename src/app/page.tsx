@@ -4,8 +4,9 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { LoginForm } from '@/components/auth/login-form'
-import { Menu, X, Calendar, Music2, MessageSquare } from 'lucide-react'
+import { Menu, X, Calendar, Music2, MessageSquare, Mail } from 'lucide-react'
 import { Logo } from '@/components/ui/logo'
+import Image from 'next/image'
 
 export default function HomePage() {
   const { data: session, status } = useSession()
@@ -126,7 +127,7 @@ export default function HomePage() {
                 <div className="text-sm text-gray-600">per month</div>
               </div>
               <div className="text-center p-4 bg-white rounded-lg shadow-sm">
-                <div className="text-3xl font-bold text-success-600">30</div>
+                <div className="text-3xl font-bold text-blue-800">30</div>
                 <div className="text-sm text-gray-600">day free trial</div>
               </div>
               <div className="text-center p-4 bg-white rounded-lg shadow-sm border-2 border-success-400">
@@ -154,25 +155,74 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Right Column - Login Form */}
+          {/* Right Column - Sign Up Form */}
           <div className="lg:pl-8">
             <div className="bg-white rounded-2xl shadow-xl p-8">
               <div className="text-center mb-8">
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  Sign In to Your Church
+                  Start Your Free Trial
                 </h2>
                 <p className="text-gray-600">
-                  Welcome back! Enter your credentials to continue.
+                  Get started with your church music scheduling today.
                 </p>
               </div>
               
-              <LoginForm />
+              <form onSubmit={(e) => {
+                e.preventDefault()
+                const formData = new FormData(e.target as HTMLFormElement)
+                const email = formData.get('email') as string
+                const churchName = formData.get('churchName') as string
+                window.location.href = `/signup?email=${encodeURIComponent(email)}&church=${encodeURIComponent(churchName)}`
+              }} className="space-y-6">
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                    Email Address
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      required
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent text-gray-900"
+                      placeholder="Enter your email"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="churchName" className="block text-sm font-medium text-gray-700 mb-2">
+                    Church Name
+                  </label>
+                  <div className="relative">
+                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 flex items-center justify-center">
+                      ⛪
+                    </div>
+                    <input
+                      id="churchName"
+                      name="churchName"
+                      type="text"
+                      required
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent text-gray-900"
+                      placeholder="Enter your church name"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500"
+                >
+                  Sign Up
+                </button>
+              </form>
 
               <div className="mt-6 text-center">
                 <p className="text-sm text-gray-600">
-                  Don't have an account?{' '}
-                  <a href="/auth/signup" className="text-brand-600 hover:text-brand-700 font-medium">
-                    Start your free trial
+                  Already have an account?{' '}
+                  <a href="/signin" className="text-brand-600 hover:text-brand-700 font-medium">
+                    Sign in
                   </a>
                 </p>
               </div>
@@ -358,13 +408,22 @@ export default function HomePage() {
       </div>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-8">
+      <footer className="bg-brand-600 text-white py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <div className="flex items-center justify-center mb-4">
-                              <Logo size="sm" textClassName="text-brand-400" />
+              <Image
+                src="/whitetransparent.png"
+                alt="Church Music Scheduler Logo"
+                width={48}
+                height={48}
+                className="object-contain"
+              />
+              <span className="ml-3 font-bold text-white text-lg">
+                Church Music Scheduler
+              </span>
             </div>
-            <p className="text-gray-400">
+            <p className="text-white opacity-90">
               © 2024 Church Music Scheduler. All rights reserved.
             </p>
           </div>
