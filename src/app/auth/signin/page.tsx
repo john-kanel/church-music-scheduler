@@ -12,7 +12,7 @@ function SignInContent() {
   const message = searchParams.get('message')
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-brand-50 to-brand-100">
       {/* Header */}
       <nav className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -20,7 +20,7 @@ function SignInContent() {
             <Link href="/" className="flex items-center">
               <Logo />
             </Link>
-            <Link href="/" className="flex items-center text-gray-600 hover:text-blue-600 transition-colors">
+            <Link href="/" className="flex items-center text-gray-600 hover:text-brand-600 transition-colors">
               <ArrowLeft className="h-4 w-4 mr-1" />
               Back to Home
             </Link>
@@ -50,7 +50,7 @@ function SignInContent() {
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Don't have an account?{' '}
-              <Link href="/auth/signup" className="text-blue-600 hover:text-blue-700 font-medium">
+              <Link href="/auth/signup" className="text-brand-600 hover:text-brand-700 font-medium">
                 Start your free trial
               </Link>
             </p>
@@ -64,7 +64,7 @@ function SignInContent() {
 export default function SignInPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-brand-50 to-brand-100 flex items-center justify-center">
                       <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-brand-600"></div>
       </div>
     }>

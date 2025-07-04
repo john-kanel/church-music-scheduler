@@ -163,7 +163,7 @@ export default function HomePage() {
                   Start Your Free Trial
                 </h2>
                 <p className="text-gray-600">
-                  Get started with your church music scheduling today.
+                  Start saving time and energy with just a few clicks today.
                 </p>
               </div>
               
@@ -415,8 +415,8 @@ export default function HomePage() {
               <Image
                 src="/whitetransparent.png"
                 alt="Church Music Scheduler Logo"
-                width={48}
-                height={48}
+                width={30}
+                height={30}
                 className="object-contain"
               />
               <span className="ml-3 font-bold text-white text-lg">

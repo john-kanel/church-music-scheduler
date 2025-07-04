@@ -124,7 +124,7 @@ function SignUpForm() {
               value={formData.name}
               onChange={handleInputChange}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent text-gray-900"
               placeholder="Enter your full name"
             />
           </div>
@@ -140,7 +140,7 @@ function SignUpForm() {
               value={formData.email}
               onChange={handleInputChange}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent text-gray-900"
               placeholder="your.email@church.org"
             />
           </div>
@@ -154,7 +154,7 @@ function SignUpForm() {
               name="role"
               value={formData.role}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent text-gray-900"
             >
               <option value="DIRECTOR">Music Director</option>
               <option value="PASTOR">Pastor/Priest</option>
@@ -173,7 +173,7 @@ function SignUpForm() {
               value={formData.churchName}
               onChange={handleInputChange}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent text-gray-900"
               placeholder="First Baptist Church"
             />
           </div>
@@ -191,7 +191,7 @@ function SignUpForm() {
               onChange={handleInputChange}
               required
               minLength={6}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent text-gray-900"
               placeholder="Choose a secure password"
             />
           </div>
@@ -208,7 +208,7 @@ function SignUpForm() {
               onChange={handleInputChange}
               required
               minLength={6}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent text-gray-900"
               placeholder="Confirm your password"
             />
           </div>
@@ -239,7 +239,7 @@ function SignUpForm() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50"
+            className="w-full bg-brand-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 transition-colors disabled:opacity-50"
           >
             {loading ? 'Redirecting to checkout...' : 'Continue to Free Trial Setup'}
           </button>
@@ -248,7 +248,7 @@ function SignUpForm() {
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600">
             Already have an account?{' '}
-            <Link href="/auth/signin" className="text-blue-600 hover:text-blue-700 font-medium">
+            <Link href="/auth/signin" className="text-brand-600 hover:text-brand-700 font-medium">
               Sign in here
             </Link>
           </p>
@@ -299,7 +299,7 @@ function LoadingFallback() {
 
 export default function SignUpPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-brand-50 to-brand-100">
       {/* Header */}
       <nav className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -307,7 +307,7 @@ export default function SignUpPage() {
             <Link href="/" className="flex items-center">
               <Logo />
             </Link>
-            <Link href="/" className="flex items-center text-gray-600 hover:text-blue-600 transition-colors">
+            <Link href="/" className="flex items-center text-gray-600 hover:text-brand-600 transition-colors">
               <ArrowLeft className="h-4 w-4 mr-1" />
               Back to Home
             </Link>
