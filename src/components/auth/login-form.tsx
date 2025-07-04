@@ -78,7 +78,7 @@ export function LoginForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent text-gray-900"
             placeholder="Enter your email"
           />
         </div>
@@ -96,7 +96,7 @@ export function LoginForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+            className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent text-gray-900"
             placeholder="Enter your password"
           />
           <button
@@ -115,7 +115,7 @@ export function LoginForm() {
             id="remember-me"
             name="remember-me"
             type="checkbox"
-            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
           />
           <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
             Remember me
@@ -123,7 +123,7 @@ export function LoginForm() {
         </div>
 
         <div className="text-sm">
-          <a href="/auth/forgot-password" className="text-blue-600 hover:text-blue-700 font-medium">
+          <a href="/auth/forgot-password" className="text-brand-600 hover:text-brand-700 font-medium">
             Forgot password?
           </a>
         </div>
@@ -132,11 +132,11 @@ export function LoginForm() {
       <button
         type="submit"
         disabled={isLoading}
-        className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {isLoading ? (
           <>
-            <Loader2 className="animate-spin h-4 w-4 mr-2" />
+            <Loader2 className="animate-spin h-4 w-4 mr-2 text-white" />
             Signing in...
           </>
         ) : (

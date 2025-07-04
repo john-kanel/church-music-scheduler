@@ -42,6 +42,7 @@ model Church {
   automationSettings    AutomationSettings?
   notificationLogs      NotificationLog[]
   emailSchedules        EmailSchedule[]
+  serviceParts          ServicePart[]
 
   @@map("parishes")
 }
@@ -71,6 +72,7 @@ model User {
   church             Church            @relation(fields: [churchId], references: [id], onDelete: Cascade)
   pastorSettings     PastorSettings?
   emailSchedules     EmailSchedule[]
+  uploadedDocuments  EventDocument[]
 
   @@map("users")
 }
@@ -123,6 +125,8 @@ model Event {
   template          EventTemplate?    @relation(fields: [templateId], references: [id])
   musicFiles        MusicFile[]
   notificationLogs  NotificationLog[]
+  hymns             EventHymn[]
+  documents         EventDocument[]
 
   @@map("events")
 }
@@ -310,15 +314,65 @@ model TemplateRole {
 }
 
 model TemplateHymn {
-  id         String        @id @default(cuid())
-  title      String
-  composer   String?
-  notes      String?
-  templateId String
-  createdAt  DateTime      @default(now())
-  template   EventTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  id            String         @id @default(cuid())
+  title         String
+  composer      String?
+  notes         String?
+  templateId    String
+  servicePartId String?
+  createdAt     DateTime       @default(now())
+  template      EventTemplate  @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  servicePart   ServicePart?   @relation(fields: [servicePartId], references: [id])
 
   @@map("template_hymns")
+}
+
+model ServicePart {
+  id            String         @id @default(cuid())
+  name          String
+  isRequired    Boolean        @default(false)
+  order         Int            @default(0)
+  churchId      String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  church        Church         @relation(fields: [churchId], references: [id], onDelete: Cascade)
+  templateHymns TemplateHymn[]
+  eventHymns    EventHymn[]
+
+  @@unique([name, churchId])
+  @@map("service_parts")
+}
+
+model EventHymn {
+  id            String      @id @default(cuid())
+  title         String
+  notes         String?
+  eventId       String
+  servicePartId String?
+  createdAt     DateTime    @default(now())
+  event         Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  servicePart   ServicePart? @relation(fields: [servicePartId], references: [id])
+
+  @@map("event_hymns")
+}
+
+model EventDocument {
+  id               String   @id @default(cuid())
+  filename         String
+  originalFilename String
+  filePath         String
+  fileSize         Int
+  mimeType         String
+  eventId          String
+  uploadedBy       String
+  uploadedAt       DateTime @default(now())
+  aiProcessed      Boolean  @default(false)
+  aiProcessedAt    DateTime?
+  aiResults        Json?
+  event            Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  uploader         User     @relation(fields: [uploadedBy], references: [id])
+
+  @@map("event_documents")
 }
 
 model OwnershipTransfer {

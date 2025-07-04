@@ -1,10 +1,29 @@
 import { Resend } from 'resend'
+import { getEmailLogoHtml } from '../components/emails/email-logo'
 
 if (!process.env.RESEND_API_KEY) {
   throw new Error('RESEND_API_KEY is not defined in environment variables')
 }
 
 export const resend = new Resend(process.env.RESEND_API_KEY)
+
+// Email-safe logo HTML (using text-based logo for guaranteed compatibility)
+const LOGO_HTML = `
+  <div style="text-align: center; margin: 20px 0;">
+    <div style="
+      background: linear-gradient(135deg, #660033 0%, #8B0045 100%);
+      color: white;
+      padding: 15px 25px;
+      border-radius: 8px;
+      display: inline-block;
+      font-family: 'Georgia', serif;
+      box-shadow: 0 4px 8px rgba(102, 0, 51, 0.3);
+    ">
+      <div style="font-size: 24px; font-weight: bold; margin-bottom: 5px;">♪ Church Music Scheduler</div>
+      <div style="font-size: 12px; opacity: 0.9; letter-spacing: 1px;">ORGANIZE • SCHEDULE • WORSHIP</div>
+    </div>
+  </div>
+`;
 
 // Generate a random password for new users
 function generateTemporaryPassword(): string {
@@ -56,9 +75,7 @@ export async function sendInvitationEmail(
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <!-- Logo Section - Space for Parish Logo -->
           <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; border-bottom: 3px solid #667eea;">
-            <div style="height: 80px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
-              <img src="${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/BIG Logo Maroon.png" alt="Church Music Scheduler" style="height: 60px; width: auto;" />
-            </div>
+            ${getEmailLogoHtml()}
             <h1 style="color: #333; margin: 0; font-size: 28px;">🎵 Music Ministry Invitation</h1>
           </div>
           
@@ -203,9 +220,7 @@ export async function sendMessageEmail(
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; border-bottom: 3px solid #667eea;">
-            <div style="height: 80px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
-              <img src="${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/BIG Logo Maroon.png" alt="Church Music Scheduler" style="height: 60px; width: auto;" />
-            </div>
+            ${getEmailLogoHtml()}
             <h1 style="color: #333; margin: 0; font-size: 24px;">${churchName}</h1>
             <p style="color: #6B7280; margin: 5px 0 0 0;">Music Ministry</p>
           </div>
@@ -279,9 +294,7 @@ export async function sendWelcomeEmail(
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <!-- Logo Section -->
           <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; border-bottom: 3px solid #667eea;">
-            <div style="height: 80px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
-              <img src="${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/BIG Logo Maroon.png" alt="Church Music Scheduler" style="height: 60px; width: auto;" />
-            </div>
+            ${getEmailLogoHtml()}
             <h1 style="color: #333; margin: 0; font-size: 28px;">🎵 Welcome to Church Music Scheduler!</h1>
           </div>
           
@@ -427,9 +440,7 @@ export async function sendPaymentConfirmationEmail(
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <!-- Logo Section -->
           <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; border-bottom: 3px solid #22c55e;">
-            <div style="height: 80px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
-              <img src="${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/BIG Logo Maroon.png" alt="Church Music Scheduler" style="height: 60px; width: auto;" />
-            </div>
+            ${getEmailLogoHtml()}
             <h1 style="color: #333; margin: 0; font-size: 28px;">✅ Payment Confirmed!</h1>
           </div>
           
@@ -570,9 +581,7 @@ export async function sendReferralPromotionEmail(
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <!-- Logo Section -->
           <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; border-bottom: 3px solid #f59e0b;">
-            <div style="height: 80px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
-              <img src="${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/BIG Logo Maroon.png" alt="Church Music Scheduler" style="height: 60px; width: auto;" />
-            </div>
+            ${getEmailLogoHtml()}
             <h1 style="color: #333; margin: 0; font-size: 28px;">💰 Earn Free Months!</h1>
           </div>
           
@@ -715,3 +724,10 @@ Sent by Church Music Scheduler
     throw error
   }
 } 
+
+// Helper function to generate logo HTML
+export const getLogoHTML = () => {
+  return LOGO_HTML;
+};
+
+export default resend; 

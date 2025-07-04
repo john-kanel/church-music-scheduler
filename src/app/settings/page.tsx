@@ -5,6 +5,14 @@ import { useSession } from 'next-auth/react'
 import { ArrowLeft, User, MapPin, Bell, Lock, CreditCard, Save, Edit3, Zap, Clock, Mail, Users, Plus, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 
+interface ServicePart {
+  id: string
+  name: string
+  isRequired: boolean
+  order: number
+  isNew?: boolean
+}
+
 export default function SettingsPage() {
   const { data: session } = useSession()
   const [activeTab, setActiveTab] = useState('personal')
@@ -55,9 +63,15 @@ export default function SettingsPage() {
   const [pastorEmail, setPastorEmail] = useState('')
   const [pastorName, setPastorName] = useState('')
 
+  // Service Parts Management
+  const [serviceParts, setServiceParts] = useState<ServicePart[]>([])
+  const [loadingServiceParts, setLoadingServiceParts] = useState(false)
+  const [draggedItem, setDraggedItem] = useState<ServicePart | null>(null)
+
   useEffect(() => {
     if (session?.user?.role === 'DIRECTOR' || session?.user?.role === 'ASSOCIATE_DIRECTOR') {
       fetchAutomationSettings()
+      fetchServiceParts()
     }
     fetchUserProfile()
   }, [session])
@@ -97,12 +111,151 @@ export default function SettingsPage() {
     }
   }
 
+  const fetchServiceParts = async () => {
+    setLoadingServiceParts(true)
+    try {
+      const response = await fetch('/api/service-parts')
+      if (response.ok) {
+        const data = await response.json()
+        setServiceParts(data.serviceParts || [])
+      }
+    } catch (error) {
+      console.error('Error fetching service parts:', error)
+    } finally {
+      setLoadingServiceParts(false)
+    }
+  }
+
+  const addServicePart = () => {
+    const newServicePart = {
+      id: `temp-${Date.now()}`,
+      name: '',
+      isRequired: false,
+      order: serviceParts.length,
+      isNew: true
+    }
+    setServiceParts([...serviceParts, newServicePart])
+  }
+
+  const updateServicePart = (id: string, field: keyof ServicePart, value: any) => {
+    setServiceParts(serviceParts.map(part => 
+      part.id === id ? { ...part, [field]: value } : part
+    ))
+  }
+
+  const removeServicePart = async (id: string) => {
+    if (id.startsWith('temp-')) {
+      // Remove from local state only
+      setServiceParts(serviceParts.filter(part => part.id !== id))
+      return
+    }
+
+    // For existing service parts, check for usage first
+    try {
+      const response = await fetch(`/api/service-parts/${id}`, {
+        method: 'DELETE'
+      })
+      
+      if (response.ok) {
+        setServiceParts(serviceParts.filter(part => part.id !== id))
+        setSuccess('Service part deleted successfully!')
+      } else {
+        const data = await response.json()
+        
+        if (data.usageCount > 0) {
+          // Show confirmation dialog for parts in use
+          const confirmDelete = window.confirm(
+            `${data.message}\n\nThis will mark ${data.templateUsage} template(s) and ${data.eventUsage} event(s) as "Custom". Do you want to continue?`
+          )
+          
+          if (confirmDelete) {
+            // Force delete
+            const forceResponse = await fetch(`/api/service-parts/${id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ forceDelete: true })
+            })
+            
+            if (forceResponse.ok) {
+              setServiceParts(serviceParts.filter(part => part.id !== id))
+              setSuccess('Service part deleted. Existing usages marked as "Custom".')
+            } else {
+              const forceData = await forceResponse.json()
+              alert(forceData.error || 'Failed to delete service part')
+            }
+          }
+        } else {
+          alert(data.error || 'Failed to delete service part')
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting service part:', error)
+      alert('Failed to delete service part')
+    }
+  }
+
+  const saveServiceParts = async () => {
+    setLoading(true)
+    try {
+      const response = await fetch('/api/service-parts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ serviceParts })
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setServiceParts(data.serviceParts)
+        setSuccess('Service parts saved successfully!')
+      } else {
+        throw new Error('Failed to save service parts')
+      }
+    } catch (error) {
+      console.error('Error saving service parts:', error)
+      alert('Failed to save service parts')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDragStart = (e: React.DragEvent, item: ServicePart) => {
+    setDraggedItem(item)
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+  }
+
+  const handleDrop = (e: React.DragEvent, targetItem: ServicePart) => {
+    e.preventDefault()
+    if (!draggedItem || draggedItem.id === targetItem.id) return
+
+    const newServiceParts = [...serviceParts]
+    const draggedIndex = newServiceParts.findIndex(part => part.id === draggedItem.id)
+    const targetIndex = newServiceParts.findIndex(part => part.id === targetItem.id)
+
+    // Remove dragged item and insert at target position
+    const [draggedPart] = newServiceParts.splice(draggedIndex, 1)
+    newServiceParts.splice(targetIndex, 0, draggedPart)
+
+    // Update order values
+    newServiceParts.forEach((part, index) => {
+      part.order = index
+    })
+
+    setServiceParts(newServiceParts)
+    setDraggedItem(null)
+  }
+
   const tabs = [
     { id: 'personal', name: 'Personal', icon: User },
     { id: 'church', name: 'Church', icon: MapPin },
     { id: 'notifications', name: 'Notifications', icon: Bell },
     ...(session?.user?.role === 'DIRECTOR' || session?.user?.role === 'ASSOCIATE_DIRECTOR' 
-      ? [{ id: 'automations', name: 'Automations', icon: Zap }] 
+      ? [
+          { id: 'automations', name: 'Automations', icon: Zap },
+          { id: 'service-parts', name: 'Service Parts', icon: Users }
+        ] 
       : []),
     { id: 'preferences', name: 'Preferences', icon: Lock },
     { id: 'billing', name: 'Billing', icon: CreditCard }
@@ -161,6 +314,8 @@ export default function SettingsPage() {
         await saveAutomationSettings()
       } else if (activeTab === 'personal') {
         await savePersonalSettings()
+      } else if (activeTab === 'service-parts') {
+        await saveServiceParts()
       } else {
         // For now, simulate saving other settings
         await new Promise(resolve => setTimeout(resolve, 1500))
@@ -285,25 +440,25 @@ export default function SettingsPage() {
               {!isEditing ? (
                 <button 
                   onClick={() => setIsEditing(true)}
-                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                        className="flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
                 >
-                  <Edit3 className="h-4 w-4 mr-2" />
+                  <Edit3 className="h-4 w-4 mr-1.5" />
                   Edit Settings
                 </button>
               ) : (
                 <>
                   <button 
                     onClick={() => setIsEditing(false)}
-                    className="flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                    className="flex items-center px-3 py-1.5 border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 transition-colors"
                   >
                     Cancel
                   </button>
                   <button 
                     onClick={handleSubmit}
                     disabled={loading}
-                    className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                    className="flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
                   >
-                    <Save className="h-4 w-4 mr-2" />
+                    <Save className="h-4 w-4 mr-1.5" />
                     {loading ? 'Saving...' : 'Save Changes'}
                   </button>
                 </>
@@ -651,9 +806,9 @@ export default function SettingsPage() {
                     <button
                       type="button"
                       onClick={addMusicianNotification}
-                      className="flex items-center px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                      className="flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-gray-700 text-sm hover:bg-gray-50 transition-colors"
                     >
-                      <Plus className="h-4 w-4 mr-2" />
+                      <Plus className="h-4 w-4 mr-1.5" />
                       Add Another Notification
                     </button>
                   )}
@@ -773,7 +928,7 @@ export default function SettingsPage() {
                         type="button"
                         onClick={invitePastor}
                         disabled={!pastorEmail || !pastorName || loading}
-                        className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="mt-4 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Send Invitation
                       </button>
@@ -781,6 +936,132 @@ export default function SettingsPage() {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Service Parts Tab */}
+          {activeTab === 'service-parts' && (
+            <div className="bg-white rounded-xl shadow-sm border p-6">
+              <div className="mb-6">
+                <h2 className="text-xl font-bold text-gray-900 flex items-center">
+                  <Users className="h-5 w-5 mr-2 text-blue-600" />
+                  Service Parts Management
+                </h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  Define the parts of your services (e.g., Opening Hymn, Communion Song, etc.) that will appear in event creation
+                </p>
+              </div>
+
+              {loadingServiceParts ? (
+                <div className="text-center py-8">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600"></div>
+                  <p className="text-gray-500 mt-2">Loading service parts...</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {serviceParts.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <Users className="h-8 w-8 mx-auto mb-2" />
+                      <p>No service parts defined yet</p>
+                      {isEditing && (
+                        <button
+                          onClick={addServicePart}
+                          className="mt-4 px-6 py-2.5 bg-gradient-to-r from-brand-600 to-brand-700 text-white text-sm font-medium rounded-lg hover:from-brand-700 hover:to-brand-800 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+                        >
+                          Add your first service part
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    serviceParts.map((part, index) => (
+                      <div
+                        key={part.id}
+                        draggable={isEditing}
+                        onDragStart={(e) => handleDragStart(e, part)}
+                        onDragOver={handleDragOver}
+                        onDrop={(e) => handleDrop(e, part)}
+                        className={`flex items-center space-x-4 p-4 border border-gray-200 rounded-lg transition-colors ${
+                          isEditing ? 'cursor-move hover:bg-gray-50' : ''
+                        } ${draggedItem?.id === part.id ? 'opacity-50' : ''}`}
+                      >
+                        <div className="flex items-center text-gray-400">
+                          <span className="text-sm font-mono">{index + 1}</span>
+                        </div>
+                        
+                        <div className="flex-1">
+                          <input
+                            type="text"
+                            value={part.name}
+                            onChange={(e) => updateServicePart(part.id, 'name', e.target.value)}
+                            disabled={!isEditing}
+                            placeholder="Service part name (e.g., Opening Hymn, Communion Song)"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent text-gray-900 disabled:bg-gray-50 disabled:border-transparent"
+                          />
+                        </div>
+
+                        <div className="flex items-center">
+                          <label className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={part.isRequired}
+                              onChange={(e) => updateServicePart(part.id, 'isRequired', e.target.checked)}
+                              disabled={!isEditing}
+                              className="mr-2 text-brand-600"
+                            />
+                            <span className="text-sm text-gray-700">Required</span>
+                          </label>
+                        </div>
+
+                        {isEditing && (
+                          <button
+                            type="button"
+                            onClick={() => removeServicePart(part.id)}
+                            className="p-2.5 text-red-600 hover:text-white hover:bg-gradient-to-r hover:from-red-600 hover:to-red-700 rounded-lg transition-all duration-200 transform hover:scale-110 shadow-sm hover:shadow-lg"
+                            title="Delete service part"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    ))
+                  )}
+                  
+                  {/* Save button for existing service parts */}
+                  {isEditing && serviceParts.length > 0 && (
+                    <div className="flex justify-between items-center mt-6 pt-4 border-t border-gray-200">
+                      <button
+                        type="button"
+                        onClick={addServicePart}
+                        className="flex items-center px-4 py-2 bg-gradient-to-r from-brand-600 to-brand-700 text-white text-sm font-medium rounded-lg hover:from-brand-700 hover:to-brand-800 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Another Service Part
+                      </button>
+                      <button
+                        type="button"
+                        onClick={saveServiceParts}
+                        disabled={loading}
+                        className="flex items-center px-4 py-2 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white text-sm font-medium rounded-lg hover:from-emerald-700 hover:to-emerald-800 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                      >
+                        <Save className="h-4 w-4 mr-2" />
+                        {loading ? 'Saving...' : 'Save Parts'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {!isEditing && serviceParts.length > 0 && (
+                <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                  <h3 className="font-medium text-blue-900 mb-2">How Service Parts Work</h3>
+                  <ul className="text-sm text-blue-800 space-y-1">
+                    <li>• These parts will appear as dropdown options when creating events</li>
+                    <li>• Required parts will automatically be added to new events</li>
+                    <li>• You can reorder parts by dragging when editing</li>
+                    <li>• Deleting a part that's in use will mark it as "Custom" in existing events</li>
+                  </ul>
+                </div>
+              )}
             </div>
           )}
 
@@ -843,7 +1124,7 @@ export default function SettingsPage() {
                   </div>
                   <Link 
                     href="/billing"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
                   >
                     Manage Billing
                   </Link>

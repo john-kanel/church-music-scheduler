@@ -64,7 +64,7 @@ function TrialSuccessContent() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="max-w-md mx-auto px-4">
           <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
-            <Loader2 className="h-16 w-16 text-blue-600 mx-auto mb-6 animate-spin" />
+            <Loader2 className="h-16 w-16 text-brand-600 mx-auto mb-6 animate-spin" />
             <h1 className="text-2xl font-bold text-gray-900 mb-4">
               Setting up your account...
             </h1>
@@ -145,7 +145,7 @@ function LoadingFallback() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="max-w-md mx-auto px-4">
         <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
-          <Loader2 className="h-16 w-16 text-blue-600 mx-auto mb-6 animate-spin" />
+                      <Loader2 className="h-16 w-16 text-brand-600 mx-auto mb-6 animate-spin" />
           <h1 className="text-2xl font-bold text-gray-900">Loading...</h1>
         </div>
       </div>

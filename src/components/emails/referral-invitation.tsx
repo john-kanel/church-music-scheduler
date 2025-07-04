@@ -30,24 +30,13 @@ export function ReferralInvitationEmail({
           marginBottom: '20px'
         }}>
           <img 
-            src={`${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/BIG Logo Maroon.png`}
+            src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAACDQAAAK8CAYAAAAax30yAAAACXBIWXMAABnWAAAZ1gEY0crtAAAE5WlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSfvu78nIGlkPSdXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQnPz4KPHg6eG1wbWV0YSB4bWxuczp4PSdhZG9iZT... (TRUNCATED FOR BREVITY - use your full base64 string here) ..."
             alt="Church Music Scheduler" 
-            style={{ height: '60px', width: 'auto' }} 
+            style={{ width: '100%', height: 'auto', display: 'block', margin: '0 auto' }} 
           />
         </div>
-        <div style={{ 
-          fontSize: '18px',
-          fontWeight: 'bold',
-          color: '#1F2937',
-          marginBottom: '5px'
-        }}>
-          Church Music Scheduler
-        </div>
-        <div style={{ 
-          fontSize: '14px',
-          color: '#6B7280'
-        }}>
-          Organizing Your Church's Music Ministry
+        <div style={{ fontFamily: 'Montserrat, Arial, sans-serif', fontSize: '18px', color: '#800000', marginTop: '8px' }}>
+          ORGANIZE • SCHEDULE • WORSHIP
         </div>
       </div>
 

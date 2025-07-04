@@ -245,7 +245,7 @@ export default function MusiciansPage() {
 
           {loading ? (
             <div className="p-8 text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-success-600 mx-auto"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-600 mx-auto"></div>
               <p className="text-gray-600 mt-4">Loading musicians...</p>
             </div>
           ) : musicians.length === 0 ? (

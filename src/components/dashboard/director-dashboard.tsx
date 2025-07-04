@@ -320,7 +320,7 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-600"></div>
       </div>
     )
   }
@@ -835,7 +835,7 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                     <div className="h-full max-h-[500px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                       {activitiesLoading ? (
                         <div className="flex items-center justify-center h-40">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600"></div>
                         </div>
                       ) : activities.length > 0 ? (
                         <div className="space-y-3 pr-2">

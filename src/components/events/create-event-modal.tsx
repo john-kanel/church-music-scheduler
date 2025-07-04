@@ -2,7 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { X, Plus, Upload, Trash2, Calendar, Users, ChevronDown, RefreshCw } from 'lucide-react'
+import { X, Plus, Upload, Trash2, Calendar, Users, ChevronDown, RefreshCw, FileText, GripVertical } from 'lucide-react'
+import dynamic from 'next/dynamic'
+
+// Dynamically import PdfProcessor to prevent SSR issues with react-pdf
+const PdfProcessor = dynamic(() => import('./pdf-processor'), {
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center p-4">Loading PDF processor...</div>
+})
 
 interface CreateEventModalProps {
   isOpen: boolean
@@ -29,8 +36,16 @@ interface Musician {
 interface Hymn {
   id: string
   title: string
-  composer?: string
+  servicePartId?: string
+  servicePartName?: string
   notes?: string
+}
+
+interface ServicePart {
+  id: string
+  name: string
+  isRequired: boolean
+  order: number
 }
 
 const RECURRENCE_PATTERNS = [
@@ -70,6 +85,10 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
 
   const [hymns, setHymns] = useState<Hymn[]>([])
   const [musicFiles, setMusicFiles] = useState<File[]>([])
+  const [serviceParts, setServiceParts] = useState<ServicePart[]>([])
+  const [loadingServiceParts, setLoadingServiceParts] = useState(false)
+  const [showPdfProcessor, setShowPdfProcessor] = useState(false)
+  const [draggedHymn, setDraggedHymn] = useState<Hymn | null>(null)
 
   // Fetch verified musicians when modal opens and assignment type is 'assigned'
   useEffect(() => {
@@ -77,6 +96,13 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
       fetchMusicians()
     }
   }, [isOpen, formData.signupType])
+
+  // Fetch service parts when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      fetchServiceParts()
+    }
+  }, [isOpen])
 
   const fetchMusicians = async () => {
     setLoadingMusicians(true)
@@ -90,6 +116,34 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
       console.error('Error fetching musicians:', error)
     } finally {
       setLoadingMusicians(false)
+    }
+  }
+
+  const fetchServiceParts = async () => {
+    setLoadingServiceParts(true)
+    try {
+      const response = await fetch('/api/service-parts')
+      if (response.ok) {
+        const data = await response.json()
+        setServiceParts(data.serviceParts || [])
+        
+        // Add required service parts automatically
+        const requiredParts = data.serviceParts.filter((part: ServicePart) => part.isRequired)
+        if (requiredParts.length > 0 && hymns.length === 0) {
+          const defaultHymns = requiredParts.map((part: ServicePart) => ({
+            id: `hymn-${Date.now()}-${part.id}`,
+            title: '',
+            servicePartId: part.id,
+            servicePartName: part.name,
+            notes: ''
+          }))
+          setHymns(defaultHymns)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching service parts:', error)
+    } finally {
+      setLoadingServiceParts(false)
     }
   }
 
@@ -153,20 +207,78 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
     const newHymn: Hymn = {
       id: Date.now().toString(),
       title: '',
-      composer: '',
+      servicePartId: '',
+      servicePartName: '',
       notes: ''
     }
     setHymns([...hymns, newHymn])
   }
 
   const updateHymn = (id: string, field: keyof Hymn, value: string) => {
-    setHymns(hymns.map(hymn => 
-      hymn.id === id ? { ...hymn, [field]: value } : hymn
-    ))
+    setHymns(hymns.map(hymn => {
+      if (hymn.id === id) {
+        if (field === 'servicePartId') {
+          // Find the service part name when ID changes
+          const servicePart = serviceParts.find(part => part.id === value)
+          return {
+            ...hymn,
+            servicePartId: value,
+            servicePartName: value === 'custom' ? 'Custom' : (servicePart?.name || '')
+          }
+        }
+        return { ...hymn, [field]: value }
+      }
+      return hymn
+    }))
   }
 
   const removeHymn = (id: string) => {
     setHymns(hymns.filter(hymn => hymn.id !== id))
+  }
+
+  const handleHymnDragStart = (e: React.DragEvent, hymn: Hymn) => {
+    setDraggedHymn(hymn)
+  }
+
+  const handleHymnDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+  }
+
+  const handleHymnDrop = (e: React.DragEvent, targetHymn: Hymn) => {
+    e.preventDefault()
+    if (!draggedHymn || draggedHymn.id === targetHymn.id) return
+
+    const newHymns = [...hymns]
+    const draggedIndex = newHymns.findIndex(hymn => hymn.id === draggedHymn.id)
+    const targetIndex = newHymns.findIndex(hymn => hymn.id === targetHymn.id)
+
+    // Remove dragged item and insert at target position
+    const [draggedItem] = newHymns.splice(draggedIndex, 1)
+    newHymns.splice(targetIndex, 0, draggedItem)
+
+    setHymns(newHymns)
+    setDraggedHymn(null)
+  }
+
+  const handlePdfSuggestions = (suggestions: Array<{servicePartName: string, songTitle: string, notes: string}>) => {
+    // Convert suggestions to hymns format
+    const newHymns = suggestions.map((suggestion, index) => {
+      // Find matching service part
+      const servicePart = serviceParts.find(part => 
+        part.name.toLowerCase() === suggestion.servicePartName.toLowerCase()
+      )
+      
+      return {
+        id: `hymn-${Date.now()}-${index}`,
+        title: suggestion.songTitle,
+        servicePartId: servicePart?.id || 'custom',
+        servicePartName: servicePart?.name || suggestion.servicePartName,
+        notes: suggestion.notes
+      }
+    })
+    
+    // Replace existing hymns with AI suggestions
+    setHymns(newHymns)
   }
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -186,55 +298,49 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
     setSuccess('')
 
     try {
-      // Additional validation for recurring events
-      if (formData.isRecurring && !formData.recurrencePattern) {
-        setError('Please select a recurrence pattern for recurring events.')
-        return
+      // Basic validation
+      if (!formData.name || !formData.location || !formData.startDate || !formData.startTime) {
+        throw new Error('Please fill in all required fields')
       }
 
-      const eventData = {
-        name: formData.name,
-        description: formData.description,
-        location: formData.location,
-        startDate: formData.startDate,
-        startTime: formData.startTime,
-        endTime: formData.endTime,
-        isRecurring: formData.isRecurring,
-        recurrencePattern: formData.isRecurring ? formData.recurrencePattern : undefined,
-        recurrenceEnd: formData.isRecurring && formData.recurrenceEnd ? formData.recurrenceEnd : undefined,
-        roles: roles.filter(role => role.name.trim() !== '').map(role => ({
-          name: role.name,
-          maxCount: role.maxCount,
-          isRequired: role.isRequired,
-          assignedMusicians: formData.signupType === 'assigned' ? role.assignedMusicians : undefined
-        })),
-        hymns: hymns.filter(hymn => hymn.title.trim() !== ''),
-        notes: formData.notes
+      if (roles.some(role => !role.name.trim())) {
+        throw new Error('Please provide names for all roles')
       }
+
+      // Prepare form data
+      const eventData = new FormData()
+      
+      // Add event details
+      Object.entries(formData).forEach(([key, value]) => {
+        eventData.append(key, value.toString())
+      })
+
+      // Add roles
+      eventData.append('roles', JSON.stringify(roles))
+
+      // Add hymns
+      eventData.append('hymns', JSON.stringify(hymns))
+
+      // Add music files
+      musicFiles.forEach((file, index) => {
+        eventData.append(`musicFile_${index}`, file)
+      })
 
       const response = await fetch('/api/events', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(eventData)
+        body: eventData,
       })
 
+      const result = await response.json()
+
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to create event')
+        throw new Error(result.error || 'Failed to create event')
       }
 
-      const result = await response.json()
+      setSuccess('Event created successfully!')
       
-      setSuccess(`Event "${formData.name}" created successfully!`)
-      
-      // Wait a moment to show success message, then close
+      // Reset form after short delay
       setTimeout(() => {
-        onEventCreated?.()
-        onClose()
-        
-        // Reset form
         setFormData({
           name: '',
           description: '',
@@ -249,13 +355,22 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
           recurrenceEnd: ''
         })
         setRoles([
-          { id: '1', name: 'Accompanist', maxCount: 1, isRequired: true },
-          { id: '2', name: 'Vocalist', maxCount: 4, isRequired: false }
+          { id: '1', name: 'Accompanist', maxCount: 1, isRequired: true, assignedMusicians: [] },
+          { id: '2', name: 'Vocalist', maxCount: 4, isRequired: false, assignedMusicians: [] }
         ])
         setHymns([])
         setMusicFiles([])
-        setSuccess('')
-      }, 1500)
+        
+        if (onEventCreated) {
+          onEventCreated()
+        }
+        
+        setTimeout(() => {
+          onClose()
+          setSuccess('')
+        }, 1500)
+      }, 2000)
+
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Network error. Please try again.')
     } finally {
@@ -266,7 +381,7 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-gray-500 bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-gray-500 bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b">
           <h2 className="text-2xl font-bold text-gray-900">Create New Event</h2>
@@ -287,8 +402,8 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
           )}
 
           {success && (
-            <div className="bg-success-50 border border-success-200 rounded-lg p-4">
-              <p className="text-success-600 text-sm flex items-center">
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <p className="text-green-600 text-sm flex items-center">
                 <svg className="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
@@ -400,50 +515,50 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
                 </label>
               </div>
 
-                             {formData.isRecurring && (
-                 <div className="space-y-4">
-                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                     <p className="text-sm text-blue-800">
-                       <strong>Recurring Events:</strong> This will automatically create multiple instances of this event based on your selected pattern. 
-                       All roles, assignments, and settings will be copied to each occurrence.
-                     </p>
-                   </div>
-                   
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6 border-l-2 border-blue-200">
-                     <div>
-                       <label className="block text-sm font-medium text-gray-700 mb-2">Recurrence Pattern *</label>
-                       <select
-                         name="recurrencePattern"
-                         value={formData.recurrencePattern}
-                         onChange={handleInputChange}
-                         required={formData.isRecurring}
-                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                       >
-                         <option value="">Select pattern...</option>
-                         {RECURRENCE_PATTERNS.map((pattern) => (
-                           <option key={pattern.value} value={pattern.value}>
-                             {pattern.label}
-                           </option>
-                         ))}
-                       </select>
-                     </div>
+              {formData.isRecurring && (
+                <div className="space-y-4">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p className="text-sm text-blue-800">
+                      <strong>Recurring Events:</strong> This will automatically create multiple instances of this event based on your selected pattern. 
+                      All roles, assignments, and settings will be copied to each occurrence.
+                    </p>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6 border-l-2 border-blue-200">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Recurrence Pattern *</label>
+                      <select
+                        name="recurrencePattern"
+                        value={formData.recurrencePattern}
+                        onChange={handleInputChange}
+                        required={formData.isRecurring}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                      >
+                        <option value="">Select pattern...</option>
+                        {RECURRENCE_PATTERNS.map((pattern) => (
+                          <option key={pattern.value} value={pattern.value}>
+                            {pattern.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                     <div>
-                       <label className="block text-sm font-medium text-gray-700 mb-2">End Date (Optional)</label>
-                       <input
-                         type="date"
-                         name="recurrenceEnd"
-                         value={formData.recurrenceEnd}
-                         onChange={handleInputChange}
-                         min={formData.startDate}
-                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                         title="If left empty, the event will recur indefinitely"
-                       />
-                       <p className="text-xs text-gray-500 mt-1">Leave empty to recur indefinitely</p>
-                     </div>
-                   </div>
-                 </div>
-               )}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">End Date (Optional)</label>
+                      <input
+                        type="date"
+                        name="recurrenceEnd"
+                        value={formData.recurrenceEnd}
+                        onChange={handleInputChange}
+                        min={formData.startDate}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                        title="If left empty, the event will recur indefinitely"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Leave empty to recur indefinitely</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </section>
 
@@ -476,7 +591,7 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
               <button
                 type="button"
                 onClick={addRole}
-                className="flex items-center px-3 py-2 bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors"
+                className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 <Plus className="h-4 w-4 mr-1" />
                 Add Role
@@ -584,50 +699,98 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
           <section>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Music & Hymns</h3>
-              <button
-                type="button"
-                onClick={addHymn}
-                className="flex items-center px-3 py-2 bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors"
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                Add Music
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowPdfProcessor(true)}
+                  className="flex items-center px-3 py-2 bg-[#660033] text-white rounded-lg hover:bg-[#800041] transition-colors"
+                >
+                  <FileText className="h-4 w-4 mr-1" />
+                  Auto Populate Service Parts
+                </button>
+                <button
+                  type="button"
+                  onClick={addHymn}
+                  className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Music
+                </button>
+              </div>
             </div>
             <div className="space-y-3">
-              {hymns.map((hymn) => (
-                <div key={hymn.id} className="grid grid-cols-1 md:grid-cols-3 gap-3 p-3 bg-gray-50 rounded-lg">
-                  <input
-                    type="text"
-                    value={hymn.title}
-                    onChange={(e) => updateHymn(hymn.id, 'title', e.target.value)}
-                    placeholder="Song/Hymn title"
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                  />
-                  <input
-                    type="text"
-                    value={hymn.composer || ''}
-                    onChange={(e) => updateHymn(hymn.id, 'composer', e.target.value)}
-                    placeholder="Composer/Artist"
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                  />
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="text"
-                      value={hymn.notes || ''}
-                      onChange={(e) => updateHymn(hymn.id, 'notes', e.target.value)}
-                      placeholder="Notes"
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeHymn(hymn.id)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
+              {hymns.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <FileText className="h-8 w-8 mx-auto mb-2" />
+                  <p>No music parts added yet</p>
+                  <p className="text-sm">Add music manually or use "Auto Populate Service Parts" to extract from a PDF</p>
                 </div>
-              ))}
+              ) : (
+                hymns.map((hymn, index) => (
+                  <div
+                    key={hymn.id}
+                    draggable
+                    onDragStart={(e) => handleHymnDragStart(e, hymn)}
+                    onDragOver={handleHymnDragOver}
+                    onDrop={(e) => handleHymnDrop(e, hymn)}
+                    className={`flex items-center gap-3 p-3 bg-gray-50 rounded-lg border-2 border-transparent hover:border-blue-200 transition-all cursor-move ${
+                      draggedHymn?.id === hymn.id ? 'opacity-50' : ''
+                    }`}
+                  >
+                    {/* Drag Handle */}
+                    <div className="flex items-center text-gray-400 hover:text-gray-600">
+                      <GripVertical className="h-5 w-5" />
+                      <span className="text-sm font-mono ml-1">{index + 1}</span>
+                    </div>
+
+                    {/* Content Grid */}
+                    <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div>
+                        <select
+                          value={hymn.servicePartId || ''}
+                          onChange={(e) => updateHymn(hymn.id, 'servicePartId', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                          onClick={(e) => e.stopPropagation()} // Prevent drag when interacting with select
+                        >
+                          <option value="">Select service part...</option>
+                          {serviceParts.map((part) => (
+                            <option key={part.id} value={part.id}>
+                              {part.name}
+                            </option>
+                          ))}
+                          <option value="custom">Custom</option>
+                        </select>
+                      </div>
+                      <input
+                        type="text"
+                        value={hymn.title}
+                        onChange={(e) => updateHymn(hymn.id, 'title', e.target.value)}
+                        placeholder="Song/Hymn title"
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                        onMouseDown={(e) => e.stopPropagation()} // Prevent drag when typing
+                      />
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="text"
+                          value={hymn.notes || ''}
+                          onChange={(e) => updateHymn(hymn.id, 'notes', e.target.value)}
+                          placeholder="Notes"
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                          onMouseDown={(e) => e.stopPropagation()} // Prevent drag when typing
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeHymn(hymn.id)}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          onMouseDown={(e) => e.stopPropagation()} // Prevent drag when clicking delete
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </section>
 
@@ -687,7 +850,7 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
             <button
               type="submit"
               disabled={loading || !!success}
-              className="px-6 py-2 bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors disabled:opacity-50 flex items-center"
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center"
             >
               {loading ? (
                 <>
@@ -708,6 +871,14 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
           </div>
         </form>
       </div>
+
+      {/* PDF Processor Modal */}
+      {showPdfProcessor && (
+        <PdfProcessor
+          onSuggestionsAccepted={handlePdfSuggestions}
+          onClose={() => setShowPdfProcessor(false)}
+        />
+      )}
     </div>
   )
 } 

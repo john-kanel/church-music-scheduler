@@ -47,7 +47,7 @@ export default function GroupsPage() {
   if (status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+                    <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-brand-600"></div>
       </div>
     )
   }
@@ -104,7 +104,7 @@ export default function GroupsPage() {
         <div className="bg-white rounded-lg shadow-sm">
           {loading ? (
             <div className="p-8 text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
               <p className="text-gray-600 mt-2">Loading groups...</p>
             </div>
           ) : groups.length === 0 ? (

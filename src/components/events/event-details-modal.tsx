@@ -5,10 +5,11 @@ import { useSession } from 'next-auth/react'
 import { 
   X, Calendar, Clock, MapPin, Users, Edit, Save, Trash2, 
   UserPlus, MessageCircle, Check, AlertTriangle, XCircle,
-  Download, Upload, Music, Plus, RefreshCw
+  Download, Upload, Music, Plus, RefreshCw, FileText, GripVertical, ExternalLink
 } from 'lucide-react'
 import { InviteModal } from '../musicians/invite-modal'
 import { SendMessageModal } from '../messages/send-message-modal'
+import PdfProcessor from './pdf-processor'
 
 interface EventDetailsModalProps {
   isOpen: boolean
@@ -65,6 +66,36 @@ interface ToastMessage {
   id: string
   type: 'success' | 'error'
   message: string
+}
+
+interface EventHymn {
+  id: string
+  title: string
+  notes?: string
+  servicePartId?: string
+  servicePart?: {
+    id: string
+    name: string
+  }
+}
+
+interface ServicePart {
+  id: string
+  name: string
+  isRequired: boolean
+  order: number
+}
+
+interface EventDocument {
+  id: string
+  filename: string
+  originalFilename: string
+  filePath: string
+  fileSize: number
+  mimeType: string
+  uploadedAt: string
+  aiProcessed: boolean
+  aiResults?: any
 }
 
 // Toast Container Component
@@ -158,6 +189,16 @@ export function EventDetailsModal({
   const [newRoleName, setNewRoleName] = useState('')
   const [addingRole, setAddingRole] = useState(false)
 
+  // Music and Documents state
+  const [eventHymns, setEventHymns] = useState<EventHymn[]>([])
+  const [eventDocuments, setEventDocuments] = useState<EventDocument[]>([])
+  const [serviceParts, setServiceParts] = useState<ServicePart[]>([])
+  const [draggedHymn, setDraggedHymn] = useState<EventHymn | null>(null)
+  const [loadingHymns, setLoadingHymns] = useState(false)
+  const [loadingDocuments, setLoadingDocuments] = useState(false)
+  const [originalHymns, setOriginalHymns] = useState<EventHymn[]>([]) // To track changes
+  const [showPdfProcessor, setShowPdfProcessor] = useState(false)
+
   const [editData, setEditData] = useState({
     name: '',
     description: '',
@@ -211,6 +252,15 @@ export function EventDetailsModal({
     }
   }, [isOpen, isDirector])
 
+  // Fetch music data when modal opens or event changes
+  useEffect(() => {
+    if (isOpen && currentEvent?.id) {
+      fetchEventHymns()
+      fetchEventDocuments()
+      fetchServiceParts()
+    }
+  }, [isOpen, currentEvent?.id])
+
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -254,6 +304,53 @@ export function EventDetailsModal({
       }
     } catch (error) {
       console.error('Error fetching musicians:', error)
+    }
+  }
+
+  const fetchEventHymns = async () => {
+    if (!currentEvent?.id) return
+    
+    setLoadingHymns(true)
+    try {
+      const response = await fetch(`/api/events/${currentEvent.id}/hymns`)
+      if (response.ok) {
+        const data = await response.json()
+        setEventHymns(data.hymns || [])
+        setOriginalHymns(data.hymns || [])
+      }
+    } catch (error) {
+      console.error('Error fetching event hymns:', error)
+    } finally {
+      setLoadingHymns(false)
+    }
+  }
+
+  const fetchEventDocuments = async () => {
+    if (!currentEvent?.id) return
+    
+    setLoadingDocuments(true)
+    try {
+      const response = await fetch(`/api/events/${currentEvent.id}/documents`)
+      if (response.ok) {
+        const data = await response.json()
+        setEventDocuments(data.documents || [])
+      }
+    } catch (error) {
+      console.error('Error fetching event documents:', error)
+    } finally {
+      setLoadingDocuments(false)
+    }
+  }
+
+  const fetchServiceParts = async () => {
+    try {
+      const response = await fetch('/api/service-parts')
+      if (response.ok) {
+        const data = await response.json()
+        setServiceParts(data.serviceParts || [])
+      }
+    } catch (error) {
+      console.error('Error fetching service parts:', error)
     }
   }
 
@@ -314,6 +411,10 @@ export function EventDetailsModal({
       }
 
       showToast('success', `Event updated successfully!${isPastEvent ? ' (No notifications sent for past event)' : ''}`)
+      
+      // Save hymns if changes were made
+      await saveHymns()
+      
       setIsEditing(false)
       
       // Refresh the event data and parent calendar
@@ -509,6 +610,159 @@ export function EventDetailsModal({
     }
   }
 
+  // Music management functions
+  const addHymn = () => {
+    const newHymn: EventHymn = {
+      id: `temp-${Date.now()}`,
+      title: '',
+      notes: '',
+      servicePartId: ''
+    }
+    setEventHymns([...eventHymns, newHymn])
+  }
+
+  const updateHymn = (id: string, field: keyof EventHymn, value: string) => {
+    setEventHymns(hymns => hymns.map(hymn => {
+      if (hymn.id === id) {
+        const updatedHymn = { ...hymn, [field]: value }
+        
+        // If updating servicePartId, also update servicePart reference
+        if (field === 'servicePartId') {
+          if (value === 'custom' || value === '') {
+            updatedHymn.servicePartId = value === 'custom' ? undefined : ''
+            updatedHymn.servicePart = undefined
+          } else {
+            const selectedPart = serviceParts.find(part => part.id === value)
+            updatedHymn.servicePart = selectedPart
+          }
+        }
+        
+        return updatedHymn
+      }
+      return hymn
+    }))
+  }
+
+  const removeHymn = (id: string) => {
+    setEventHymns(hymns => hymns.filter(hymn => hymn.id !== id))
+  }
+
+  const handleHymnDragStart = (e: React.DragEvent, hymn: EventHymn) => {
+    setDraggedHymn(hymn)
+  }
+
+  const handleHymnDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+  }
+
+  const handleHymnDrop = (e: React.DragEvent, targetHymn: EventHymn) => {
+    e.preventDefault()
+    if (!draggedHymn || draggedHymn.id === targetHymn.id) return
+
+    const newHymns = [...eventHymns]
+    const draggedIndex = newHymns.findIndex(hymn => hymn.id === draggedHymn.id)
+    const targetIndex = newHymns.findIndex(hymn => hymn.id === targetHymn.id)
+
+    // Remove dragged item and insert at target position
+    const [draggedItem] = newHymns.splice(draggedIndex, 1)
+    newHymns.splice(targetIndex, 0, draggedItem)
+
+    setEventHymns(newHymns)
+    setDraggedHymn(null)
+  }
+
+  const saveHymns = async () => {
+    if (!currentEvent?.id || !isEditing) return
+
+    setLoadingHymns(true)
+    try {
+      const response = await fetch(`/api/events/${currentEvent.id}/hymns`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hymns: eventHymns })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to save music')
+      }
+
+      // Check if changes were made to trigger notifications
+      const hymnsChanged = JSON.stringify(originalHymns) !== JSON.stringify(eventHymns)
+      
+      if (hymnsChanged) {
+        showToast('success', 'Music updated successfully! Musicians will be notified of changes.')
+      }
+      
+      setOriginalHymns([...eventHymns])
+      await fetchEventHymns() // Refresh with server data
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to save music'
+      setError(errorMessage)
+      showToast('error', errorMessage)
+    } finally {
+      setLoadingHymns(false)
+    }
+  }
+
+  const openPDF = (document: EventDocument) => {
+    // Open PDF in new tab
+    window.open(`/api/events/${currentEvent?.id}/documents/${document.id}/view`, '_blank')
+  }
+
+  const handleDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0 || !currentEvent) return
+
+    setLoading(true)
+    try {
+      for (const file of Array.from(files)) {
+        const formData = new FormData()
+        formData.append('file', file)
+        
+        const response = await fetch(`/api/events/${currentEvent.id}/documents`, {
+          method: 'POST',
+          body: formData
+        })
+        
+        if (!response.ok) {
+          throw new Error('Failed to upload document')
+        }
+      }
+      
+      showToast('success', `${files.length} document(s) uploaded successfully`)
+      fetchEventDocuments() // Refresh the documents list
+    } catch (error) {
+      console.error('Error uploading documents:', error)
+      showToast('error', 'Failed to upload documents')
+    } finally {
+      setLoading(false)
+      // Reset the file input
+      e.target.value = ''
+    }
+  }
+
+  const handlePdfSuggestions = (suggestions: Array<{servicePartName: string, songTitle: string, notes: string}>) => {
+    // Convert suggestions to hymns and add them
+    const newHymns = suggestions.map((suggestion, index) => {
+      // Find matching service part
+      const matchingPart = serviceParts.find(part => 
+        part.name.toLowerCase().includes(suggestion.servicePartName.toLowerCase()) ||
+        suggestion.servicePartName.toLowerCase().includes(part.name.toLowerCase())
+      )
+      
+      return {
+        id: `hymn-${Date.now()}-${index}`,
+        title: suggestion.songTitle,
+        notes: suggestion.notes,
+        servicePartId: matchingPart?.id || ''
+      }
+    })
+
+    setEventHymns(prev => [...prev, ...newHymns])
+    showToast('success', `Added ${suggestions.length} songs from PDF`)
+  }
+
   // Filter musicians based on search text
   const getFilteredMusicians = (assignmentId: string) => {
     const searchText = searchTexts[assignmentId] || ''
@@ -589,7 +843,7 @@ export function EventDetailsModal({
   })
 
   return (
-    <div className="fixed inset-0 bg-gray-500 bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-gray-500 bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b">
@@ -870,6 +1124,210 @@ export function EventDetailsModal({
                     This event repeats based on the selected pattern. Changes to this event may affect future occurrences.
                   </div>
                 )}
+              </div>
+            )}
+          </div>
+
+          {/* Music & Service Parts */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                <Music className="h-5 w-5 mr-2 text-blue-600" />
+                Music & Service Parts ({eventHymns.length})
+              </h3>
+              {isEditing && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowPdfProcessor(true)}
+                    className="flex items-center px-3 py-1 text-sm bg-[#660033] text-white rounded-lg hover:bg-[#800041] transition-colors"
+                  >
+                    <FileText className="h-4 w-4 mr-1" />
+                    Auto Populate
+                  </button>
+                  <button
+                    onClick={addHymn}
+                    className="flex items-center px-3 py-1 text-sm bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Music
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {loadingHymns ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-brand-600"></div>
+                <span className="ml-2 text-gray-600">Loading music...</span>
+              </div>
+            ) : eventHymns.length > 0 ? (
+              <div className="space-y-3">
+                {eventHymns.map((hymn, index) => (
+                  <div 
+                    key={hymn.id} 
+                    className={`relative bg-gray-50 rounded-lg p-4 border ${isEditing ? 'cursor-move' : ''} ${
+                      draggedHymn?.id === hymn.id ? 'opacity-50' : ''
+                    }`}
+                    draggable={isEditing}
+                    onDragStart={(e) => isEditing && handleHymnDragStart(e, hymn)}
+                    onDragOver={(e) => isEditing && handleHymnDragOver(e)}
+                    onDrop={(e) => isEditing && handleHymnDrop(e, hymn)}
+                  >
+                    {isEditing ? (
+                      <div className="space-y-3">
+                        {/* Drag handle and remove button */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center text-gray-400">
+                            <GripVertical className="h-4 w-4 mr-2" />
+                            <span className="text-sm">Song {index + 1}</span>
+                          </div>
+                          <button
+                            onClick={() => removeHymn(hymn.id)}
+                            className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                            title="Remove this music item"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+
+                        {/* Service part selection */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Service Part</label>
+                          <select
+                            value={hymn.servicePartId || ''}
+                            onChange={(e) => updateHymn(hymn.id, 'servicePartId', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          >
+                            <option value="">Select service part...</option>
+                            {serviceParts.map((part) => (
+                              <option key={part.id} value={part.id}>
+                                {part.name}
+                              </option>
+                            ))}
+                            <option value="custom">Custom / Other</option>
+                          </select>
+                        </div>
+
+                        {/* Song title */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Song Title *</label>
+                          <input
+                            type="text"
+                            value={hymn.title}
+                            onChange={(e) => updateHymn(hymn.id, 'title', e.target.value)}
+                            placeholder="Enter song title..."
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          />
+                        </div>
+
+                        {/* Notes */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Notes (Optional)</label>
+                          <textarea
+                            value={hymn.notes || ''}
+                            onChange={(e) => updateHymn(hymn.id, 'notes', e.target.value)}
+                            placeholder="Special instructions, key, tempo, etc..."
+                            rows={2}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      /* Read-only view */
+                      <div className="space-y-2">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center mb-1">
+                              <span className="text-sm font-medium text-gray-500 mr-2">
+                                {hymn.servicePart?.name || 'Other'}:
+                              </span>
+                              <span className="font-medium text-gray-900">{hymn.title}</span>
+                            </div>
+                            {hymn.notes && (
+                              <p className="text-sm text-gray-600 mt-1">{hymn.notes}</p>
+                            )}
+                          </div>
+                          <div className="text-xs text-gray-400 ml-4">
+                            #{index + 1}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <Music className="h-8 w-8 mx-auto mb-2" />
+                <p>No music assigned yet</p>
+                <p className="text-sm">Use "Add Music" or "Auto Populate" to add songs</p>
+              </div>
+            )}
+          </div>
+
+          {/* Event Documents & PDFs */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                <FileText className="h-5 w-5 mr-2 text-blue-600" />
+                Event Documents ({eventDocuments.length})
+              </h3>
+              {isEditing && (
+                <button
+                  onClick={() => document.getElementById('document-upload')?.click()}
+                  className="flex items-center px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Upload className="h-4 w-4 mr-1" />
+                  Upload Document
+                </button>
+              )}
+            </div>
+            {/* Hidden file input */}
+            <input
+              id="document-upload"
+              type="file"
+              accept=".pdf,.doc,.docx"
+              multiple
+              onChange={handleDocumentUpload}
+              className="hidden"
+            />
+
+            {loadingDocuments ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-brand-600"></div>
+                <span className="ml-2 text-gray-600">Loading documents...</span>
+              </div>
+            ) : eventDocuments.length > 0 ? (
+              <div className="space-y-3">
+                {eventDocuments.map((document) => (
+                  <div key={document.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                    <div className="flex items-center flex-1">
+                      <FileText className="h-5 w-5 text-blue-600 mr-3" />
+                      <div className="flex-1">
+                        <div className="font-medium text-gray-900">{document.originalFilename}</div>
+                        <div className="text-sm text-gray-500">
+                          Uploaded {new Date(document.uploadedAt).toLocaleDateString()}
+                          {document.aiProcessed && <span className="ml-2 text-green-600">✓ AI Processed</span>}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => openPDF(document)}
+                        className="flex items-center px-3 py-1 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
+                        title="Open PDF in new tab"
+                      >
+                        <ExternalLink className="h-4 w-4 mr-1" />
+                        View
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <FileText className="h-8 w-8 mx-auto mb-2" />
+                <p>No documents uploaded</p>
               </div>
             )}
           </div>
@@ -1232,7 +1690,7 @@ export function EventDetailsModal({
 
         {/* Delete Confirmation Modal */}
         {showDeleteConfirm && (
-          <div className="absolute inset-0 bg-gray-500 bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-500 bg-opacity-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-lg p-6 max-w-md w-full">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Delete Event</h3>
               <p className="text-sm text-gray-600 mb-6">
@@ -1274,6 +1732,14 @@ export function EventDetailsModal({
         onClose={() => setShowMessageModal(false)}
         onMessageSent={() => setShowMessageModal(false)}
       />
+
+      {/* PDF Processor Modal */}
+      {showPdfProcessor && (
+        <PdfProcessor
+          onSuggestionsAccepted={handlePdfSuggestions}
+          onClose={() => setShowPdfProcessor(false)}
+        />
+      )}
 
       {/* Toast Container */}
       <ToastContainer

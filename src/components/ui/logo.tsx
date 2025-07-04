@@ -34,7 +34,6 @@ export function Logo({
         width={size === 'sm' ? 24 : size === 'md' ? 32 : size === 'lg' ? 40 : size === 'xl' ? 48 : 64}
         height={size === 'sm' ? 24 : size === 'md' ? 32 : size === 'lg' ? 40 : size === 'xl' ? 48 : 64}
         className={cn(sizeClasses[size], "object-contain")}
-        priority
       />
       {showText && (
         <span className={cn(

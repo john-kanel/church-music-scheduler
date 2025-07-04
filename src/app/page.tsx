@@ -26,14 +26,14 @@ export default function HomePage() {
   // Show loading during hydration to prevent mismatch
   if (!isClient || status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-50 to-brand-100">
                     <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-brand-600"></div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-brand-50 to-brand-100">
       {/* Header */}
       <nav className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -304,8 +304,10 @@ export default function HomePage() {
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">Annual Plan</h3>
                 <div className="mb-2">
                   <div className="text-lg text-gray-500 line-through">$420/year</div>
-                  <div className="text-4xl font-bold text-success-600">$200</div>
-                  <div className="text-gray-600">/year</div>
+                  <div className="mb-2">
+                    <span className="text-4xl font-bold text-success-600">$200</span>
+                    <span className="text-gray-600">/year</span>
+                  </div>
                 </div>
                 <div className="bg-success-50 text-success-700 text-sm font-medium px-3 py-1 rounded-full inline-block mb-4">
                   Save $220 per year!

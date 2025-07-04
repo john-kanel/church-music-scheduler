@@ -182,23 +182,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
-    const body = await request.json()
-    const {
-      name,
-      description,
-      location,
-      startDate,
-      startTime,
-      endTime,
-      eventTypeId,
-      templateId,
-      templateColor,
-      roles = [],
-      hymns = [],
-      isRecurring = false,
-      recurrencePattern,
-      recurrenceEnd
-    } = body
+    const formData = await request.formData()
+    
+    // Extract form data
+    const name = formData.get('name') as string
+    const description = formData.get('description') as string || ''
+    const location = formData.get('location') as string
+    const startDate = formData.get('startDate') as string
+    const startTime = formData.get('startTime') as string
+    const endTime = formData.get('endTime') as string || ''
+    const eventTypeId = formData.get('eventTypeId') as string || null
+    const templateId = formData.get('templateId') as string || null
+    const templateColor = formData.get('templateColor') as string || null
+    const isRecurring = formData.get('isRecurring') === 'true'
+    const recurrencePattern = formData.get('recurrencePattern') as string || ''
+    const recurrenceEnd = formData.get('recurrenceEnd') as string || ''
+    
+    // Parse JSON fields
+    const roles = formData.get('roles') ? JSON.parse(formData.get('roles') as string) : []
+    const hymns = formData.get('hymns') ? JSON.parse(formData.get('hymns') as string) : []
 
     // Validation
     if (!name || !location || !startDate || !startTime) {

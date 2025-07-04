@@ -42,7 +42,7 @@ export function ReferralSuccessNotification({
           marginBottom: '20px'
         }}>
           <img 
-            src={`${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/BIG Logo Maroon.png`}
+            src={`${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/big-logo-maroon.png`}
             alt="Church Music Scheduler" 
             style={{ height: '60px', width: 'auto' }} 
           />

@@ -76,10 +76,10 @@ function generateRecurringEvents(
   return events
 }
 
-// GET /api/events/[eventId] - Get single event
+// GET /api/events/[id] - Get single event
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<{ eventId: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   const params = await context.params
   try {
@@ -91,7 +91,7 @@ export async function GET(
 
     const event = await prisma.event.findFirst({
       where: {
-        id: params.eventId,
+        id: params.id,
         churchId: session.user.churchId
       },
       include: {
@@ -133,10 +133,10 @@ export async function GET(
   }
 }
 
-// PUT /api/events/[eventId] - Update event
+// PUT /api/events/[id] - Update event
 export async function PUT(
   request: NextRequest,
-  context: { params: Promise<{ eventId: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   const params = await context.params
   try {
@@ -154,7 +154,7 @@ export async function PUT(
     // Verify event belongs to church
     const existingEvent = await prisma.event.findFirst({
       where: {
-        id: params.eventId,
+        id: params.id,
         churchId: session.user.churchId
       }
     })
@@ -202,7 +202,7 @@ export async function PUT(
     const result = await prisma.$transaction(async (tx) => {
       // Update the event
       const updatedEvent = await tx.event.update({
-        where: { id: params.eventId },
+        where: { id: params.id },
         data: {
           name,
           description,
@@ -221,7 +221,7 @@ export async function PUT(
         // Remove existing unassigned roles
         await tx.eventAssignment.deleteMany({
           where: {
-            eventId: params.eventId,
+            eventId: params.id,
             userId: null,
             groupId: null
           }
@@ -230,7 +230,7 @@ export async function PUT(
         // Create new role assignments
         await tx.eventAssignment.createMany({
           data: roles.map((role: any) => ({
-            eventId: params.eventId,
+            eventId: params.id,
             roleName: role.name,
             maxMusicians: role.maxCount || 1,
             status: 'PENDING'
@@ -243,14 +243,14 @@ export async function PUT(
         // Remove any existing recurring events for this parent
         await tx.event.deleteMany({
           where: {
-            parentEventId: params.eventId
+            parentEventId: params.id
           }
         })
 
         // Get existing role assignments to copy to recurring events
         const existingAssignments = await tx.eventAssignment.findMany({
           where: {
-            eventId: params.eventId,
+            eventId: params.id,
             userId: null,
             groupId: null
           }
@@ -269,7 +269,7 @@ export async function PUT(
           const createdEvent = await tx.event.create({
             data: {
               ...recurringEvent,
-              parentEventId: params.eventId
+              parentEventId: params.id
             }
           })
 
@@ -289,7 +289,7 @@ export async function PUT(
         // If no longer recurring, remove any child events
         await tx.event.deleteMany({
           where: {
-            parentEventId: params.eventId
+            parentEventId: params.id
           }
         })
       }
@@ -299,7 +299,7 @@ export async function PUT(
 
     // Fetch the complete updated event
     const completeEvent = await prisma.event.findUnique({
-      where: { id: params.eventId },
+      where: { id: params.id },
       include: {
         eventType: true,
         assignments: {
@@ -322,7 +322,7 @@ export async function PUT(
     // Schedule automated notifications for updated event (skip for past events)
     if (!isPastEvent) {
       const { scheduleEventNotifications } = await import('@/lib/automation-helpers')
-      await scheduleEventNotifications(params.eventId, session.user.churchId)
+      await scheduleEventNotifications(params.id, session.user.churchId)
     }
 
     return NextResponse.json({ 
@@ -339,10 +339,10 @@ export async function PUT(
   }
 }
 
-// DELETE /api/events/[eventId] - Delete event
+// DELETE /api/events/[id] - Delete event
 export async function DELETE(
   request: NextRequest,
-  context: { params: Promise<{ eventId: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   const params = await context.params
   try {
@@ -360,7 +360,7 @@ export async function DELETE(
     // Verify event belongs to church
     const existingEvent = await prisma.event.findFirst({
       where: {
-        id: params.eventId,
+        id: params.id,
         churchId: session.user.churchId
       }
     })
@@ -371,7 +371,7 @@ export async function DELETE(
 
     // Delete event (cascade will handle assignments and files)
     await prisma.event.delete({
-      where: { id: params.eventId }
+      where: { id: params.id }
     })
 
     return NextResponse.json({ 

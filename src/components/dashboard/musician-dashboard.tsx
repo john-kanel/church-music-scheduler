@@ -240,7 +240,7 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-600"></div>
       </div>
     )
   }
@@ -607,8 +607,8 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
                       {dashboardData.musicDirector.email}
                     </a>
                   </div>
-                  <div className="flex items-center">
-                    <Phone className="h-5 w-5 text-gray-400 mr-2" />
+                    <div className="flex items-center">
+                      <Phone className="h-5 w-5 text-gray-400 mr-2" />
                     {dashboardData.musicDirector.phone ? (
                       <a 
                         href={`tel:${dashboardData.musicDirector.phone}`}
@@ -619,7 +619,7 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
                     ) : (
                       <span className="text-sm text-gray-500">No phone number provided</span>
                     )}
-                  </div>
+                    </div>
                 </div>
               </div>
             )}

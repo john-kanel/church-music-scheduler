@@ -1,4 +1,5 @@
-import { resend } from './resend'
+import { resend, getLogoHTML } from './resend'
+import { getEmailLogoHtml } from '../components/emails/email-logo'
 
 export async function sendMusicianEventNotification(
   email: string,
@@ -20,9 +21,7 @@ export async function sendMusicianEventNotification(
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <!-- Logo Section -->
       <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; border-bottom: 3px solid #660033;">
-        <div style="height: 80px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
-          <img src="${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/BIG Logo Maroon.png" alt="Church Music Scheduler" style="height: 60px; width: auto;" />
-        </div>
+        ${getEmailLogoHtml()}
         <h1 style="color: #333; margin: 0; font-size: 24px;">🎵 Event Reminder</h1>
       </div>
       
@@ -78,9 +77,7 @@ export async function sendPastorMonthlyReport(
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <!-- Logo Section -->
       <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; border-bottom: 3px solid #660033;">
-        <div style="height: 80px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
-          <img src="${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/BIG Logo Maroon.png" alt="Church Music Scheduler" style="height: 60px; width: auto;" />
-        </div>
+        ${getEmailLogoHtml()}
         <h1 style="color: #333; margin: 0; font-size: 24px;">📊 Monthly Music Schedule Report</h1>
       </div>
       
@@ -138,9 +135,7 @@ export async function sendPastorDailyDigest(
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <!-- Logo Section -->
       <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; border-bottom: 3px solid #660033;">
-        <div style="height: 80px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
-          <img src="${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/BIG Logo Maroon.png" alt="Church Music Scheduler" style="height: 60px; width: auto;" />
-        </div>
+        ${getEmailLogoHtml()}
         <h1 style="color: #333; margin: 0; font-size: 24px;">📰 Daily Music Ministry Update</h1>
       </div>
       

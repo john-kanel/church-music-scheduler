@@ -35,8 +35,16 @@ interface TemplateRole {
 interface TemplateHymn {
   id?: string
   title: string
-  composer?: string
+  servicePartId?: string
+  servicePartName?: string
   notes?: string
+}
+
+interface ServicePart {
+  id: string
+  name: string
+  isRequired: boolean
+  order: number
 }
 
 const TEMPLATE_COLORS = [
@@ -57,6 +65,8 @@ export function CreateTemplateModal({
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [activeTab, setActiveTab] = useState<'details' | 'roles' | 'music' | 'preview'>('details')
+  const [serviceParts, setServiceParts] = useState<ServicePart[]>([])
+  const [loadingServiceParts, setLoadingServiceParts] = useState(false)
 
   const [templateData, setTemplateData] = useState<EventTemplate>({
     name: '',
@@ -69,6 +79,13 @@ export function CreateTemplateModal({
     ],
     hymns: []
   })
+
+  // Fetch service parts when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      fetchServiceParts()
+    }
+  }, [isOpen])
 
   // Reset or set template data when modal opens/closes or editing changes
   useEffect(() => {
@@ -95,6 +112,21 @@ export function CreateTemplateModal({
       })
     }
   }, [editingTemplate, isOpen])
+
+  const fetchServiceParts = async () => {
+    setLoadingServiceParts(true)
+    try {
+      const response = await fetch('/api/service-parts')
+      if (response.ok) {
+        const data = await response.json()
+        setServiceParts(data.serviceParts || [])
+      }
+    } catch (error) {
+      console.error('Error fetching service parts:', error)
+    } finally {
+      setLoadingServiceParts(false)
+    }
+  }
 
   const handleInputChange = (field: keyof EventTemplate, value: any) => {
     setTemplateData(prev => ({ ...prev, [field]: value }))
@@ -126,16 +158,32 @@ export function CreateTemplateModal({
   const addHymn = () => {
     setTemplateData(prev => ({
       ...prev,
-      hymns: [...prev.hymns, { title: '', composer: '', notes: '' }]
+      hymns: [...prev.hymns, { title: '', servicePartId: '', servicePartName: '', notes: '' }]
     }))
   }
 
   const updateHymn = (index: number, field: keyof TemplateHymn, value: string) => {
     setTemplateData(prev => ({
       ...prev,
-      hymns: prev.hymns.map((hymn, i) => 
-        i === index ? { ...hymn, [field]: value } : hymn
-      )
+      hymns: prev.hymns.map((hymn, i) => {
+        if (i === index) {
+          const updatedHymn = { ...hymn, [field]: value }
+          
+          // If updating servicePartId, also update servicePartName
+          if (field === 'servicePartId') {
+            if (value === 'custom' || value === '') {
+              updatedHymn.servicePartId = value === 'custom' ? undefined : ''
+              updatedHymn.servicePartName = 'Custom'
+            } else {
+              const selectedPart = serviceParts.find(part => part.id === value)
+              updatedHymn.servicePartName = selectedPart?.name || 'Custom'
+            }
+          }
+          
+          return updatedHymn
+        }
+        return hymn
+      })
     }))
   }
 
@@ -198,7 +246,7 @@ export function CreateTemplateModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-gray-500 bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-gray-500 bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b">
@@ -417,18 +465,26 @@ export function CreateTemplateModal({
               <div className="space-y-3">
                 {templateData.hymns.map((hymn, index) => (
                   <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-3 p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <select
+                        value={hymn.servicePartId || ''}
+                        onChange={(e) => updateHymn(index, 'servicePartId', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="">Select service part...</option>
+                        {serviceParts.map((part) => (
+                          <option key={part.id} value={part.id}>
+                            {part.name}
+                          </option>
+                        ))}
+                        <option value="custom">Custom</option>
+                      </select>
+                    </div>
                     <input
                       type="text"
                       value={hymn.title}
                       onChange={(e) => updateHymn(index, 'title', e.target.value)}
                       placeholder="Song/Hymn title"
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                    <input
-                      type="text"
-                      value={hymn.composer || ''}
-                      onChange={(e) => updateHymn(index, 'composer', e.target.value)}
-                      placeholder="Composer/Artist"
                       className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                     <div className="flex items-center space-x-2">
@@ -512,7 +568,7 @@ export function CreateTemplateModal({
                       {templateData.hymns.map((hymn, index) => (
                         <div key={index} className="py-2 px-3 bg-white rounded border">
                           <div className="font-medium">{hymn.title}</div>
-                          {hymn.composer && <div className="text-sm text-gray-600">by {hymn.composer}</div>}
+                          {hymn.servicePartName && <div className="text-sm text-gray-600">{hymn.servicePartName}</div>}
                           {hymn.notes && <div className="text-sm text-gray-500">{hymn.notes}</div>}
                         </div>
                       ))}
