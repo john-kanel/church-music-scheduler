@@ -19,8 +19,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const resolvedParams = await params
-    const { id } = resolvedParams
+    const { id } = await params
 
     // Check if the service part exists and belongs to the user's church
     const servicePart = await prisma.servicePart.findFirst({
@@ -93,8 +92,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const resolvedParams = await params
-    const { id } = resolvedParams
+    const { id } = await params
     const { forceDelete } = await req.json()
 
     if (forceDelete) {

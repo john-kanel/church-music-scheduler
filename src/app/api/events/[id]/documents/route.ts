@@ -13,8 +13,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const resolvedParams = await params
-    const eventId = resolvedParams.id
+    const { id: eventId } = await params
 
     // Fetch event documents ordered by upload date
     const documents = await prisma.eventDocument.findMany({

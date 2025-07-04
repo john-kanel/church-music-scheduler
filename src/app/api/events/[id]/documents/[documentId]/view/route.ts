@@ -15,8 +15,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const resolvedParams = await params
-    const { id: eventId, documentId } = resolvedParams
+    const { id: eventId, documentId } = await params
 
     // Fetch the document from database
     const document = await prisma.eventDocument.findFirst({
