@@ -1,5 +1,6 @@
 import { resend, getLogoHTML } from './resend'
 import { getEmailLogoHtml } from '../components/emails/email-logo'
+import { prisma } from './db'
 
 export async function sendMusicianEventNotification(
   email: string,
@@ -12,6 +13,118 @@ export async function sendMusicianEventNotification(
     : `${Math.floor(hoursBeforeEvent / 24)} day${Math.floor(hoursBeforeEvent / 24) !== 1 ? 's' : ''}`
 
   const subject = `Reminder: ${event.name} in ${timeframe}`
+
+  // Fetch hymns and documents for this event (if event.id exists)
+  let eventHymns = []
+  let eventDocuments = []
+  
+  if (event.id) {
+    // Real event - fetch from database
+    [eventHymns, eventDocuments] = await Promise.all([
+      prisma.eventHymn.findMany({
+        where: { eventId: event.id },
+        include: {
+          servicePart: true
+        },
+        orderBy: { createdAt: 'asc' } // Order by creation time to maintain service order
+      }),
+      prisma.eventDocument.findMany({
+        where: { eventId: event.id },
+        orderBy: { uploadedAt: 'asc' }
+      })
+    ])
+  } else {
+    // Test event - use sample data
+    eventHymns = [
+      {
+        id: 'test-1',
+        title: 'Amazing Grace',
+        notes: 'Key of G',
+        servicePart: { name: 'Opening Hymn' },
+        createdAt: new Date()
+      },
+      {
+        id: 'test-2', 
+        title: 'Be Still My Soul',
+        notes: null,
+        servicePart: { name: 'Communion Song' },
+        createdAt: new Date()
+      },
+      {
+        id: 'test-3',
+        title: 'Go in Peace',
+        notes: 'Repeat verse 2',
+        servicePart: { name: 'Closing Hymn' },
+        createdAt: new Date()
+      }
+    ]
+    
+    eventDocuments = [
+      {
+        id: 'test-doc-1',
+        originalFilename: 'Amazing Grace - Sheet Music.pdf',
+        uploadedAt: new Date()
+      },
+      {
+        id: 'test-doc-2', 
+        originalFilename: 'Be Still My Soul - Lyrics.pdf',
+        uploadedAt: new Date()
+      }
+    ]
+  }
+
+  // Generate music section HTML
+  const generateMusicSection = () => {
+    // If no service parts at all, show "No music provided"
+    if (eventHymns.length === 0) {
+      return `
+        <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="margin: 0 0 15px 0; color: #1f2937;">🎵 Music for this Service</h3>
+          <p style="margin: 0; color: #6b7280; font-style: italic;">No music provided for this event</p>
+        </div>
+      `
+    }
+
+    // Generate hymn list
+    const hymnsList = eventHymns.map((hymn, index) => {
+      const servicePartName = hymn.servicePart?.name || 'Other'
+      const title = hymn.title
+      const notes = hymn.notes ? ` (${hymn.notes})` : ''
+      
+      return `${index + 1}. ${servicePartName}: ${title}${notes}`
+    }).join('\n')
+
+    // Generate document links if any
+    let documentsSection = ''
+    if (eventDocuments.length > 0) {
+      const documentLinks = eventDocuments.map(doc => {
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://churchmusicscheduler.com'
+        const viewUrl = event.id 
+          ? `${baseUrl}/api/events/${event.id}/documents/${doc.id}/view`
+          : `${baseUrl}/sample-music-files` // Test link for sample documents
+        return `• <a href="${viewUrl}" style="color: #660033; text-decoration: none;">${doc.originalFilename}</a>`
+      }).join('\n')
+
+      documentsSection = `
+        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+          <h4 style="margin: 0 0 8px 0; color: #1f2937; font-size: 14px;">📁 Music Files (${eventDocuments.length}):</h4>
+          <div style="font-size: 14px; line-height: 1.6; color: #4b5563;">
+${documentLinks}
+          </div>
+        </div>
+      `
+    }
+
+    return `
+      <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3 style="margin: 0 0 15px 0; color: #1f2937;">🎵 Music for this Service</h3>
+        <div style="white-space: pre-line; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; color: #4b5563; line-height: 1.6; font-size: 14px;">
+${hymnsList}
+        </div>
+        ${documentsSection}
+      </div>
+    `
+  }
 
   const musiciansList = event.assignments
     .map((assignment: any) => `${assignment.user.firstName} ${assignment.user.lastName}`)
@@ -40,6 +153,8 @@ export async function sendMusicianEventNotification(
           `${Math.round((new Date(event.endTime).getTime() - new Date(event.startTime).getTime()) / (1000 * 60))} minutes` : 
           'TBD'}</p>
       </div>
+      
+      ${generateMusicSection()}
       
       <div style="background-color: #ecfdf5; padding: 15px; border-radius: 8px; margin: 20px 0;">
         <h4 style="margin: 0 0 10px 0; color: #065f46;">Other Musicians Assigned:</h4>
