@@ -176,7 +176,7 @@ export function ReferralInvitationEmail({
         {/* CTA Button */}
         <div style={{ textAlign: 'center', marginBottom: '25px' }}>
           <a 
-            href={`https://church-music-scheduler-production.up.railway.app/auth/signup?ref=${referralCode}`}
+                            href={`${process.env.NEXT_PUBLIC_APP_URL || 'https://churchmusicscheduler.com'}/auth/signup?ref=${referralCode}`}
             style={{
               display: 'inline-block',
               backgroundColor: '#660033',

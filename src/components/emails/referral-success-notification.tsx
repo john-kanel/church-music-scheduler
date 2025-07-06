@@ -278,7 +278,7 @@ export function ReferralSuccessNotification({
             Keep sharing your referral code with other churches and earn unlimited free months!
           </p>
           <a 
-            href="https://church-music-scheduler-production.up.railway.app/rewards"
+                            href={`${process.env.NEXT_PUBLIC_APP_URL || 'https://churchmusicscheduler.com'}/rewards`}
             style={{
               display: 'inline-block',
               backgroundColor: '#660033',

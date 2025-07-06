@@ -1,5 +1,6 @@
 // Simple email-safe logo that matches the website header
 export function getEmailLogoHtml() {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://churchmusicscheduler.com';
   return `
     <div style="text-align: center; padding: 20px 0; margin: 0 auto; width: 100%;">
       <div style="display: inline-block; vertical-align: middle;">
@@ -7,7 +8,7 @@ export function getEmailLogoHtml() {
           <tr>
             <td style="vertical-align: middle; text-align: center;">
               <img
-                src="https://church-music-scheduler-production.up.railway.app/logo.png"
+                src="${baseUrl}/logo.png"
                 alt="Church Music Scheduler Logo"
                 style="width: 48px; height: 48px; object-fit: contain; display: block; margin: 0 auto;"
               />
@@ -26,6 +27,7 @@ export function getEmailLogoHtml() {
 
 // Alternative version with fallback for when images don't load
 export function getEmailLogoHtmlWithFallback() {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://churchmusicscheduler.com';
   return `
     <div style="text-align: center; padding: 20px 0; margin: 0 auto; width: 100%;">
       <div style="display: inline-block; vertical-align: middle;">
@@ -33,7 +35,7 @@ export function getEmailLogoHtmlWithFallback() {
           <tr>
             <td style="vertical-align: middle; text-align: center;">
               <img
-                src="https://church-music-scheduler-production.up.railway.app/logo.png"
+                src="${baseUrl}/logo.png"
                 alt="Church Music Scheduler Logo"
                 style="width: 48px; height: 48px; object-fit: contain; display: block; margin: 0 auto;"
                 onerror="this.style.display='none';"
