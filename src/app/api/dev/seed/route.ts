@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     // Create sample event types
     const eventTypes = await Promise.all([
       prisma.eventType.upsert({
-        where: { name_churchId: { name: 'Sunday Mass', churchId } },
+        where: { name_color_churchId: { name: 'Sunday Mass', color: '#3B82F6', churchId } },
         update: {},
         create: {
           name: 'Sunday Mass',
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
         }
       }),
       prisma.eventType.upsert({
-        where: { name_churchId: { name: 'Wedding', churchId } },
+        where: { name_color_churchId: { name: 'Wedding', color: '#10B981', churchId } },
         update: {},
         create: {
           name: 'Wedding',
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
         }
       }),
       prisma.eventType.upsert({
-        where: { name_churchId: { name: 'Funeral', churchId } },
+        where: { name_color_churchId: { name: 'Funeral', color: '#6B7280', churchId } },
         update: {},
         create: {
           name: 'Funeral',
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
         }
       }),
       prisma.eventType.upsert({
-        where: { name_churchId: { name: 'Special Event', churchId } },
+        where: { name_color_churchId: { name: 'Special Event', color: '#F59E0B', churchId } },
         update: {},
         create: {
           name: 'Special Event',
