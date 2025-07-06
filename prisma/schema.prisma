@@ -426,7 +426,7 @@ model AutomationSettings {
   pastorEmailEnabled        Boolean                 @default(true)
   pastorMonthlyReportDay    Int                     @default(27) // Day of month to send monthly report
   pastorWeeklyReportEnabled Boolean                 @default(false)
-  pastorWeeklyReportDay     Int                     @default(5) // Day of week to send weekly report (0=Sunday, 6=Saturday)
+  pastorWeeklyReportDay     Int                     @default(0) // Day of week to send weekly report (0=Sunday, 6=Saturday) - Sunday=current week, Mon-Sat=next week
   pastorDailyDigestEnabled  Boolean                 @default(true)
   pastorDailyDigestTime     String                  @default("08:00") // Time to send daily digest (24hr format)
   

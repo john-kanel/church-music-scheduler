@@ -57,7 +57,7 @@ export default function SettingsPage() {
     pastorEmailEnabled: true,
     pastorMonthlyReportDay: 27,
     pastorWeeklyReportEnabled: false,
-    pastorWeeklyReportDay: 5, // Friday
+    pastorWeeklyReportDay: 0, // Sunday
     pastorDailyDigestEnabled: true,
     pastorDailyDigestTime: '08:00'
   })
@@ -898,8 +898,8 @@ export default function SettingsPage() {
                       </div>
                       <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-3">
                         <p className="text-xs text-amber-800">
-                          <strong>Note:</strong> If you select Friday or Saturday, the report will include events for the <em>following</em> week (Monday-Sunday). 
-                          If you select Sunday through Thursday, the report will include events for the <em>current</em> week (Sunday-Saturday).
+                          <strong>Note:</strong> If you select any day following Sunday (Monday-Saturday), the report will include events for the <em>following</em> week (Monday-Sunday). 
+                          If you select Sunday, the report will include events for the <em>current</em> week (Sunday-Saturday).
                         </p>
                       </div>
                       <p className="text-xs text-gray-500">
