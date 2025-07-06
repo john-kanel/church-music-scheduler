@@ -32,6 +32,7 @@
     "canvas": "^3.1.2",
     "cookie": "^1.0.2",
     "date-fns": "^4.1.0",
+    "dotenv": "^17.0.1",
     "formidable": "^3.5.4",
     "html2canvas": "^1.4.1",
     "jsonwebtoken": "^9.0.2",

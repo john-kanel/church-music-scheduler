@@ -16,6 +16,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
+    // Determine trial period based on referral code
+    const trialDays = referralCode && referralCode.trim() ? 60 : 30 // 60 days if referred, 30 days standard
+    
     // Create the trial checkout session
     const checkoutSession = await stripe.checkout.sessions.create({
       mode: 'subscription',
@@ -28,7 +31,7 @@ export async function POST(req: NextRequest) {
         },
       ],
       subscription_data: {
-        trial_period_days: 30, // 30-day trial
+        trial_period_days: trialDays,
         metadata: {
           signupData: JSON.stringify({
             name,

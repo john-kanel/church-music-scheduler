@@ -98,7 +98,7 @@ export function ReferralInvitationEmail({
               fontWeight: 'bold',
               marginBottom: '10px'
             }}>
-              Get Your First Month FREE!
+              Get 60 Days FREE Trial!
             </div>
           </div>
 
@@ -108,7 +108,7 @@ export function ReferralInvitationEmail({
             textAlign: 'center',
             marginBottom: '0'
           }}>
-            Plus, {referrerName} will also receive one free month as our thank you!
+            That's 30 days standard trial + 30 days referral bonus! Plus, {referrerName} will receive one free month as our thank you!
           </p>
         </div>
 
@@ -188,7 +188,7 @@ export function ReferralInvitationEmail({
               fontWeight: 'bold'
             }}
           >
-            Start Your Free Month Now
+            Start Your 60-Day Free Trial
           </a>
         </div>
 

@@ -232,7 +232,7 @@ function SignUpForm() {
               placeholder="Enter 8-character code"
             />
             <p className="text-xs text-gray-500 mt-1">
-              🎁 Have a referral code? Enter it here to get your first month free!
+              🎁 Have a referral code? Enter it here to get an extra 30 days free trial!
             </p>
           </div>
 
