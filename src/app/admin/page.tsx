@@ -23,6 +23,16 @@ import {
   LogOut
 } from 'lucide-react'
 
+interface ConfirmationDialog {
+  isOpen: boolean
+  title: string
+  message: string
+  confirmText: string
+  confirmButtonClass: string
+  onConfirm: () => void
+  onCancel: () => void
+}
+
 interface Church {
   id: string
   name: string
@@ -70,11 +80,42 @@ export default function AdminPage() {
   const [selectedChurch, setSelectedChurch] = useState<string>('')
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(20)
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmationDialog>({
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmText: 'Confirm',
+    confirmButtonClass: 'bg-blue-600 hover:bg-blue-700',
+    onConfirm: () => {},
+    onCancel: () => {}
+  })
 
   // Load admin data
   useEffect(() => {
     loadAdminData()
   }, [])
+
+  // Helper function to show confirmation dialog
+  const showConfirmDialog = (
+    title: string,
+    message: string,
+    onConfirm: () => void,
+    confirmText: string = 'Confirm',
+    confirmButtonClass: string = 'bg-blue-600 hover:bg-blue-700'
+  ) => {
+    setConfirmDialog({
+      isOpen: true,
+      title,
+      message,
+      confirmText,
+      confirmButtonClass,
+      onConfirm: () => {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }))
+        onConfirm()
+      },
+      onCancel: () => setConfirmDialog(prev => ({ ...prev, isOpen: false }))
+    })
+  }
 
   const loadAdminData = async () => {
     setLoading(true)
@@ -106,44 +147,67 @@ export default function AdminPage() {
     }
   }
 
-  const grantFreeAccess = async (churchId: string, months: number) => {
-    try {
-      const response = await fetch('/api/admin/grant-access', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ churchId, months })
-      })
+  const grantFreeAccess = (churchId: string, months: number) => {
+    const church = churches.find(c => c.id === churchId)
+    const churchName = church?.name || 'Unknown Church'
+    
+    showConfirmDialog(
+      'Grant Free Access',
+      `Are you sure you want to grant ${months} month${months > 1 ? 's' : ''} of free access to "${churchName}"?\n\nThis will extend their subscription and they will not be charged during this period.`,
+      async () => {
+        try {
+          const response = await fetch('/api/admin/grant-access', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ churchId, months })
+          })
 
-      if (response.ok) {
-        alert(`Successfully granted ${months} months of free access!`)
-        loadAdminData()
-      } else {
-        alert('Failed to grant access')
-      }
-    } catch (error) {
-      console.error('Error granting access:', error)
-      alert('Error granting access')
-    }
+          if (response.ok) {
+            alert(`Successfully granted ${months} months of free access to ${churchName}!`)
+            loadAdminData()
+          } else {
+            alert('Failed to grant access')
+          }
+        } catch (error) {
+          console.error('Error granting access:', error)
+          alert('Error granting access')
+        }
+      },
+      `Grant ${months} Month${months > 1 ? 's' : ''}`,
+      'bg-green-600 hover:bg-green-700'
+    )
   }
 
-  const updateSubscriptionStatus = async (churchId: string, status: string) => {
-    try {
-      const response = await fetch('/api/admin/subscription', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ churchId, status })
-      })
+  const updateSubscriptionStatus = (churchId: string, status: string) => {
+    const church = churches.find(c => c.id === churchId)
+    const churchName = church?.name || 'Unknown Church'
+    const currentStatus = church?.subscriptionStatus || 'unknown'
+    
+    showConfirmDialog(
+      'Update Subscription Status',
+      `Are you sure you want to change the subscription status for "${churchName}" from "${currentStatus}" to "${status}"?\n\nThis will immediately affect their access to the system.`,
+      async () => {
+        try {
+          const response = await fetch('/api/admin/subscription', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ churchId, status })
+          })
 
-      if (response.ok) {
-        alert('Subscription status updated successfully!')
-        loadAdminData()
-      } else {
-        alert('Failed to update subscription status')
-      }
-    } catch (error) {
-      console.error('Error updating subscription:', error)
-      alert('Error updating subscription status')
-    }
+          if (response.ok) {
+            alert(`Subscription status for ${churchName} updated to ${status} successfully!`)
+            loadAdminData()
+          } else {
+            alert('Failed to update subscription status')
+          }
+        } catch (error) {
+          console.error('Error updating subscription:', error)
+          alert('Error updating subscription status')
+        }
+      },
+      'Update Status',
+      'bg-orange-600 hover:bg-orange-700'
+    )
   }
 
   const exportData = async (type: 'churches' | 'users') => {
@@ -164,54 +228,62 @@ export default function AdminPage() {
     }
   }
 
-  const deleteUser = async (userId: string, userName: string) => {
-    if (!confirm(`Are you sure you want to delete user "${userName}"? This action cannot be undone and will remove all related data.`)) {
-      return
-    }
+  const deleteUser = (userId: string, userName: string) => {
+    showConfirmDialog(
+      'Delete User',
+      `Are you sure you want to delete user "${userName}"?\n\n⚠️ WARNING: This action cannot be undone and will remove:\n• The user account\n• All their event assignments\n• All their communications\n• All related data\n\nThis is a permanent deletion.`,
+      async () => {
+        try {
+          const response = await fetch('/api/admin/users', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId })
+          })
 
-    try {
-      const response = await fetch('/api/admin/users', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId })
-      })
-
-      if (response.ok) {
-        alert('User deleted successfully!')
-        loadAdminData()
-      } else {
-        alert('Failed to delete user')
-      }
-    } catch (error) {
-      console.error('Error deleting user:', error)
-      alert('Error deleting user')
-    }
+          if (response.ok) {
+            alert(`User "${userName}" deleted successfully!`)
+            loadAdminData()
+          } else {
+            alert('Failed to delete user')
+          }
+        } catch (error) {
+          console.error('Error deleting user:', error)
+          alert('Error deleting user')
+        }
+      },
+      'Delete User',
+      'bg-red-600 hover:bg-red-700'
+    )
   }
 
-  const deleteChurch = async (churchId: string, churchName: string, userCount: number) => {
-    if (!confirm(`Are you sure you want to delete church "${churchName}"? This will permanently delete:\n\n• The church and all its settings\n• ${userCount} users\n• All events and assignments\n• All groups and communications\n• All related data\n\nThis action cannot be undone!`)) {
-      return
-    }
+  const deleteChurch = (churchId: string, churchName: string, userCount: number) => {
+    showConfirmDialog(
+      'Delete Church',
+      `Are you sure you want to delete church "${churchName}"?\n\n🚨 CRITICAL WARNING: This will permanently delete:\n\n• The church and all its settings\n• ${userCount} users\n• All events and assignments\n• All groups and communications\n• All music files and documents\n• All subscription data\n• All related data\n\nThis action cannot be undone and will completely remove all traces of this church from the system!`,
+      async () => {
+        try {
+          const response = await fetch('/api/admin/churches', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ churchId })
+          })
 
-    try {
-      const response = await fetch('/api/admin/churches', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ churchId })
-      })
-
-      if (response.ok) {
-        const result = await response.json()
-        alert(`Church "${churchName}" and all related data deleted successfully!`)
-        loadAdminData()
-      } else {
-        const error = await response.json()
-        alert(`Failed to delete church: ${error.error || 'Unknown error'}`)
-      }
-    } catch (error) {
-      console.error('Error deleting church:', error)
-      alert('Error deleting church')
-    }
+          if (response.ok) {
+            const result = await response.json()
+            alert(`Church "${churchName}" and all related data deleted successfully!`)
+            loadAdminData()
+          } else {
+            const error = await response.json()
+            alert(`Failed to delete church: ${error.error || 'Unknown error'}`)
+          }
+        } catch (error) {
+          console.error('Error deleting church:', error)
+          alert('Error deleting church')
+        }
+      },
+      'DELETE CHURCH',
+      'bg-red-600 hover:bg-red-700'
+    )
   }
 
   const logout = () => {
@@ -525,7 +597,13 @@ export default function AdminPage() {
                               Grant 1yr
                             </button>
                             <select
-                              onChange={(e) => updateSubscriptionStatus(church.id, e.target.value)}
+                              onChange={(e) => {
+                                if (e.target.value !== church.subscriptionStatus) {
+                                  updateSubscriptionStatus(church.id, e.target.value)
+                                  // Reset to original value - will be updated after confirmation
+                                  e.target.value = church.subscriptionStatus
+                                }
+                              }}
                               className="text-xs border border-gray-300 rounded px-2 py-1"
                               defaultValue={church.subscriptionStatus}
                             >
@@ -800,6 +878,41 @@ export default function AdminPage() {
           </div>
         )}
       </div>
+
+      {/* Confirmation Dialog */}
+      {confirmDialog.isOpen && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-xl p-6 max-w-md w-full mx-4">
+            <div className="flex items-center mb-4">
+              <AlertCircle className="h-6 w-6 text-orange-500 mr-3" />
+              <h3 className="text-lg font-medium text-gray-900">
+                {confirmDialog.title}
+              </h3>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-gray-600 whitespace-pre-line">
+                {confirmDialog.message}
+              </p>
+            </div>
+            
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={confirmDialog.onCancel}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDialog.onConfirm}
+                className={`px-4 py-2 text-sm font-medium text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 ${confirmDialog.confirmButtonClass}`}
+              >
+                {confirmDialog.confirmText}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
