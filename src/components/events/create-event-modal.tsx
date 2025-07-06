@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { X, Plus, Upload, Trash2, Calendar, Users, ChevronDown, RefreshCw, FileText, GripVertical } from 'lucide-react'
+import { X, Plus, Upload, Trash2, Calendar, Users, ChevronDown, RefreshCw, FileText, GripVertical, Music2 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 
 // Dynamically import PdfProcessor to prevent SSR issues with react-pdf
@@ -48,6 +48,18 @@ interface ServicePart {
   order: number
 }
 
+interface Group {
+  id: string
+  name: string
+  description?: string
+  members: Array<{
+    id: string
+    firstName: string
+    lastName: string
+    email: string
+  }>
+}
+
 const RECURRENCE_PATTERNS = [
   { value: 'weekly', label: 'Weekly' },
   { value: 'biweekly', label: 'Every 2 weeks' },
@@ -63,6 +75,9 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
   const [success, setSuccess] = useState('')
   const [musicians, setMusicians] = useState<Musician[]>([])
   const [loadingMusicians, setLoadingMusicians] = useState(false)
+  const [groups, setGroups] = useState<Group[]>([])
+  const [loadingGroups, setLoadingGroups] = useState(false)
+  const [selectedGroups, setSelectedGroups] = useState<string[]>([])
 
   const [formData, setFormData] = useState({
     name: '',
@@ -75,7 +90,8 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
     notes: '',
     isRecurring: false,
     recurrencePattern: '',
-    recurrenceEnd: ''
+    recurrenceEnd: '',
+    copyHymnsToRecurring: true // Whether to copy hymns to recurring events
   })
 
   const [roles, setRoles] = useState<Role[]>([
@@ -101,6 +117,7 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
   useEffect(() => {
     if (isOpen) {
       fetchServiceParts()
+      fetchGroups()
     }
   }, [isOpen])
 
@@ -147,6 +164,21 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
     }
   }
 
+  const fetchGroups = async () => {
+    setLoadingGroups(true)
+    try {
+      const response = await fetch('/api/groups')
+      if (response.ok) {
+        const data = await response.json()
+        setGroups(data.groups || [])
+      }
+    } catch (error) {
+      console.error('Error fetching groups:', error)
+    } finally {
+      setLoadingGroups(false)
+    }
+  }
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target
     setFormData(prev => ({
@@ -184,23 +216,45 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
   const assignMusicianToRole = (roleId: string, musicianId: string) => {
     setRoles(roles.map(role => {
       if (role.id === roleId) {
-        const currentAssigned = role.assignedMusicians || []
-        if (currentAssigned.includes(musicianId)) {
-          // Remove musician if already assigned
+        const currentAssignments = role.assignedMusicians || []
+        const isAssigned = currentAssignments.includes(musicianId)
+        
+        if (isAssigned) {
           return {
             ...role,
-            assignedMusicians: currentAssigned.filter(id => id !== musicianId)
+            assignedMusicians: currentAssignments.filter(id => id !== musicianId)
           }
-        } else if (currentAssigned.length < role.maxCount) {
-          // Add musician if under max count
+        } else {
           return {
             ...role,
-            assignedMusicians: [...currentAssigned, musicianId]
+            assignedMusicians: [...currentAssignments, musicianId]
           }
         }
       }
       return role
     }))
+  }
+
+  // Helper function to get all musician IDs from selected groups
+  const getGroupMemberIds = (): string[] => {
+    const memberIds: string[] = []
+    selectedGroups.forEach(groupId => {
+      const group = groups.find(g => g.id === groupId)
+      if (group) {
+        group.members.forEach(member => {
+          if (!memberIds.includes(member.id)) {
+            memberIds.push(member.id)
+          }
+        })
+      }
+    })
+    return memberIds
+  }
+
+  // Filter musicians to exclude those already assigned via groups
+  const getAvailableMusicians = (): Musician[] => {
+    const groupMemberIds = getGroupMemberIds()
+    return musicians.filter(musician => !groupMemberIds.includes(musician.id))
   }
 
   const addHymn = () => {
@@ -321,6 +375,12 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
       // Add hymns
       eventData.append('hymns', JSON.stringify(hymns))
 
+      // Add selected groups
+      eventData.append('selectedGroups', JSON.stringify(selectedGroups))
+      
+      // Add copy hymns option for recurring events
+      eventData.append('copyHymnsToRecurring', formData.copyHymnsToRecurring.toString())
+
       // Add music files
       musicFiles.forEach((file, index) => {
         eventData.append(`musicFile_${index}`, file)
@@ -341,25 +401,27 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
       
       // Reset form after short delay
       setTimeout(() => {
-        setFormData({
-          name: '',
-          description: '',
-          location: '',
-          startDate: '',
-          startTime: '',
-          endTime: '',
-          signupType: 'open',
-          notes: '',
-          isRecurring: false,
-          recurrencePattern: '',
-          recurrenceEnd: ''
-        })
+              setFormData({
+        name: '',
+        description: '',
+        location: '',
+        startDate: '',
+        startTime: '',
+        endTime: '',
+        signupType: 'open',
+        notes: '',
+        isRecurring: false,
+        recurrencePattern: '',
+        recurrenceEnd: '',
+        copyHymnsToRecurring: true
+      })
         setRoles([
           { id: '1', name: 'Accompanist', maxCount: 1, isRequired: true, assignedMusicians: [] },
           { id: '2', name: 'Vocalist', maxCount: 4, isRequired: false, assignedMusicians: [] }
         ])
         setHymns([])
         setMusicFiles([])
+        setSelectedGroups([])
         
         if (onEventCreated) {
           onEventCreated()
@@ -557,6 +619,26 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
                       <p className="text-xs text-gray-500 mt-1">Leave empty to recur indefinitely</p>
                     </div>
                   </div>
+                  
+                  {/* Copy Hymns Option - Only show if there are hymns */}
+                  {hymns.length > 0 && (
+                    <div className="pl-6 border-l-2 border-blue-200">
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={formData.copyHymnsToRecurring}
+                          onChange={(e) => setFormData(prev => ({ ...prev, copyHymnsToRecurring: e.target.checked }))}
+                          className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                        />
+                        <span className="ml-2 text-sm text-gray-700">
+                          Copy hymns/music to all recurring events
+                        </span>
+                      </label>
+                      <p className="text-xs text-gray-500 mt-1 ml-6">
+                        Uncheck if you want different music for each recurring event
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -584,6 +666,99 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
             </div>
           </section>
 
+          {/* Group Assignment */}
+          <section>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <Users className="h-5 w-5 mr-2 text-success-600" />
+              Group Assignment
+            </h3>
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600">
+                Select groups to automatically assign all members to this event. All group members will receive notifications.
+              </p>
+              
+              {loadingGroups ? (
+                <div className="text-sm text-gray-500">Loading groups...</div>
+              ) : groups.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {groups.map((group) => {
+                    const isSelected = selectedGroups.includes(group.id)
+                    return (
+                      <label
+                        key={group.id}
+                        className={`flex items-center p-3 rounded-lg border cursor-pointer transition-colors ${
+                          isSelected 
+                            ? 'bg-success-50 border-success-200 text-success-900' 
+                            : 'bg-white border-gray-200 hover:bg-gray-50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedGroups([...selectedGroups, group.id])
+                            } else {
+                              setSelectedGroups(selectedGroups.filter(id => id !== group.id))
+                            }
+                          }}
+                          className="mr-3"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium truncate">
+                            {group.name}
+                          </div>
+                          <div className="text-xs text-gray-500 truncate">
+                            {group.description && (
+                              <span className="mr-2">{group.description}</span>
+                            )}
+                            {group.members.length} member{group.members.length !== 1 ? 's' : ''}
+                          </div>
+                        </div>
+                      </label>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-lg text-center">
+                  No groups available. You can create groups in the Groups section to organize your musicians.
+                </div>
+              )}
+              
+              {selectedGroups.length > 0 && (
+                <div className="bg-success-50 border border-success-200 rounded-lg p-3">
+                  <p className="text-sm text-success-800 font-medium">
+                    {selectedGroups.length} group{selectedGroups.length !== 1 ? 's' : ''} selected
+                  </p>
+                  <p className="text-xs text-success-700 mt-1">
+                    All members of selected groups will be automatically assigned to this event and receive notifications.
+                  </p>
+                  
+                  {/* Show group members that will be auto-assigned */}
+                  <div className="mt-3 pt-3 border-t border-success-300">
+                    <p className="text-xs text-success-700 font-medium mb-2">
+                      Musicians automatically assigned via groups:
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {getGroupMemberIds().map(memberId => {
+                        const member = musicians.find(m => m.id === memberId)
+                        if (!member) return null
+                        return (
+                          <span 
+                            key={memberId}
+                            className="inline-flex items-center px-2 py-1 bg-success-100 text-success-800 text-xs rounded-full"
+                          >
+                            {member.firstName} {member.lastName}
+                          </span>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+
           {/* Roles */}
           <section>
             <div className="flex items-center justify-between mb-4">
@@ -599,8 +774,19 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
             </div>
             <div className="space-y-4">
               {roles.map((role) => (
-                <div key={role.id} className="p-4 bg-gray-50 rounded-lg space-y-3">
+                <div key={role.id} className="p-4 bg-gray-50 rounded-lg space-y-3 group">
                   <div className="flex items-center space-x-3">
+                    {/* Music Note / Trash Icon */}
+                    <button
+                      type="button"
+                      onClick={() => removeRole(role.id)}
+                      className="flex items-center justify-center w-8 h-8 rounded-lg transition-all duration-200 hover:bg-red-50 group-hover:bg-red-50"
+                      title="Remove role"
+                    >
+                      <Music2 className="h-4 w-4 text-blue-600 group-hover:hidden transition-all duration-200" />
+                      <Trash2 className="h-4 w-4 text-red-600 hidden group-hover:block transition-all duration-200" />
+                    </button>
+                    
                     <input
                       type="text"
                       value={role.name}
@@ -628,13 +814,6 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
                       />
                       <span className="text-sm text-gray-700">Required</span>
                     </label>
-                    <button
-                      type="button"
-                      onClick={() => removeRole(role.id)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
                   </div>
                   
                   {/* Musician Assignment Section - Only show for Director Assignment */}
@@ -647,7 +826,7 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
                         <div className="text-sm text-gray-500">Loading musicians...</div>
                       ) : musicians.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-32 overflow-y-auto">
-                          {musicians.map((musician) => {
+                          {getAvailableMusicians().map((musician) => {
                             const isAssigned = (role.assignedMusicians || []).includes(musician.id)
                             const canAssign = !isAssigned && (role.assignedMusicians || []).length < role.maxCount
                             return (
@@ -685,7 +864,10 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
                         </div>
                       ) : (
                         <div className="text-sm text-gray-500">
-                          No verified musicians available. Musicians need to accept their invitations first.
+                          {musicians.length === 0 
+                            ? "No verified musicians available. Musicians need to accept their invitations first."
+                            : "No musicians available for individual assignment. All verified musicians are already assigned via groups."
+                          }
                         </div>
                       )}
                     </div>
@@ -743,9 +925,9 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
                       <span className="text-sm font-mono ml-1">{index + 1}</span>
                     </div>
 
-                    {/* Content Grid */}
-                    <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <div>
+                    {/* Content using flex layout to keep trash can inside */}
+                    <div className="flex-1 flex flex-col md:flex-row md:items-center gap-3">
+                      <div className="w-full md:w-48">
                         <select
                           value={hymn.servicePartId || ''}
                           onChange={(e) => updateHymn(hymn.id, 'servicePartId', e.target.value)}
@@ -766,27 +948,25 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
                         value={hymn.title}
                         onChange={(e) => updateHymn(hymn.id, 'title', e.target.value)}
                         placeholder="Song/Hymn title"
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                         onMouseDown={(e) => e.stopPropagation()} // Prevent drag when typing
                       />
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="text"
-                          value={hymn.notes || ''}
-                          onChange={(e) => updateHymn(hymn.id, 'notes', e.target.value)}
-                          placeholder="Notes"
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                          onMouseDown={(e) => e.stopPropagation()} // Prevent drag when typing
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeHymn(hymn.id)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          onMouseDown={(e) => e.stopPropagation()} // Prevent drag when clicking delete
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
+                      <input
+                        type="text"
+                        value={hymn.notes || ''}
+                        onChange={(e) => updateHymn(hymn.id, 'notes', e.target.value)}
+                        placeholder="Notes"
+                        className="w-full md:w-32 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                        onMouseDown={(e) => e.stopPropagation()} // Prevent drag when typing
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeHymn(hymn.id)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors self-center"
+                        onMouseDown={(e) => e.stopPropagation()} // Prevent drag when clicking delete
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </div>
                   </div>
                 ))

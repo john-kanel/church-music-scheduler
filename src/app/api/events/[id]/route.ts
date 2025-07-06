@@ -156,6 +156,9 @@ export async function PUT(
       where: {
         id: params.id,
         churchId: session.user.churchId
+      },
+      include: {
+        eventType: true
       }
     })
 
@@ -179,6 +182,9 @@ export async function PUT(
       isPastEvent
     } = body
 
+    // Ensure roles is always an array
+    const validRoles = Array.isArray(roles) ? roles : []
+
     // Validation
     if (!name || !location || !startDate || !startTime) {
       return NextResponse.json(
@@ -198,7 +204,11 @@ export async function PUT(
       endDateTime = new Date(year, month - 1, day, endHour, endMinute)
     }
 
+    // Use the provided eventTypeId if available, otherwise keep the existing one
+    let finalEventTypeId = eventTypeId || existingEvent.eventTypeId
+
     // Update event in transaction
+    console.log('Updating event with data:', { name, location, startDateTime, validRoles: validRoles.length })
     const result = await prisma.$transaction(async (tx) => {
       // Update the event
       const updatedEvent = await tx.event.update({
@@ -212,12 +222,12 @@ export async function PUT(
           isRecurring,
           recurrencePattern,
           recurrenceEnd: recurrenceEnd ? new Date(recurrenceEnd) : null,
-          ...(eventTypeId && { eventTypeId })
+          ...(finalEventTypeId && { eventTypeId: finalEventTypeId })
         }
       })
 
       // If roles provided, update assignments
-      if (roles.length > 0) {
+      if (validRoles.length > 0) {
         // Remove existing unassigned roles
         await tx.eventAssignment.deleteMany({
           where: {
@@ -229,7 +239,7 @@ export async function PUT(
 
         // Create new role assignments
         await tx.eventAssignment.createMany({
-          data: roles.map((role: any) => ({
+          data: validRoles.map((role: any) => ({
             eventId: params.id,
             roleName: role.name,
             maxMusicians: role.maxCount || 1,
@@ -332,8 +342,16 @@ export async function PUT(
 
   } catch (error) {
     console.error('Error updating event:', error)
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      eventId: params.id
+    })
     return NextResponse.json(
-      { error: 'Failed to update event' },
+      { 
+        error: 'Failed to update event',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     )
   }

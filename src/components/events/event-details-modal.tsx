@@ -86,6 +86,18 @@ interface ServicePart {
   order: number
 }
 
+interface Group {
+  id: string
+  name: string
+  description?: string
+  members: Array<{
+    id: string
+    firstName: string
+    lastName: string
+    email: string
+  }>
+}
+
 interface EventDocument {
   id: string
   filename: string
@@ -159,6 +171,11 @@ const RECURRENCE_PATTERNS = [
   { value: 'custom', label: 'Custom pattern' }
 ]
 
+const EVENT_COLORS = [
+  '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', 
+  '#F97316', '#06B6D4', '#84CC16', '#EC4899', '#6B7280'
+]
+
 export function EventDetailsModal({ 
   isOpen, 
   onClose, 
@@ -172,6 +189,9 @@ export function EventDetailsModal({
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [musicians, setMusicians] = useState<Musician[]>([])
+  const [groups, setGroups] = useState<Group[]>([])
+  const [loadingGroups, setLoadingGroups] = useState(false)
+  const [selectedGroups, setSelectedGroups] = useState<string[]>([])
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [showMessageModal, setShowMessageModal] = useState(false)
@@ -188,6 +208,9 @@ export function EventDetailsModal({
   const [showAddRole, setShowAddRole] = useState(false)
   const [newRoleName, setNewRoleName] = useState('')
   const [addingRole, setAddingRole] = useState(false)
+
+  // Color editing
+  const [showColorPicker, setShowColorPicker] = useState(false)
 
   // Music and Documents state
   const [eventHymns, setEventHymns] = useState<EventHymn[]>([])
@@ -207,15 +230,20 @@ export function EventDetailsModal({
     startTime: '',
     endTime: '',
     status: 'confirmed' as 'confirmed' | 'tentative' | 'cancelled' | 'pending' | 'error',
+    signupType: 'open' as 'open' | 'assigned',
     isRecurring: false,
     recurrencePattern: '',
-    recurrenceEnd: ''
+    recurrenceEnd: '',
+    eventTypeColor: '#3B82F6'
   })
 
   // Initialize current event when modal opens or event prop changes
   useEffect(() => {
     if (event) {
       setCurrentEvent(event)
+    } else {
+      // Reset selectedGroups when modal closes
+      setSelectedGroups([])
     }
   }, [event])
 
@@ -235,9 +263,11 @@ export function EventDetailsModal({
         status: (currentEvent.status && ['confirmed', 'tentative', 'cancelled', 'pending', 'error'].includes(currentEvent.status)) 
           ? currentEvent.status as 'confirmed' | 'tentative' | 'cancelled' | 'pending' | 'error'
           : 'confirmed',
+        signupType: 'open' as 'open' | 'assigned', // Default to open for existing events
         isRecurring: currentEvent.isRecurring || false,
         recurrencePattern: currentEvent.recurrencePattern || '',
-        recurrenceEnd: '' // Note: recurrenceEnd is not stored in event yet, but ready for future enhancement
+        recurrenceEnd: '', // Note: recurrenceEnd is not stored in event yet, but ready for future enhancement
+        eventTypeColor: currentEvent.eventType?.color || '#3B82F6'
       })
     }
   }, [currentEvent, isEditing])
@@ -249,8 +279,27 @@ export function EventDetailsModal({
   useEffect(() => {
     if (isOpen && isDirector) {
       fetchMusicians()
+      fetchGroups()
     }
   }, [isOpen, isDirector])
+
+  // Initialize selectedGroups with existing group assignments when editing
+  useEffect(() => {
+    if (isEditing && currentEvent?.assignments && groups.length > 0) {
+      const existingGroupIds: string[] = []
+      
+      // Find group assignments (assignments that have a group but no user)
+      currentEvent.assignments.forEach(assignment => {
+        if (assignment.group && !assignment.user) {
+          if (!existingGroupIds.includes(assignment.group.id)) {
+            existingGroupIds.push(assignment.group.id)
+          }
+        }
+      })
+      
+      setSelectedGroups(existingGroupIds)
+    }
+  }, [isEditing, currentEvent, groups])
 
   // Fetch music data when modal opens or event changes
   useEffect(() => {
@@ -271,13 +320,18 @@ export function EventDetailsModal({
       // Close all dropdowns if clicking outside
       setOpenDropdowns({})
       setSearchTexts({})
+      
+      // Close color picker if clicking outside
+      if (!target.closest('.color-picker-container')) {
+        setShowColorPicker(false)
+      }
     }
 
-    if (Object.values(openDropdowns).some(Boolean)) {
+    if (Object.values(openDropdowns).some(Boolean) || showColorPicker) {
       document.addEventListener('mousedown', handleClickOutside)
       return () => document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [openDropdowns])
+  }, [openDropdowns, showColorPicker])
 
   // Toast management
   const showToast = (type: 'success' | 'error', message: string) => {
@@ -304,6 +358,21 @@ export function EventDetailsModal({
       }
     } catch (error) {
       console.error('Error fetching musicians:', error)
+    }
+  }
+
+  const fetchGroups = async () => {
+    setLoadingGroups(true)
+    try {
+      const response = await fetch('/api/groups')
+      if (response.ok) {
+        const data = await response.json()
+        setGroups(data.groups || [])
+      }
+    } catch (error) {
+      console.error('Error fetching groups:', error)
+    } finally {
+      setLoadingGroups(false)
     }
   }
 
@@ -364,6 +433,8 @@ export function EventDetailsModal({
     setIsEditing(false)
     setError('')
     setSuccess('')
+    setShowColorPicker(false)
+    setSelectedGroups([]) // Clear selected groups when cancelling
   }
 
   const handleSave = async () => {
@@ -396,11 +467,31 @@ export function EventDetailsModal({
     setSuccess('')
 
     try {
+      // Handle event type color change
+      let eventTypeId = currentEvent.eventType?.id
+      if (editData.eventTypeColor !== currentEvent.eventType?.color) {
+        // Create or find event type with the new color
+        const eventTypeResponse = await fetch('/api/event-types', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: currentEvent.eventType?.name || 'General',
+            color: editData.eventTypeColor
+          })
+        })
+        
+        if (eventTypeResponse.ok) {
+          const eventTypeData = await eventTypeResponse.json()
+          eventTypeId = eventTypeData.eventType.id
+        }
+      }
+
       const response = await fetch(`/api/events/${currentEvent.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...editData,
+          eventTypeId,
           isPastEvent // Include this flag so the API knows to skip notifications
         })
       })
@@ -410,12 +501,18 @@ export function EventDetailsModal({
         throw new Error(errorData.error || 'Failed to update event')
       }
 
+      // Note: Group assignments are handled separately and don't need to be updated here
+      // The selectedGroups state is just for UI purposes in the edit modal
+      // Actual group assignment changes would need to be handled through individual assignment management
+
       showToast('success', `Event updated successfully!${isPastEvent ? ' (No notifications sent for past event)' : ''}`)
       
       // Save hymns if changes were made
       await saveHymns()
       
       setIsEditing(false)
+      setShowColorPicker(false)
+      setSelectedGroups([]) // Clear selected groups after saving
       
       // Refresh the event data and parent calendar
       await fetchEventData()
@@ -610,6 +707,35 @@ export function EventDetailsModal({
     }
   }
 
+  const handleDeleteRole = async (assignmentId: string) => {
+    if (!currentEvent) return
+    
+    try {
+      setLoading(true)
+      setError('')
+      
+      const response = await fetch(`/api/assignments/${assignmentId}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to delete role')
+      }
+
+      showToast('success', 'Role deleted successfully!')
+      
+      // Refresh event data to show updated assignments
+      await fetchEventData()
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete role'
+      setError(errorMessage)
+      showToast('error', errorMessage)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   // Music management functions
   const addHymn = () => {
     const newHymn: EventHymn = {
@@ -763,14 +889,76 @@ export function EventDetailsModal({
     showToast('success', `Added ${suggestions.length} songs from PDF`)
   }
 
-  // Filter musicians based on search text
+  // Helper function to get all musician IDs from selected groups (for new group assignments)
+  const getNewGroupMemberIds = (): string[] => {
+    const memberIds: string[] = []
+    selectedGroups.forEach(groupId => {
+      const group = groups.find(g => g.id === groupId)
+      if (group) {
+        group.members.forEach(member => {
+          if (!memberIds.includes(member.id)) {
+            memberIds.push(member.id)
+          }
+        })
+      }
+    })
+    return memberIds
+  }
+
+  // Helper function to get all musician IDs from existing group assignments
+  const getExistingGroupMemberIds = (): string[] => {
+    const memberIds: string[] = []
+    if (currentEvent?.assignments) {
+      // First, find all group assignments (assignments that have a group but no user)
+      const groupAssignments = currentEvent.assignments.filter(assignment => 
+        assignment.group && !assignment.user
+      )
+      
+      // For each group assignment, get all members of that group
+      groupAssignments.forEach(groupAssignment => {
+        const group = groups.find(g => g.id === groupAssignment.group?.id)
+        if (group) {
+          group.members.forEach(member => {
+            if (!memberIds.includes(member.id)) {
+              memberIds.push(member.id)
+            }
+          })
+        }
+      })
+      
+      // Also check for assignments where the roleName indicates group membership
+      currentEvent.assignments.forEach(assignment => {
+        if (assignment.user && assignment.roleName.includes(' Member')) {
+          if (!memberIds.includes(assignment.user.id)) {
+            memberIds.push(assignment.user.id)
+          }
+        }
+      })
+    }
+    return memberIds
+  }
+
+  // Helper function to get all musician IDs that should be excluded from individual assignment
+  const getAllGroupMemberIds = (): string[] => {
+    const newGroupMembers = getNewGroupMemberIds()
+    const existingGroupMembers = getExistingGroupMemberIds()
+    const allMembers = [...newGroupMembers, ...existingGroupMembers]
+    return [...new Set(allMembers)] // Remove duplicates
+  }
+
+  // Filter musicians to exclude those already assigned via groups, then apply search filter
   const getFilteredMusicians = (assignmentId: string) => {
+    // First exclude group members (both new and existing)
+    const groupMemberIds = getAllGroupMemberIds()
+    const availableMusicians = musicians.filter(musician => !groupMemberIds.includes(musician.id))
+    
+    // Then apply search filter
     const searchText = searchTexts[assignmentId] || ''
     if (!searchText.trim()) {
-      return musicians
+      return availableMusicians
     }
     
-    return musicians.filter(musician => 
+    return availableMusicians.filter(musician => 
       `${musician.firstName} ${musician.lastName}`.toLowerCase().includes(searchText.toLowerCase())
     )
   }
@@ -848,10 +1036,46 @@ export function EventDetailsModal({
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b">
           <div className="flex items-center">
-            <div
-              className="w-4 h-4 rounded-full mr-3"
-              style={{ backgroundColor: currentEvent.eventType.color }}
-            />
+            <div className="relative color-picker-container">
+              <button
+                onClick={() => isDirector && isEditing && setShowColorPicker(!showColorPicker)}
+                className={`w-4 h-4 rounded-full mr-3 ${
+                  isDirector && isEditing 
+                    ? 'hover:ring-2 hover:ring-gray-300 hover:ring-offset-1 cursor-pointer transition-all' 
+                    : ''
+                }`}
+                style={{ backgroundColor: isEditing ? editData.eventTypeColor : currentEvent.eventType.color }}
+                title={isDirector && isEditing ? "Click to change event color" : undefined}
+              />
+              
+              {/* Color Picker Popup */}
+              {showColorPicker && isEditing && (
+                <div className="absolute top-6 left-0 z-20 bg-white border border-gray-200 rounded-xl shadow-xl p-4 min-w-[240px]">
+                  <div className="mb-3">
+                    <h4 className="text-sm font-medium text-gray-700">Select Event Color</h4>
+                  </div>
+                  <div className="grid grid-cols-5 gap-3">
+                    {EVENT_COLORS.map((color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        onClick={() => {
+                          setEditData(prev => ({ ...prev, eventTypeColor: color }))
+                          setShowColorPicker(false)
+                        }}
+                        className={`w-8 h-8 rounded-full border-2 transition-all hover:scale-110 hover:shadow-md ${
+                          editData.eventTypeColor === color 
+                            ? 'border-gray-900 scale-110 shadow-md' 
+                            : 'border-gray-300 hover:border-gray-500'
+                        }`}
+                        style={{ backgroundColor: color }}
+                        title={`Select ${color}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
             <div>
               <h2 className="text-xl font-bold text-gray-900">
                 {isEditing ? (
@@ -1041,6 +1265,122 @@ export function EventDetailsModal({
             )}
           </div>
 
+          {/* Signup Type - Only show in edit mode */}
+          {isEditing && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                <Users className="h-5 w-5 mr-2 text-blue-600" />
+                Musician Assignment
+              </h3>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">How will musicians be assigned?</label>
+                <select
+                  value={editData.signupType}
+                  onChange={(e) => setEditData(prev => ({ ...prev, signupType: e.target.value as 'open' | 'assigned' }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                >
+                  <option value="open">Open Signup - Musicians can volunteer themselves</option>
+                  <option value="assigned">Director Assignment - You assign musicians manually</option>
+                </select>
+              </div>
+            </div>
+          )}
+
+          {/* Group Assignment - Only show in edit mode */}
+          {isEditing && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                <Users className="h-5 w-5 mr-2 text-success-600" />
+                Group Assignment
+              </h3>
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600">
+                  Select groups to automatically assign all members to this event. All group members will receive notifications.
+                </p>
+                
+                {loadingGroups ? (
+                  <div className="text-sm text-gray-500">Loading groups...</div>
+                ) : groups.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {groups.map((group) => {
+                      const isSelected = selectedGroups.includes(group.id)
+                      return (
+                        <label
+                          key={group.id}
+                          className={`flex items-center p-3 rounded-lg border cursor-pointer transition-colors ${
+                            isSelected 
+                              ? 'bg-success-50 border-success-200 text-success-900' 
+                              : 'bg-white border-gray-200 hover:bg-gray-50'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedGroups([...selectedGroups, group.id])
+                              } else {
+                                setSelectedGroups(selectedGroups.filter(id => id !== group.id))
+                              }
+                            }}
+                            className="mr-3"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium truncate">
+                              {group.name}
+                            </div>
+                            <div className="text-xs text-gray-500 truncate">
+                              {group.description && (
+                                <span className="mr-2">{group.description}</span>
+                              )}
+                              {group.members.length} member{group.members.length !== 1 ? 's' : ''}
+                            </div>
+                          </div>
+                        </label>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-lg text-center">
+                    No groups available. You can create groups in the Groups section to organize your musicians.
+                  </div>
+                )}
+                
+                {selectedGroups.length > 0 && (
+                  <div className="bg-success-50 border border-success-200 rounded-lg p-3">
+                    <p className="text-sm text-success-800 font-medium">
+                      {selectedGroups.length} group{selectedGroups.length !== 1 ? 's' : ''} selected
+                    </p>
+                    <p className="text-xs text-success-700 mt-1">
+                      All members of selected groups will be automatically assigned to this event and receive notifications.
+                    </p>
+                    
+                    {/* Show group members that will be auto-assigned */}
+                    <div className="mt-3 pt-3 border-t border-success-300">
+                      <p className="text-xs text-success-700 font-medium mb-2">
+                        Musicians automatically assigned via groups:
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {getNewGroupMemberIds().map(memberId => {
+                          const member = musicians.find(m => m.id === memberId)
+                          if (!member) return null
+                          return (
+                            <span 
+                              key={memberId}
+                              className="inline-flex items-center px-2 py-1 bg-success-100 text-success-800 text-xs rounded-full"
+                            >
+                              {member.firstName} {member.lastName}
+                            </span>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Recurring Event Settings */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center">
@@ -1146,7 +1486,7 @@ export function EventDetailsModal({
                   </button>
                   <button
                     onClick={addHymn}
-                    className="flex items-center px-3 py-1 text-sm bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors"
+                    className="flex items-center px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
                     <Plus className="h-4 w-4 mr-1" />
                     Add Music
@@ -1342,7 +1682,7 @@ export function EventDetailsModal({
               {isDirector && isEditing && currentEvent.assignments && currentEvent.assignments.length > 0 && !showAddRole && (
                 <button
                   onClick={() => setShowAddRole(true)}
-                  className="flex items-center px-3 py-1 text-sm bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors"
+                  className="flex items-center px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   title="Add another role"
                 >
                   <Plus className="h-4 w-4 mr-1" />
@@ -1448,7 +1788,12 @@ export function EventDetailsModal({
                                         </>
                                       ) : (
                                         <div className="px-3 py-2 text-sm text-gray-500 text-center">
-                                          {searchTexts[assignment.id] ? 'No musicians found' : 'No musicians available'}
+                                          {searchTexts[assignment.id] 
+                                            ? 'No musicians found' 
+                                            : musicians.length === 0 
+                                              ? 'No verified musicians available. Musicians need to accept their invitations first.'
+                                              : 'No musicians available for individual assignment. All verified musicians are already assigned via groups.'
+                                          }
                                         </div>
                                       )}
                                     </div>
@@ -1461,10 +1806,20 @@ export function EventDetailsModal({
                       ) : (
                         /* Show assign musician button for open positions */
                         isDirector && isEditing ? (
-                          <div className="relative">
+                          <div className="relative group">
+                            {/* Delete role button - visible on hover */}
+                            <button
+                              onClick={() => handleDeleteRole(assignment.id)}
+                              className="absolute -left-8 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100"
+                              title="Delete this role"
+                              disabled={loading}
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                            
                             <button
                               onClick={() => toggleDropdown(assignment.id)}
-                              className="flex items-center px-3 py-1 text-sm bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors disabled:opacity-50"
+                              className="flex items-center px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                               disabled={loading}
                             >
                               {loading ? (
@@ -1519,7 +1874,12 @@ export function EventDetailsModal({
                                     </>
                                   ) : (
                                     <div className="px-3 py-2 text-sm text-gray-500 text-center">
-                                      {searchTexts[assignment.id] ? 'No musicians found' : 'No musicians available'}
+                                      {searchTexts[assignment.id] 
+                                        ? 'No musicians found' 
+                                        : musicians.length === 0 
+                                          ? 'No verified musicians available. Musicians need to accept their invitations first.'
+                                          : 'No musicians available for individual assignment. All verified musicians are already assigned via groups.'
+                                      }
                                     </div>
                                   )}
                                 </div>
@@ -1561,7 +1921,7 @@ export function EventDetailsModal({
                         <button
                           onClick={handleAddRole}
                           disabled={addingRole || !newRoleName.trim()}
-                          className="px-4 py-2 bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors disabled:opacity-50 text-sm flex items-center"
+                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 text-sm flex items-center"
                         >
                           {addingRole ? (
                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
@@ -1594,7 +1954,7 @@ export function EventDetailsModal({
                     {!showAddRole ? (
                       <button
                         onClick={() => setShowAddRole(true)}
-                        className="flex items-center mx-auto px-4 py-2 bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors text-sm"
+                        className="flex items-center mx-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
                       >
                         <Plus className="h-4 w-4 mr-2" />
                         Add Role
@@ -1614,7 +1974,7 @@ export function EventDetailsModal({
                           <button
                             onClick={handleAddRole}
                             disabled={addingRole || !newRoleName.trim()}
-                            className="flex-1 px-3 py-2 bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors disabled:opacity-50 text-sm flex items-center justify-center"
+                            className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 text-sm flex items-center justify-center"
                           >
                             {addingRole ? (
                               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -1649,7 +2009,7 @@ export function EventDetailsModal({
             <div className="flex flex-wrap gap-2 pt-4 border-t">
               <button
                 onClick={() => setShowMessageModal(true)}
-                className="flex items-center px-3 py-2 bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors text-sm"
+                className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
               >
                 <MessageCircle className="h-4 w-4 mr-1" />
                 Message Musicians
@@ -1670,7 +2030,7 @@ export function EventDetailsModal({
               <button
                 onClick={handleSave}
                 disabled={loading || !editData.name || !editData.location}
-                className="px-4 py-2 bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors disabled:opacity-50 flex items-center"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center"
               >
                 {loading ? (
                   <>

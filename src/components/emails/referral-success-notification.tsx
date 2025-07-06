@@ -126,14 +126,14 @@ export function ReferralSuccessNotification({
 
         {/* Reward Information */}
         <div style={{ 
-          backgroundColor: '#EFF6FF', 
+          backgroundColor: '#FDF2F8', 
           padding: '25px', 
           borderRadius: '8px', 
           marginBottom: '25px',
-          border: '2px solid #3B82F6'
+          border: '2px solid #660033'
         }}>
           <h3 style={{ 
-            color: '#1D4ED8', 
+            color: '#660033', 
             fontSize: '18px', 
             fontWeight: 'bold', 
             marginBottom: '15px',
@@ -145,7 +145,7 @@ export function ReferralSuccessNotification({
           <div style={{ textAlign: 'center' }}>
             <div style={{
               display: 'inline-block',
-              backgroundColor: '#3B82F6',
+              backgroundColor: '#660033',
               color: 'white',
               padding: '12px 20px',
               borderRadius: '8px',
@@ -158,7 +158,7 @@ export function ReferralSuccessNotification({
             
             <p style={{ 
               fontSize: '14px', 
-              color: '#1E40AF', 
+              color: '#660033', 
               marginBottom: '0'
             }}>
               This reward has been automatically applied to your account!
@@ -211,7 +211,7 @@ export function ReferralSuccessNotification({
               <div style={{
                 fontSize: '24px',
                 fontWeight: 'bold',
-                color: '#3B82F6',
+                color: '#660033',
                 marginBottom: '5px'
               }}>
                 ${totalMoneySaved.toFixed(2)}
@@ -281,7 +281,7 @@ export function ReferralSuccessNotification({
             href="https://church-music-scheduler-production.up.railway.app/rewards"
             style={{
               display: 'inline-block',
-              backgroundColor: '#F59E0B',
+              backgroundColor: '#660033',
               color: 'white',
               padding: '10px 20px',
               borderRadius: '6px',

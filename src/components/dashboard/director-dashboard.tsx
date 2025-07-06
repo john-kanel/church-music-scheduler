@@ -28,10 +28,34 @@ import {
 } from 'lucide-react'
 import { Logo } from '@/components/ui/logo'
 import Link from 'next/link'
-import { CreateEventModal } from '../events/create-event-modal'
-import { InviteModal } from '../musicians/invite-modal'
-import { SendMessageModal } from '../messages/send-message-modal'
-import { EventDetailsModal } from '../events/event-details-modal'
+import dynamic from 'next/dynamic'
+import { 
+  fetchDashboardData, 
+  fetchActivities, 
+  invalidateDashboardCache, 
+  invalidateActivitiesCache 
+} from '@/lib/request-cache'
+
+// Dynamic imports for modal components to reduce bundle size
+const CreateEventModal = dynamic(() => import('../events/create-event-modal').then(mod => ({ default: mod.CreateEventModal })), {
+  ssr: false,
+  loading: () => <div>Loading...</div>
+})
+
+const InviteModal = dynamic(() => import('../musicians/invite-modal').then(mod => ({ default: mod.InviteModal })), {
+  ssr: false,
+  loading: () => <div>Loading...</div>
+})
+
+const SendMessageModal = dynamic(() => import('../messages/send-message-modal').then(mod => ({ default: mod.SendMessageModal })), {
+  ssr: false,
+  loading: () => <div>Loading...</div>
+})
+
+const EventDetailsModal = dynamic(() => import('../events/event-details-modal').then(mod => ({ default: mod.EventDetailsModal })), {
+  ssr: false,
+  loading: () => <div>Loading...</div>
+})
 
 interface User {
   id: string
@@ -99,44 +123,30 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
   const [showMusiciansDropdown, setShowMusiciansDropdown] = useState(false)
   const [showMessagesDropdown, setShowMessagesDropdown] = useState(false)
 
-  // Fetch dashboard data
+  // Fetch dashboard data using cached functions
   useEffect(() => {
-    const fetchDashboardData = async () => {
+    const loadData = async () => {
       try {
         const month = currentDate.getMonth() + 1 // JavaScript months are 0-indexed
         const year = currentDate.getFullYear()
-        const response = await fetch(`/api/dashboard?month=${month}&year=${year}`)
-        if (response.ok) {
-          const data = await response.json()
-          setDashboardData(data)
-        } else {
-          console.error('Failed to fetch dashboard data')
-        }
+        
+        // Use Promise.all to fetch both data sets simultaneously with caching
+        const [dashboardData, activitiesData] = await Promise.all([
+          fetchDashboardData(month, year),
+          fetchActivities()
+        ])
+        
+        setDashboardData(dashboardData)
+        setActivities(activitiesData)
       } catch (error) {
-        console.error('Error fetching dashboard data:', error)
+        console.error('Error loading dashboard data:', error)
       } finally {
         setLoading(false)
-      }
-    }
-
-    const fetchActivities = async () => {
-      try {
-        const response = await fetch('/api/activities')
-        if (response.ok) {
-          const data = await response.json()
-          setActivities(data)
-        } else {
-          console.error('Failed to fetch activities')
-        }
-      } catch (error) {
-        console.error('Error fetching activities:', error)
-      } finally {
         setActivitiesLoading(false)
       }
     }
 
-    fetchDashboardData()
-    fetchActivities()
+    loadData()
   }, [currentDate])
 
   // Show tour for new directors
@@ -157,20 +167,18 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
       const targetDate = date || currentDate
       const month = targetDate.getMonth() + 1 // JavaScript months are 0-indexed
       const year = targetDate.getFullYear()
-      const [dashboardResponse, activitiesResponse] = await Promise.all([
-        fetch(`/api/dashboard?month=${month}&year=${year}`),
-        fetch('/api/activities')
+      
+      // Invalidate cache first, then fetch fresh data
+      invalidateDashboardCache(month, year)
+      invalidateActivitiesCache()
+      
+      const [dashboardData, activitiesData] = await Promise.all([
+        fetchDashboardData(month, year),
+        fetchActivities()
       ])
       
-      if (dashboardResponse.ok) {
-        const data = await dashboardResponse.json()
-        setDashboardData(data)
-      }
-      
-      if (activitiesResponse.ok) {
-        const activitiesData = await activitiesResponse.json()
-        setActivities(activitiesData)
-      }
+      setDashboardData(dashboardData)
+      setActivities(activitiesData)
     } catch (error) {
       console.error('Error refreshing dashboard data:', error)
     }
@@ -426,10 +434,10 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                           Transfer Ownership
                         </Link>
                       )}
-                      <Link href="/support" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                        <LifeBuoy className="h-4 w-4 inline mr-2" />
-                        Support
-                      </Link>
+                                        <Link href="/support" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                    <LifeBuoy className="h-4 w-4 inline mr-2" />
+                    Support
+                  </Link>
                       <button
                         onClick={() => signOut()}
                         className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -460,7 +468,7 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                     <div className="flex">
                       <Link 
                         href="/calendar"
-                        className="flex items-center px-3 sm:px-4 py-2 bg-secondary-600 text-white rounded-l-lg hover:bg-secondary-700 transition-colors text-sm sm:text-base"
+                        className="flex items-center px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-l-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
                       >
                         <Calendar className="h-4 w-4 mr-1 sm:mr-2" />
                         <span className="hidden sm:inline">Events</span>
@@ -473,7 +481,7 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                           setShowMessagesDropdown(false)
                           setShowEventsDropdown(!showEventsDropdown)
                         }}
-                        className="px-2 py-2 bg-secondary-600 text-white border-l border-secondary-800 rounded-r-lg hover:bg-secondary-700 transition-colors"
+                        className="px-2 py-2 bg-blue-600 text-white border-l border-blue-800 rounded-r-lg hover:bg-blue-700 transition-colors"
                       >
                         <ChevronDown className="h-4 w-4" />
                       </button>
@@ -538,7 +546,7 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                     <div className="flex">
                       <Link 
                         href="/messages"
-                        className="flex items-center px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-l-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
+                        className="flex items-center px-3 sm:px-4 py-2 bg-secondary-600 text-white rounded-l-lg hover:bg-secondary-700 transition-colors text-sm sm:text-base"
                       >
                         <MessageSquare className="h-4 w-4 mr-1 sm:mr-2" />
                         <span className="hidden sm:inline">Messages</span>
@@ -551,7 +559,7 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                           setShowMusiciansDropdown(false)
                           setShowMessagesDropdown(!showMessagesDropdown)
                         }}
-                        className="px-2 py-2 bg-blue-600 text-white border-l border-blue-800 rounded-r-lg hover:bg-blue-700 transition-colors"
+                        className="px-2 py-2 bg-secondary-600 text-white border-l border-secondary-800 rounded-r-lg hover:bg-secondary-700 transition-colors"
                       >
                         <ChevronDown className="h-4 w-4" />
                       </button>

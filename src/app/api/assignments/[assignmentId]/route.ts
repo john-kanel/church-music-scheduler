@@ -131,4 +131,58 @@ export async function PUT(
       { status: 500 }
     )
   }
+}
+
+// DELETE /api/assignments/[assignmentId] - Delete assignment (remove role from event)
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ assignmentId: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user?.churchId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Only directors and pastors can delete assignments
+    if (!['DIRECTOR', 'ASSOCIATE_DIRECTOR', 'PASTOR'].includes(session.user.role)) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
+    }
+
+    const { assignmentId } = await params
+
+    // Verify the assignment exists and belongs to the church
+    const assignment = await prisma.eventAssignment.findFirst({
+      where: {
+        id: assignmentId,
+        event: {
+          churchId: session.user.churchId
+        }
+      },
+      include: {
+        event: true
+      }
+    })
+
+    if (!assignment) {
+      return NextResponse.json({ error: 'Assignment not found' }, { status: 404 })
+    }
+
+    // Delete the assignment
+    await prisma.eventAssignment.delete({
+      where: { id: assignmentId }
+    })
+
+    return NextResponse.json({
+      message: 'Role deleted successfully'
+    })
+
+  } catch (error) {
+    console.error('Error deleting assignment:', error)
+    return NextResponse.json(
+      { error: 'Failed to delete assignment' },
+      { status: 500 }
+    )
+  }
 } 

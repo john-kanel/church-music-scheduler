@@ -346,7 +346,7 @@ export default function CalendarPage() {
     setShowCreateEvent(true)
   }
 
-  const generatePDF = () => {
+  const generatePDF = async () => {
     try {
       const pdf = new jsPDF()
       const pageWidth = pdf.internal.pageSize.getWidth()
@@ -395,7 +395,19 @@ export default function CalendarPage() {
       pdf.setFontSize(12)
       pdf.setFont('helvetica', 'bold')
       
-      eventsToShow.forEach((event, index) => {
+      // Process each event and fetch hymns
+      for (const event of eventsToShow) {
+        // Fetch hymns for this event
+        let eventHymns = []
+        try {
+          const hymnsResponse = await fetch(`/api/events/${event.id}/hymns`)
+          if (hymnsResponse.ok) {
+            const hymnsData = await hymnsResponse.json()
+            eventHymns = hymnsData.hymns || []
+          }
+        } catch (error) {
+          console.error(`Error fetching hymns for event ${event.id}:`, error)
+        }
         // Check if we need a new page
         if (yPosition > pageHeight - 40) {
           pdf.addPage()
@@ -468,6 +480,41 @@ export default function CalendarPage() {
           })
         }
 
+        // Service Parts / Music List
+        if (eventHymns && eventHymns.length > 0) {
+          yPosition += 2
+          pdf.text(`Music & Service Parts (${eventHymns.length} items):`, 25, yPosition)
+          yPosition += 5
+
+          eventHymns.forEach((hymn: any, index: number) => {
+            if (yPosition > pageHeight - 20) {
+              pdf.addPage()
+              yPosition = 20
+            }
+            
+            const servicePartName = hymn.servicePart?.name || 'Other'
+            const hymnText = `  ${index + 1}. ${servicePartName}: ${hymn.title}${hymn.notes ? ` (${hymn.notes})` : ''}`
+            
+            // Handle long hymn titles that might need wrapping
+            const hymnLines = pdf.splitTextToSize(hymnText, pageWidth - 60)
+            if (hymnLines.length === 1) {
+              pdf.text(hymnLines[0], 30, yPosition)
+              yPosition += 4
+            } else {
+              // Multi-line hymn entry
+              hymnLines.forEach((line: string, lineIndex: number) => {
+                if (yPosition > pageHeight - 20) {
+                  pdf.addPage()
+                  yPosition = 20
+                }
+                pdf.text(line, lineIndex === 0 ? 30 : 35, yPosition)
+                yPosition += 4
+              })
+            }
+          })
+          yPosition += 2
+        }
+
         // Description
         if (event.description) {
           yPosition += 2
@@ -483,7 +530,7 @@ export default function CalendarPage() {
         }
 
         yPosition += 10 // Space between events
-      })
+      }
     }
 
     // Footer
@@ -543,8 +590,8 @@ export default function CalendarPage() {
             </div>
             <div className="flex items-center space-x-3">
               <button
-                onClick={generatePDF}
-                className="flex items-center px-4 py-2 bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors"
+                onClick={() => generatePDF()}
+                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 <FileText className="h-4 w-4 mr-2" />
                 Print PDF
@@ -570,7 +617,7 @@ export default function CalendarPage() {
                 <h2 className="text-lg font-bold text-gray-900">Event Templates</h2>
                 <button
                   onClick={() => setShowCreateTemplate(true)}
-                  className="flex items-center justify-center w-8 h-8 bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors"
+                  className="flex items-center justify-center w-8 h-8 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   title="Create new template"
                 >
                   <Plus className="h-4 w-4" />
@@ -654,7 +701,7 @@ export default function CalendarPage() {
                       </button>
                       <button
                         onClick={() => setCurrentDate(new Date())}
-                        className="px-3 py-2 text-sm bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors"
+                        className="px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                       >
                         Today
                       </button>

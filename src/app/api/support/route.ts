@@ -44,8 +44,8 @@ export async function POST(request: NextRequest) {
           <div style="white-space: pre-wrap; line-height: 1.5;">${message}</div>
         </div>
         
-        <div style="margin-top: 20px; padding: 15px; background-color: #eff6ff; border-radius: 8px;">
-          <p style="margin: 0; font-size: 12px; color: #1e40af;">
+        <div style="margin-top: 20px; padding: 15px; background-color: #FDF2F8; border-radius: 8px;">
+          <p style="margin: 0; font-size: 12px; color: #660033;">
             This message was sent through the Church Music Scheduler support form.
           </p>
         </div>

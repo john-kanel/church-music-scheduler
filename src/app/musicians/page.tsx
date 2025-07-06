@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { ArrowLeft, Users, Plus, Search, UserPlus, Music, Phone, Calendar, Check, X, Edit2, Filter } from 'lucide-react'
+import { ArrowLeft, Users, Plus, Search, UserPlus, Music, Phone, Calendar, Check, X, Edit2, Filter, Download } from 'lucide-react'
 import Link from 'next/link'
 import { InviteModal } from '../../components/musicians/invite-modal'
+import InvitationModal from '../../components/musicians/invitation-modal'
 
 interface Musician {
   id: string
@@ -15,6 +16,10 @@ interface Musician {
   isVerified: boolean
   createdAt: string
   status?: 'active' | 'pending' | 'inactive'
+  groups?: Array<{
+    id: string
+    name: string
+  }>
 }
 
 interface EditingMusician {
@@ -24,11 +29,22 @@ interface EditingMusician {
   email: string
   phone: string
   status: 'active' | 'pending' | 'inactive'
+  groups: Array<{
+    id: string
+    name: string
+  }>
+}
+
+interface Group {
+  id: string
+  name: string
+  description?: string
 }
 
 export default function MusiciansPage() {
   const { data: session } = useSession()
   const [showInviteModal, setShowInviteModal] = useState(false)
+  const [showInvitationLinkModal, setShowInvitationLinkModal] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [musicians, setMusicians] = useState<Musician[]>([])
   const [loading, setLoading] = useState(true)
@@ -36,6 +52,9 @@ export default function MusiciansPage() {
   const [editingData, setEditingData] = useState<EditingMusician | null>(null)
   const [saving, setSaving] = useState(false)
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending' | 'inactive'>('all')
+  const [exporting, setExporting] = useState(false)
+  const [availableGroups, setAvailableGroups] = useState<Group[]>([])
+  const [loadingGroups, setLoadingGroups] = useState(false)
 
   // Fetch musicians
   useEffect(() => {
@@ -60,6 +79,23 @@ export default function MusiciansPage() {
     }
   }
 
+  const fetchGroups = async () => {
+    setLoadingGroups(true)
+    try {
+      const response = await fetch('/api/groups')
+      if (response.ok) {
+        const data = await response.json()
+        setAvailableGroups(data.groups || [])
+      } else {
+        console.error('Failed to fetch groups')
+      }
+    } catch (error) {
+      console.error('Error fetching groups:', error)
+    } finally {
+      setLoadingGroups(false)
+    }
+  }
+
   const handleInvitesSent = () => {
     // Refresh the musicians list after sending invites
     fetchMusicians()
@@ -73,8 +109,11 @@ export default function MusiciansPage() {
       lastName: musician.lastName,
       email: musician.email,
       phone: musician.phone || '',
-      status: musician.status || (musician.isVerified ? 'active' : 'pending')
+      status: musician.status || (musician.isVerified ? 'active' : 'pending'),
+      groups: musician.groups || []
     })
+    // Fetch available groups when editing starts
+    fetchGroups()
   }
 
   const cancelEditing = () => {
@@ -91,6 +130,7 @@ export default function MusiciansPage() {
 
     setSaving(true)
     try {
+      // First, update the musician's basic info
       const response = await fetch(`/api/musicians/${editingData.id}`, {
         method: 'PUT',
         headers: {
@@ -105,25 +145,7 @@ export default function MusiciansPage() {
         }),
       })
 
-      if (response.ok) {
-        const result = await response.json()
-        // Update the local state
-        setMusicians(prev => prev.map(musician => 
-          musician.id === editingData.id 
-            ? { 
-                ...musician, 
-                firstName: editingData.firstName,
-                lastName: editingData.lastName,
-                email: editingData.email,
-                phone: editingData.phone || undefined,
-                status: editingData.status,
-                isVerified: editingData.status === 'active'
-              }
-            : musician
-        ))
-        setEditingId(null)
-        setEditingData(null)
-      } else {
+      if (!response.ok) {
         console.error('Failed to update musician - Response status:', response.status)
         try {
           const errorData = await response.json()
@@ -131,7 +153,80 @@ export default function MusiciansPage() {
         } catch {
           alert('Failed to update musician. Please try again.')
         }
+        return
       }
+
+      // Get the original musician data to compare groups
+      const originalMusician = musicians.find(m => m.id === editingData.id)
+      const originalGroups = originalMusician?.groups || []
+      const newGroups = editingData.groups
+
+      // Find groups to add and remove
+      const groupsToAdd = newGroups.filter(newGroup => 
+        !originalGroups.some(oldGroup => oldGroup.id === newGroup.id)
+      )
+      const groupsToRemove = originalGroups.filter(oldGroup => 
+        !newGroups.some(newGroup => newGroup.id === oldGroup.id)
+      )
+
+      // Handle group membership changes
+      const groupPromises = []
+
+      // Add musician to new groups
+      for (const group of groupsToAdd) {
+        groupPromises.push(
+          fetch('/api/groups', {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              groupId: group.id,
+              action: 'add',
+              musicianId: editingData.id
+            })
+          })
+        )
+      }
+
+      // Remove musician from old groups
+      for (const group of groupsToRemove) {
+        groupPromises.push(
+          fetch('/api/groups', {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              groupId: group.id,
+              action: 'remove',
+              musicianId: editingData.id
+            })
+          })
+        )
+      }
+
+      // Wait for all group operations to complete
+      await Promise.all(groupPromises)
+
+      // Update the local state
+      setMusicians(prev => prev.map(musician => 
+        musician.id === editingData.id 
+          ? { 
+              ...musician, 
+              firstName: editingData.firstName,
+              lastName: editingData.lastName,
+              email: editingData.email,
+              phone: editingData.phone || undefined,
+              status: editingData.status,
+              isVerified: editingData.status === 'active',
+              groups: editingData.groups
+            }
+          : musician
+      ))
+      setEditingId(null)
+      setEditingData(null)
+
     } catch (error) {
       console.error('Error updating musician:', error?.toString?.() || 'Unknown error')
       alert('Error updating musician. Please try again.')
@@ -143,6 +238,72 @@ export default function MusiciansPage() {
   const handleEditingChange = (field: keyof EditingMusician, value: string) => {
     if (editingData) {
       setEditingData({ ...editingData, [field]: value })
+    }
+  }
+
+  const handleGroupToggle = (group: Group) => {
+    if (!editingData) return
+
+    const isCurrentlyMember = editingData.groups.some(g => g.id === group.id)
+    
+    if (isCurrentlyMember) {
+      // Remove from groups
+      setEditingData({
+        ...editingData,
+        groups: editingData.groups.filter(g => g.id !== group.id)
+      })
+    } else {
+      // Add to groups
+      setEditingData({
+        ...editingData,
+        groups: [...editingData.groups, { id: group.id, name: group.name }]
+      })
+    }
+  }
+
+  const handleExport = async () => {
+    if (!session?.user?.churchId) return
+    
+    setExporting(true)
+    try {
+      const response = await fetch('/api/musicians/export', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (response.ok) {
+        // Create a download link
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        
+        // Get filename from response headers or use default
+        const contentDisposition = response.headers.get('content-disposition')
+        let filename = 'musicians_export.csv'
+        if (contentDisposition) {
+          const filenameMatch = contentDisposition.match(/filename="([^"]*)"/)
+          if (filenameMatch) {
+            filename = filenameMatch[1]
+          }
+        }
+        
+        a.download = filename
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+      } else {
+        const errorData = await response.json().catch(() => ({}))
+        alert(`Failed to export: ${errorData.error || 'Please try again.'}`)
+      }
+    } catch (error) {
+      console.error('Export error:', error)
+      alert('Error exporting data. Please try again.')
+    } finally {
+      setExporting(false)
     }
   }
 
@@ -205,12 +366,29 @@ export default function MusiciansPage() {
               </div>
             </div>
             <div className="flex items-center space-x-3">
+              {canEditMusicians && (
+                <button 
+                  onClick={handleExport}
+                  disabled={exporting || musicians.length === 0}
+                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  {exporting ? 'Exporting...' : 'Export'}
+                </button>
+              )}
+              <button 
+                onClick={() => setShowInvitationLinkModal(true)}
+                className="flex items-center px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors"
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Invitation Link
+              </button>
               <button 
                 onClick={() => setShowInviteModal(true)}
                 className="flex items-center px-4 py-2 bg-success-600 text-white rounded-lg hover:bg-success-700 transition-colors"
               >
                 <UserPlus className="h-4 w-4 mr-2" />
-                Invite Musicians
+                Email Invites
               </button>
             </div>
           </div>
@@ -345,6 +523,9 @@ export default function MusiciansPage() {
                       </div>
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Groups
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Joined
                     </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -356,7 +537,7 @@ export default function MusiciansPage() {
                   {filteredMusicians.length === 0 ? (
                     /* No results message */
                     <tr>
-                      <td colSpan={5} className="px-6 py-12 text-center">
+                      <td colSpan={6} className="px-6 py-12 text-center">
                         <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
                         <h3 className="text-lg font-medium text-gray-900 mb-2">
                           No musicians match this filter
@@ -491,6 +672,55 @@ export default function MusiciansPage() {
                           </span>
                         )}
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {editingId === musician.id && editingData ? (
+                          <div className="max-w-48">
+                            {loadingGroups ? (
+                              <div className="text-xs text-gray-400">Loading groups...</div>
+                            ) : availableGroups.length > 0 ? (
+                              <div className="space-y-1">
+                                <div className="text-xs font-medium text-gray-700 mb-2">Select Groups:</div>
+                                <div className="max-h-32 overflow-y-auto space-y-1">
+                                  {availableGroups.map((group) => {
+                                    const isSelected = editingData.groups.some(g => g.id === group.id)
+                                    return (
+                                      <label
+                                        key={group.id}
+                                        className="flex items-center space-x-2 text-xs cursor-pointer hover:bg-gray-50 px-2 py-1 rounded"
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={isSelected}
+                                          onChange={() => handleGroupToggle(group)}
+                                          className="h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                        />
+                                        <span className="text-gray-700">{group.name}</span>
+                                      </label>
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="text-xs text-gray-400">No groups available</div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex flex-wrap gap-1">
+                            {musician.groups && musician.groups.length > 0 ? (
+                              musician.groups.map((group) => (
+                                <span
+                                  key={group.id}
+                                  className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                                >
+                                  {group.name}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-xs text-gray-400 italic">No groups</span>
+                            )}
+                          </div>
+                        )}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <div className="flex items-center">
                           <Calendar className="h-4 w-4 text-gray-400 mr-2" />
@@ -544,25 +774,25 @@ export default function MusiciansPage() {
         {/* Quick Actions */}
         <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
           <button 
+            onClick={() => setShowInvitationLinkModal(true)}
+            className="bg-white rounded-xl shadow-sm border p-6 hover:border-brand-300 hover:shadow-md transition-all text-left"
+          >
+            <div className="flex items-center mb-4">
+              <UserPlus className="h-8 w-8 text-brand-600 mr-3" />
+              <h3 className="font-medium text-gray-900">Invitation Link</h3>
+            </div>
+            <p className="text-sm text-gray-600">Share a link or QR code for musicians to join themselves</p>
+          </button>
+
+          <button 
             onClick={() => setShowInviteModal(true)}
             className="bg-white rounded-xl shadow-sm border p-6 hover:border-success-300 hover:shadow-md transition-all text-left"
           >
             <div className="flex items-center mb-4">
               <UserPlus className="h-8 w-8 text-success-600 mr-3" />
-              <h3 className="font-medium text-gray-900">Individual Invite</h3>
+              <h3 className="font-medium text-gray-900">Email Invites</h3>
             </div>
-            <p className="text-sm text-gray-600">Send a personal invitation to a specific musician</p>
-          </button>
-
-          <button 
-            onClick={() => setShowInviteModal(true)}
-            className="bg-white rounded-xl shadow-sm border p-6 hover:border-blue-300 hover:shadow-md transition-all text-left"
-          >
-            <div className="flex items-center mb-4">
-              <Users className="h-8 w-8 text-blue-600 mr-3" />
-              <h3 className="font-medium text-gray-900">Bulk Invites</h3>
-            </div>
-            <p className="text-sm text-gray-600">Import multiple musicians from a list or spreadsheet</p>
+            <p className="text-sm text-gray-600">Send personal invitations or import multiple musicians</p>
           </button>
 
           <Link 
@@ -583,6 +813,12 @@ export default function MusiciansPage() {
         isOpen={showInviteModal}
         onClose={() => setShowInviteModal(false)}
         onInvitesSent={handleInvitesSent}
+      />
+
+      {/* Invitation Link Modal */}
+      <InvitationModal 
+        isOpen={showInvitationLinkModal}
+        onClose={() => setShowInvitationLinkModal(false)}
       />
     </div>
   )

@@ -31,72 +31,94 @@ export async function GET(request: NextRequest) {
       ? new Date(parseInt(yearParam), parseInt(monthParam) - 1, 1)
       : new Date()
 
-    if (userRole === 'DIRECTOR' || userRole === 'ASSOCIATE_DIRECTOR' || userRole === 'PASTOR') {
-      // Director Dashboard Data
-      const now = new Date()
-      const oneWeekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+    // Calculate date ranges once
+    const now = new Date()
+    const oneWeekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+    const startOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1)
+    const endOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59)
 
-      const upcomingEvents = await prisma.event.findMany({
-        where: {
-          churchId,
-          startTime: {
-            gte: now,
-            lte: oneWeekFromNow
-          }
-        },
-        include: {
-          eventType: true,
-          assignments: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  firstName: true,
-                  lastName: true
+    if (userRole === 'DIRECTOR' || userRole === 'ASSOCIATE_DIRECTOR' || userRole === 'PASTOR') {
+      // Director Dashboard Data - Combine all queries using Promise.all
+      const [
+        upcomingEvents,
+        totalMusicians,
+        pendingInvitations,
+        monthEvents
+      ] = await Promise.all([
+        // Upcoming events (next 7 days)
+        prisma.event.findMany({
+          where: {
+            churchId,
+            startTime: {
+              gte: now,
+              lte: oneWeekFromNow
+            }
+          },
+          include: {
+            eventType: {
+              select: {
+                id: true,
+                name: true,
+                color: true
+              }
+            },
+            assignments: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true
+                  }
                 }
               }
             }
+          },
+          orderBy: {
+            startTime: 'asc'
+          },
+          take: 5
+        }),
+        
+        // Total musicians count
+        prisma.user.count({
+          where: {
+            churchId,
+            role: 'MUSICIAN'
           }
-        },
-        orderBy: {
-          startTime: 'asc'
-        },
-        take: 5
-      })
-
-      const totalMusicians = await prisma.user.count({
-        where: {
-          churchId,
-          role: 'MUSICIAN'
-        }
-      })
-
-      const pendingInvitations = await prisma.invitation.count({
-        where: {
-          churchId,
-          status: 'PENDING'
-        }
-      })
-
-      // Get events for target month (for calendar display)
-      const startOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1)
-      const endOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59)
-
-      const monthEvents = await prisma.event.findMany({
-        where: {
-          churchId,
-          startTime: {
-            gte: startOfMonth,
-            lte: endOfMonth
+        }),
+        
+        // Pending invitations count
+        prisma.invitation.count({
+          where: {
+            churchId,
+            status: 'PENDING'
           }
-        },
-        include: {
-          eventType: true
-        },
-        orderBy: {
-          startTime: 'asc'
-        }
-      })
+        }),
+        
+        // Month events for calendar
+        prisma.event.findMany({
+          where: {
+            churchId,
+            startTime: {
+              gte: startOfMonth,
+              lte: endOfMonth
+            }
+          },
+          include: {
+            eventType: {
+              select: {
+                id: true,
+                name: true,
+                color: true
+              }
+            }
+          },
+          orderBy: {
+            startTime: 'asc'
+          }
+        })
+      ])
 
       return NextResponse.json({
         userRole,
@@ -110,94 +132,110 @@ export async function GET(request: NextRequest) {
       })
 
     } else {
-      // Musician Dashboard Data
-      const now = new Date()
-
-      const upcomingAssignments = await prisma.eventAssignment.findMany({
-        where: {
-          userId,
-          event: {
-            startTime: {
-              gte: now
+      // Musician Dashboard Data - Combine all queries using Promise.all
+      const [
+        upcomingAssignments,
+        thisMonthAssignments,
+        monthEvents,
+        musicDirector
+      ] = await Promise.all([
+        // Upcoming assignments
+        prisma.eventAssignment.findMany({
+          where: {
+            userId,
+            event: {
+              startTime: {
+                gte: now
+              }
             }
-          }
-        },
-        include: {
-          event: {
-            include: {
-              eventType: true
-            }
-          }
-        },
-        orderBy: {
-          event: {
-            startTime: 'asc'
-          }
-        },
-        take: 10
-      })
-
-      const pendingCount = upcomingAssignments.filter(a => a.status === 'PENDING').length
-      const acceptedCount = upcomingAssignments.filter(a => a.status === 'ACCEPTED').length
-
-      // Get events for target month (for calendar display) - all church events
-      const startOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1)
-      const endOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59)
-
-      const monthEvents = await prisma.event.findMany({
-        where: {
-          churchId,
-          startTime: {
-            gte: startOfMonth,
-            lte: endOfMonth
-          }
-        },
-        include: {
-          eventType: true,
-          assignments: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  firstName: true,
-                  lastName: true
+          },
+          include: {
+            event: {
+              include: {
+                eventType: {
+                  select: {
+                    id: true,
+                    name: true,
+                    color: true
+                  }
                 }
               }
             }
+          },
+          orderBy: {
+            event: {
+              startTime: 'asc'
+            }
+          },
+          take: 10
+        }),
+        
+        // This month's assignments count
+        prisma.eventAssignment.count({
+          where: {
+            userId,
+            event: {
+              startTime: {
+                gte: startOfMonth,
+                lte: endOfMonth
+              }
+            }
           }
-        },
-        orderBy: {
-          startTime: 'asc'
-        }
-      })
-
-      // Get this month's assignments count
-      const thisMonthAssignments = await prisma.eventAssignment.count({
-        where: {
-          userId,
-          event: {
+        }),
+        
+        // Month events for calendar
+        prisma.event.findMany({
+          where: {
+            churchId,
             startTime: {
               gte: startOfMonth,
               lte: endOfMonth
             }
+          },
+          include: {
+            eventType: {
+              select: {
+                id: true,
+                name: true,
+                color: true
+              }
+            },
+            assignments: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true
+                  }
+                }
+              }
+            }
+          },
+          orderBy: {
+            startTime: 'asc'
           }
-        }
-      })
+        }),
+        
+        // Music director contact info
+        prisma.user.findFirst({
+          where: {
+            churchId,
+            role: 'DIRECTOR'
+          },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true
+          }
+        })
+      ])
 
-      // Get music director contact info
-      const musicDirector = await prisma.user.findFirst({
-        where: {
-          churchId,
-          role: 'DIRECTOR'
-        },
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          email: true,
-          phone: true
-        }
-      })
+      // Calculate stats from the data we already have
+      const pendingCount = upcomingAssignments.filter(a => a.status === 'PENDING').length
+      const acceptedCount = upcomingAssignments.filter(a => a.status === 'ACCEPTED').length
 
       return NextResponse.json({
         userRole,

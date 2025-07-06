@@ -63,7 +63,7 @@ export async function PUT(
       }
     }
 
-    // Update the musician
+    // Update the musician and invitation status
     const updatedMusician = await prisma.user.update({
       where: { id: musicianId },
       data: {
@@ -87,11 +87,25 @@ export async function PUT(
       }
     })
 
+    // Update invitation status if status was changed
+    if (status) {
+      const invitationStatus = status === 'active' ? 'ACCEPTED' : 'PENDING'
+      await prisma.invitation.updateMany({
+        where: {
+          email: email.trim().toLowerCase(),
+          churchId: session.user.churchId
+        },
+        data: {
+          status: invitationStatus
+        }
+      })
+    }
+
     return NextResponse.json({
       message: 'Musician updated successfully',
       musician: {
         ...updatedMusician,
-        status: updatedMusician.isVerified ? 'active' : 'pending'
+        status: status || (updatedMusician.isVerified ? 'active' : 'pending')
       }
     })
 
@@ -169,6 +183,27 @@ export async function GET(
       return NextResponse.json({ error: 'Musician not found' }, { status: 404 })
     }
 
+    // Get invitation status for this musician
+    const invitation = await prisma.invitation.findFirst({
+      where: {
+        email: musician.email,
+        churchId: session.user.churchId
+      },
+      select: {
+        status: true
+      }
+    })
+
+    // Determine status based on invitation acceptance
+    let status = 'pending'
+    if (invitation && invitation.status === 'ACCEPTED') {
+      status = 'active'
+    } else if (musician.isVerified) {
+      // If no invitation found but user is verified, they're active
+      // (this handles legacy users who were created before invitation system)
+      status = 'active'
+    }
+
     // Format the response
     const formattedMusician = {
       id: musician.id,
@@ -179,6 +214,7 @@ export async function GET(
       phone: musician.phone,
       role: musician.role,
       isVerified: musician.isVerified,
+      status: status,
       emailNotifications: musician.emailNotifications,
       smsNotifications: musician.smsNotifications,
       joinedAt: musician.createdAt,

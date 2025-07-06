@@ -46,6 +46,18 @@ export const authOptions: NextAuthOptions = {
             where: { id: user.id },
             data: { isVerified: true }
           })
+
+          // Also mark any corresponding invitation as accepted
+          await prisma.invitation.updateMany({
+            where: {
+              email: user.email,
+              churchId: user.churchId,
+              status: 'PENDING'
+            },
+            data: {
+              status: 'ACCEPTED'
+            }
+          })
         }
 
         return {

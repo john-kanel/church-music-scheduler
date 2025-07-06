@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { X, Mail, MessageSquare, Users, Send, Phone } from 'lucide-react'
 
@@ -8,17 +8,22 @@ interface SendMessageModalProps {
   isOpen: boolean
   onClose: () => void
   onMessageSent?: () => void
+  recipients?: any[]
+  groupName?: string
 }
 
-export function SendMessageModal({ isOpen, onClose, onMessageSent }: SendMessageModalProps) {
+export function SendMessageModal({ isOpen, onClose, onMessageSent, recipients, groupName }: SendMessageModalProps) {
   const { data: session } = useSession()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [groups, setGroups] = useState<any[]>([])
+  const [events, setEvents] = useState<any[]>([])
+  const [selectedEventId, setSelectedEventId] = useState('')
 
   const [messageData, setMessageData] = useState({
     subject: '',
     message: '',
-    recipients: 'all', // 'all', 'musicians', 'specific', 'event'
+    recipients: recipients && recipients.length > 0 ? 'group' : 'all', // 'all', 'musicians', 'specific', 'event', 'group'
     specificEmails: '',
     sendMethod: 'email', // 'email', 'sms', 'both'
     urgent: false,
@@ -28,11 +33,16 @@ export function SendMessageModal({ isOpen, onClose, onMessageSent }: SendMessage
   })
 
   const recipientOptions = [
+    ...(recipients && recipients.length > 0 ? [{ value: 'group', label: `${groupName} Members (${recipients.length})` }] : []),
     { value: 'all', label: 'All Church Members' },
     { value: 'musicians', label: 'All Musicians' },
     { value: 'directors', label: 'Directors & Pastors' },
     { value: 'accompanists', label: 'Accompanists Only' },
     { value: 'vocalists', label: 'Vocalists Only' },
+    ...groups.map(group => ({ 
+      value: `group-${group.id}`, 
+      label: `${group.name} (${group.members?.length || 0} members)` 
+    })),
     { value: 'individual', label: 'Select Individual People' },
     { value: 'specific', label: 'Enter Email Addresses' },
     { value: 'event', label: 'Event Participants' }
@@ -49,6 +59,38 @@ export function SendMessageModal({ isOpen, onClose, onMessageSent }: SendMessage
 
   const [selectedIndividuals, setSelectedIndividuals] = useState<string[]>([])
 
+  // Fetch groups and events when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      fetchGroups()
+      fetchEvents()
+    }
+  }, [isOpen])
+
+  const fetchGroups = async () => {
+    try {
+      const response = await fetch('/api/groups')
+      if (response.ok) {
+        const data = await response.json()
+        setGroups(data.groups || [])
+      }
+    } catch (error) {
+      console.error('Error fetching groups:', error)
+    }
+  }
+
+  const fetchEvents = async () => {
+    try {
+      const response = await fetch('/api/events')
+      if (response.ok) {
+        const data = await response.json()
+        setEvents(data.events || [])
+      }
+    } catch (error) {
+      console.error('Error fetching events:', error)
+    }
+  }
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target
     setMessageData(prev => ({
@@ -63,22 +105,49 @@ export function SendMessageModal({ isOpen, onClose, onMessageSent }: SendMessage
     setError('')
 
     try {
-      // Determine recipients
-      let recipients: string[] | string = 'all'
+      // Determine recipients and message type
+      let recipientList: string[] | string = 'all'
+      let messageType = 'BROADCAST'
       
       if (messageData.recipients === 'individual') {
-        recipients = selectedIndividuals
+        recipientList = selectedIndividuals
+        messageType = 'INDIVIDUAL'
       } else if (messageData.recipients === 'specific') {
-        recipients = messageData.specificEmails
+        recipientList = messageData.specificEmails
           .split(',')
           .map(email => email.trim())
           .filter(email => email.includes('@'))
-      } else if (messageData.recipients === 'invited') {
-        // For now, just use all musicians - could enhance later with invitation status
-        recipients = availableMusicians.map(m => m.id)
-      } else if (messageData.recipients === 'accepted') {
-        // For now, just use all musicians - could enhance later with acceptance status
-        recipients = availableMusicians.map(m => m.id)
+        messageType = 'INDIVIDUAL'
+      } else if (messageData.recipients === 'group') {
+        recipientList = recipients?.map(member => member.id) || []
+        messageType = 'INDIVIDUAL'
+      } else if (messageData.recipients.startsWith('group-')) {
+        // Handle new group selections
+        const groupId = messageData.recipients.replace('group-', '')
+        const selectedGroup = groups.find(g => g.id === groupId)
+        if (selectedGroup) {
+          recipientList = selectedGroup.members?.map((member: any) => member.id) || []
+          messageType = 'INDIVIDUAL'
+        }
+      } else if (messageData.recipients === 'event') {
+        // Handle event participants
+        if (selectedEventId) {
+          const selectedEvent = events.find(e => e.id === selectedEventId)
+          if (selectedEvent && selectedEvent.assignments) {
+            recipientList = selectedEvent.assignments
+              .filter((assignment: any) => assignment.user)
+              .map((assignment: any) => assignment.user.id)
+            messageType = 'INDIVIDUAL'
+          }
+        }
+      } else if (messageData.recipients === 'musicians') {
+        messageType = 'BROADCAST'
+      } else if (messageData.recipients === 'directors') {
+        messageType = 'BROADCAST'
+      } else if (messageData.recipients === 'accompanists') {
+        messageType = 'BROADCAST'
+      } else if (messageData.recipients === 'vocalists') {
+        messageType = 'BROADCAST'
       }
 
       // Map send method to API format
@@ -95,9 +164,9 @@ export function SendMessageModal({ isOpen, onClose, onMessageSent }: SendMessage
         },
         body: JSON.stringify({
           subject: messageData.subject,
-          message: messageData.message,
-          type: typeMap[messageData.sendMethod],
-          recipients,
+          content: messageData.message,
+          type: messageType,
+          recipientIds: Array.isArray(recipientList) ? recipientList : [],
           // eventId could be added later for event-specific messages
         })
       })
@@ -177,6 +246,56 @@ export function SendMessageModal({ isOpen, onClose, onMessageSent }: SendMessage
                 </select>
               </div>
 
+              {messageData.recipients === 'group' && recipients && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Group Members</label>
+                  <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-300 rounded-lg p-3">
+                    {recipients.map((member) => (
+                      <div key={member.id} className="flex items-center p-2 bg-blue-50 rounded">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-900">{member.name}</div>
+                          <div className="text-sm text-gray-500">{member.email}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-sm text-gray-500 mt-2">
+                    Message will be sent to {recipients.length} group members
+                  </p>
+                </div>
+              )}
+
+              {messageData.recipients.startsWith('group-') && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Group Members</label>
+                  {(() => {
+                    const groupId = messageData.recipients.replace('group-', '')
+                    const selectedGroup = groups.find(g => g.id === groupId)
+                    if (!selectedGroup) return null
+                    
+                    return (
+                      <>
+                        <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-300 rounded-lg p-3">
+                          {selectedGroup.members?.map((member: any) => (
+                            <div key={member.id} className="flex items-center p-2 bg-blue-50 rounded">
+                              <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+                              <div className="flex-1">
+                                <div className="font-medium text-gray-900">{member.firstName} {member.lastName}</div>
+                                <div className="text-sm text-gray-500">{member.email}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-sm text-gray-500 mt-2">
+                          Message will be sent to {selectedGroup.members?.length || 0} group members
+                        </p>
+                      </>
+                    )
+                  })()}
+                </div>
+              )}
+
               {messageData.recipients === 'individual' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Select People</label>
@@ -226,13 +345,65 @@ export function SendMessageModal({ isOpen, onClose, onMessageSent }: SendMessage
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Select Event</label>
                   <select
+                    value={selectedEventId}
+                    onChange={(e) => setSelectedEventId(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent text-gray-900"
                   >
-                    <option value="">No events created yet</option>
+                    <option value="">Select an event...</option>
+                    {events.map(event => (
+                      <option key={event.id} value={event.id}>
+                        {event.name} - {new Date(event.startTime).toLocaleDateString()}
+                      </option>
+                    ))}
                   </select>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Create an event first to message its participants
-                  </p>
+                  {events.length === 0 ? (
+                    <p className="text-sm text-gray-500 mt-1">
+                      No events found. Create an event first to message its participants.
+                    </p>
+                  ) : selectedEventId ? (
+                    (() => {
+                      const selectedEvent = events.find(e => e.id === selectedEventId)
+                      if (!selectedEvent) return null
+                      
+                      const participants = selectedEvent.assignments?.filter((assignment: any) => assignment.user) || []
+                      
+                      return (
+                        <div className="mt-3">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Event Participants</label>
+                          {participants.length > 0 ? (
+                            <>
+                              <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-300 rounded-lg p-3">
+                                {participants.map((assignment: any) => (
+                                  <div key={assignment.id} className="flex items-center p-2 bg-blue-50 rounded">
+                                    <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+                                    <div className="flex-1">
+                                      <div className="font-medium text-gray-900">
+                                        {assignment.user.firstName} {assignment.user.lastName}
+                                      </div>
+                                      <div className="text-sm text-gray-500">
+                                        {assignment.user.email} • {assignment.roleName}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                              <p className="text-sm text-gray-500 mt-2">
+                                Message will be sent to {participants.length} event participants
+                              </p>
+                            </>
+                          ) : (
+                            <p className="text-sm text-gray-500 mt-1">
+                              No participants assigned to this event yet.
+                            </p>
+                          )}
+                        </div>
+                      )
+                    })()
+                  ) : (
+                    <p className="text-sm text-gray-500 mt-1">
+                      Select an event to see its participants.
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -256,7 +427,6 @@ export function SendMessageModal({ isOpen, onClose, onMessageSent }: SendMessage
               >
                 <Mail className="h-8 w-8 mb-2" />
                 <span className="font-medium">Email Only</span>
-                <span className="text-sm text-gray-500">Via Resend</span>
               </button>
 
               <button
@@ -270,7 +440,6 @@ export function SendMessageModal({ isOpen, onClose, onMessageSent }: SendMessage
               >
                 <Phone className="h-8 w-8 mb-2" />
                 <span className="font-medium">SMS Only</span>
-                <span className="text-sm text-gray-500">Via Twilio</span>
               </button>
 
               <button
@@ -287,7 +456,6 @@ export function SendMessageModal({ isOpen, onClose, onMessageSent }: SendMessage
                   <Phone className="h-6 w-6" />
                 </div>
                 <span className="font-medium">Both</span>
-                <span className="text-sm text-gray-500">Email + SMS</span>
               </button>
             </div>
           </section>

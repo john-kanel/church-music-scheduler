@@ -74,7 +74,7 @@ export async function sendInvitationEmail(
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <!-- Logo Section - Space for Parish Logo -->
-          <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; border-bottom: 3px solid #667eea;">
+          <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; border-bottom: 3px solid #660033;">
             ${getEmailLogoHtml()}
             <h1 style="color: #333; margin: 0; font-size: 28px;">🎵 Music Ministry Invitation</h1>
           </div>
@@ -88,8 +88,8 @@ export async function sendInvitationEmail(
             </p>
 
             <!-- Login Credentials Box -->
-            <div style="margin: 30px 0; padding: 25px; background: #f1f5f9; border-radius: 8px; border-left: 4px solid #3b82f6;">
-              <h3 style="margin: 0 0 15px 0; color: #1e40af; font-size: 18px;">🔐 Your Login Credentials</h3>
+            <div style="margin: 30px 0; padding: 25px; background: #FDF2F8; border-radius: 8px; border-left: 4px solid #660033;">
+              <h3 style="margin: 0 0 15px 0; color: #660033; font-size: 18px;">🔐 Your Login Credentials</h3>
               <div style="background: white; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
                 <p style="margin: 5px 0; color: #374151;"><strong>Username/Email:</strong> ${to}</p>
                 <p style="margin: 5px 0; color: #374151;"><strong>Temporary Password:</strong> <code style="background: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-family: monospace; font-size: 16px;">${tempPassword}</code></p>
@@ -101,7 +101,7 @@ export async function sendInvitationEmail(
               </div>
             </div>
             
-            <div style="margin: 30px 0; padding: 20px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #667eea;">
+            <div style="margin: 30px 0; padding: 20px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #660033;">
               <h3 style="margin: 0 0 10px 0; color: #333;">What you'll get access to:</h3>
               <ul style="color: #666; margin: 0; padding-left: 20px;">
                 <li>Event scheduling and calendar</li>
@@ -113,12 +113,12 @@ export async function sendInvitationEmail(
             </div>
             
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${inviteLink}" 
-                 style="background: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; margin-bottom: 10px;">
+                            <a href="${inviteLink}"
+                 style="background: #660033; color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; margin-bottom: 10px;">
                 Accept Invitation & Sign In
               </a>
               <p style="color: #666; font-size: 14px; margin: 10px 0 0 0;">
-                Or visit: <a href="${process.env.NEXTAUTH_URL || 'https://yourapp.com'}/auth/signin" style="color: #667eea;">${process.env.NEXTAUTH_URL || 'https://yourapp.com'}/auth/signin</a>
+                Or visit: <a href="${process.env.NEXTAUTH_URL || 'https://yourapp.com'}/auth/signin" style="color: #660033;">${process.env.NEXTAUTH_URL || 'https://yourapp.com'}/auth/signin</a>
               </p>
             </div>
             
@@ -219,7 +219,7 @@ export async function sendMessageEmail(
       subject,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; border-bottom: 3px solid #667eea;">
+          <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; border-bottom: 3px solid #660033;">
             ${getEmailLogoHtml()}
             <h1 style="color: #333; margin: 0; font-size: 24px;">${churchName}</h1>
             <p style="color: #6B7280; margin: 5px 0 0 0;">Music Ministry</p>
@@ -293,7 +293,7 @@ export async function sendWelcomeEmail(
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <!-- Logo Section -->
-          <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; border-bottom: 3px solid #667eea;">
+          <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; border-bottom: 3px solid #660033;">
             ${getEmailLogoHtml()}
             <h1 style="color: #333; margin: 0; font-size: 28px;">🎵 Welcome to Church Music Scheduler!</h1>
           </div>
@@ -306,15 +306,15 @@ export async function sendWelcomeEmail(
             </p>
 
             <!-- Trial Information Box -->
-            <div style="margin: 30px 0; padding: 25px; background: #dbeafe; border-radius: 8px; border-left: 4px solid #3b82f6;">
-              <h3 style="margin: 0 0 15px 0; color: #1e40af; font-size: 20px;">🚀 Your Free Trial is Active!</h3>
+            <div style="margin: 30px 0; padding: 25px; background: #FDF2F8; border-radius: 8px; border-left: 4px solid #660033;">
+              <h3 style="margin: 0 0 15px 0; color: #660033; font-size: 20px;">🚀 Your Free Trial is Active!</h3>
               <div style="background: white; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
                 <p style="margin: 5px 0; color: #374151; font-size: 16px;"><strong>✅ No credit card required</strong></p>
                 <p style="margin: 5px 0; color: #374151; font-size: 16px;"><strong>✅ ${trialDaysRemaining} days of full access</strong></p>
                 <p style="margin: 5px 0; color: #374151; font-size: 16px;"><strong>✅ All features unlocked</strong></p>
               </div>
-              <div style="background: #f0f9ff; padding: 12px; border-radius: 6px; border-left: 3px solid #0ea5e9;">
-                <p style="margin: 0; color: #0c4a6e; font-size: 14px;">
+              <div style="background: #FDF2F8; padding: 12px; border-radius: 6px; border-left: 3px solid #660033;">
+                <p style="margin: 0; color: #660033; font-size: 14px;">
                   💡 <strong>Perfect timing:</strong> You have plenty of time to explore all features and see how Church Music Scheduler can transform your music ministry!
                 </p>
               </div>
@@ -333,7 +333,7 @@ export async function sendWelcomeEmail(
             
             <div style="text-align: center; margin: 30px 0;">
               <a href="${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/dashboard" 
-                 style="background: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; margin-bottom: 10px; font-size: 16px;">
+                 style="background: #660033; color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; margin-bottom: 10px; font-size: 16px;">
                 Start Exploring Your Dashboard →
               </a>
             </div>
@@ -462,14 +462,14 @@ export async function sendPaymentConfirmationEmail(
             </div>
             
             <!-- Manage Billing -->
-            <div style="margin: 30px 0; padding: 20px; background: #f1f5f9; border-radius: 8px; border-left: 4px solid #3b82f6;">
-              <h3 style="margin: 0 0 15px 0; color: #1e40af; font-size: 18px;">💳 Manage Your Billing</h3>
-              <p style="color: #1e40af; margin: 0 0 15px 0; font-size: 14px;">
+            <div style="margin: 30px 0; padding: 20px; background: #FDF2F8; border-radius: 8px; border-left: 4px solid #660033;">
+              <h3 style="margin: 0 0 15px 0; color: #660033; font-size: 18px;">💳 Manage Your Billing</h3>
+              <p style="color: #660033; margin: 0 0 15px 0; font-size: 14px;">
                 You can view invoices, update payment methods, or change plans anytime through your billing portal.
               </p>
               <div style="text-align: center;">
                 <a href="${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/billing" 
-                   style="background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 14px;">
+                   style="background: #660033; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 14px;">
                   Manage Billing →
                 </a>
               </div>
@@ -488,7 +488,7 @@ export async function sendPaymentConfirmationEmail(
             
             <div style="text-align: center; margin: 30px 0;">
               <a href="${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/dashboard" 
-                 style="background: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; margin-bottom: 10px; font-size: 16px;">
+                 style="background: #660033; color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; margin-bottom: 10px; font-size: 16px;">
                 Continue to Dashboard →
               </a>
             </div>
@@ -620,8 +620,8 @@ export async function sendReferralPromotionEmail(
             </div>
             
             <!-- Referral Link Section -->
-            <div style="margin: 30px 0; padding: 20px; background: #f1f5f9; border-radius: 8px; border-left: 4px solid #3b82f6;">
-              <h3 style="margin: 0 0 15px 0; color: #1e40af; font-size: 18px;">🔗 Your Personal Referral Link</h3>
+            <div style="margin: 30px 0; padding: 20px; background: #FDF2F8; border-radius: 8px; border-left: 4px solid #660033;">
+              <h3 style="margin: 0 0 15px 0; color: #660033; font-size: 18px;">🔗 Your Personal Referral Link</h3>
               <div style="background: white; padding: 15px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #e5e7eb;">
                 <p style="margin: 0; color: #6b7280; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Share this link:</p>
                 <p style="margin: 5px 0 0 0; color: #374151; font-family: monospace; font-size: 14px; word-break: break-all; background: #f9fafb; padding: 8px; border-radius: 4px;">

@@ -43,6 +43,7 @@ model Church {
   notificationLogs      NotificationLog[]
   emailSchedules        EmailSchedule[]
   serviceParts          ServicePart[]
+  musicianInviteLink    MusicianInviteLink?
 
   @@map("parishes")
 }
@@ -62,6 +63,7 @@ model User {
   instruments        String[]          @default([])
   skillLevel         SkillLevel        @default(INTERMEDIATE)
   yearsExperience    Int?
+  invitedVia         String?           // Tracks how user joined: 'invitation_link', 'email_invite', 'direct_signup'
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
   churchId           String
@@ -74,6 +76,9 @@ model User {
   emailSchedules     EmailSchedule[]
   uploadedDocuments  EventDocument[]
 
+  @@index([churchId])
+  @@index([role])
+  @@index([email])
   @@map("users")
 }
 
@@ -98,7 +103,7 @@ model EventType {
   church    Church   @relation(fields: [churchId], references: [id], onDelete: Cascade)
   events    Event[]
 
-  @@unique([name, churchId])
+  @@unique([name, color, churchId])
   @@map("event_types")
 }
 
@@ -128,6 +133,9 @@ model Event {
   hymns             EventHymn[]
   documents         EventDocument[]
 
+  @@index([churchId])
+  @@index([startTime])
+  @@index([churchId, startTime])
   @@map("events")
 }
 
@@ -173,6 +181,10 @@ model EventAssignment {
   group        Group?           @relation(fields: [groupId], references: [id], onDelete: Cascade)
   user         User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([eventId, userId])
+  @@index([userId])
+  @@index([status])
+  @@index([userId, status])
   @@map("event_assignments")
 }
 
@@ -208,6 +220,10 @@ model Invitation {
   church    Church           @relation(fields: [churchId], references: [id], onDelete: Cascade)
 
   @@unique([email, churchId])
+  @@index([churchId])
+  @@index([status])
+  @@index([churchId, status])
+  @@index([email])
   @@map("invitations")
 }
 
@@ -480,6 +496,44 @@ model EmailSchedule {
   @@map("email_schedules")
 }
 
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("password_reset_tokens")
+}
+
+model MusicianInviteLink {
+  id           String            @id @default(cuid())
+  churchId     String            @unique
+  slug         String            @unique  // URL-friendly church name slug
+  isActive     Boolean           @default(true)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  createdBy    String            // User ID who created the link
+  pageViews    InvitePageView[]
+  church       Church            @relation(fields: [churchId], references: [id], onDelete: Cascade)
+
+  @@map("musician_invite_links")
+}
+
+model InvitePageView {
+  id             String             @id @default(cuid())
+  inviteLinkId   String
+  visitorId      String             // Hash of IP + User Agent for unique visitor tracking
+  viewedAt       DateTime           @default(now())
+  ipAddress      String?            // Optional: store for analytics
+  userAgent      String?            // Optional: store for analytics
+  inviteLink     MusicianInviteLink @relation(fields: [inviteLinkId], references: [id], onDelete: Cascade)
+
+  @@unique([inviteLinkId, visitorId])  // Prevent duplicate views from same visitor
+  @@map("invite_page_views")
+}
+
 enum UserRole {
   DIRECTOR
   ASSOCIATE_DIRECTOR
@@ -518,6 +572,7 @@ enum ActivityType {
   EVENT_CREATED
   MUSICIAN_INVITED
   MUSICIAN_SIGNED_UP
+  MUSICIAN_JOINED_VIA_LINK
   MESSAGE_SENT
   AUTOMATED_NOTIFICATION_SENT
   AUTOMATION_SETTINGS_UPDATED

@@ -244,4 +244,128 @@ export async function PUT(request: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+// PATCH /api/groups - Manage group membership (add/remove musicians)
+export async function PATCH(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user?.churchId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Only directors and pastors can manage group memberships
+    if (!['DIRECTOR', 'ASSOCIATE_DIRECTOR', 'PASTOR'].includes(session.user.role)) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
+    }
+
+    const body = await request.json()
+    const { groupId, action, musicianId } = body
+
+    // Validation
+    if (!groupId || !action || !musicianId) {
+      return NextResponse.json(
+        { error: 'Group ID, action, and musician ID are required' },
+        { status: 400 }
+      )
+    }
+
+    if (!['add', 'remove'].includes(action)) {
+      return NextResponse.json(
+        { error: 'Action must be either "add" or "remove"' },
+        { status: 400 }
+      )
+    }
+
+    // Verify group belongs to church
+    const group = await prisma.group.findFirst({
+      where: {
+        id: groupId,
+        churchId: session.user.churchId
+      }
+    })
+
+    if (!group) {
+      return NextResponse.json({ error: 'Group not found' }, { status: 404 })
+    }
+
+    // Verify musician belongs to church
+    const musician = await prisma.user.findFirst({
+      where: {
+        id: musicianId,
+        churchId: session.user.churchId,
+        role: 'MUSICIAN'
+      }
+    })
+
+    if (!musician) {
+      return NextResponse.json({ error: 'Musician not found' }, { status: 404 })
+    }
+
+    if (action === 'add') {
+      // Check if musician is already in the group
+      const existingMembership = await prisma.groupMember.findFirst({
+        where: {
+          userId: musicianId,
+          groupId: groupId
+        }
+      })
+
+      if (existingMembership) {
+        return NextResponse.json(
+          { error: 'Musician is already a member of this group' },
+          { status: 400 }
+        )
+      }
+
+      // Add musician to group
+      await prisma.groupMember.create({
+        data: {
+          userId: musicianId,
+          groupId: groupId
+        }
+      })
+
+      return NextResponse.json({
+        message: `${musician.firstName} ${musician.lastName} added to ${group.name}`,
+        action: 'added'
+      })
+
+    } else if (action === 'remove') {
+      // Check if musician is in the group
+      const existingMembership = await prisma.groupMember.findFirst({
+        where: {
+          userId: musicianId,
+          groupId: groupId
+        }
+      })
+
+      if (!existingMembership) {
+        return NextResponse.json(
+          { error: 'Musician is not a member of this group' },
+          { status: 400 }
+        )
+      }
+
+      // Remove musician from group
+      await prisma.groupMember.delete({
+        where: {
+          id: existingMembership.id
+        }
+      })
+
+      return NextResponse.json({
+        message: `${musician.firstName} ${musician.lastName} removed from ${group.name}`,
+        action: 'removed'
+      })
+    }
+
+  } catch (error) {
+    console.error('Error managing group membership:', error)
+    return NextResponse.json(
+      { error: 'Failed to manage group membership' },
+      { status: 500 }
+    )
+  }
 } 

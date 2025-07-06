@@ -109,7 +109,7 @@ Your application will be available at `http://localhost:3000`
 
 1. **Authentication Flow**
    - [ ] Sign-up page for new parishes
-   - [ ] Password reset functionality
+   - [x] Password reset functionality
    - [ ] Email verification
 
 2. **Event Management**

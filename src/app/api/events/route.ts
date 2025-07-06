@@ -198,9 +198,16 @@ export async function POST(request: NextRequest) {
     const recurrencePattern = formData.get('recurrencePattern') as string || ''
     const recurrenceEnd = formData.get('recurrenceEnd') as string || ''
     
-    // Parse JSON fields
+    // Parse JSON fields with safe defaults
     const roles = formData.get('roles') ? JSON.parse(formData.get('roles') as string) : []
     const hymns = formData.get('hymns') ? JSON.parse(formData.get('hymns') as string) : []
+    const selectedGroups = formData.get('selectedGroups') ? JSON.parse(formData.get('selectedGroups') as string) : []
+    const copyHymnsToRecurring = formData.get('copyHymnsToRecurring') === 'true'
+
+    // Ensure all arrays are properly defined
+    const validRoles = Array.isArray(roles) ? roles : []
+    const validHymns = Array.isArray(hymns) ? hymns : []
+    const validSelectedGroups = Array.isArray(selectedGroups) ? selectedGroups : []
 
     // Validation
     if (!name || !location || !startDate || !startTime) {
@@ -290,8 +297,8 @@ export async function POST(request: NextRequest) {
       })
 
       // Create role assignments if provided
-      if (roles.length > 0) {
-        for (const role of roles) {
+      if (validRoles.length > 0) {
+        for (const role of validRoles) {
           if (role.assignedMusicians && role.assignedMusicians.length > 0) {
             // Create individual assignments for each assigned musician
             await tx.eventAssignment.createMany({
@@ -323,6 +330,67 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // Create group assignments if provided
+      if (validSelectedGroups.length > 0) {
+        for (const groupId of validSelectedGroups) {
+          // Verify group exists and belongs to church
+          const group = await tx.group.findFirst({
+            where: {
+              id: groupId,
+              churchId: session.user.churchId
+            },
+            include: {
+              members: {
+                include: {
+                  user: true
+                }
+              }
+            }
+          })
+
+          if (group) {
+            // Create group assignment
+            await tx.eventAssignment.create({
+              data: {
+                eventId: event.id,
+                groupId: group.id,
+                status: 'PENDING'
+              }
+            })
+
+            // Also create individual assignments for each group member
+            // This ensures they get individual notifications and can accept/decline
+            for (const member of group.members) {
+              await tx.eventAssignment.create({
+                data: {
+                  eventId: event.id,
+                  userId: member.user.id,
+                  roleName: `${group.name} Member`,
+                  status: 'PENDING'
+                }
+              })
+            }
+          }
+        }
+      }
+
+      // Create hymns if provided
+      if (validHymns.length > 0) {
+        for (const hymn of validHymns) {
+          // Skip empty hymns
+          if (!hymn.title?.trim()) continue
+
+          await tx.eventHymn.create({
+            data: {
+              eventId: event.id,
+              title: hymn.title.trim(),
+              notes: hymn.notes?.trim() || null,
+              servicePartId: hymn.servicePartId === 'custom' || !hymn.servicePartId ? null : hymn.servicePartId
+            }
+          })
+        }
+      }
+
       // If this is a recurring event, create recurring instances
       if (isRecurring && recurrencePattern) {
         // Generate recurring events
@@ -343,8 +411,8 @@ export async function POST(request: NextRequest) {
           })
 
           // Copy role assignments to recurring events
-          if (roles.length > 0) {
-            for (const role of roles) {
+          if (validRoles.length > 0) {
+            for (const role of validRoles) {
               if (role.assignedMusicians && role.assignedMusicians.length > 0) {
                 await tx.eventAssignment.createMany({
                   data: role.assignedMusicians.map((musicianId: string) => ({
@@ -370,6 +438,65 @@ export async function POST(request: NextRequest) {
                 await tx.eventAssignment.createMany({
                   data: assignmentsToCreate
                 })
+              }
+            }
+          }
+
+          // Copy hymns to recurring events (only if user chose to)
+          if (validHymns.length > 0 && copyHymnsToRecurring) {
+            for (const hymn of validHymns) {
+              // Skip empty hymns
+              if (!hymn.title?.trim()) continue
+
+              await tx.eventHymn.create({
+                data: {
+                  eventId: createdEvent.id,
+                  title: hymn.title.trim(),
+                  notes: hymn.notes?.trim() || null,
+                  servicePartId: hymn.servicePartId === 'custom' || !hymn.servicePartId ? null : hymn.servicePartId
+                }
+              })
+            }
+          }
+
+          // Copy group assignments to recurring events
+          if (validSelectedGroups.length > 0) {
+            for (const groupId of validSelectedGroups) {
+              const group = await tx.group.findFirst({
+                where: {
+                  id: groupId,
+                  churchId: session.user.churchId
+                },
+                include: {
+                  members: {
+                    include: {
+                      user: true
+                    }
+                  }
+                }
+              })
+
+              if (group) {
+                // Create group assignment for recurring event
+                await tx.eventAssignment.create({
+                  data: {
+                    eventId: createdEvent.id,
+                    groupId: group.id,
+                    status: 'PENDING'
+                  }
+                })
+
+                // Create individual assignments for each group member
+                for (const member of group.members) {
+                  await tx.eventAssignment.create({
+                    data: {
+                      eventId: createdEvent.id,
+                      userId: member.user.id,
+                      roleName: `${group.name} Member`,
+                      status: 'PENDING'
+                    }
+                  })
+                }
               }
             }
           }

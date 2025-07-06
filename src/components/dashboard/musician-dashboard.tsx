@@ -335,7 +335,7 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
             {/* Events Navigation Button */}
             <Link 
               href="/calendar"
-              className="flex items-center justify-center px-3 sm:px-4 py-2 bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors text-sm sm:text-base"
+              className="flex items-center justify-center px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
             >
               <Calendar className="h-4 w-4 mr-1 sm:mr-2" />
               Events
@@ -353,7 +353,7 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
             {/* Messages Navigation Button */}
             <Link 
               href="/messages"
-              className="flex items-center justify-center px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
+              className="flex items-center justify-center px-3 sm:px-4 py-2 bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors text-sm sm:text-base"
             >
               <MessageSquare className="h-4 w-4 mr-1 sm:mr-2" />
               Messages

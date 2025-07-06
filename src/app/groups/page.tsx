@@ -3,14 +3,19 @@
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { Music, Users, Plus, ArrowLeft } from 'lucide-react'
+import { Music, Users, Plus, ArrowLeft, Edit2, Trash2, X, UserPlus, UserMinus, MessageSquare } from 'lucide-react'
 import Link from 'next/link'
 import { CreateGroupModal } from '@/components/groups/create-group-modal'
+import { SendMessageModal } from '@/components/messages/send-message-modal'
 
 export default function GroupsPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [showMessageModal, setShowMessageModal] = useState(false)
+  const [editingGroup, setEditingGroup] = useState<any>(null)
+  const [messagingGroup, setMessagingGroup] = useState<any>(null)
   const [groups, setGroups] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -42,6 +47,17 @@ export default function GroupsPage() {
 
   const handleGroupCreated = () => {
     fetchGroups() // Refresh the groups list
+  }
+
+  const handleEditGroup = (group: any) => {
+    setEditingGroup(group)
+    setShowEditModal(true)
+  }
+
+  const handleGroupUpdated = () => {
+    fetchGroups() // Refresh the groups list
+    setShowEditModal(false)
+    setEditingGroup(null)
   }
 
   if (status === 'loading') {
@@ -129,9 +145,22 @@ export default function GroupsPage() {
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {groups.map((group: any) => (
-                  <div key={group.id} className="border border-gray-200 rounded-lg p-6 hover:border-blue-300 hover:shadow-md transition-all">
+                  <div key={group.id} className="border border-gray-200 rounded-lg p-6 hover:border-blue-300 hover:shadow-md transition-all relative group">
+                    {/* Edit button - only show for directors/pastors */}
+                    {canCreateGroups && (
+                      <div className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => handleEditGroup(group)}
+                          className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full shadow-lg border border-gray-200 bg-white transition-colors"
+                          title="Edit group"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+                    
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-lg font-semibold text-gray-900">{group.name}</h3>
+                      <h3 className="text-lg font-semibold text-gray-900 pr-8">{group.name}</h3>
                       <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
                         {group.memberCount} {group.memberCount === 1 ? 'member' : 'members'}
                       </span>
@@ -158,7 +187,429 @@ export default function GroupsPage() {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onGroupCreated={handleGroupCreated}
+        onMessageGroup={(members) => {
+          setMessagingGroup({ name: 'Selected Members', members })
+          setShowMessageModal(true)
+        }}
       />
+
+      {/* Edit Group Modal */}
+      <EditGroupModal 
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false)
+          setEditingGroup(null)
+        }}
+        group={editingGroup}
+        onGroupUpdated={handleGroupUpdated}
+        onMessageGroup={(group) => {
+          setMessagingGroup(group)
+          setShowMessageModal(true)
+        }}
+      />
+
+      {/* Send Message Modal */}
+      <SendMessageModal
+        isOpen={showMessageModal}
+        onClose={() => {
+          setShowMessageModal(false)
+          setMessagingGroup(null)
+        }}
+        onMessageSent={() => {
+          setShowMessageModal(false)
+          setMessagingGroup(null)
+          fetchGroups()
+        }}
+        recipients={messagingGroup?.members || []}
+        groupName={messagingGroup?.name}
+      />
+    </div>
+  )
+}
+
+// Edit Group Modal Component
+function EditGroupModal({ isOpen, onClose, group, onGroupUpdated, onMessageGroup }: {
+  isOpen: boolean
+  onClose: () => void
+  group: any
+  onGroupUpdated: () => void
+  onMessageGroup: (group: any) => void
+}) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+  const [membershipLoading, setMembershipLoading] = useState(false)
+  const [formData, setFormData] = useState({
+    name: '',
+    description: ''
+  })
+
+  // Musicians management state
+  const [musicians, setMusicians] = useState<any[]>([])
+  const [loadingMusicians, setLoadingMusicians] = useState(false)
+  const [selectedMusicianId, setSelectedMusicianId] = useState('')
+  const [currentMembers, setCurrentMembers] = useState<any[]>([])
+
+  useEffect(() => {
+    if (group) {
+      setFormData({
+        name: group.name || '',
+        description: group.description || ''
+      })
+      setCurrentMembers(group.members || [])
+      
+      // Fetch musicians when group is loaded
+      if (isOpen) {
+        fetchMusicians()
+      }
+    }
+  }, [group, isOpen])
+
+  const fetchMusicians = async () => {
+    setLoadingMusicians(true)
+    try {
+      const response = await fetch('/api/musicians')
+      if (response.ok) {
+        const data = await response.json()
+        setMusicians(data.musicians || [])
+      }
+    } catch (error) {
+      console.error('Error fetching musicians:', error)
+    } finally {
+      setLoadingMusicians(false)
+    }
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }))
+  }
+
+  const handleAddMusician = async () => {
+    if (!selectedMusicianId || !group) return
+
+    setMembershipLoading(true)
+    try {
+      const response = await fetch('/api/groups', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          groupId: group.id,
+          action: 'add',
+          musicianId: selectedMusicianId
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to add musician')
+      }
+
+      // Find the musician and add to current members
+      const musician = musicians.find(m => m.id === selectedMusicianId)
+      if (musician) {
+        setCurrentMembers(prev => [...prev, {
+          id: musician.id,
+          name: `${musician.firstName} ${musician.lastName}`,
+          email: musician.email,
+          role: musician.role,
+          joinedAt: new Date().toISOString()
+        }])
+      }
+
+      setSelectedMusicianId('')
+      setSuccess('Musician added successfully!')
+      setTimeout(() => setSuccess(''), 3000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to add musician')
+      setTimeout(() => setError(''), 3000)
+    } finally {
+      setMembershipLoading(false)
+    }
+  }
+
+  const handleRemoveMusician = async (musicianId: string) => {
+    if (!group) return
+
+    setMembershipLoading(true)
+    try {
+      const response = await fetch('/api/groups', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          groupId: group.id,
+          action: 'remove',
+          musicianId: musicianId
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to remove musician')
+      }
+
+      // Remove from current members
+      setCurrentMembers(prev => prev.filter(member => member.id !== musicianId))
+      setSuccess('Musician removed successfully!')
+      setTimeout(() => setSuccess(''), 3000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to remove musician')
+      setTimeout(() => setError(''), 3000)
+    } finally {
+      setMembershipLoading(false)
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!group) return
+
+    setLoading(true)
+    setError('')
+    setSuccess('')
+
+    try {
+      const response = await fetch('/api/groups', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          groupId: group.id,
+          updates: {
+            name: formData.name,
+            description: formData.description
+          }
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to update group')
+      }
+
+      setSuccess('Group updated successfully!')
+      
+      // Wait a moment to show success message, then close
+      setTimeout(() => {
+        onGroupUpdated()
+      }, 1500)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Network error. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Get available musicians (not already in group)
+  const availableMusicians = musicians.filter(musician => 
+    !currentMembers.some(member => member.id === musician.id)
+  )
+
+  if (!isOpen) return null
+
+  return (
+    <div className="fixed inset-0 bg-gray-500 bg-opacity-50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-6 border-b">
+          <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+            <Edit2 className="h-6 w-6 mr-2 text-blue-600" />
+            Edit Group
+          </h2>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-700 hover:text-gray-900"
+          >
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          )}
+
+          {success && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <p className="text-green-600 text-sm flex items-center">
+                <svg className="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                {success}
+              </p>
+            </div>
+          )}
+
+          {/* Group Details Section */}
+          <section className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Group Details</h3>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Group Name *</label>
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                placeholder="e.g., Adult Choir, Youth Band, Praise Team"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                placeholder="Brief description of the group's purpose, role, and any special requirements..."
+              />
+            </div>
+          </section>
+
+          {/* Musicians Management Section */}
+          <section className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+              <Users className="h-5 w-5 mr-2" />
+              Musicians ({currentMembers.length})
+            </h3>
+
+            {/* Add Musicians */}
+            <div className="space-y-3">
+              <label className="block text-sm font-medium text-gray-700">Add Musician</label>
+              <div className="flex gap-3">
+                <select
+                  value={selectedMusicianId}
+                  onChange={(e) => setSelectedMusicianId(e.target.value)}
+                  disabled={loadingMusicians || membershipLoading}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 disabled:opacity-50"
+                >
+                  <option value="">
+                    {loadingMusicians ? 'Loading musicians...' : 'Select a musician to add'}
+                  </option>
+                  {availableMusicians.map((musician) => (
+                    <option key={musician.id} value={musician.id}>
+                      {musician.firstName} {musician.lastName} ({musician.email})
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={handleAddMusician}
+                  disabled={!selectedMusicianId || membershipLoading}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                >
+                  {membershipLoading ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  ) : (
+                    <UserPlus className="h-4 w-4 mr-2" />
+                  )}
+                  Add
+                </button>
+              </div>
+            </div>
+
+            {/* Current Members */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">Current Members</label>
+              {currentMembers.length === 0 ? (
+                <div className="text-center py-8 text-gray-500 border-2 border-dashed border-gray-200 rounded-lg">
+                  <Users className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                  <p>No musicians in this group yet</p>
+                  <p className="text-sm">Use the dropdown above to add members</p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3">
+                  {currentMembers.map((member) => (
+                    <div key={member.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center">
+                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                          <Users className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-900">{member.name}</div>
+                          <div className="text-sm text-gray-600">{member.email}</div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveMusician(member.id)}
+                        disabled={membershipLoading}
+                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                        title="Remove from group"
+                      >
+                        <UserMinus className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+
+          <div className="flex justify-between items-center pt-6 border-t">
+            {/* Message Button - Bottom Left */}
+            <button
+              type="button"
+              onClick={() => onMessageGroup(group)}
+              disabled={currentMembers.length === 0}
+              className="px-4 py-2 bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+              title={currentMembers.length === 0 ? 'Add musicians to the group first' : 'Send message to all group members'}
+            >
+              <MessageSquare className="h-4 w-4 mr-2" />
+              Message Group ({currentMembers.length})
+            </button>
+
+            {/* Form Actions - Bottom Right */}
+            <div className="flex space-x-4">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={loading}
+                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading || !!success}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center"
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Updating...
+                  </>
+                ) : success ? (
+                  <>
+                    <svg className="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    Updated!
+                  </>
+                ) : (
+                  <>
+                    <Edit2 className="h-4 w-4 mr-2" />
+                    Update Group
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
     </div>
   )
 } 

@@ -1,13 +1,52 @@
-// Returns the logo as a base64 <img> tag for use in all emails
+// Simple email-safe logo that matches the website header
 export function getEmailLogoHtml() {
   return `
-    <img
-      src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAACDQAAAK8CAYAAAAax30yAAAACXBIWXMAABnWAAAZ1gEY0crtAAAE5WlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSfvu78nIGlkPSdXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQnPz4KPHg6eG1wbWV0YSB4bWxuczp4PSdhZG9iZT... (TRUNCATED FOR BREVITY - use your full base64 string here) ..."
-      alt="Church Music Scheduler Logo"
-      style="display:block;width:100%;max-width:600px;margin:0 auto;"
-    />
-    <div style="text-align:center;font-family:Montserrat,sans-serif;font-size:18px;color:#800000;margin-top:8px;">
-      ORGANIZE • SCHEDULE • WORSHIP
+    <div style="text-align: center; padding: 20px 0; margin: 0 auto; width: 100%;">
+      <div style="display: inline-block; vertical-align: middle;">
+        <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
+          <tr>
+            <td style="vertical-align: middle; text-align: center;">
+              <img
+                src="https://church-music-scheduler-production.up.railway.app/logo.png"
+                alt="Church Music Scheduler Logo"
+                style="width: 48px; height: 48px; object-fit: contain; display: block; margin: 0 auto;"
+              />
+            </td>
+            <td style="vertical-align: middle; padding-left: 12px;">
+              <span style="font-family: 'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 24px; font-weight: bold; color: #111827; margin: 0; display: inline-block;">
+                Church Music Scheduler
+              </span>
+            </td>
+          </tr>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+// Alternative version with fallback for when images don't load
+export function getEmailLogoHtmlWithFallback() {
+  return `
+    <div style="text-align: center; padding: 20px 0; margin: 0 auto; width: 100%;">
+      <div style="display: inline-block; vertical-align: middle;">
+        <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
+          <tr>
+            <td style="vertical-align: middle; text-align: center;">
+              <img
+                src="https://church-music-scheduler-production.up.railway.app/logo.png"
+                alt="Church Music Scheduler Logo"
+                style="width: 48px; height: 48px; object-fit: contain; display: block; margin: 0 auto;"
+                onerror="this.style.display='none';"
+              />
+            </td>
+            <td style="vertical-align: middle; padding-left: 12px;">
+              <span style="font-family: 'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 24px; font-weight: bold; color: #111827; margin: 0; display: inline-block;">
+                Church Music Scheduler
+              </span>
+            </td>
+          </tr>
+        </table>
+      </div>
     </div>
   `;
 } 

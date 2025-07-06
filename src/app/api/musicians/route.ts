@@ -101,30 +101,58 @@ export async function GET(request: NextRequest) {
       ]
     })
 
+    // Get invitation status for each musician
+    const musicianEmails = musicians.map(m => m.email)
+    const invitations = await prisma.invitation.findMany({
+      where: {
+        email: { in: musicianEmails },
+        churchId: session.user.churchId
+      },
+      select: {
+        email: true,
+        status: true
+      }
+    })
+
     // Format the response
-    const formattedMusicians = musicians.map(musician => ({
-      id: musician.id,
-      firstName: musician.firstName,
-      lastName: musician.lastName,
-      name: `${musician.firstName} ${musician.lastName}`.trim(),
-      email: musician.email,
-      phone: musician.phone,
-      isVerified: musician.isVerified,
-      status: musician.isVerified ? 'active' : 'pending',
-      emailNotifications: musician.emailNotifications,
-      smsNotifications: musician.smsNotifications,
-      createdAt: musician.createdAt.toISOString(), // Convert Date to ISO string
-      instrument: 'Musician', // Placeholder - we can add proper instrument field later
-      groups: musician.groupMemberships.map(gm => gm.group),
-      upcomingEvents: musician.eventAssignments.map(ea => ({
-        id: ea.event.id,
-        name: ea.event.name,
-        startTime: ea.event.startTime,
-        status: ea.status,
-        role: ea.roleName
-      })),
-      totalAcceptedAssignments: musician._count.eventAssignments
-    }))
+    const formattedMusicians = musicians.map(musician => {
+      // Find the invitation for this musician
+      const invitation = invitations.find(inv => inv.email === musician.email)
+      
+      // Determine status based on invitation acceptance
+      let status = 'pending'
+      if (invitation && invitation.status === 'ACCEPTED') {
+        status = 'active'
+      } else if (musician.isVerified) {
+        // If no invitation found but user is verified, they're active
+        // (this handles legacy users who were created before invitation system)
+        status = 'active'
+      }
+      
+      return {
+        id: musician.id,
+        firstName: musician.firstName,
+        lastName: musician.lastName,
+        name: `${musician.firstName} ${musician.lastName}`.trim(),
+        email: musician.email,
+        phone: musician.phone,
+        isVerified: musician.isVerified,
+        status: status,
+        emailNotifications: musician.emailNotifications,
+        smsNotifications: musician.smsNotifications,
+        createdAt: musician.createdAt.toISOString(), // Convert Date to ISO string
+        instrument: 'Musician', // Placeholder - we can add proper instrument field later
+        groups: musician.groupMemberships.map(gm => gm.group),
+        upcomingEvents: musician.eventAssignments.map(ea => ({
+          id: ea.event.id,
+          name: ea.event.name,
+          startTime: ea.event.startTime,
+          status: ea.status,
+          role: ea.roleName
+        })),
+        totalAcceptedAssignments: musician._count.eventAssignments
+      }
+    })
 
     return NextResponse.json({ musicians: formattedMusicians })
   } catch (error) {

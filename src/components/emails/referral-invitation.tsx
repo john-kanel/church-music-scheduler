@@ -117,9 +117,9 @@ export function ReferralInvitationEmail({
           textAlign: 'center', 
           marginBottom: '25px',
           padding: '20px',
-          backgroundColor: '#EFF6FF',
+          backgroundColor: '#FDF2F8',
           borderRadius: '8px',
-          border: '2px dashed #3B82F6'
+          border: '2px dashed #660033'
         }}>
           <p style={{ 
             fontSize: '16px', 
@@ -132,7 +132,7 @@ export function ReferralInvitationEmail({
           <div style={{
             fontSize: '24px',
             fontWeight: 'bold',
-            color: '#3B82F6',
+            color: '#660033',
             fontFamily: 'Courier, monospace',
             letterSpacing: '2px',
             marginBottom: '10px'
@@ -179,7 +179,7 @@ export function ReferralInvitationEmail({
             href={`https://church-music-scheduler-production.up.railway.app/auth/signup?ref=${referralCode}`}
             style={{
               display: 'inline-block',
-              backgroundColor: '#3B82F6',
+              backgroundColor: '#660033',
               color: 'white',
               padding: '12px 30px',
               borderRadius: '8px',
