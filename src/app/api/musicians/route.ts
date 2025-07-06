@@ -43,76 +43,60 @@ export async function GET(request: NextRequest) {
       ]
     }
 
-    const musicians = await prisma.user.findMany({
-      where: whereClause,
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        phone: true,
-        role: true,
-        isVerified: true,
-        emailNotifications: true,
-        smsNotifications: true,
-        createdAt: true,
-        groupMemberships: {
-          include: {
-            group: {
-              select: {
-                id: true,
-                name: true
+    // Optimized queries using Promise.all
+    const [musicians, invitations] = await Promise.all([
+      // Musicians query with minimal data
+      prisma.user.findMany({
+        where: whereClause,
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          phone: true,
+          role: true,
+          isVerified: true,
+          emailNotifications: true,
+          smsNotifications: true,
+          createdAt: true,
+          groupMemberships: {
+            select: {
+              group: {
+                select: {
+                  id: true,
+                  name: true
+                }
+              }
+            }
+          },
+          // Simplified upcoming events - just count
+          _count: {
+            select: {
+              eventAssignments: {
+                where: {
+                  status: 'ACCEPTED'
+                }
               }
             }
           }
         },
-        eventAssignments: {
-          where: {
-            event: {
-              startTime: {
-                gte: new Date() // Only upcoming events
-              }
-            }
-          },
-          include: {
-            event: {
-              select: {
-                id: true,
-                name: true,
-                startTime: true
-              }
-            }
-          },
-          take: 5 // Limit to next 5 events
+        orderBy: [
+          { firstName: 'asc' },
+          { lastName: 'asc' }
+        ]
+      }),
+      
+      // Invitations query - get all at once
+      prisma.invitation.findMany({
+        where: {
+          churchId: session.user.churchId
         },
-        _count: {
-          select: {
-            eventAssignments: {
-              where: {
-                status: 'ACCEPTED'
-              }
-            }
-          }
+        select: {
+          email: true,
+          status: true
         }
-      },
-      orderBy: [
-        { firstName: 'asc' },
-        { lastName: 'asc' }
-      ]
-    })
-
-    // Get invitation status for each musician
-    const musicianEmails = musicians.map(m => m.email)
-    const invitations = await prisma.invitation.findMany({
-      where: {
-        email: { in: musicianEmails },
-        churchId: session.user.churchId
-      },
-      select: {
-        email: true,
-        status: true
-      }
-    })
+      })
+    ])
 
     // Format the response
     const formattedMusicians = musicians.map(musician => {
@@ -143,13 +127,7 @@ export async function GET(request: NextRequest) {
         createdAt: musician.createdAt.toISOString(), // Convert Date to ISO string
         instrument: 'Musician', // Placeholder - we can add proper instrument field later
         groups: musician.groupMemberships.map(gm => gm.group),
-        upcomingEvents: musician.eventAssignments.map(ea => ({
-          id: ea.event.id,
-          name: ea.event.name,
-          startTime: ea.event.startTime,
-          status: ea.status,
-          role: ea.roleName
-        })),
+        upcomingEvents: [], // Removed for performance - can be loaded separately if needed
         totalAcceptedAssignments: musician._count.eventAssignments
       }
     })

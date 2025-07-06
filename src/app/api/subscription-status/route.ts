@@ -8,14 +8,15 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-05-28.basil',
 })
 
-// Simple in-memory cache for subscription status
+// Enhanced caching - 15 minutes for subscription status
 const subscriptionCache = new Map<string, {
   data: any
   timestamp: number
+  promise?: Promise<any>
 }>()
 
-// Cache duration: 5 minutes
-const CACHE_DURATION = 5 * 60 * 1000
+// Cache duration: 15 minutes (subscription status changes infrequently)
+const CACHE_DURATION = 15 * 60 * 1000
 
 function getCachedSubscription(churchId: string) {
   const cached = subscriptionCache.get(churchId)
@@ -25,10 +26,16 @@ function getCachedSubscription(churchId: string) {
   return null
 }
 
-function setCachedSubscription(churchId: string, data: any) {
+function getCachedPromise(churchId: string) {
+  const cached = subscriptionCache.get(churchId)
+  return cached?.promise
+}
+
+function setCachedSubscription(churchId: string, data: any, promise?: Promise<any>) {
   subscriptionCache.set(churchId, {
     data,
-    timestamp: Date.now()
+    timestamp: Date.now(),
+    promise
   })
 }
 
@@ -40,117 +47,37 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get church data with subscription info (optimized query)
-    const church = await prisma.church.findFirst({
-      where: {
-        users: {
-          some: {
-            id: session.user.id
-          }
-        }
-      },
-      select: {
-        id: true,
-        name: true,
-        subscriptionStatus: true,
-        subscriptionEnds: true,
-        stripeCustomerId: true,
-        createdAt: true
-      }
-    })
-
-    if (!church) {
+    // Use churchId from session for faster lookup
+    const churchId = session.user.churchId
+    if (!churchId) {
       return NextResponse.json({ error: 'Church not found' }, { status: 404 })
     }
 
     // Check cache first
-    const cachedData = getCachedSubscription(church.id)
+    const cachedData = getCachedSubscription(churchId)
     if (cachedData) {
       return NextResponse.json(cachedData)
     }
 
-    let subscriptionData = {
-      status: church.subscriptionStatus,
-      isTrialActive: false,
-      trialDaysRemaining: 0,
-      trialEndsAt: null as string | null,
-      subscriptionEnds: church.subscriptionEnds?.toISOString() || null,
-      stripePlan: null as string | null,
-      stripeStatus: null as string | null
-    }
-
-    // Only call Stripe if church has a customer ID and no cached data
-    if (church.stripeCustomerId) {
+    // Check for in-flight request
+    const cachedPromise = getCachedPromise(churchId)
+    if (cachedPromise) {
       try {
-        const subscriptions = await stripe.subscriptions.list({
-          customer: church.stripeCustomerId,
-          status: 'all',
-          limit: 1
-        })
-
-        if (subscriptions.data.length > 0) {
-          const subscription = subscriptions.data[0]
-          
-          subscriptionData.stripeStatus = subscription.status
-          subscriptionData.stripePlan = subscription.items.data[0]?.price.id || null
-
-          // Check if it's a trial subscription
-          if (subscription.trial_end && subscription.status === 'trialing') {
-            const trialEndDate = new Date(subscription.trial_end * 1000)
-            const now = new Date()
-            const timeDiff = trialEndDate.getTime() - now.getTime()
-            const daysRemaining = Math.ceil(timeDiff / (1000 * 3600 * 24))
-
-            subscriptionData.isTrialActive = daysRemaining > 0
-            subscriptionData.trialDaysRemaining = Math.max(0, daysRemaining)
-            subscriptionData.trialEndsAt = trialEndDate.toISOString()
-            subscriptionData.status = 'trial'
-
-            // Update database if needed (but don't wait for it)
-            if (Math.abs(church.subscriptionEnds?.getTime() || 0 - trialEndDate.getTime()) > 60000) {
-              prisma.church.update({
-                where: { id: church.id },
-                data: {
-                  subscriptionEnds: trialEndDate,
-                  subscriptionStatus: 'trial'
-                }
-              }).catch(err => console.error('Failed to update church subscription:', err))
-            }
-          } else if (subscription.status === 'active') {
-            subscriptionData.status = 'active'
-            subscriptionData.isTrialActive = false
-            subscriptionData.trialDaysRemaining = 0
-          }
-        }
-      } catch (stripeError) {
-        console.error('Error fetching Stripe subscription:', stripeError)
-        // Fall back to database data if Stripe fails
+        const result = await cachedPromise
+        return NextResponse.json(result)
+      } catch (error) {
+        // If the cached promise failed, continue with new request
       }
     }
 
-    // If no Stripe data but subscription status is trial, calculate from database
-    if (subscriptionData.status === 'trial' && church.subscriptionEnds && !subscriptionData.isTrialActive) {
-      const now = new Date()
-      const timeDiff = church.subscriptionEnds.getTime() - now.getTime()
-      const daysRemaining = Math.ceil(timeDiff / (1000 * 3600 * 24))
+    // Create new request promise
+    const requestPromise = fetchSubscriptionData(churchId)
+    setCachedSubscription(churchId, null, requestPromise)
 
-      subscriptionData.isTrialActive = daysRemaining > 0
-      subscriptionData.trialDaysRemaining = Math.max(0, daysRemaining)
-      subscriptionData.trialEndsAt = church.subscriptionEnds.toISOString()
-    }
-
-    const responseData = {
-      church: {
-        id: church.id,
-        name: church.name
-      },
-      subscription: subscriptionData
-    }
-
-    // Cache the response
-    setCachedSubscription(church.id, responseData)
-
-    return NextResponse.json(responseData)
+    const result = await requestPromise
+    setCachedSubscription(churchId, result)
+    
+    return NextResponse.json(result)
 
   } catch (error) {
     console.error('Error fetching subscription status:', error)
@@ -158,5 +85,90 @@ export async function GET(request: NextRequest) {
       { error: 'Failed to fetch subscription status' },
       { status: 500 }
     )
+  }
+}
+
+async function fetchSubscriptionData(churchId: string) {
+  // Optimized church lookup - direct ID query
+  const church = await prisma.church.findUnique({
+    where: { id: churchId },
+    select: {
+      id: true,
+      name: true,
+      subscriptionStatus: true,
+      subscriptionEnds: true,
+      stripeCustomerId: true,
+      createdAt: true
+    }
+  })
+
+  if (!church) {
+    throw new Error('Church not found')
+  }
+
+  let subscriptionData = {
+    status: church.subscriptionStatus,
+    isTrialActive: false,
+    trialDaysRemaining: 0,
+    trialEndsAt: null as string | null,
+    subscriptionEnds: church.subscriptionEnds?.toISOString() || null,
+    stripePlan: null as string | null,
+    stripeStatus: null as string | null
+  }
+
+  // Only fetch Stripe data if customer ID exists (optimization)
+  if (church.stripeCustomerId) {
+    try {
+      const subscriptions = await stripe.subscriptions.list({
+        customer: church.stripeCustomerId,
+        status: 'all',
+        limit: 1
+      })
+
+      if (subscriptions.data.length > 0) {
+        const subscription = subscriptions.data[0]
+        
+        subscriptionData.stripeStatus = subscription.status
+        
+        if (subscription.trial_end) {
+          const trialEnd = new Date(subscription.trial_end * 1000)
+          const now = new Date()
+          const timeDiff = trialEnd.getTime() - now.getTime()
+          const daysRemaining = Math.ceil(timeDiff / (1000 * 3600 * 24))
+          
+          subscriptionData.isTrialActive = daysRemaining > 0
+          subscriptionData.trialDaysRemaining = Math.max(0, daysRemaining)
+          subscriptionData.trialEndsAt = trialEnd.toISOString()
+        }
+        
+        // Get plan information
+        if (subscription.items.data.length > 0) {
+          const item = subscription.items.data[0]
+          subscriptionData.stripePlan = item.price.id
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching Stripe subscription:', error)
+      // Continue with database data if Stripe fails
+    }
+  }
+
+  // If no Stripe data but subscription status is trial, calculate from database
+  if (subscriptionData.status === 'trial' && church.subscriptionEnds && !subscriptionData.isTrialActive) {
+    const now = new Date()
+    const timeDiff = church.subscriptionEnds.getTime() - now.getTime()
+    const daysRemaining = Math.ceil(timeDiff / (1000 * 3600 * 24))
+
+    subscriptionData.isTrialActive = daysRemaining > 0
+    subscriptionData.trialDaysRemaining = Math.max(0, daysRemaining)
+    subscriptionData.trialEndsAt = church.subscriptionEnds.toISOString()
+  }
+
+  return {
+    church: {
+      id: church.id,
+      name: church.name
+    },
+    subscription: subscriptionData
   }
 } 
