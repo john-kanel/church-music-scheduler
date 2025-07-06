@@ -77,6 +77,8 @@ export async function POST(request: NextRequest) {
       musicianNotifications,
       pastorEmailEnabled,
       pastorMonthlyReportDay,
+      pastorWeeklyReportEnabled,
+      pastorWeeklyReportDay,
       pastorDailyDigestEnabled,
       pastorDailyDigestTime
     } = body
@@ -88,6 +90,8 @@ export async function POST(request: NextRequest) {
         churchId: user.churchId,
         pastorEmailEnabled,
         pastorMonthlyReportDay,
+        pastorWeeklyReportEnabled,
+        pastorWeeklyReportDay,
         pastorDailyDigestEnabled,
         pastorDailyDigestTime,
         musicianNotifications: {
@@ -100,6 +104,8 @@ export async function POST(request: NextRequest) {
       update: {
         pastorEmailEnabled,
         pastorMonthlyReportDay,
+        pastorWeeklyReportEnabled,
+        pastorWeeklyReportDay,
         pastorDailyDigestEnabled,
         pastorDailyDigestTime,
         musicianNotifications: {
@@ -127,6 +133,7 @@ export async function POST(request: NextRequest) {
         metadata: {
           musicianNotificationsCount: musicianNotifications.length,
           pastorEmailEnabled,
+          pastorWeeklyReportEnabled,
           pastorDailyDigestEnabled
         }
       }

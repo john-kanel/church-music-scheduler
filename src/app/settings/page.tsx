@@ -56,6 +56,8 @@ export default function SettingsPage() {
     ],
     pastorEmailEnabled: true,
     pastorMonthlyReportDay: 27,
+    pastorWeeklyReportEnabled: false,
+    pastorWeeklyReportDay: 5, // Friday
     pastorDailyDigestEnabled: true,
     pastorDailyDigestTime: '08:00'
   })
@@ -857,6 +859,51 @@ export default function SettingsPage() {
                       </div>
                       <p className="text-xs text-gray-500">
                         Report will include all events for the following month as a PDF attachment.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Weekly Report Settings */}
+                  <div className="border border-gray-200 rounded-lg p-4">
+                    <h3 className="font-semibold text-gray-900 mb-3">Weekly Report</h3>
+                    <div className="space-y-4">
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={automationSettings.pastorWeeklyReportEnabled}
+                          onChange={(e) => handleAutomationChange('pastorWeeklyReportEnabled', e.target.checked)}
+                          disabled={!isEditing}
+                          className="mr-3"
+                        />
+                        <span className="text-sm font-medium text-gray-900">Send weekly event report</span>
+                      </label>
+
+                      <div className="flex items-center space-x-4">
+                        <span className="text-sm text-gray-600">Send on</span>
+                        <select
+                          value={automationSettings.pastorWeeklyReportDay}
+                          onChange={(e) => handleAutomationChange('pastorWeeklyReportDay', parseInt(e.target.value))}
+                          disabled={!isEditing || !automationSettings.pastorWeeklyReportEnabled}
+                          className="px-2 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-50"
+                        >
+                          <option value={0}>Sunday</option>
+                          <option value={1}>Monday</option>
+                          <option value={2}>Tuesday</option>
+                          <option value={3}>Wednesday</option>
+                          <option value={4}>Thursday</option>
+                          <option value={5}>Friday</option>
+                          <option value={6}>Saturday</option>
+                        </select>
+                        <span className="text-sm text-gray-600">of each week</span>
+                      </div>
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-3">
+                        <p className="text-xs text-amber-800">
+                          <strong>Note:</strong> If you select Friday or Saturday, the report will include events for the <em>following</em> week (Monday-Sunday). 
+                          If you select Sunday through Thursday, the report will include events for the <em>current</em> week (Sunday-Saturday).
+                        </p>
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        Report will include all scheduled events for the relevant week as a PDF attachment.
                       </p>
                     </div>
                   </div>
