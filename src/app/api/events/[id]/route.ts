@@ -209,7 +209,7 @@ export async function PUT(
       )
     }
 
-    // Combine date and time - construct in UTC to match database storage
+    // Combine date and time - treat input as local time (no Z suffix = local time)
     const startDateTime = new Date(`${startDate}T${startTime}:00`)
     
     let endDateTime = null
@@ -226,7 +226,8 @@ export async function PUT(
       originalDateTime: existingEvent.startTime.toISOString(),
       timesMatch: startDateTime.getTime() === existingEvent.startTime.getTime(),
       serverTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      constructedLocal: startDateTime.toString()
+      constructedLocal: startDateTime.toString(),
+      note: 'Input treated as local time, converted to UTC for storage'
     })
 
     // Use the provided eventTypeId if available, otherwise keep the existing one
