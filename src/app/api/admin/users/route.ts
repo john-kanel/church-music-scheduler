@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { PrismaClient } from '@prisma/client'
 
 export async function GET() {
   try {
@@ -27,7 +28,7 @@ export async function GET() {
     })
 
     // Format the response
-    const formattedUsers = users.map(user => ({
+    const formattedUsers = users.map((user: any) => ({
       id: user.id,
       email: user.email,
       firstName: user.firstName,
@@ -64,7 +65,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Delete user and all related data in a transaction
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: PrismaClient) => {
       // Delete related data first (foreign key constraints)
       await tx.eventAssignment.deleteMany({
         where: { userId }
