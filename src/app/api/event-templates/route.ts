@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
           data: hymns.map((hymn: any) => ({
             templateId: newTemplate.id,
             title: hymn.title,
-            composer: hymn.composer,
+            servicePartId: hymn.servicePartId === 'custom' || !hymn.servicePartId ? null : hymn.servicePartId,
             notes: hymn.notes
           }))
         })

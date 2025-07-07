@@ -95,7 +95,7 @@ export async function PUT(
           data: hymns.map((hymn: any) => ({
             templateId,
             title: hymn.title,
-            composer: hymn.composer,
+            servicePartId: hymn.servicePartId === 'custom' || !hymn.servicePartId ? null : hymn.servicePartId,
             notes: hymn.notes
           }))
         })
