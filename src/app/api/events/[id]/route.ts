@@ -209,25 +209,32 @@ export async function PUT(
       )
     }
 
-    // Combine date and time - treat input as local time (no Z suffix = local time)
-    const startDateTime = new Date(`${startDate}T${startTime}:00`)
+    // TIMEZONE FIX: User input times are in EST (UTC-5), convert to UTC for storage
+    const [year, month, day] = startDate.split('-').map(Number)
+    const [startHour, startMinute] = startTime.split(':').map(Number)
+    
+    // Create UTC date by adding 5 hours to EST time (EST is UTC-5)
+    const startDateTime = new Date(Date.UTC(year, month - 1, day, startHour + 5, startMinute, 0, 0))
     
     let endDateTime = null
     if (endTime) {
-      endDateTime = new Date(`${startDate}T${endTime}:00`)
+      const [endHour, endMinute] = endTime.split(':').map(Number)
+      endDateTime = new Date(Date.UTC(year, month - 1, day, endHour + 5, endMinute, 0, 0))
     }
 
     console.log('📅 Date/time construction:', {
       input: { startDate, startTime, endTime },
+      estConversion: { 
+        inputTime: `${startTime} EST`, 
+        utcTime: `${startHour + 5}:${startMinute.toString().padStart(2, '0')} UTC` 
+      },
       constructed: {
         startDateTime: startDateTime.toISOString(),
         endDateTime: endDateTime?.toISOString()
       },
       originalDateTime: existingEvent.startTime.toISOString(),
       timesMatch: startDateTime.getTime() === existingEvent.startTime.getTime(),
-      serverTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      constructedLocal: startDateTime.toString(),
-      note: 'Input treated as local time, converted to UTC for storage'
+      note: 'EST input converted to UTC (+5 hours)'
     })
 
     // Use the provided eventTypeId if available, otherwise keep the existing one
