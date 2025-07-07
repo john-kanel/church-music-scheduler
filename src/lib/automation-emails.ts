@@ -1,6 +1,7 @@
 import { resend, getLogoHTML } from './resend'
 import { getEmailLogoHtml } from '../components/emails/email-logo'
 import { prisma } from './db'
+import { generateMonthlyReportPDF, generateWeeklyReportPDF } from './pdf-generator'
 
 export async function sendMusicianEventNotification(
   email: string,
@@ -188,6 +189,57 @@ export async function sendPastorMonthlyReport(
   const monthName = month.toLocaleString('default', { month: 'long', year: 'numeric' })
   const subject = `Monthly Music Schedule Report - ${monthName}`
 
+  // Generate PDF attachment with all events and music
+  let pdfAttachment = null
+  let pdfError = false
+
+  try {
+    // Fetch detailed event data with hymns for each event
+    const eventsWithMusic = await Promise.all(events.map(async (event) => {
+      try {
+        // Fetch hymns for this event
+        const eventHymns = await prisma.eventHymn.findMany({
+          where: { eventId: event.id },
+          include: {
+            servicePart: true
+          },
+          orderBy: [
+            { servicePart: { order: 'asc' } },
+            { createdAt: 'asc' }
+          ]
+        })
+
+        return {
+          ...event,
+          hymns: eventHymns
+        }
+      } catch (error) {
+        console.error(`Error fetching hymns for event ${event.id}:`, error)
+        return {
+          ...event,
+          hymns: []
+        }
+      }
+    }))
+
+    const pdfBuffer = await generateMonthlyReportPDF(
+      churchName,
+      eventsWithMusic,
+      month,
+      true // Include music
+    )
+
+    const filename = `${churchName.replace(/[^a-zA-Z0-9]/g, '_')}_Monthly_Report_${month.getFullYear()}_${(month.getMonth() + 1).toString().padStart(2, '0')}.pdf`
+    
+    pdfAttachment = {
+      filename,
+      content: pdfBuffer
+    }
+  } catch (error) {
+    console.error('Error generating monthly report PDF:', error)
+    pdfError = true
+  }
+
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <!-- Logo Section -->
@@ -202,6 +254,20 @@ export async function sendPastorMonthlyReport(
       
       <p>Here is the music schedule for ${churchName} for <strong>${monthName}</strong>:</p>
       
+      ${pdfError ? `
+        <div style="background-color: #fef2f2; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ef4444;">
+          <p style="margin: 0; color: #dc2626; font-size: 14px;">
+            <strong>Note:</strong> PDF generation failed. Please see the schedule details below.
+          </p>
+        </div>
+      ` : `
+        <div style="background-color: #f0f9ff; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3b82f6;">
+          <p style="margin: 0; color: #1d4ed8; font-size: 14px;">
+            <strong>PDF Attached:</strong> A detailed PDF report with all events, assignments, and music is attached to this email.
+          </p>
+        </div>
+      `}
+      
       <div style="margin: 20px 0;">
         ${events.map(event => `
           <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #660033;">
@@ -209,8 +275,8 @@ export async function sendPastorMonthlyReport(
             <p style="margin: 5px 0;"><strong>Date:</strong> ${new Date(event.startTime).toLocaleDateString()}</p>
             <p style="margin: 5px 0;"><strong>Time:</strong> ${new Date(event.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
             <p style="margin: 5px 0;"><strong>Location:</strong> ${event.location}</p>
-            ${event.assignments.length > 0 ? `
-              <p style="margin: 5px 0;"><strong>Musicians:</strong> ${event.assignments.map((a: any) => `${a.user.firstName} ${a.user.lastName}`).join(', ')}</p>
+            ${event.assignments && event.assignments.length > 0 ? `
+              <p style="margin: 5px 0;"><strong>Musicians:</strong> ${event.assignments.filter((a: any) => a.user).map((a: any) => `${a.user.firstName} ${a.user.lastName}`).join(', ')}</p>
             ` : ''}
           </div>
         `).join('')}
@@ -228,12 +294,19 @@ export async function sendPastorMonthlyReport(
     </div>
   `
 
-  await resend.emails.send({
+  const emailData: any = {
     from: 'Church Music Scheduler <notifications@churchmusicscheduler.com>',
     to: email,
     subject,
     html: htmlContent
-  })
+  }
+
+  // Add PDF attachment if generated successfully
+  if (pdfAttachment && !pdfError) {
+    emailData.attachments = [pdfAttachment]
+  }
+
+  await resend.emails.send(emailData)
 }
 
 export async function sendPastorDailyDigest(
@@ -285,4 +358,137 @@ export async function sendPastorDailyDigest(
     subject,
     html: htmlContent
   })
+}
+
+export async function sendPastorWeeklyReport(
+  email: string,
+  firstName: string,
+  churchName: string,
+  events: any[],
+  weekStartDate: Date
+) {
+  const weekEndDate = new Date(weekStartDate)
+  weekEndDate.setDate(weekStartDate.getDate() + 6)
+  
+  const dateRange = `${weekStartDate.toLocaleDateString()} - ${weekEndDate.toLocaleDateString()}`
+  const subject = `Weekly Music Schedule Report - ${dateRange}`
+
+  // Generate PDF attachment with all events and music
+  let pdfAttachment = null
+  let pdfError = false
+
+  try {
+    // Fetch detailed event data with hymns for each event
+    const eventsWithMusic = await Promise.all(events.map(async (event) => {
+      try {
+        // Fetch hymns for this event
+        const eventHymns = await prisma.eventHymn.findMany({
+          where: { eventId: event.id },
+          include: {
+            servicePart: true
+          },
+          orderBy: [
+            { servicePart: { order: 'asc' } },
+            { createdAt: 'asc' }
+          ]
+        })
+
+        return {
+          ...event,
+          hymns: eventHymns
+        }
+      } catch (error) {
+        console.error(`Error fetching hymns for event ${event.id}:`, error)
+        return {
+          ...event,
+          hymns: []
+        }
+      }
+    }))
+
+    const pdfBuffer = await generateWeeklyReportPDF(
+      churchName,
+      eventsWithMusic,
+      weekStartDate,
+      true // Include music
+    )
+
+    const filename = `${churchName.replace(/[^a-zA-Z0-9]/g, '_')}_Weekly_Report_${weekStartDate.toISOString().split('T')[0]}.pdf`
+    
+    pdfAttachment = {
+      filename,
+      content: pdfBuffer
+    }
+  } catch (error) {
+    console.error('Error generating weekly report PDF:', error)
+    pdfError = true
+  }
+
+  const htmlContent = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <!-- Logo Section -->
+      <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; border-bottom: 3px solid #660033;">
+        ${getEmailLogoHtml()}
+        <h1 style="color: #333; margin: 0; font-size: 24px;">📅 Weekly Music Schedule Report</h1>
+      </div>
+      
+      <div style="background: white; padding: 30px 20px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
+      
+      <p>Dear ${firstName},</p>
+      
+      <p>Here is the music schedule for ${churchName} for the week of <strong>${dateRange}</strong>:</p>
+      
+      ${pdfError ? `
+        <div style="background-color: #fef2f2; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ef4444;">
+          <p style="margin: 0; color: #dc2626; font-size: 14px;">
+            <strong>Note:</strong> PDF generation failed. Please see the schedule details below.
+          </p>
+        </div>
+      ` : `
+        <div style="background-color: #f0f9ff; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3b82f6;">
+          <p style="margin: 0; color: #1d4ed8; font-size: 14px;">
+            <strong>PDF Attached:</strong> A detailed PDF report with all events, assignments, and music is attached to this email.
+          </p>
+        </div>
+      `}
+      
+      <div style="margin: 20px 0;">
+        ${events.map(event => `
+          <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #660033;">
+            <h4 style="margin: 0 0 10px 0; color: #1f2937;">${event.name}</h4>
+            <p style="margin: 5px 0;"><strong>Date:</strong> ${new Date(event.startTime).toLocaleDateString()}</p>
+            <p style="margin: 5px 0;"><strong>Time:</strong> ${new Date(event.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+            <p style="margin: 5px 0;"><strong>Location:</strong> ${event.location}</p>
+            ${event.assignments && event.assignments.length > 0 ? `
+              <p style="margin: 5px 0;"><strong>Musicians:</strong> ${event.assignments.filter((a: any) => a.user).map((a: any) => `${a.user.firstName} ${a.user.lastName}`).join(', ')}</p>
+            ` : ''}
+          </div>
+        `).join('')}
+      </div>
+      
+      <p style="margin-top: 30px;">
+        <strong>Summary:</strong> ${events.length} event${events.length !== 1 ? 's' : ''} scheduled for this week
+      </p>
+      
+      <p style="color: #6b7280; font-size: 14px;">
+        This report is automatically generated on your selected day of the week. 
+        If you have any questions about the music schedule, please contact your music director.
+      </p>
+      </div>
+    </div>
+  `
+
+  const emailData: any = {
+    from: 'Church Music Scheduler <notifications@churchmusicscheduler.com>',
+    to: email,
+    subject,
+    html: htmlContent
+  }
+
+  // Add PDF attachment if generated successfully
+  if (pdfAttachment && !pdfError) {
+    emailData.attachments = [pdfAttachment]
+  }
+
+  await resend.emails.send(emailData)
 } 

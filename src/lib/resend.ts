@@ -612,23 +612,12 @@ export async function sendReferralPromotionEmail(
               <h3 style="margin: 0 0 15px 0; color: #15803d; font-size: 18px;">🤝 Perfect for sharing with:</h3>
               <ul style="color: #166534; margin: 0; padding-left: 20px; line-height: 1.8;">
                 <li><strong>Pastor friends</strong> at neighboring churches</li>
-                <li><strong>Music directors</strong> in your denomination</li>
+                <li><strong>Music directors</strong> in your city</li>
                 <li><strong>Worship leaders</strong> from conferences and events</li>
-                <li><strong>Church staff</strong> who struggle with music coordination</li>
                 <li><strong>Anyone</strong> who could benefit from better music ministry organization</li>
               </ul>
             </div>
-            
-            <!-- Referral Link Section -->
-            <div style="margin: 30px 0; padding: 20px; background: #FDF2F8; border-radius: 8px; border-left: 4px solid #660033;">
-              <h3 style="margin: 0 0 15px 0; color: #660033; font-size: 18px;">🔗 Your Personal Referral Link</h3>
-              <div style="background: white; padding: 15px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #e5e7eb;">
-                <p style="margin: 0; color: #6b7280; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Share this link:</p>
-                <p style="margin: 5px 0 0 0; color: #374151; font-family: monospace; font-size: 14px; word-break: break-all; background: #f9fafb; padding: 8px; border-radius: 4px;">
-                  ${referralUrl}
-                </p>
-              </div>
-            </div>
+
             
             <div style="text-align: center; margin: 30px 0;">
               <a href="${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/rewards" 
@@ -641,7 +630,7 @@ export async function sendReferralPromotionEmail(
             <div style="margin: 30px 0; padding: 20px; background: #f8f9fa; border-radius: 8px;">
               <h3 style="margin: 0 0 15px 0; color: #333;">How it works:</h3>
               <ol style="color: #666; margin: 0; padding-left: 20px; line-height: 1.8;">
-                <li>Share your referral link or code with other churches</li>
+                <li>Share your referral code with other churches</li>
                 <li>They sign up using your code and complete their trial</li>
                 <li>When they become a paying customer, you get 1 month free!</li>
                 <li>Your next billing is automatically reduced</li>
@@ -685,16 +674,12 @@ Your referral code: ${referralCode}
 
 PERFECT FOR SHARING WITH:
 • Pastor friends at neighboring churches
-• Music directors in your denomination
+• Music directors in your city
 • Worship leaders from conferences and events
-• Church staff who struggle with music coordination
 • Anyone who could benefit from better music ministry organization
 
-YOUR PERSONAL REFERRAL LINK:
-${referralUrl}
-
 HOW IT WORKS:
-1. Share your referral link or code with other churches
+1. Share your referral code with other churches
 2. They sign up using your code and complete their trial
 3. When they become a paying customer, you get 1 month free!
 4. Your next billing is automatically reduced

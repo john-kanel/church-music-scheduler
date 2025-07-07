@@ -172,8 +172,8 @@ export async function POST(request: NextRequest) {
 
     // Create parish and user in a transaction
     const result = await prisma.$transaction(async (tx) => {
-      // Generate unique referral code for new church
-      const newReferralCode = await generateReferralCode()
+              // Generate unique referral code for new church
+        const newReferralCode = await generateReferralCode(churchName)
       
       // Create the church first
       const church = await tx.church.create({

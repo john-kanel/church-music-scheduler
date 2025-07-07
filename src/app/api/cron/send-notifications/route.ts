@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { sendMusicianEventNotification, sendPastorMonthlyReport, sendPastorDailyDigest } from '@/lib/automation-emails'
+import { sendMusicianEventNotification, sendPastorMonthlyReport, sendPastorDailyDigest, sendPastorWeeklyReport } from '@/lib/automation-emails'
 
 export async function POST(request: NextRequest) {
   try {
@@ -74,6 +74,16 @@ export async function POST(request: NextRequest) {
           currentHour === 8
         ) {
           await sendPastorMonthlyReports(church)
+          notificationsSent++
+        }
+
+        // Send pastor weekly reports (on the specified day at 8 AM)
+        if (
+          church.automationSettings.pastorWeeklyReportEnabled &&
+          now.getDay() === church.automationSettings.pastorWeeklyReportDay &&
+          currentHour === 8
+        ) {
+          await sendPastorWeeklyReports(church)
           notificationsSent++
         }
 
@@ -267,6 +277,109 @@ async function sendPastorMonthlyReports(church: any) {
     }
   } catch (error) {
     console.error('Error sending pastor monthly reports:', error)
+  }
+}
+
+async function sendPastorWeeklyReports(church: any) {
+  try {
+    // Get pastor users for this church
+    const pastors = await prisma.user.findMany({
+      where: {
+        churchId: church.id,
+        role: { in: ['PASTOR', 'ASSOCIATE_PASTOR'] },
+        isVerified: true
+      },
+      include: {
+        pastorSettings: true
+      }
+    })
+
+    if (pastors.length === 0) return
+
+    // Determine the correct week based on the logic:
+    // Sunday = current week (Sunday-Saturday)
+    // Monday-Saturday = next week (Monday-Sunday)
+    const now = new Date()
+    const currentDay = now.getDay()
+    const selectedDay = church.automationSettings.pastorWeeklyReportDay
+
+    let weekStartDate: Date
+    
+    if (selectedDay === 0) {
+      // Sunday - show current week (Sunday-Saturday)
+      weekStartDate = new Date(now)
+      weekStartDate.setDate(now.getDate() - currentDay)
+    } else {
+      // Monday-Saturday - show next week (Monday-Sunday)
+      const daysUntilMonday = (8 - currentDay) % 7
+      weekStartDate = new Date(now)
+      weekStartDate.setDate(now.getDate() + daysUntilMonday)
+    }
+
+    const weekEndDate = new Date(weekStartDate)
+    weekEndDate.setDate(weekStartDate.getDate() + 6)
+
+    // Get events for the determined week
+    const events = await prisma.event.findMany({
+      where: {
+        churchId: church.id,
+        startTime: {
+          gte: weekStartDate,
+          lte: weekEndDate
+        }
+      },
+      include: {
+        assignments: {
+          include: {
+            user: {
+              select: {
+                firstName: true,
+                lastName: true
+              }
+            }
+          }
+        },
+        eventType: true
+      },
+      orderBy: {
+        startTime: 'asc'
+      }
+    })
+
+    // Send report to each pastor
+    for (const pastor of pastors) {
+      if (pastor.pastorSettings?.monthlyReportEnabled !== false) {
+        try {
+          await sendPastorWeeklyReport(
+            pastor.email,
+            pastor.firstName,
+            church.name,
+            events,
+            weekStartDate
+          )
+
+          // Log the notification
+          await prisma.notificationLog.create({
+            data: {
+              type: 'PASTOR_WEEKLY_REPORT',
+              churchId: church.id,
+              recipientEmail: pastor.email,
+              recipientName: `${pastor.firstName} ${pastor.lastName}`,
+              subject: `Weekly Music Schedule Report - ${weekStartDate.toLocaleDateString()} - ${weekEndDate.toLocaleDateString()}`,
+              metadata: {
+                eventsCount: events.length,
+                weekStartDate: weekStartDate.toISOString(),
+                weekEndDate: weekEndDate.toISOString()
+              }
+            }
+          })
+        } catch (error) {
+          console.error(`Error sending weekly report to ${pastor.email}:`, error)
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error sending pastor weekly reports:', error)
   }
 }
 

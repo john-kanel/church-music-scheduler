@@ -207,7 +207,7 @@ export async function POST() {
       referrerChurchName: 'St. Mary\'s Catholic Church',
       referredPersonName: 'Father Michael',
       referredChurchName: 'Holy Trinity Parish',
-      monthlyReward: 29.99,
+              monthlyReward: 35,
       totalRewardsEarned: 3,
       totalMoneySaved: 89.97
     }))

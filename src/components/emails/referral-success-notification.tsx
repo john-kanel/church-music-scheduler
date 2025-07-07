@@ -1,4 +1,5 @@
 import React from 'react'
+import { getEmailLogoHtml } from './email-logo'
 
 interface ReferralSuccessNotificationProps {
   referrerName: string
@@ -34,22 +35,10 @@ export function ReferralSuccessNotification({
         borderRadius: '8px 8px 0 0', 
         borderBottom: '3px solid #10B981' 
       }}>
-        <div style={{
-          height: '80px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginBottom: '20px'
-        }}>
-          <img 
-            src={`${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/big-logo-maroon.png`}
-            alt="Church Music Scheduler" 
-            style={{ height: '60px', width: 'auto' }} 
-          />
-        </div>
+        <div dangerouslySetInnerHTML={{ __html: getEmailLogoHtml() }} />
         <h1 style={{ 
           color: '#333', 
-          margin: '0', 
+          margin: '20px 0 0 0', 
           fontSize: '28px',
           fontWeight: 'bold'
         }}>
