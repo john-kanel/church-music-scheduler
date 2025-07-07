@@ -467,7 +467,11 @@ export async function DELETE(
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
-    // Verify event belongs to church
+    // Get deletion type from query parameters
+    const { searchParams } = new URL(request.url)
+    const deletionType = searchParams.get('type') || 'single' // 'single', 'all', 'future'
+
+    // Verify event belongs to church and get recurring information
     const existingEvent = await prisma.event.findFirst({
       where: {
         id: params.id,
@@ -479,13 +483,81 @@ export async function DELETE(
       return NextResponse.json({ error: 'Event not found' }, { status: 404 })
     }
 
-    // Delete event (cascade will handle assignments and files)
-    await prisma.event.delete({
-      where: { id: params.id }
+    // Handle different deletion types
+    await prisma.$transaction(async (tx) => {
+      switch (deletionType) {
+        case 'single':
+          // Delete only this event
+          await tx.event.delete({
+            where: { id: params.id }
+          })
+          break
+
+        case 'all':
+          // Delete all events in the recurring series
+          if (existingEvent.parentEventId) {
+            // This is a child event, delete parent and all children
+            await tx.event.deleteMany({
+              where: {
+                OR: [
+                  { id: existingEvent.parentEventId },
+                  { parentEventId: existingEvent.parentEventId }
+                ]
+              }
+            })
+          } else {
+            // This is the parent event, delete it and all children
+            await tx.event.deleteMany({
+              where: {
+                OR: [
+                  { id: params.id },
+                  { parentEventId: params.id }
+                ]
+              }
+            })
+          }
+          break
+
+        case 'future':
+          // Delete this event and all future events in the series
+          if (existingEvent.parentEventId) {
+            // This is a child event, delete this and all future events
+            await tx.event.deleteMany({
+              where: {
+                OR: [
+                  { id: params.id },
+                  {
+                    parentEventId: existingEvent.parentEventId,
+                    startTime: { gte: existingEvent.startTime }
+                  }
+                ]
+              }
+            })
+          } else {
+            // This is the parent event, delete it and all children
+            await tx.event.deleteMany({
+              where: {
+                OR: [
+                  { id: params.id },
+                  { parentEventId: params.id }
+                ]
+              }
+            })
+          }
+          break
+
+        default:
+          throw new Error('Invalid deletion type')
+      }
     })
 
+    const deletionMessage = 
+      deletionType === 'single' ? 'Event deleted successfully' :
+      deletionType === 'all' ? 'All recurring events deleted successfully' :
+      'Future recurring events deleted successfully'
+
     return NextResponse.json({ 
-      message: 'Event deleted successfully' 
+      message: deletionMessage 
     })
 
   } catch (error) {

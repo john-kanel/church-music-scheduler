@@ -32,6 +32,7 @@ interface CalendarEvent {
     color: string
   }
   templateId?: string
+  parentEventId?: string
   status?: 'confirmed' | 'tentative' | 'cancelled' | 'pending' | 'error'
   isRecurring?: boolean
   recurrencePattern?: string
@@ -194,6 +195,7 @@ export function EventDetailsModal({
   const [loadingGroups, setLoadingGroups] = useState(false)
   const [selectedGroups, setSelectedGroups] = useState<string[]>([])
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showRecurringDeleteModal, setShowRecurringDeleteModal] = useState(false)
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [showMessageModal, setShowMessageModal] = useState(false)
   const [openDropdowns, setOpenDropdowns] = useState<{ [key: string]: boolean }>({})
@@ -447,6 +449,19 @@ export function EventDetailsModal({
     setSelectedGroups([]) // Clear selected groups when cancelling
   }
 
+  // Close all modals when the main modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setShowDeleteConfirm(false)
+      setShowRecurringDeleteModal(false)
+      setShowInviteModal(false)
+      setShowMessageModal(false)
+      setShowAddRole(false)
+      setShowColorPicker(false)
+      setShowPdfProcessor(false)
+    }
+  }, [isOpen])
+
   const handleSave = async () => {
     if (!currentEvent) return
     
@@ -614,14 +629,32 @@ export function EventDetailsModal({
     }
   }
 
-  const handleDelete = async () => {
+  // Helper function to check if event is part of a recurring series
+  const isRecurringEvent = () => {
+    if (!currentEvent) return false
+    // Event is recurring if it has isRecurring=true (parent) or has a parentEventId (child)
+    return currentEvent.isRecurring || !!currentEvent.parentEventId
+  }
+
+  // Handle delete button click - show appropriate modal
+  const handleDeleteClick = () => {
+    if (isRecurringEvent()) {
+      setShowRecurringDeleteModal(true)
+    } else {
+      setShowDeleteConfirm(true)
+    }
+  }
+
+  // Handle single event deletion
+  const handleDelete = async (deletionType: 'single' | 'all' | 'future' = 'single') => {
     if (!currentEvent) return
     
     setLoading(true)
     setError('')
 
     try {
-      const response = await fetch(`/api/events/${currentEvent.id}`, {
+      const url = `/api/events/${currentEvent.id}?type=${deletionType}`
+      const response = await fetch(url, {
         method: 'DELETE'
       })
 
@@ -630,8 +663,15 @@ export function EventDetailsModal({
         throw new Error(errorData.error || 'Failed to delete event')
       }
 
-      showToast('success', 'Event deleted successfully!')
+      const result = await response.json()
+      showToast('success', result.message || 'Event deleted successfully!')
+      
+      // Close modals
+      setShowDeleteConfirm(false)
+      setShowRecurringDeleteModal(false)
+      
       onEventDeleted?.()
+      onClose()
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete event'
       setError(errorMessage)
@@ -1208,7 +1248,7 @@ export function EventDetailsModal({
                   <Edit className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={() => setShowDeleteConfirm(true)}
+                  onClick={handleDeleteClick}
                   className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                   title="Delete event"
                 >
@@ -2186,13 +2226,81 @@ export function EventDetailsModal({
                   Cancel
                 </button>
                 <button
-                  onClick={handleDelete}
+                  onClick={() => handleDelete('single')}
                   disabled={loading}
                   className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
                 >
                   {loading ? 'Deleting...' : 'Delete'}
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Recurring Event Delete Modal */}
+        {showRecurringDeleteModal && (
+          <div className="absolute inset-0 bg-gray-500 bg-opacity-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg p-6 max-w-lg w-full">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Delete Recurring Event</h3>
+              <p className="text-sm text-gray-600 mb-6">
+                This event is part of a recurring series. What would you like to delete?
+              </p>
+              
+              <div className="space-y-3 mb-6">
+                <button
+                  onClick={() => handleDelete('single')}
+                  disabled={loading}
+                  className="w-full p-4 text-left border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <div className="font-medium text-gray-900">Just this event</div>
+                  <div className="text-sm text-gray-500 mt-1">
+                    Delete only this occurrence, keeping all other events in the series
+                  </div>
+                </button>
+
+                {currentEvent?.isRecurring && (
+                  <button
+                    onClick={() => handleDelete('all')}
+                    disabled={loading}
+                    className="w-full p-4 text-left border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <div className="font-medium text-gray-900">All events in series</div>
+                    <div className="text-sm text-gray-500 mt-1">
+                      Delete this event and all future recurring events
+                    </div>
+                  </button>
+                )}
+
+                {currentEvent?.parentEventId && (
+                  <button
+                    onClick={() => handleDelete('future')}
+                    disabled={loading}
+                    className="w-full p-4 text-left border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <div className="font-medium text-gray-900">This and future events</div>
+                    <div className="text-sm text-gray-500 mt-1">
+                      Delete this event and all future events in the series
+                    </div>
+                  </button>
+                )}
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowRecurringDeleteModal(false)}
+                  disabled={loading}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+              </div>
+
+              {loading && (
+                <div className="flex items-center justify-center mt-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                  <span className="ml-2 text-sm text-gray-600">Deleting...</span>
+                </div>
+              )}
             </div>
           </div>
         )}
