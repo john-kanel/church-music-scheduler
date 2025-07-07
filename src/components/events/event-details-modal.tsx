@@ -253,7 +253,7 @@ export function EventDetailsModal({
       const startDate = new Date(currentEvent.startTime)
       const endDate = currentEvent.endTime ? new Date(currentEvent.endTime) : null
       
-      setEditData({
+      const newEditData = {
         name: currentEvent.name,
         description: currentEvent.description || '',
         location: currentEvent.location || '',
@@ -268,7 +268,18 @@ export function EventDetailsModal({
         recurrencePattern: currentEvent.recurrencePattern || '',
         recurrenceEnd: '', // Note: recurrenceEnd is not stored in event yet, but ready for future enhancement
         eventTypeColor: currentEvent.eventType?.color || '#3B82F6'
+      }
+      
+      console.log('📝 Setting edit data for editing mode:', {
+        currentEventName: currentEvent.name,
+        currentEventLocation: currentEvent.location,
+        newEditDataName: newEditData.name,
+        newEditDataLocation: newEditData.location,
+        startDate: newEditData.startDate,
+        startTime: newEditData.startTime
       })
+      
+      setEditData(newEditData)
     }
   }, [currentEvent, isEditing])
 
@@ -440,6 +451,27 @@ export function EventDetailsModal({
   const handleSave = async () => {
     if (!currentEvent) return
     
+    console.log('💾 Starting save operation:', {
+      currentEventData: {
+        name: currentEvent.name,
+        location: currentEvent.location,
+        startTime: currentEvent.startTime
+      },
+      editDataValues: {
+        name: editData.name,
+        location: editData.location,
+        startDate: editData.startDate,
+        startTime: editData.startTime,
+        endTime: editData.endTime,
+        description: editData.description
+      },
+      dataChanged: {
+        nameChanged: editData.name !== currentEvent.name,
+        locationChanged: editData.location !== currentEvent.location,
+        descriptionChanged: editData.description !== (currentEvent.description || '')
+      }
+    })
+    
     // Additional validation for recurring events
     if (editData.isRecurring && !editData.recurrencePattern) {
       setError('Please select a recurrence pattern for recurring events.')
@@ -499,7 +531,15 @@ export function EventDetailsModal({
       console.log('📤 Sending event update request:', {
         eventId: currentEvent.id,
         requestData,
-        url: `/api/events/${currentEvent.id}`
+        url: `/api/events/${currentEvent.id}`,
+        editDataDetails: {
+          name: editData.name,
+          location: editData.location,
+          startDate: editData.startDate,
+          startTime: editData.startTime,
+          endTime: editData.endTime,
+          description: editData.description
+        }
       })
 
       const response = await fetch(`/api/events/${currentEvent.id}`, {
@@ -1125,7 +1165,10 @@ export function EventDetailsModal({
                   <input
                     type="text"
                     value={editData.name}
-                    onChange={(e) => setEditData(prev => ({ ...prev, name: e.target.value }))}
+                    onChange={(e) => {
+                      console.log('📝 Name field changed:', e.target.value)
+                      setEditData(prev => ({ ...prev, name: e.target.value }))
+                    }}
                     className="text-xl font-bold bg-transparent border-b border-gray-300 focus:border-blue-500 focus:outline-none"
                   />
                 ) : (
@@ -1279,7 +1322,10 @@ export function EventDetailsModal({
                 <input
                   type="text"
                   value={editData.location}
-                  onChange={(e) => setEditData(prev => ({ ...prev, location: e.target.value }))}
+                  onChange={(e) => {
+                    console.log('📍 Location field changed:', e.target.value)
+                    setEditData(prev => ({ ...prev, location: e.target.value }))
+                  }}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Event location..."
                 />
