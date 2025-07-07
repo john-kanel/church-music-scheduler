@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { PrismaClient } from '@prisma/client'
 
 export async function GET() {
   try {
@@ -36,7 +37,7 @@ export async function GET() {
     })
 
     // Format the response to include computed fields
-    const formattedChurches = churches.map(church => ({
+    const formattedChurches = churches.map((church: any) => ({
       id: church.id,
       name: church.name,
       email: church.email,
@@ -95,7 +96,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Delete church and all related data in a transaction
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: PrismaClient) => {
       // Delete all event assignments for events belonging to this church
       await tx.eventAssignment.deleteMany({
         where: {
