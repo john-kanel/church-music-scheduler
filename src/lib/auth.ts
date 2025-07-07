@@ -1,8 +1,9 @@
+import { PrismaAdapter } from '@auth/prisma-adapter'
 import { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
+import { UserRole } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import { prisma } from './db'
-import { UserRole } from '@/generated/prisma'
 
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET || 'your-secret-key-change-this-in-production',

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { PrismaClient } from '@prisma/client'
+import { Prisma } from '@prisma/client'
 
 // Helper function to generate recurring events
 function generateRecurringEvents(
@@ -251,7 +251,7 @@ export async function PUT(
       finalEventTypeId 
     })
     
-    const result = await prisma.$transaction(async (tx: PrismaClient) => {
+    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       console.log('📝 Updating event in database...')
       
       // Update the event
@@ -485,7 +485,7 @@ export async function DELETE(
     }
 
     // Handle different deletion types
-    await prisma.$transaction(async (tx: PrismaClient) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       switch (deletionType) {
         case 'single':
           // Delete only this event

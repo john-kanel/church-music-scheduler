@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { PrismaClient } from '@prisma/client'
+import { Prisma } from '@prisma/client'
 
 // Force rebuild - TypeScript fixes applied
 export async function GET() {
@@ -97,7 +97,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Delete church and all related data in a transaction
-    await prisma.$transaction(async (tx: PrismaClient) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Delete all event assignments for events belonging to this church
       await tx.eventAssignment.deleteMany({
         where: {

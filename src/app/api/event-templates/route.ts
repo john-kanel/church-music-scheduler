@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { PrismaClient } from '@prisma/client'
+import { Prisma } from '@prisma/client'
 
 // GET /api/event-templates - List templates for the church
 export async function GET(request: NextRequest) {
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create template in transaction
-    const template = await prisma.$transaction(async (tx: PrismaClient) => {
+    const template = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Create the template
       const newTemplate = await tx.eventTemplate.create({
         data: {

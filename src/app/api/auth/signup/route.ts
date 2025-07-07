@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcrypt'
 import { prisma } from '@/lib/db'
-import { UserRole } from '@/generated/prisma'
+import { Prisma } from '@prisma/client'
 import { generateReferralCode, isValidReferralCode } from '@/lib/utils'
-import { PrismaClient } from '@prisma/client'
 
 export async function POST(request: NextRequest) {
   try {
@@ -69,7 +68,7 @@ export async function POST(request: NextRequest) {
           lastName: lastName.trim(),
           email: email.toLowerCase().trim(),
           password: hashedPassword,
-          role: transfer.inviteeRole as UserRole,
+          role: transfer.inviteeRole,
           churchId: transfer.churchId,
         },
         select: {
@@ -172,7 +171,7 @@ export async function POST(request: NextRequest) {
     const userLastName = nameParts.slice(1).join(' ') || ''
 
     // Create parish and user in a transaction
-    const result = await prisma.$transaction(async (tx: PrismaClient) => {
+    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
               // Generate unique referral code for new church
         const newReferralCode = await generateReferralCode(churchName)
       
@@ -195,7 +194,7 @@ export async function POST(request: NextRequest) {
           lastName: userLastName,
           email: email.toLowerCase().trim(),
           password: hashedPassword,
-          role: role as UserRole,
+          role: role || 'DIRECTOR',
           churchId: church.id,
         },
         select: {

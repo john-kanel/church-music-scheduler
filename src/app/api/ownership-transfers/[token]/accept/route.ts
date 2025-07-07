@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/db'
+import { Prisma } from '@prisma/client'
 import { Resend } from 'resend'
 
-const prisma = new PrismaClient()
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 export async function POST(
@@ -60,7 +60,7 @@ export async function POST(
     }
 
     // Start transaction to handle the ownership transfer
-    await prisma.$transaction(async (tx: PrismaClient) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Update the user's church and role
       await tx.user.update({
         where: { id: user.id },

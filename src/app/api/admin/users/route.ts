@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { PrismaClient } from '@prisma/client'
+import { Prisma } from '@prisma/client'
 
 export async function GET() {
   try {
@@ -65,7 +65,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Delete user and all related data in a transaction
-    await prisma.$transaction(async (tx: PrismaClient) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Delete related data first (foreign key constraints)
       await tx.eventAssignment.deleteMany({
         where: { userId }

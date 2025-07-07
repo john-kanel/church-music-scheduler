@@ -7,7 +7,7 @@ import { Resend } from 'resend'
 import { ReferralSuccessNotification } from '@/components/emails/referral-success-notification'
 import { render } from '@react-email/render'
 import { sendPaymentConfirmationEmail, sendReferralPromotionEmail } from '@/lib/resend'
-import { PrismaClient } from '@prisma/client'
+import { Prisma } from '@prisma/client'
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -213,7 +213,7 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
         )
         
         // Mark payment email as sent and schedule referral email for 24 hours later
-        await prisma.$transaction(async (tx: PrismaClient) => {
+        await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
           await tx.church.update({
             where: { id: church.id },
             data: { paymentEmailSentAt: new Date() }
@@ -271,7 +271,7 @@ async function processReferralRewards(churchId: string, invoice: Stripe.Invoice)
     console.log(`Processing ${pendingReferrals.length} referral rewards for church ${churchId}`)
 
     for (const referral of pendingReferrals) {
-      await prisma.$transaction(async (tx: PrismaClient) => {
+      await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
         // Mark referral as completed
         await tx.referral.update({
           where: { id: referral.id },

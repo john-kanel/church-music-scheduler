@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { PrismaClient } from '@prisma/client'
+import { Prisma } from '@prisma/client'
 
 // PUT /api/event-templates/[templateId] - Update a template
 export async function PUT(
@@ -55,7 +55,7 @@ export async function PUT(
     }
 
     // Update template in transaction
-    const template = await prisma.$transaction(async (tx: PrismaClient) => {
+    const template = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Update the template
       const updatedTemplate = await tx.eventTemplate.update({
         where: { id: templateId },

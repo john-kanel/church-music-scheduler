@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { logActivity } from '@/lib/activity'
 import { checkSubscriptionStatus, createSubscriptionErrorResponse } from '@/lib/subscription-check'
-import { PrismaClient } from '@prisma/client'
+import { Prisma } from '@prisma/client'
 
 // Helper function to generate recurring events
 function generateRecurringEvents(
@@ -316,7 +316,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create event in transaction with assignments
-    const result = await prisma.$transaction(async (tx: PrismaClient) => {
+    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Create the event
       const event = await tx.event.create({
         data: {
