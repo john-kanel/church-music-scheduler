@@ -52,6 +52,7 @@ interface CalendarEvent {
     }
   }[]
   musicFiles?: any[]
+  recurrenceEnd?: string
 }
 
 interface Musician {
@@ -260,28 +261,26 @@ export function EventDetailsModal({
         startDate: startDate.toISOString().split('T')[0],
         startTime: startDate.toTimeString().slice(0, 5),
         endTime: endDate ? endDate.toTimeString().slice(0, 5) : '',
-        status: (currentEvent.status && ['confirmed', 'tentative', 'cancelled', 'pending', 'error'].includes(currentEvent.status)) 
-          ? currentEvent.status as 'confirmed' | 'tentative' | 'cancelled' | 'pending' | 'error'
-          : 'confirmed',
+        status: (currentEvent.status && ['confirmed', 'tentative', 'cancelled', 'pending', 'error'].includes(currentEvent.status)) ? currentEvent.status : 'confirmed',
         signupType: 'open' as 'open' | 'assigned', // Default to open for existing events
+        eventTypeId: currentEvent.eventType?.id || '',
+        eventTypeName: currentEvent.eventType?.name || '',
+        eventTypeColor: currentEvent.eventType?.color || '#6B7280',
         isRecurring: currentEvent.isRecurring || false,
         recurrencePattern: currentEvent.recurrencePattern || '',
-        recurrenceEnd: '', // Note: recurrenceEnd is not stored in event yet, but ready for future enhancement
-        eventTypeColor: currentEvent.eventType?.color || '#3B82F6'
+        recurrenceEnd: currentEvent.recurrenceEnd ? new Date(currentEvent.recurrenceEnd).toISOString().split('T')[0] : '',
+        isPastEvent: new Date(currentEvent.startTime) < new Date()
       }
       
-      console.log('📝 Setting edit data for editing mode:', {
-        currentEventName: currentEvent.name,
-        currentEventLocation: currentEvent.location,
-        newEditDataName: newEditData.name,
-        newEditDataLocation: newEditData.location,
-        startDate: newEditData.startDate,
-        startTime: newEditData.startTime
-      })
-      
+      console.log('🔧 Initializing editData:', newEditData)
       setEditData(newEditData)
     }
   }, [currentEvent, isEditing])
+
+  // Debug: Log whenever editData changes
+  useEffect(() => {
+    console.log('📊 editData state updated:', editData)
+  }, [editData])
 
   // Check if user is director
   const isDirector = session?.user?.role === 'DIRECTOR' || session?.user?.role === 'PASTOR'
@@ -530,7 +529,16 @@ export function EventDetailsModal({
 
       console.log('📤 Sending event update request:', {
         eventId: currentEvent.id,
-        requestData,
+        requestData: {
+          name: requestData.name,
+          location: requestData.location,
+          startDate: editData.startDate,
+          startTime: editData.startTime,
+          endTime: editData.endTime,
+          description: requestData.description,
+          eventTypeId: requestData.eventTypeId,
+          isRecurring: requestData.isRecurring
+        },
         url: `/api/events/${currentEvent.id}`,
         editDataDetails: {
           name: editData.name,
@@ -1344,10 +1352,13 @@ export function EventDetailsModal({
             {isEditing ? (
               <textarea
                 value={editData.description}
-                onChange={(e) => setEditData(prev => ({ ...prev, description: e.target.value }))}
+                onChange={(e) => {
+                  console.log('📝 Description field changed:', e.target.value)
+                  setEditData(prev => ({ ...prev, description: e.target.value }))
+                }}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                rows={3}
                 placeholder="Event description..."
+                rows={3}
               />
             ) : (
               <p className="text-gray-700">{currentEvent.description || 'No description provided'}</p>
