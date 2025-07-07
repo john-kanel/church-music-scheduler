@@ -103,7 +103,11 @@ export function CreateTemplateModal({
 
   // Reset or set template data when modal opens/closes or editing changes
   useEffect(() => {
+    console.log('🔧 Template Modal: editingTemplate changed:', editingTemplate)
+    console.log('🔧 Template Modal: isOpen:', isOpen)
+    
     if (editingTemplate) {
+      console.log('✅ Loading existing template data:', editingTemplate)
       setTemplateData({
         ...editingTemplate,
         roles: editingTemplate.roles?.length > 0 ? editingTemplate.roles : [
@@ -113,6 +117,7 @@ export function CreateTemplateModal({
         hymns: editingTemplate.hymns || []
       })
     } else {
+      console.log('🆕 Creating new template - resetting data')
       setTemplateData({
         name: '',
         description: '',
@@ -143,7 +148,12 @@ export function CreateTemplateModal({
   }
 
   const handleInputChange = (field: keyof EventTemplate, value: any) => {
-    setTemplateData(prev => ({ ...prev, [field]: value }))
+    console.log('📝 Template Modal: Updating field:', field, 'value:', value)
+    setTemplateData(prev => {
+      const newData = { ...prev, [field]: value }
+      console.log('📝 Template Modal: New templateData:', newData)
+      return newData
+    })
   }
 
   const addRole = () => {
@@ -207,9 +217,9 @@ export function CreateTemplateModal({
   }
 
   const updateHymn = (index: number, field: keyof TemplateHymn, value: string) => {
-    setTemplateData(prev => ({
-      ...prev,
-      hymns: prev.hymns.map((hymn, i) => {
+    console.log('🎵 Template Modal: Updating hymn', index, 'field:', field, 'value:', value)
+    setTemplateData(prev => {
+      const newHymns = prev.hymns.map((hymn, i) => {
         if (i === index) {
           const updatedHymn = { ...hymn, [field]: value }
           
@@ -224,11 +234,16 @@ export function CreateTemplateModal({
             }
           }
           
+          console.log('🎵 Template Modal: Updated hymn:', updatedHymn)
           return updatedHymn
         }
         return hymn
       })
-    }))
+      
+      const newData = { ...prev, hymns: newHymns }
+      console.log('🎵 Template Modal: New templateData with updated hymns:', newData)
+      return newData
+    })
   }
 
   const removeHymn = (index: number) => {
@@ -288,6 +303,9 @@ export function CreateTemplateModal({
   }
 
   if (!isOpen) return null
+
+  console.log('🪟 Template Modal: Rendering modal with templateData:', templateData)
+  console.log('🪟 Template Modal: editingTemplate:', editingTemplate)
 
   return (
     <div className="fixed inset-0 bg-gray-500 bg-opacity-50 z-50 flex items-center justify-center p-4">
