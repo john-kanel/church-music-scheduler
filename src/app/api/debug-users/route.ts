@@ -40,7 +40,7 @@ export async function GET() {
     })
 
     return NextResponse.json({
-      users: users.map(user => ({
+      users: users.map((user: any) => ({
         ...user,
         churchName: user.church?.name
       })),
@@ -48,8 +48,8 @@ export async function GET() {
       summary: {
         totalUsers: users.length,
         totalInvitations: invitations.length,
-        verifiedUsers: users.filter(u => u.isVerified).length,
-        unverifiedUsers: users.filter(u => !u.isVerified).length
+        verifiedUsers: users.filter((u: any) => u.isVerified).length,
+        unverifiedUsers: users.filter((u: any) => !u.isVerified).length
       }
     })
 

@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
     })
 
     // Format the response
-    const formattedMessages = messages.map(message => ({
+    const formattedMessages = messages.map((message: any) => ({
       id: message.id,
       subject: message.subject,
       content: message.message,
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
         type: 'EMAIL', // Map to the enum value
         churchId: session.user.churchId,
         sentBy: session.user.id,
-        recipients: recipients.map(r => r.id)
+        recipients: recipients.map((r: any) => r.id)
       }
     })
 

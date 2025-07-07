@@ -43,12 +43,12 @@ export async function GET(request: NextRequest) {
     })
 
     // Format the response
-    const formattedGroups = groups.map(group => ({
+    const formattedGroups = groups.map((group: any) => ({
       id: group.id,
       name: group.name,
       description: group.description,
       createdAt: group.createdAt,
-      members: group.members.map(member => ({
+      members: group.members.map((member: any) => ({
         id: member.user.id,
         name: `${member.user.firstName} ${member.user.lastName}`,
         email: member.user.email,
@@ -221,7 +221,7 @@ export async function PUT(request: NextRequest) {
       name: updatedGroup.name,
       description: updatedGroup.description,
       createdAt: updatedGroup.createdAt,
-      members: updatedGroup.members.map(member => ({
+      members: updatedGroup.members.map((member: any) => ({
         id: member.user.id,
         name: `${member.user.firstName} ${member.user.lastName}`,
         email: member.user.email,

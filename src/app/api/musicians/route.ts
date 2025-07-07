@@ -99,9 +99,9 @@ export async function GET(request: NextRequest) {
     ])
 
     // Format the response
-    const formattedMusicians = musicians.map(musician => {
+    const formattedMusicians = musicians.map((musician: any) => {
       // Find the invitation for this musician
-      const invitation = invitations.find(inv => inv.email === musician.email)
+      const invitation = invitations.find((inv: any) => inv.email === musician.email)
       
       // Determine status based on invitation acceptance
       let status = 'pending'
@@ -126,7 +126,7 @@ export async function GET(request: NextRequest) {
         smsNotifications: musician.smsNotifications,
         createdAt: musician.createdAt.toISOString(), // Convert Date to ISO string
         instrument: 'Musician', // Placeholder - we can add proper instrument field later
-        groups: musician.groupMemberships.map(gm => gm.group),
+        groups: musician.groupMemberships.map((gm: any) => gm.group),
         upcomingEvents: [], // Removed for performance - can be loaded separately if needed
         totalAcceptedAssignments: musician._count.eventAssignments
       }
