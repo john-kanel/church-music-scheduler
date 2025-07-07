@@ -198,60 +198,101 @@ export default function CalendarPage() {
   const handleDrop = async (day: number, hour: number = 10) => {
     if (!draggedTemplate) return
 
-    try {
-      const dropDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day, hour, 0)
-      const endDate = new Date(dropDate.getTime() + draggedTemplate.duration * 60000)
+    const dropDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day, hour, 0)
+    const endDate = new Date(dropDate.getTime() + draggedTemplate.duration * 60000)
 
-      // Optimistic UI update
-      const newEvent = {
-        id: 'temp-' + Date.now(),
+    console.log('🎯 Dropping template:', { 
+      templateName: draggedTemplate.name, 
+      day, 
+      hour, 
+      dropDate: dropDate.toISOString() 
+    })
+
+    // Optimistic UI update
+    const newEvent = {
+      id: 'temp-' + Date.now(),
+      name: draggedTemplate.name,
+      description: draggedTemplate.description,
+      location: 'TBD', // Default location
+      startTime: dropDate.toISOString(),
+      endTime: endDate.toISOString(),
+      eventType: {
+        id: 'temp',
         name: draggedTemplate.name,
-        description: draggedTemplate.description,
-        location: 'TBD', // Default location
-        startTime: dropDate.toISOString(),
-        endTime: endDate.toISOString(),
-        eventType: {
-          id: 'temp',
-          name: draggedTemplate.name,
-          color: draggedTemplate.color
-        },
-        templateId: draggedTemplate.id
+        color: draggedTemplate.color
+      },
+      templateId: draggedTemplate.id,
+      _tempState: 'pending' as const
+    }
+    
+    setEvents(prev => [...prev, newEvent])
+
+    try {
+      const requestBody = {
+        name: draggedTemplate.name,
+        description: draggedTemplate.description || '',
+        location: 'TBD', // Default location required by API
+        startDate: dropDate.toISOString().split('T')[0],
+        startTime: dropDate.toTimeString().slice(0, 5),
+        endTime: endDate.toTimeString().slice(0, 5),
+        eventTypeId: null,
+        templateId: draggedTemplate.id,
+        templateColor: draggedTemplate.color,
+        roles: draggedTemplate.roles || [],
+        hymns: draggedTemplate.hymns || [],
+        isRecurring: draggedTemplate.isRecurring || false,
+        recurrencePattern: draggedTemplate.recurrencePattern || ''
       }
-      
-      setEvents(prev => [...prev, newEvent])
+
+      console.log('📤 Sending request:', requestBody)
 
       const response = await fetch('/api/events', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          name: draggedTemplate.name,
-          description: draggedTemplate.description,
-          location: 'TBD', // Default location required by API
-          startDate: dropDate.toISOString().split('T')[0],
-          startTime: dropDate.toTimeString().slice(0, 5),
-          endTime: endDate.toTimeString().slice(0, 5),
-          eventTypeId: null,
-          templateId: draggedTemplate.id,
-          templateColor: draggedTemplate.color,
-          roles: draggedTemplate.roles,
-          hymns: draggedTemplate.hymns,
-          isRecurring: draggedTemplate.isRecurring,
-          recurrencePattern: draggedTemplate.recurrencePattern
-        }),
+        body: JSON.stringify(requestBody),
       })
 
       if (!response.ok) {
-        // Remove optimistic update if failed
-        setEvents(prev => prev.filter(e => e.id !== newEvent.id))
-        throw new Error('Failed to create event')
+        const errorData = await response.json().catch(() => ({}))
+        console.error('❌ API Error:', { 
+          status: response.status, 
+          statusText: response.statusText, 
+          error: errorData 
+        })
+        
+        throw new Error(errorData.details || errorData.error || `HTTP ${response.status}: ${response.statusText}`)
       }
 
-      // Refresh events to get the real data
+      const result = await response.json()
+      console.log('✅ Event created successfully:', result)
+
+      // Remove optimistic update and refresh to get real data
+      setEvents(prev => prev.filter(e => e.id !== newEvent.id))
       fetchEvents()
+
     } catch (error) {
-      console.error('Error creating event from template:', error)
+      console.error('❌ Error creating event from template:', error)
+      
+      // Show error state briefly
+      setEvents(prev => prev.map(e => 
+        e.id === newEvent.id 
+          ? { ...e, _tempState: 'error' as const, name: `${e.name} (Failed)` }
+          : e
+      ))
+      
+      // Show user-friendly error message
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+      alert(`Failed to create event: ${errorMessage}`)
+      
+      // Remove failed event after 3 seconds
+      setTimeout(() => {
+        setEvents(prev => prev.filter(e => e.id !== newEvent.id))
+      }, 3000)
+    } finally {
+      // Always clear the dragged template
+      setDraggedTemplate(null)
     }
   }
 
@@ -630,6 +671,7 @@ export default function CalendarPage() {
                     key={template.id}
                     draggable
                     onDragStart={() => {
+                      console.log('🚀 Starting drag operation for template:', template.name)
                       setDraggedTemplate(template)
                       setDraggedEvent(null)
                     }}

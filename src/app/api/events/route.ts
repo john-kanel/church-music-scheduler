@@ -182,27 +182,63 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
-    const formData = await request.formData()
+    let requestData: any = {}
     
-    // Extract form data
-    const name = formData.get('name') as string
-    const description = formData.get('description') as string || ''
-    const location = formData.get('location') as string
-    const startDate = formData.get('startDate') as string
-    const startTime = formData.get('startTime') as string
-    const endTime = formData.get('endTime') as string || ''
-    const eventTypeId = formData.get('eventTypeId') as string || null
-    const templateId = formData.get('templateId') as string || null
-    const templateColor = formData.get('templateColor') as string || null
-    const isRecurring = formData.get('isRecurring') === 'true'
-    const recurrencePattern = formData.get('recurrencePattern') as string || ''
-    const recurrenceEnd = formData.get('recurrenceEnd') as string || ''
+    // Handle both JSON and FormData requests
+    const contentType = request.headers.get('content-type')
     
-    // Parse JSON fields with safe defaults
-    const roles = formData.get('roles') ? JSON.parse(formData.get('roles') as string) : []
-    const hymns = formData.get('hymns') ? JSON.parse(formData.get('hymns') as string) : []
-    const selectedGroups = formData.get('selectedGroups') ? JSON.parse(formData.get('selectedGroups') as string) : []
-    const copyHymnsToRecurring = formData.get('copyHymnsToRecurring') === 'true'
+    if (contentType?.includes('application/json')) {
+      // JSON request (from drag-and-drop)
+      requestData = await request.json()
+      console.log('Processing JSON request for event creation:', { 
+        name: requestData.name, 
+        templateId: requestData.templateId 
+      })
+    } else {
+      // FormData request (from regular form submission)
+      const formData = await request.formData()
+      console.log('Processing FormData request for event creation')
+      
+      // Extract form data
+      requestData = {
+        name: formData.get('name') as string,
+        description: formData.get('description') as string || '',
+        location: formData.get('location') as string,
+        startDate: formData.get('startDate') as string,
+        startTime: formData.get('startTime') as string,
+        endTime: formData.get('endTime') as string || '',
+        eventTypeId: formData.get('eventTypeId') as string || null,
+        templateId: formData.get('templateId') as string || null,
+        templateColor: formData.get('templateColor') as string || null,
+        isRecurring: formData.get('isRecurring') === 'true',
+        recurrencePattern: formData.get('recurrencePattern') as string || '',
+        recurrenceEnd: formData.get('recurrenceEnd') as string || '',
+        roles: formData.get('roles') ? JSON.parse(formData.get('roles') as string) : [],
+        hymns: formData.get('hymns') ? JSON.parse(formData.get('hymns') as string) : [],
+        selectedGroups: formData.get('selectedGroups') ? JSON.parse(formData.get('selectedGroups') as string) : [],
+        copyHymnsToRecurring: formData.get('copyHymnsToRecurring') === 'true'
+      }
+    }
+
+    // Extract and validate data with safe defaults
+    const {
+      name,
+      description = '',
+      location,
+      startDate,
+      startTime,
+      endTime = '',
+      eventTypeId = null,
+      templateId = null,
+      templateColor = null,
+      isRecurring = false,
+      recurrencePattern = '',
+      recurrenceEnd = '',
+      roles = [],
+      hymns = [],
+      selectedGroups = [],
+      copyHymnsToRecurring = false
+    } = requestData
 
     // Ensure all arrays are properly defined
     const validRoles = Array.isArray(roles) ? roles : []
@@ -211,6 +247,7 @@ export async function POST(request: NextRequest) {
 
     // Validation
     if (!name || !location || !startDate || !startTime) {
+      console.error('Validation failed:', { name, location, startDate, startTime })
       return NextResponse.json(
         { error: 'Name, location, start date, and start time are required' },
         { status: 400 }
@@ -537,7 +574,8 @@ export async function POST(request: NextRequest) {
       metadata: {
         eventId: result.id,
         eventName: name,
-        eventDate: startDateTime.toISOString()
+        eventDate: startDateTime.toISOString(),
+        source: contentType?.includes('application/json') ? 'drag-drop' : 'form'
       }
     })
 
@@ -545,15 +583,29 @@ export async function POST(request: NextRequest) {
     const { scheduleEventNotifications } = await import('@/lib/automation-helpers')
     await scheduleEventNotifications(result.id, session.user.churchId)
 
+    console.log('✅ Event created successfully:', { 
+      eventId: result.id, 
+      name, 
+      source: contentType?.includes('application/json') ? 'drag-drop' : 'form' 
+    })
+
     return NextResponse.json({ 
       message: 'Event created successfully',
       event: completeEvent 
     }, { status: 201 })
 
   } catch (error) {
-    console.error('Error creating event:', error)
+    console.error('❌ Error creating event:', error)
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    })
+    
     return NextResponse.json(
-      { error: 'Failed to create event' },
+      { 
+        error: 'Failed to create event',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     )
   }
