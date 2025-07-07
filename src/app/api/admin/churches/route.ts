@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { PrismaClient } from '@prisma/client'
 
+// Force rebuild - TypeScript fixes applied
 export async function GET() {
   try {
     const churches = await prisma.church.findMany({
