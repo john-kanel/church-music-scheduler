@@ -239,7 +239,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       if (directors.length > 0) {
         await resend.emails.send({
           from: 'Church Music Scheduler <no-reply@churchmusicscheduler.com>',
-          to: directors.map(d => d.email),
+          to: directors.map((d: any) => d.email),
           subject: `New Musician Joined: ${firstName} ${lastName}`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">

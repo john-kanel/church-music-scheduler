@@ -82,14 +82,14 @@ export async function PUT(
     }
 
     // Check if changes were made
-    const hymnsChanged = JSON.stringify(originalHymns.map(h => ({ 
-      title: h.title, 
-      notes: h.notes, 
-      servicePartId: h.servicePartId
-    }))) !== JSON.stringify(createdHymns.map(h => ({ 
-      title: h.title, 
-      notes: h.notes, 
-      servicePartId: h.servicePartId
+    const hymnsChanged = JSON.stringify(originalHymns.map((h: any) => ({
+      name: h.name,
+      composer: h.composer,
+      pageNumber: h.pageNumber
+    }))) !== JSON.stringify(createdHymns.map((h: any) => ({
+      name: h.name,
+      composer: h.composer,
+      pageNumber: h.pageNumber
     })))
 
     // Send notifications if changes were made
@@ -110,8 +110,8 @@ export async function PUT(
       if (event) {
         // Get all assigned musicians
         const assignedMusicians = event.assignments
-          .filter(assignment => assignment.user)
-          .map(assignment => assignment.user!)
+          .filter((assignment: any) => assignment.user)
+          .map((assignment: any) => assignment.user!)
 
         // Check if this is a past event
         const eventDateTime = new Date(event.startTime)
@@ -146,7 +146,7 @@ async function sendMusicChangeNotifications(event: any, musicians: any[], hymns:
   const eventDate = new Date(event.startTime).toLocaleDateString()
   const eventTime = new Date(event.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   
-  const musicList = hymns.map((hymn, index) => 
+  const musicList = hymns.map((hymn: any, index: number) => 
     `${index + 1}. ${hymn.servicePart?.name || 'Other'}: ${hymn.title}${hymn.notes ? ` (${hymn.notes})` : ''}`
   ).join('\n')
 
@@ -196,7 +196,7 @@ ${musicList}
   `
 
   // Send email to each musician
-  const emailPromises = musicians.map(async (musician) => {
+  const emailPromises = musicians.map(async (musician: any) => {
     try {
       await resend.emails.send({
         from: 'Church Music Scheduler <notifications@churchmusicscheduler.com>',

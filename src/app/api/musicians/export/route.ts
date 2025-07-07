@@ -69,13 +69,13 @@ export async function GET(req: NextRequest) {
       'Date Joined'
     ]
 
-    const csvRows = musicians.map(musician => {
+    const csvRows = musicians.map((musician: any) => {
       // Determine status based on isVerified
       const status = musician.isVerified ? 'Active' : 'Pending'
 
       // Format groups
       const groups = musician.groupMemberships
-        .map(membership => membership.group.name)
+        .map((membership: any) => membership.group.name)
         .join('; ')
 
       // Format date
@@ -95,8 +95,8 @@ export async function GET(req: NextRequest) {
     // Create CSV content
     const csvContent = [
       csvHeaders.join(','),
-      ...csvRows.map(row => 
-        row.map(cell => {
+      ...csvRows.map((row: any) => 
+        row.map((cell: any) => {
           // Escape quotes and wrap in quotes if contains comma, quote, or newline
           const escaped = cell.replace(/"/g, '""')
           return /[",\r\n]/.test(escaped) ? `"${escaped}"` : escaped

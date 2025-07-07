@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       totalTrialChurches: churches.length,
       churches: debugData,
-      discrepancies: debugData.filter(c => c.discrepancy).length
+      discrepancies: debugData.filter((c: any) => c.discrepancy).length
     })
 
   } catch (error) {

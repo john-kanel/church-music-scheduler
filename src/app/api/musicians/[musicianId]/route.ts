@@ -218,8 +218,8 @@ export async function GET(
       emailNotifications: musician.emailNotifications,
       smsNotifications: musician.smsNotifications,
       joinedAt: musician.createdAt,
-      groups: musician.groupMemberships.map(gm => gm.group),
-      recentEvents: musician.eventAssignments.map(ea => ({
+      groups: musician.groupMemberships.map((gm: any) => gm.group),
+      recentEvents: musician.eventAssignments.map((ea: any) => ({
         id: ea.event.id,
         name: ea.event.name,
         startTime: ea.event.startTime,

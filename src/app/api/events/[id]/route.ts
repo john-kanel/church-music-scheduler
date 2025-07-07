@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { PrismaClient } from '@prisma/client'
 
 // Helper function to generate recurring events
 function generateRecurringEvents(
@@ -250,7 +251,7 @@ export async function PUT(
       finalEventTypeId 
     })
     
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: PrismaClient) => {
       console.log('📝 Updating event in database...')
       
       // Update the event
@@ -356,7 +357,7 @@ export async function PUT(
           // Copy existing role assignments to recurring events
           if (existingAssignments.length > 0) {
             await tx.eventAssignment.createMany({
-              data: existingAssignments.map((assignment) => ({
+              data: existingAssignments.map((assignment: any) => ({
                 eventId: createdEvent.id,
                 roleName: assignment.roleName,
                 maxMusicians: assignment.maxMusicians,
@@ -484,7 +485,7 @@ export async function DELETE(
     }
 
     // Handle different deletion types
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: PrismaClient) => {
       switch (deletionType) {
         case 'single':
           // Delete only this event

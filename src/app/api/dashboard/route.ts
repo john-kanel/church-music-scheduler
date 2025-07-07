@@ -234,8 +234,8 @@ export async function GET(request: NextRequest) {
       ])
 
       // Calculate stats from the data we already have
-      const pendingCount = upcomingAssignments.filter(a => a.status === 'PENDING').length
-      const acceptedCount = upcomingAssignments.filter(a => a.status === 'ACCEPTED').length
+      const pendingCount = upcomingAssignments.filter((a: any) => a.status === 'PENDING').length
+      const acceptedCount = upcomingAssignments.filter((a: any) => a.status === 'ACCEPTED').length
 
       return NextResponse.json({
         userRole,

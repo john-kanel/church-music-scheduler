@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Send email notifications to recipients who have email notifications enabled
-    const emailRecipients = recipients.filter(r => r.emailNotifications)
+    const emailRecipients = recipients.filter((r: any) => r.emailNotifications)
     
     if (emailRecipients.length > 0) {
       // Get church and sender info for email templates

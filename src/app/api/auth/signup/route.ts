@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt'
 import { prisma } from '@/lib/db'
 import { UserRole } from '@/generated/prisma'
 import { generateReferralCode, isValidReferralCode } from '@/lib/utils'
+import { PrismaClient } from '@prisma/client'
 
 export async function POST(request: NextRequest) {
   try {
@@ -171,7 +172,7 @@ export async function POST(request: NextRequest) {
     const userLastName = nameParts.slice(1).join(' ') || ''
 
     // Create parish and user in a transaction
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: PrismaClient) => {
               // Generate unique referral code for new church
         const newReferralCode = await generateReferralCode(churchName)
       

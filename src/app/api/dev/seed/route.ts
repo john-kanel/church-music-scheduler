@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
     // Add musicians to groups
     await Promise.all([
       // Add first 3 musicians to choir
-      ...musicians.slice(0, 3).map(musician =>
+      ...musicians.slice(0, 3).map((musician: any) =>
         prisma.groupMember.upsert({
           where: { userId_groupId: { userId: musician.id, groupId: groups[0].id } },
           update: {},
@@ -172,7 +172,7 @@ export async function POST(request: NextRequest) {
         })
       ),
       // Add last 2 musicians to instrumentalists
-      ...musicians.slice(3, 5).map(musician =>
+      ...musicians.slice(3, 5).map((musician: any) =>
         prisma.groupMember.upsert({
           where: { userId_groupId: { userId: musician.id, groupId: groups[1].id } },
           update: {},
@@ -210,7 +210,7 @@ export async function POST(request: NextRequest) {
       const musiciansToAssign = i % 2 === 0 ? musicians.slice(0, 3) : musicians.slice(2, 5)
       
       await Promise.all(
-                 musiciansToAssign.map(musician =>
+                 musiciansToAssign.map((musician: any) =>
            prisma.eventAssignment.create({
              data: {
                eventId: event.id,
@@ -237,7 +237,7 @@ export async function POST(request: NextRequest) {
 
     // Assign all musicians to the special event
     await Promise.all(
-             musicians.map(musician =>
+             musicians.map((musician: any) =>
          prisma.eventAssignment.create({
            data: {
              eventId: specialEvent.id,
