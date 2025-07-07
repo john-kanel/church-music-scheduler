@@ -467,7 +467,18 @@ export function EventDetailsModal({
       dataChanged: {
         nameChanged: editData.name !== currentEvent.name,
         locationChanged: editData.location !== currentEvent.location,
-        descriptionChanged: editData.description !== (currentEvent.description || '')
+        descriptionChanged: editData.description !== currentEvent.description,
+        startDateChanged: editData.startDate !== new Date(currentEvent.startTime).toISOString().split('T')[0],
+        startTimeChanged: editData.startTime !== new Date(currentEvent.startTime).toTimeString().slice(0, 5),
+        endTimeChanged: editData.endTime !== (currentEvent.endTime ? new Date(currentEvent.endTime).toTimeString().slice(0, 5) : ''),
+        anyChangeDetected: (
+          editData.name !== currentEvent.name ||
+          editData.location !== currentEvent.location ||
+          editData.description !== currentEvent.description ||
+          editData.startDate !== new Date(currentEvent.startTime).toISOString().split('T')[0] ||
+          editData.startTime !== new Date(currentEvent.startTime).toTimeString().slice(0, 5) ||
+          editData.endTime !== (currentEvent.endTime ? new Date(currentEvent.endTime).toTimeString().slice(0, 5) : '')
+        )
       }
     })
     
@@ -1284,8 +1295,12 @@ export function EventDetailsModal({
                     <input
                       type="date"
                       value={editData.startDate}
-                      onChange={(e) => setEditData(prev => ({ ...prev, startDate: e.target.value }))}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onChange={(e) => {
+                        console.log('📅 Start date field changed:', e.target.value)
+                        setEditData(prev => ({ ...prev, startDate: e.target.value }))
+                      }}
+                      className="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -1294,8 +1309,12 @@ export function EventDetailsModal({
                       <input
                         type="time"
                         value={editData.startTime}
-                        onChange={(e) => setEditData(prev => ({ ...prev, startTime: e.target.value }))}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        onChange={(e) => {
+                          console.log('🕐 Start time field changed:', e.target.value)
+                          setEditData(prev => ({ ...prev, startTime: e.target.value }))
+                        }}
+                        className="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
                       />
                     </div>
                     <div>
@@ -1303,8 +1322,11 @@ export function EventDetailsModal({
                       <input
                         type="time"
                         value={editData.endTime}
-                        onChange={(e) => setEditData(prev => ({ ...prev, endTime: e.target.value }))}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        onChange={(e) => {
+                          console.log('🕐 End time field changed:', e.target.value)
+                          setEditData(prev => ({ ...prev, endTime: e.target.value }))
+                        }}
+                        className="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                   </div>
