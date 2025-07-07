@@ -87,7 +87,7 @@ export async function sendMusicianEventNotification(
     }
 
     // Generate hymn list
-    const hymnsList = eventHymns.map((hymn, index) => {
+    const hymnsList = eventHymns.map((hymn: any, index: number) => {
       const servicePartName = hymn.servicePart?.name || 'Other'
       const title = hymn.title
       const notes = hymn.notes ? ` (${hymn.notes})` : ''
@@ -98,7 +98,7 @@ export async function sendMusicianEventNotification(
     // Generate document links if any
     let documentsSection = ''
     if (eventDocuments.length > 0) {
-      const documentLinks = eventDocuments.map(doc => {
+      const documentLinks = eventDocuments.map((doc: any) => {
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://churchmusicscheduler.com'
         const viewUrl = event.id 
           ? `${baseUrl}/api/events/${event.id}/documents/${doc.id}/view`
