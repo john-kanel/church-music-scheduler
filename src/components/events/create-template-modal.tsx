@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { 
   X, Plus, Trash2, Calendar, Clock, Palette, Users, Music, 
-  Save, Settings, Eye, ChevronDown
+  Save, Eye, ChevronDown
 } from 'lucide-react'
 
 interface CreateTemplateModalProps {
@@ -315,7 +315,7 @@ export function CreateTemplateModal({
         {/* Tab Navigation */}
         <div className="flex border-b bg-gray-50">
           {[
-            { id: 'details', label: 'Details', icon: Settings },
+            { id: 'details', label: 'Details', icon: Clock },
             { id: 'roles', label: 'Roles', icon: Users },
             { id: 'music', label: 'Music', icon: Music },
             { id: 'preview', label: 'Preview', icon: Eye }
@@ -502,55 +502,53 @@ export function CreateTemplateModal({
                     Define default music selections that will be included when creating events from this template
                   </p>
                 </div>
-                <div className="flex items-center space-x-2">
-                  {/* Select Defaults Dropdown */}
-                  <div className="relative">
-                    <button
-                      onClick={() => setShowDefaultsDropdown(!showDefaultsDropdown)}
-                      className="flex items-center px-3 py-2 bg-gray-100 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors"
-                      disabled={serviceParts.length === 0}
-                    >
-                      <Settings className="h-4 w-4 mr-1" />
-                      Select Defaults
-                      <ChevronDown className="h-4 w-4 ml-1" />
-                    </button>
-                    
-                    {showDefaultsDropdown && (
-                      <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                        <div className="py-1">
-                          <button
-                            onClick={() => {
-                              addDefaultServiceParts('required')
-                              setShowDefaultsDropdown(false)
-                            }}
-                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                            disabled={serviceParts.filter(p => p.isRequired).length === 0}
-                          >
-                            Add Required Parts ({serviceParts.filter(p => p.isRequired).length})
-                          </button>
-                          <button
-                            onClick={() => {
-                              addDefaultServiceParts('all')
-                              setShowDefaultsDropdown(false)
-                            }}
-                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                            disabled={serviceParts.length === 0}
-                          >
-                            Add All Service Parts ({serviceParts.length})
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Add Music Button */}
+                <div className="relative">
                   <button
-                    onClick={addHymn}
+                    onClick={() => setShowDefaultsDropdown(!showDefaultsDropdown)}
                     className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
                     <Plus className="h-4 w-4 mr-1" />
                     Add Music
+                    <ChevronDown className="h-4 w-4 ml-2" />
                   </button>
+                  
+                  {showDefaultsDropdown && (
+                    <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                      <div className="py-1">
+                        <button
+                          onClick={() => {
+                            addHymn()
+                            setShowDefaultsDropdown(false)
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center"
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Music
+                        </button>
+                        <hr className="my-1" />
+                        <button
+                          onClick={() => {
+                            addDefaultServiceParts('required')
+                            setShowDefaultsDropdown(false)
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                          disabled={serviceParts.filter(p => p.isRequired).length === 0}
+                        >
+                          Add All Required Default Service Parts ({serviceParts.filter(p => p.isRequired).length})
+                        </button>
+                        <button
+                          onClick={() => {
+                            addDefaultServiceParts('all')
+                            setShowDefaultsDropdown(false)
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                          disabled={serviceParts.length === 0}
+                        >
+                          Add All Default Service Parts ({serviceParts.length})
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
