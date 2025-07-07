@@ -470,6 +470,7 @@ export function EventDetailsModal({
       // Handle event type color change
       let eventTypeId = currentEvent.eventType?.id
       if (editData.eventTypeColor !== currentEvent.eventType?.color) {
+        console.log('🎨 Event type color changed, creating/finding new event type...')
         // Create or find event type with the new color
         const eventTypeResponse = await fetch('/api/event-types', {
           method: 'POST',
@@ -483,23 +484,44 @@ export function EventDetailsModal({
         if (eventTypeResponse.ok) {
           const eventTypeData = await eventTypeResponse.json()
           eventTypeId = eventTypeData.eventType.id
+          console.log('✅ Event type updated:', eventTypeData.eventType)
+        } else {
+          console.error('❌ Failed to update event type:', await eventTypeResponse.text())
         }
       }
+
+      const requestData = {
+        ...editData,
+        eventTypeId,
+        isPastEvent
+      }
+
+      console.log('📤 Sending event update request:', {
+        eventId: currentEvent.id,
+        requestData,
+        url: `/api/events/${currentEvent.id}`
+      })
 
       const response = await fetch(`/api/events/${currentEvent.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...editData,
-          eventTypeId,
-          isPastEvent // Include this flag so the API knows to skip notifications
-        })
+        body: JSON.stringify(requestData)
+      })
+
+      console.log('📥 Received response:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok
       })
 
       if (!response.ok) {
         const errorData = await response.json()
+        console.error('❌ Update failed with error:', errorData)
         throw new Error(errorData.error || 'Failed to update event')
       }
+
+      const responseData = await response.json()
+      console.log('✅ Update successful:', responseData)
 
       // Note: Group assignments are handled separately and don't need to be updated here
       // The selectedGroups state is just for UI purposes in the edit modal
@@ -508,6 +530,7 @@ export function EventDetailsModal({
       showToast('success', `Event updated successfully!${isPastEvent ? ' (No notifications sent for past event)' : ''}`)
       
       // Save hymns if changes were made
+      console.log('🎵 Saving hymns...')
       await saveHymns()
       
       setIsEditing(false)
@@ -515,9 +538,15 @@ export function EventDetailsModal({
       setSelectedGroups([]) // Clear selected groups after saving
       
       // Refresh the event data and parent calendar
+      console.log('🔄 Refreshing event data...')
+      // Add a small delay to ensure database operations are complete
+      await new Promise(resolve => setTimeout(resolve, 500))
       await fetchEventData()
       onEventUpdated?.()
+      
+      console.log('🎉 Event update process completed successfully!')
     } catch (err) {
+      console.error('❌ Event update failed:', err)
       const errorMessage = err instanceof Error ? err.message : 'Failed to update event'
       setError(errorMessage)
       showToast('error', errorMessage)
@@ -557,13 +586,24 @@ export function EventDetailsModal({
     if (!currentEvent?.id) return
 
     try {
+      console.log('📥 Fetching fresh event data for:', currentEvent.id)
       setLoading(true)
       const response = await fetch(`/api/events/${currentEvent.id}`)
       
       if (!response.ok) throw new Error('Failed to fetch event data')
       
       const responseData = await response.json()
+      console.log('📄 Received event data:', responseData)
+      
       const updatedEvent = responseData.event // Extract the event from the response wrapper
+      console.log('🔄 Updating currentEvent state with:', {
+        oldName: currentEvent.name,
+        newName: updatedEvent.name,
+        oldLocation: currentEvent.location,
+        newLocation: updatedEvent.location,
+        oldStartTime: currentEvent.startTime,
+        newStartTime: updatedEvent.startTime
+      })
       
       // Preserve assignment order by mapping based on original order
       if (currentEvent.assignments && updatedEvent.assignments) {
@@ -590,9 +630,12 @@ export function EventDetailsModal({
       }
       
       setCurrentEvent(updatedEvent)
+      console.log('✅ Event state updated successfully')
+      
       onEventUpdated?.()
+      console.log('✅ Parent calendar notified of update')
     } catch (err) {
-      console.error('Error fetching event data:', err)
+      console.error('❌ Error fetching event data:', err)
       showToast('error', 'Failed to refresh event data')
     } finally {
       setLoading(false)

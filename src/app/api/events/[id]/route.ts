@@ -208,8 +208,18 @@ export async function PUT(
     let finalEventTypeId = eventTypeId || existingEvent.eventTypeId
 
     // Update event in transaction
-    console.log('Updating event with data:', { name, location, startDateTime, validRoles: validRoles.length })
+    console.log('🔄 Starting event update transaction:', { 
+      eventId: params.id,
+      name, 
+      location, 
+      startDateTime: startDateTime.toISOString(),
+      validRoles: validRoles.length,
+      finalEventTypeId 
+    })
+    
     const result = await prisma.$transaction(async (tx) => {
+      console.log('📝 Updating event in database...')
+      
       // Update the event
       const updatedEvent = await tx.event.update({
         where: { id: params.id },
@@ -225,9 +235,17 @@ export async function PUT(
           ...(finalEventTypeId && { eventTypeId: finalEventTypeId })
         }
       })
+      
+      console.log('✅ Event updated in database:', { 
+        eventId: updatedEvent.id,
+        updatedName: updatedEvent.name,
+        updatedLocation: updatedEvent.location
+      })
 
       // If roles provided, update assignments
       if (validRoles.length > 0) {
+        console.log('👥 Updating role assignments...')
+        
         // Remove existing unassigned roles
         await tx.eventAssignment.deleteMany({
           where: {
@@ -246,10 +264,14 @@ export async function PUT(
             status: 'PENDING'
           }))
         })
+        
+        console.log('✅ Role assignments updated')
       }
 
       // If this event is now recurring, create recurring instances
       if (isRecurring && recurrencePattern) {
+        console.log('🔄 Processing recurring event settings...')
+        
         // Remove any existing recurring events for this parent
         await tx.event.deleteMany({
           where: {
@@ -295,6 +317,8 @@ export async function PUT(
             })
           }
         }
+        
+        console.log('✅ Recurring events created')
       } else if (!isRecurring) {
         // If no longer recurring, remove any child events
         await tx.event.deleteMany({
@@ -302,12 +326,17 @@ export async function PUT(
             parentEventId: params.id
           }
         })
+        
+        console.log('✅ Removed recurring events (no longer recurring)')
       }
 
       return updatedEvent
     })
 
+    console.log('✅ Transaction completed successfully')
+
     // Fetch the complete updated event
+    console.log('📄 Fetching complete event data...')
     const completeEvent = await prisma.event.findUnique({
       where: { id: params.id },
       include: {
@@ -329,11 +358,20 @@ export async function PUT(
       }
     })
 
+    console.log('✅ Complete event data fetched')
+
     // Schedule automated notifications for updated event (skip for past events)
     if (!isPastEvent) {
+      console.log('📧 Scheduling notifications...')
       const { scheduleEventNotifications } = await import('@/lib/automation-helpers')
       await scheduleEventNotifications(params.id, session.user.churchId)
+      console.log('✅ Notifications scheduled')
     }
+
+    console.log('🎉 Event update completed successfully:', { 
+      eventId: params.id,
+      eventName: completeEvent?.name 
+    })
 
     return NextResponse.json({ 
       message: 'Event updated successfully',
