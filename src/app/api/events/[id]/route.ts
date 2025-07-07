@@ -182,6 +182,22 @@ export async function PUT(
       isPastEvent
     } = body
 
+    console.log('📨 API received request body:', {
+      name,
+      description,
+      location,
+      startDate,
+      startTime,
+      endTime,
+      eventTypeId,
+      isPastEvent,
+      originalEvent: {
+        name: existingEvent.name,
+        location: existingEvent.location,
+        startTime: existingEvent.startTime.toISOString()
+      }
+    })
+
     // Ensure roles is always an array
     const validRoles = Array.isArray(roles) ? roles : []
 
@@ -204,6 +220,17 @@ export async function PUT(
       endDateTime = new Date(year, month - 1, day, endHour, endMinute)
     }
 
+    console.log('📅 Date/time construction:', {
+      input: { startDate, startTime, endTime },
+      parsed: { year, month, day, startHour, startMinute },
+      constructed: {
+        startDateTime: startDateTime.toISOString(),
+        endDateTime: endDateTime?.toISOString()
+      },
+      originalDateTime: existingEvent.startTime.toISOString(),
+      timesMatch: startDateTime.getTime() === existingEvent.startTime.getTime()
+    })
+
     // Use the provided eventTypeId if available, otherwise keep the existing one
     let finalEventTypeId = eventTypeId || existingEvent.eventTypeId
 
@@ -221,25 +248,40 @@ export async function PUT(
       console.log('📝 Updating event in database...')
       
       // Update the event
+      const updateData = {
+        name,
+        description,
+        location,
+        startTime: startDateTime,
+        endTime: endDateTime,
+        isRecurring,
+        recurrencePattern,
+        recurrenceEnd: recurrenceEnd ? new Date(recurrenceEnd) : null,
+        ...(finalEventTypeId && { eventTypeId: finalEventTypeId })
+      }
+
+      console.log('💾 About to update event with data:', {
+        eventId: params.id,
+        updateData: {
+          name: updateData.name,
+          location: updateData.location,
+          startTime: updateData.startTime.toISOString(),
+          endTime: updateData.endTime?.toISOString(),
+          description: updateData.description
+        }
+      })
+
       const updatedEvent = await tx.event.update({
         where: { id: params.id },
-        data: {
-          name,
-          description,
-          location,
-          startTime: startDateTime,
-          endTime: endDateTime,
-          isRecurring,
-          recurrencePattern,
-          recurrenceEnd: recurrenceEnd ? new Date(recurrenceEnd) : null,
-          ...(finalEventTypeId && { eventTypeId: finalEventTypeId })
-        }
+        data: updateData
       })
       
       console.log('✅ Event updated in database:', { 
         eventId: updatedEvent.id,
         updatedName: updatedEvent.name,
-        updatedLocation: updatedEvent.location
+        updatedLocation: updatedEvent.location,
+        updatedStartTime: updatedEvent.startTime.toISOString(),
+        updatedEndTime: updatedEvent.endTime?.toISOString()
       })
 
       // If roles provided, update assignments
@@ -358,7 +400,13 @@ export async function PUT(
       }
     })
 
-    console.log('✅ Complete event data fetched')
+    console.log('✅ Complete event data fetched:', {
+      eventId: completeEvent?.id,
+      name: completeEvent?.name,
+      location: completeEvent?.location,
+      startTime: completeEvent?.startTime.toISOString(),
+      endTime: completeEvent?.endTime?.toISOString()
+    })
 
     // Schedule automated notifications for updated event (skip for past events)
     if (!isPastEvent) {
