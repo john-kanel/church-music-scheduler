@@ -209,26 +209,24 @@ export async function PUT(
       )
     }
 
-    // Combine date and time - treat as local time to avoid timezone issues
-    const [year, month, day] = startDate.split('-').map(Number)
-    const [startHour, startMinute] = startTime.split(':').map(Number)
-    const startDateTime = new Date(year, month - 1, day, startHour, startMinute)
+    // Combine date and time - construct in UTC to match database storage
+    const startDateTime = new Date(`${startDate}T${startTime}:00`)
     
     let endDateTime = null
     if (endTime) {
-      const [endHour, endMinute] = endTime.split(':').map(Number)
-      endDateTime = new Date(year, month - 1, day, endHour, endMinute)
+      endDateTime = new Date(`${startDate}T${endTime}:00`)
     }
 
     console.log('📅 Date/time construction:', {
       input: { startDate, startTime, endTime },
-      parsed: { year, month, day, startHour, startMinute },
       constructed: {
         startDateTime: startDateTime.toISOString(),
         endDateTime: endDateTime?.toISOString()
       },
       originalDateTime: existingEvent.startTime.toISOString(),
-      timesMatch: startDateTime.getTime() === existingEvent.startTime.getTime()
+      timesMatch: startDateTime.getTime() === existingEvent.startTime.getTime(),
+      serverTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      constructedLocal: startDateTime.toString()
     })
 
     // Use the provided eventTypeId if available, otherwise keep the existing one
