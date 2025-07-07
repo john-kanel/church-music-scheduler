@@ -480,8 +480,7 @@ export async function sendPaymentConfirmationEmail(
               <h3 style="margin: 0 0 15px 0; color: #333;">What's next:</h3>
               <ul style="color: #666; margin: 0; padding-left: 20px; line-height: 1.8;">
                 <li><strong>Continue building your team</strong> - Invite more musicians to join</li>
-                <li><strong>Explore advanced features</strong> - Set up automation and templates</li>
-                <li><strong>Organize your music library</strong> - Upload and categorize your sheet music</li>
+                <li><strong>Explore advanced features</strong> - Set up automation and template</li>
                 <li><strong>Schedule upcoming events</strong> - Plan your services and rehearsals</li>
               </ul>
             </div>
@@ -532,8 +531,7 @@ Visit: ${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/billing
 
 WHAT'S NEXT:
 • Continue building your team - Invite more musicians to join
-• Explore advanced features - Set up automation and templates  
-• Organize your music library - Upload and categorize your sheet music
+• Explore advanced features - Set up automation and template
 • Schedule upcoming events - Plan your services and rehearsals
 
 QUESTIONS OR NEED SUPPORT?

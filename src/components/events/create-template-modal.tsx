@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { 
   X, Plus, Trash2, Calendar, Clock, Palette, Users, Music, 
-  Save, Settings, Eye
+  Save, Settings, Eye, ChevronDown
 } from 'lucide-react'
 
 interface CreateTemplateModalProps {
@@ -67,6 +67,7 @@ export function CreateTemplateModal({
   const [activeTab, setActiveTab] = useState<'details' | 'roles' | 'music' | 'preview'>('details')
   const [serviceParts, setServiceParts] = useState<ServicePart[]>([])
   const [loadingServiceParts, setLoadingServiceParts] = useState(false)
+  const [showDefaultsDropdown, setShowDefaultsDropdown] = useState(false)
 
   const [templateData, setTemplateData] = useState<EventTemplate>({
     name: '',
@@ -86,6 +87,19 @@ export function CreateTemplateModal({
       fetchServiceParts()
     }
   }, [isOpen])
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element
+      if (showDefaultsDropdown && !target.closest('.relative')) {
+        setShowDefaultsDropdown(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showDefaultsDropdown])
 
   // Reset or set template data when modal opens/closes or editing changes
   useEffect(() => {
@@ -159,6 +173,36 @@ export function CreateTemplateModal({
     setTemplateData(prev => ({
       ...prev,
       hymns: [...prev.hymns, { title: '', servicePartId: '', servicePartName: '', notes: '' }]
+    }))
+  }
+
+  const addDefaultServiceParts = (type: 'required' | 'all') => {
+    const partsToAdd = type === 'required' 
+      ? serviceParts.filter(part => part.isRequired)
+      : serviceParts
+
+    // Filter out parts that are already added
+    const existingServicePartIds = templateData.hymns
+      .map(hymn => hymn.servicePartId)
+      .filter(id => id && id !== 'custom')
+
+    const newParts = partsToAdd.filter(part => !existingServicePartIds.includes(part.id))
+
+    if (newParts.length === 0) {
+      // Show a brief message if no new parts to add
+      return
+    }
+
+    const newHymns = newParts.map(part => ({
+      title: '',
+      servicePartId: part.id,
+      servicePartName: part.name,
+      notes: ''
+    }))
+
+    setTemplateData(prev => ({
+      ...prev,
+      hymns: [...prev.hymns, ...newHymns]
     }))
   }
 
@@ -452,14 +496,62 @@ export function CreateTemplateModal({
           {activeTab === 'music' && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">Default Music & Hymns</h3>
-                <button
-                  onClick={addHymn}
-                  className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add Music
-                </button>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Default Music & Hymns</h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Define default music selections that will be included when creating events from this template
+                  </p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  {/* Select Defaults Dropdown */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowDefaultsDropdown(!showDefaultsDropdown)}
+                      className="flex items-center px-3 py-2 bg-gray-100 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors"
+                      disabled={serviceParts.length === 0}
+                    >
+                      <Settings className="h-4 w-4 mr-1" />
+                      Select Defaults
+                      <ChevronDown className="h-4 w-4 ml-1" />
+                    </button>
+                    
+                    {showDefaultsDropdown && (
+                      <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                        <div className="py-1">
+                          <button
+                            onClick={() => {
+                              addDefaultServiceParts('required')
+                              setShowDefaultsDropdown(false)
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                            disabled={serviceParts.filter(p => p.isRequired).length === 0}
+                          >
+                            Add Required Parts ({serviceParts.filter(p => p.isRequired).length})
+                          </button>
+                          <button
+                            onClick={() => {
+                              addDefaultServiceParts('all')
+                              setShowDefaultsDropdown(false)
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                            disabled={serviceParts.length === 0}
+                          >
+                            Add All Service Parts ({serviceParts.length})
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Add Music Button */}
+                  <button
+                    onClick={addHymn}
+                    className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Music
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-3">
