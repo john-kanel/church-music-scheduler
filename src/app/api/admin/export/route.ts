@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
       csvContent = 'Church ID,Name,Email,Phone,Subscription Status,Subscription Ends,User Count,Event Count,Created At,Stripe Customer ID\n'
 
       // Add data rows
-      churches.forEach(church => {
+      churches.forEach((church: any) => {
         csvContent += [
           church.id,
           `"${church.name}"`,
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
       csvContent = 'User ID,First Name,Last Name,Email,Role,Verified,Church,Subscription Status,Created At,Last Updated\n'
 
       // Add data rows
-      users.forEach(user => {
+      users.forEach((user: any) => {
         csvContent += [
           user.id,
           `"${user.firstName}"`,
