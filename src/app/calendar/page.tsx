@@ -63,7 +63,20 @@ interface CalendarEvent {
       name: string
     }
   }[]
+  hymns?: {
+    id: string
+    title: string
+    notes?: string
+    servicePart?: {
+      id: string
+      name: string
+    }
+  }[]
   musicFiles?: any[]
+  _count?: {
+    assignments: number
+    hymns: number
+  }
   _tempState?: 'pending' | 'error' // Internal state for UI feedback
 }
 
@@ -245,6 +258,8 @@ export default function CalendarPage() {
       }
 
       console.log('📤 Sending request:', requestBody)
+      console.log('🎭 ROLES DEBUG: Template roles being sent:', JSON.stringify(draggedTemplate.roles, null, 2))
+      console.log('🎭 ROLES DEBUG: Number of roles in template:', (draggedTemplate.roles || []).length)
 
       const response = await fetch('/api/events', {
         method: 'POST',
@@ -398,21 +413,42 @@ export default function CalendarPage() {
       const pageHeight = pdf.internal.pageSize.getHeight()
       let yPosition = 20
 
+      // Load and add Montserrat fonts
+      try {
+        // Load Montserrat font files
+        const [regularFont, boldFont] = await Promise.all([
+          fetch('/fonts/Montserrat-Regular.ttf').then(res => res.arrayBuffer()),
+          fetch('/fonts/Montserrat-Bold.ttf').then(res => res.arrayBuffer())
+        ])
+        
+        // Convert to base64 for jsPDF
+        const regularBase64 = btoa(String.fromCharCode(...new Uint8Array(regularFont)))
+        const boldBase64 = btoa(String.fromCharCode(...new Uint8Array(boldFont)))
+        
+        // Add fonts to PDF
+        pdf.addFileToVFS('Montserrat-Regular.ttf', regularBase64)
+        pdf.addFileToVFS('Montserrat-Bold.ttf', boldBase64)
+        pdf.addFont('Montserrat-Regular.ttf', 'Montserrat', 'normal')
+        pdf.addFont('Montserrat-Bold.ttf', 'Montserrat', 'bold')
+      } catch (error) {
+        console.warn('Could not load custom fonts, falling back to system fonts:', error)
+      }
+
     // Header
     pdf.setFontSize(20)
-    pdf.setFont('helvetica', 'bold')
+    pdf.setFont('Montserrat', 'bold')
     const title = `${session?.user?.churchName || 'Church'} Music Schedule`
     pdf.text(title, pageWidth / 2, yPosition, { align: 'center' })
     
     yPosition += 10
     pdf.setFontSize(14)
-    pdf.setFont('helvetica', 'normal')
+    pdf.setFont('Montserrat', 'normal')
     const dateRange = viewMode === 'calendar' 
       ? `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`
       : listFilter === 'upcoming' ? 'Upcoming Events' : 'Past Events'
     pdf.text(dateRange, pageWidth / 2, yPosition, { align: 'center' })
     
-    yPosition += 20
+    yPosition += 25
 
     // Get events to display
     const now = new Date()
@@ -436,10 +472,6 @@ export default function CalendarPage() {
       pdf.setFontSize(12)
       pdf.text('No events to display', pageWidth / 2, yPosition, { align: 'center' })
     } else {
-      // Events list
-      pdf.setFontSize(12)
-      pdf.setFont('helvetica', 'bold')
-      
       // Process each event and fetch hymns
       for (const event of eventsToShow) {
         // Fetch hymns for this event
@@ -453,22 +485,84 @@ export default function CalendarPage() {
         } catch (error) {
           console.error(`Error fetching hymns for event ${event.id}:`, error)
         }
-        // Check if we need a new page
-        if (yPosition > pageHeight - 40) {
+        
+        // Check if we need a new page (accounting for container height)
+        if (yPosition > pageHeight - 80) {
           pdf.addPage()
           yPosition = 20
         }
 
+        // Container setup
+        const containerStartY = yPosition - 5
+        const containerPadding = 8
+        const containerWidth = pageWidth - 40
+        
+        // First, capture all content in memory to calculate container height
+        let contentStartY = yPosition + 5
+        let tempY = contentStartY
+        
         const eventDate = new Date(event.startTime)
         const eventEndDate = event.endTime ? new Date(event.endTime) : null
         
+        // Calculate height needed for content
+        tempY += 12 // Event title (increased for larger font)
+        tempY += 8  // Date/time (increased for larger font) 
+        if (event.location) tempY += 8 // Location (increased for larger font)
+        
+        if (event.description && event.description.trim()) {
+          tempY += 8 // Description header
+          const lines = pdf.splitTextToSize(event.description, pageWidth - 60)
+          tempY += lines.length * 6 + 5 // Description content + spacing (increased for larger font)
+        }
+        
+        if (event.assignments && event.assignments.length > 0) {
+          tempY += 8 // Musicians summary
+          tempY += event.assignments.length * 6 // Assignment list (increased for larger font)
+        }
+        
+        if (eventHymns && eventHymns.length > 0) {
+          tempY += 9 // Music section header
+          tempY += eventHymns.length * 6 // Hymns list (increased for larger font)
+        }
+        
+        const containerHeight = tempY - containerStartY + 8
+        
+        // Convert event color to RGB for PDF styling
+        const hexToRgb = (hex: string) => {
+          const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+          return result ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16)
+          } : { r: 59, g: 130, b: 246 } // Default blue if parsing fails
+        }
+        
+        const eventColor = hexToRgb(event.eventType.color)
+        
+        // Draw container background first with lighter hue (20% opacity equivalent)
+        const bgR = Math.round(eventColor.r * 0.2 + 255 * 0.8)
+        const bgG = Math.round(eventColor.g * 0.2 + 255 * 0.8) 
+        const bgB = Math.round(eventColor.b * 0.2 + 255 * 0.8)
+        pdf.setFillColor(bgR, bgG, bgB)
+        
+        // Draw border with darker hue (original color)
+        pdf.setDrawColor(eventColor.r, eventColor.g, eventColor.b)
+        pdf.setLineWidth(1.0)
+        pdf.rect(20, containerStartY, containerWidth, containerHeight, 'FD') // Fill and Draw in one operation
+        
+        // Now add the text content on top of the background
+        yPosition = contentStartY
+        
         // Event title
-        pdf.setFont('helvetica', 'bold')
-        pdf.text(event.name, 20, yPosition)
-        yPosition += 7
+        pdf.setFont('Montserrat', 'bold')
+        pdf.setFontSize(16)
+        pdf.setTextColor(0, 0, 0) // Ensure black text
+        pdf.text(event.name, 25, yPosition)
+        yPosition += 12
 
-        // Date and time
-        pdf.setFont('helvetica', 'normal')
+        // Combined date and time - "Thursday, July 20, 2025 @ 8:30 PM"
+        pdf.setFont('Montserrat', 'normal')
+        pdf.setFontSize(12)
         const dateStr = eventDate.toLocaleDateString('en-US', {
           weekday: 'long',
           year: 'numeric',
@@ -485,20 +579,28 @@ export default function CalendarPage() {
           hour12: true
         })}` : '')
         
-        pdf.text(`Date: ${dateStr}`, 25, yPosition)
-        yPosition += 5
-        pdf.text(`Time: ${timeStr}`, 25, yPosition)
-        yPosition += 5
+        pdf.text(`${dateStr} @ ${timeStr}`, 25, yPosition)
+        yPosition += 8
 
         // Location
         if (event.location) {
           pdf.text(`Location: ${event.location}`, 25, yPosition)
-          yPosition += 5
+          yPosition += 8
         }
 
-        // Event type
-        pdf.text(`Type: ${event.eventType.name}`, 25, yPosition)
-        yPosition += 5
+        // Description (moved up to be more prominent)
+        if (event.description && event.description.trim()) {
+          pdf.setFont('Montserrat', 'normal')
+          const descriptionText = `Description: ${event.description}`
+          const lines = pdf.splitTextToSize(descriptionText, pageWidth - 60)
+          lines.forEach((line: string) => {
+            pdf.setFontSize(11)
+            pdf.text(line, 25, yPosition)
+            pdf.setFontSize(12)
+            yPosition += 6
+          })
+          yPosition += 5
+        }
 
         // Assignments summary
         if (event.assignments && event.assignments.length > 0) {
@@ -506,84 +608,66 @@ export default function CalendarPage() {
           const openCount = event.assignments.filter(a => !a.user).length
           const totalSpots = event.assignments.length
           
-          pdf.text(`Assignments: ${assignedCount}/${totalSpots} filled (${openCount} open)`, 25, yPosition)
+          pdf.text(`Musicians: ${assignedCount}/${totalSpots} assigned (${openCount} open)`, 25, yPosition)
           yPosition += 5
 
-          // List assignments
+          // List assignments with better formatting
           event.assignments.forEach((assignment) => {
-            if (yPosition > pageHeight - 20) {
-              pdf.addPage()
-              yPosition = 20
-            }
-            
             const assigneeText = assignment.user 
               ? `${assignment.user.firstName} ${assignment.user.lastName}`
               : assignment.group?.name || 'Open'
             
-            pdf.text(`  • ${assignment.roleName}: ${assigneeText}`, 30, yPosition)
-            yPosition += 4
+            pdf.setFontSize(11)
+            pdf.text(`   • ${assignment.roleName}: ${assigneeText}`, 30, yPosition)
+            pdf.setFontSize(12)
+            yPosition += 6
           })
+          yPosition += 2
         }
 
         // Service Parts / Music List
         if (eventHymns && eventHymns.length > 0) {
-          yPosition += 2
           pdf.text(`Music & Service Parts (${eventHymns.length} items):`, 25, yPosition)
           yPosition += 5
 
           eventHymns.forEach((hymn: any, index: number) => {
-            if (yPosition > pageHeight - 20) {
-              pdf.addPage()
-              yPosition = 20
-            }
-            
             const servicePartName = hymn.servicePart?.name || 'Other'
-            const hymnText = `  ${index + 1}. ${servicePartName}: ${hymn.title}${hymn.notes ? ` (${hymn.notes})` : ''}`
+            const hymnText = `   ${index + 1}. ${servicePartName}: ${hymn.title}${hymn.notes ? ` (${hymn.notes})` : ''}`
             
-            // Handle long hymn titles that might need wrapping
-            const hymnLines = pdf.splitTextToSize(hymnText, pageWidth - 60)
-            if (hymnLines.length === 1) {
-              pdf.text(hymnLines[0], 30, yPosition)
-              yPosition += 4
-            } else {
-              // Multi-line hymn entry
-              hymnLines.forEach((line: string, lineIndex: number) => {
-                if (yPosition > pageHeight - 20) {
-                  pdf.addPage()
-                  yPosition = 20
-                }
-                pdf.text(line, lineIndex === 0 ? 30 : 35, yPosition)
-                yPosition += 4
-              })
-            }
+            pdf.setFontSize(11)
+            pdf.text(hymnText, 30, yPosition)
+            pdf.setFontSize(12)
+            yPosition += 6
           })
-          yPosition += 2
+          yPosition += 3
         }
 
-        // Description
-        if (event.description) {
-          yPosition += 2
-          const lines = pdf.splitTextToSize(event.description, pageWidth - 50)
-          pdf.text(`Description: ${lines[0]}`, 25, yPosition)
-          if (lines.length > 1) {
-            for (let i = 1; i < lines.length; i++) {
-              yPosition += 4
-              pdf.text(lines[i], 25, yPosition)
-            }
-          }
-          yPosition += 5
-        }
 
-        yPosition += 10 // Space between events
+
+        yPosition = containerStartY + containerHeight + 10 // Space between events
       }
     }
 
-    // Footer
-    const footerY = pageHeight - 15
-    pdf.setFontSize(8)
-    pdf.setFont('helvetica', 'normal')
-    pdf.text(`Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, 20, footerY)
-    pdf.text(`Page 1 of ${pdf.getNumberOfPages()}`, pageWidth - 20, footerY, { align: 'right' })
+    // Add logo and app name to bottom of each page
+    const totalPages = pdf.getNumberOfPages()
+    for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+      pdf.setPage(pageNum)
+      
+      // Logo area at bottom
+      const logoY = pageHeight - 25
+      
+      // Add app name centered at bottom
+      pdf.setFontSize(12)
+      pdf.setFont('Montserrat', 'bold')
+      pdf.text('Church Music Scheduler', pageWidth / 2, logoY, { align: 'center' })
+      
+      // Add generation timestamp and page numbers
+      const footerY = pageHeight - 15
+      pdf.setFontSize(9)
+      pdf.setFont('Montserrat', 'normal')
+      pdf.text(`Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, 20, footerY)
+      pdf.text(`Page ${pageNum} of ${totalPages}`, pageWidth - 20, footerY, { align: 'right' })
+    }
 
     // Save the PDF
     const filename = `${session?.user?.churchName?.replace(/[^a-zA-Z0-9]/g, '_') || 'Church'}_Schedule_${new Date().toISOString().split('T')[0]}.pdf`
@@ -765,7 +849,7 @@ export default function CalendarPage() {
                     </div>
                   </div>
                   <p className="text-sm text-gray-600 mt-1">
-                    Drag templates from the left to create events
+                    Drag a template to any date to create an event, or click a date to start from scratch
                   </p>
                 </div>
 
@@ -823,6 +907,10 @@ export default function CalendarPage() {
                                   minute: '2-digit',
                                   hour12: true
                                 })
+                                const hasRoles = event.assignments && event.assignments.length > 0
+                                const assignedCount = event.assignments?.filter(a => a.user).length || 0
+                                const totalRoles = event.assignments?.length || 0
+                                
                                 return (
                                   <div
                                     key={event.id}
@@ -839,7 +927,7 @@ export default function CalendarPage() {
                                       setDraggedEvent(null)
                                       setIsDragging(false)
                                     }}
-                                    className={`text-xs px-2 py-1 rounded truncate cursor-move hover:opacity-80 transition-all duration-200 ${
+                                    className={`text-xs px-2 py-1 rounded cursor-move hover:opacity-80 transition-all duration-200 ${
                                       isDragging && draggedEvent?.id === event.id 
                                         ? 'opacity-50 scale-95 shadow-lg' 
                                         : 'hover:scale-105'
@@ -850,21 +938,27 @@ export default function CalendarPage() {
                                         ? 'border-red-500 border-2'
                                         : ''
                                     }`}
-                                    style={{
+                                    style={{ 
                                       backgroundColor: event.eventType.color + '20',
                                       color: event.eventType.color,
                                       borderLeft: `3px solid ${event.eventType.color}`,
                                       transform: isDragging && draggedEvent?.id === event.id ? 'rotate(2deg)' : 'none'
                                     }}
-                                    title={`${event.name} at ${timeString} - Drag to move`}
+                                    title={`${event.name} at ${timeString}${hasRoles ? `\n👥 ${assignedCount}/${totalRoles} roles filled` : ''} - Click to view details, drag to move`}
                                     onClick={(e) => {
                                       e.stopPropagation()
                                       handleEventClick(event)
                                     }}
                                   >
-                                    {timeString} {event.name}
-                                    {event._tempState === 'pending' && ' (Saving...)'}
-                                    {event._tempState === 'error' && ' (Failed to save)'}
+                                    <div className="truncate">
+                                      <span className="font-medium">{timeString}</span> {event.name}
+                                    </div>
+                                    {event._tempState === 'pending' && (
+                                      <div className="text-xs opacity-75 mt-1">(Saving...)</div>
+                                    )}
+                                    {event._tempState === 'error' && (
+                                      <div className="text-xs text-red-600 mt-1">(Failed to save)</div>
+                                    )}
                                   </div>
                                 )
                               })}

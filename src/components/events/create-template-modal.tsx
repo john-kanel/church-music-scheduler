@@ -185,7 +185,7 @@ export function CreateTemplateModal({
       const newHymns = [...prev.hymns, { title: '', servicePartId: '', servicePartName: '', notes: '' }]
       console.log('➕ Template Modal: New hymns array:', newHymns)
       return {
-        ...prev,
+      ...prev,
         hymns: newHymns
       }
     })
@@ -227,7 +227,7 @@ export function CreateTemplateModal({
       const updatedHymns = [...prev.hymns, ...newHymns]
       console.log('🎶 Template Modal: Updated hymns array:', updatedHymns)
       return {
-        ...prev,
+      ...prev,
         hymns: updatedHymns
       }
     })

@@ -142,9 +142,18 @@ export async function GET(request: NextRequest) {
           }
         },
         musicFiles: true,
+        hymns: {
+          include: {
+            servicePart: true
+          },
+          orderBy: {
+            createdAt: 'asc'
+          }
+        },
         _count: {
           select: {
-            assignments: true
+            assignments: true,
+            hymns: true
           }
         }
       },
@@ -315,229 +324,202 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Create event in transaction with assignments
+    // Process all data BEFORE starting transaction
+    console.log('🎭 ROLES DEBUG: Processing roles for event:', name)
+    console.log('🎭 ROLES DEBUG: validRoles array:', JSON.stringify(validRoles, null, 2))
+    console.log('🎭 ROLES DEBUG: Number of roles to process:', validRoles.length)
+
+    // Prepare all assignments outside transaction
+    const assignmentsToCreate: any[] = []
+    for (const role of validRoles) {
+      console.log('🎭 ROLES DEBUG: Processing individual role:', JSON.stringify(role, null, 2))
+      
+      if (role.assignedMusicians && role.assignedMusicians.length > 0) {
+        // Create assignments for specific musicians
+        for (const musicianId of role.assignedMusicians) {
+          assignmentsToCreate.push({
+            userId: musicianId,
+            roleName: role.name,
+            status: 'PENDING'
+          })
+        }
+      } else {
+        // Create open assignments
+        for (let i = 0; i < role.maxCount; i++) {
+          assignmentsToCreate.push({
+            roleName: role.name,
+            maxMusicians: 1,
+            status: 'PENDING'
+          })
+        }
+      }
+    }
+
+    // Prepare all hymns outside transaction
+    const hymnsToCreate = validHymns.map(hymn => ({
+      title: hymn.title?.trim() || '',
+      notes: hymn.notes?.trim() || null,
+      servicePartId: hymn.servicePartId === 'custom' || !hymn.servicePartId ? null : hymn.servicePartId
+    }))
+
+    // Prepare all group assignments outside transaction
+    const groupAssignmentsToCreate: any[] = []
+    const individualAssignmentsFromGroups: any[] = []
+    
+    for (const groupId of validSelectedGroups) {
+      // Get group data outside transaction
+      const group = await prisma.group.findFirst({
+        where: { id: groupId, churchId: session.user.churchId },
+        include: { members: { include: { user: true } } }
+      })
+      
+      if (group) {
+        groupAssignmentsToCreate.push({
+          groupId: group.id,
+          status: 'PENDING'
+        })
+        
+        // Add individual assignments for group members
+        for (const member of group.members) {
+          individualAssignmentsFromGroups.push({
+            userId: member.user.id,
+            groupId: group.id,
+            status: 'PENDING'
+          })
+        }
+      }
+    }
+
+    console.log('🎭 ROLES DEBUG: Prepared', assignmentsToCreate.length, 'role assignments')
+    console.log('🎭 ROLES DEBUG: Prepared', hymnsToCreate.length, 'hymns')
+    console.log('🎭 ROLES DEBUG: Prepared', groupAssignmentsToCreate.length, 'group assignments')
+
+    // SIMPLE, FAST TRANSACTION
     const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      // Create the event
+      console.log('🚀 Starting fast transaction')
+      
+      // 1. Create the event
       const event = await tx.event.create({
         data: {
-          name,
-          description,
-          location,
+          name: name,
+          description: description || null,
+          location: location || null,
           startTime: startDateTime,
           endTime: endDateTime,
-          isRecurring,
-          recurrencePattern,
-          recurrenceEnd: recurrenceEnd ? new Date(recurrenceEnd) : null,
-          churchId: session.user.churchId,
           eventTypeId: finalEventTypeId,
+          churchId: session.user.churchId,
           templateId: templateId || null
         }
       })
 
-      // Create role assignments if provided
-      if (validRoles.length > 0) {
-        for (const role of validRoles) {
-          if (role.assignedMusicians && role.assignedMusicians.length > 0) {
-            // Create individual assignments for each assigned musician
-            await tx.eventAssignment.createMany({
-              data: role.assignedMusicians.map((musicianId: string) => ({
-                eventId: event.id,
-                userId: musicianId,
-                roleName: role.name,
-                status: 'PENDING'
-              }))
-            })
-          } else {
-            // Create multiple open role assignments based on maxCount
-            const maxCount = role.maxCount || 1
-            const assignmentsToCreate = []
+      // 2. Create all assignments in one batch
+      const allAssignments = [
+        ...assignmentsToCreate.map(a => ({ ...a, eventId: event.id })),
+        ...groupAssignmentsToCreate.map(a => ({ ...a, eventId: event.id })),
+        ...individualAssignmentsFromGroups.map(a => ({ ...a, eventId: event.id }))
+      ]
+
+      if (allAssignments.length > 0) {
+        await tx.eventAssignment.createMany({ data: allAssignments })
+      }
+
+      // 3. Create all hymns in one batch
+      if (hymnsToCreate.length > 0) {
+        console.log('📝 Creating hymns in batch')
+        await tx.eventHymn.createMany({
+          data: hymnsToCreate.map(h => ({ ...h, eventId: event.id }))
+        })
+      }
+
+      // 4. Handle recurring events if needed
+      if (isRecurring && recurrencePattern && recurrenceEnd) {
+        const recurrenceEndDate = new Date(recurrenceEnd)
+        const recurringEventData: any[] = []
+        let currentDate = new Date(startDateTime)
+        
+        while (currentDate <= recurrenceEndDate) {
+          if (recurrencePattern === 'weekly') {
+            currentDate.setDate(currentDate.getDate() + 7)
+          } else if (recurrencePattern === 'biweekly') {
+            currentDate.setDate(currentDate.getDate() + 14)
+          } else if (recurrencePattern === 'monthly') {
+            currentDate.setMonth(currentDate.getMonth() + 1)
+          } else if (recurrencePattern === 'quarterly') {
+            currentDate.setMonth(currentDate.getMonth() + 3)
+        }
+          
+          if (currentDate <= recurrenceEndDate) {
+            const recurringEndTime = new Date(currentDate)
+            if (endDateTime) {
+              recurringEndTime.setTime(recurringEndTime.getTime() + (endDateTime.getTime() - startDateTime.getTime()))
+            }
             
-            for (let i = 0; i < maxCount; i++) {
-              assignmentsToCreate.push({
-                eventId: event.id,
-                roleName: role.name,
-                maxMusicians: 1, // Each assignment is for 1 musician
-                status: 'PENDING' as const
-              })
-            }
-            
-            await tx.eventAssignment.createMany({
-              data: assignmentsToCreate
-            })
-          }
-        }
-      }
-
-      // Create group assignments if provided
-      if (validSelectedGroups.length > 0) {
-        for (const groupId of validSelectedGroups) {
-          // Verify group exists and belongs to church
-          const group = await tx.group.findFirst({
-            where: {
-              id: groupId,
-              churchId: session.user.churchId
-            },
-            include: {
-              members: {
-                include: {
-                  user: true
-                }
-              }
-            }
-          })
-
-          if (group) {
-            // Create group assignment
-            await tx.eventAssignment.create({
-              data: {
-                eventId: event.id,
-                groupId: group.id,
-                status: 'PENDING'
-              }
-            })
-
-            // Also create individual assignments for each group member
-            // This ensures they get individual notifications and can accept/decline
-            for (const member of group.members) {
-              await tx.eventAssignment.create({
-                data: {
-                  eventId: event.id,
-                  userId: member.user.id,
-                  roleName: `${group.name} Member`,
-                  status: 'PENDING'
-                }
-              })
-            }
-          }
-        }
-      }
-
-      // Create hymns if provided
-      if (validHymns.length > 0) {
-        for (const hymn of validHymns) {
-          // Create all hymns, including empty ones as placeholders
-          await tx.eventHymn.create({
-            data: {
-              eventId: event.id,
-              title: hymn.title?.trim() || '', // Allow empty titles
-              notes: hymn.notes?.trim() || null,
-              servicePartId: hymn.servicePartId === 'custom' || !hymn.servicePartId ? null : hymn.servicePartId
-            }
-          })
-        }
-      }
-
-      // If this is a recurring event, create recurring instances
-      if (isRecurring && recurrencePattern) {
-        // Generate recurring events
-        const recurringEvents = generateRecurringEvents(
-          event,
-          recurrencePattern,
-          recurrenceEnd ? new Date(recurrenceEnd) : null,
-          session.user.churchId
-        )
-
-        // Create recurring events
-        for (const recurringEvent of recurringEvents) {
-          const createdEvent = await tx.event.create({
-            data: {
-              ...recurringEvent,
+            recurringEventData.push({
+              name: name,
+              description: description || null,
+              location: location || null,
+              startTime: new Date(currentDate),
+              endTime: recurringEndTime,
+              eventTypeId: finalEventTypeId,
+              churchId: session.user.churchId,
+              templateId: templateId || null,
               parentEventId: event.id
-            }
+            })
+          }
+        }
+        
+        if (recurringEventData.length > 0) {
+          const createdRecurringEvents = await tx.event.createManyAndReturn({
+            data: recurringEventData
           })
 
-          // Copy role assignments to recurring events
-          if (validRoles.length > 0) {
-            for (const role of validRoles) {
-              if (role.assignedMusicians && role.assignedMusicians.length > 0) {
-                await tx.eventAssignment.createMany({
-                  data: role.assignedMusicians.map((musicianId: string) => ({
-                    eventId: createdEvent.id,
-                    userId: musicianId,
-                    roleName: role.name,
-                    status: 'PENDING'
-                  }))
+          // Create assignments for recurring events
+          const recurringAssignments: any[] = []
+          const recurringHymns: any[] = []
+          
+          for (const recurringEvent of createdRecurringEvents) {
+            // Add role assignments if there are any
+            if (allAssignments.length > 0) {
+              for (const assignment of allAssignments) {
+                recurringAssignments.push({
+                  ...assignment,
+                  eventId: recurringEvent.id
                 })
-              } else {
-                const maxCount = role.maxCount || 1
-                const assignmentsToCreate = []
-                
-                for (let i = 0; i < maxCount; i++) {
-                  assignmentsToCreate.push({
-                    eventId: createdEvent.id,
-                    roleName: role.name,
-                    maxMusicians: 1,
-                    status: 'PENDING' as const
-                  })
-                }
-                
-                await tx.eventAssignment.createMany({
-                  data: assignmentsToCreate
+              }
+            }
+            
+            // Add hymns if requested
+            if (copyHymnsToRecurring && hymnsToCreate.length > 0) {
+              for (const hymn of hymnsToCreate) {
+                recurringHymns.push({
+                  ...hymn,
+                  eventId: recurringEvent.id
                 })
               }
             }
           }
 
-          // Copy hymns to recurring events (only if user chose to)
-          if (validHymns.length > 0 && copyHymnsToRecurring) {
-            for (const hymn of validHymns) {
-              // Create all hymns, including empty ones as placeholders
-              await tx.eventHymn.create({
-                data: {
-                  eventId: createdEvent.id,
-                  title: hymn.title?.trim() || '', // Allow empty titles
-                  notes: hymn.notes?.trim() || null,
-                  servicePartId: hymn.servicePartId === 'custom' || !hymn.servicePartId ? null : hymn.servicePartId
-                }
-              })
+          if (recurringAssignments.length > 0) {
+            await tx.eventAssignment.createMany({ data: recurringAssignments })
             }
-          }
-
-          // Copy group assignments to recurring events
-          if (validSelectedGroups.length > 0) {
-            for (const groupId of validSelectedGroups) {
-              const group = await tx.group.findFirst({
-                where: {
-                  id: groupId,
-                  churchId: session.user.churchId
-                },
-                include: {
-                  members: {
-                    include: {
-                      user: true
-                    }
+          
+          if (recurringHymns.length > 0) {
+            await tx.eventHymn.createMany({ data: recurringHymns })
                   }
-                }
-              })
-
-              if (group) {
-                // Create group assignment for recurring event
-                await tx.eventAssignment.create({
-                  data: {
-                    eventId: createdEvent.id,
-                    groupId: group.id,
-                    status: 'PENDING'
-                  }
-                })
-
-                // Create individual assignments for each group member
-                for (const member of group.members) {
-                  await tx.eventAssignment.create({
-                    data: {
-                      eventId: createdEvent.id,
-                      userId: member.user.id,
-                      roleName: `${group.name} Member`,
-                      status: 'PENDING'
-                    }
-                  })
-                }
-              }
-            }
-          }
         }
       }
 
+      console.log('✅ Fast transaction completed')
       return event
+    }, {
+      timeout: 30000, // 30 second timeout
+      maxWait: 10000  // 10 second max wait
+    })
+
+    console.log('✅ Event created successfully:', {
+      eventId: result.id,
+      name: result.name,
+      source: templateId ? 'template' : 'manual'
     })
 
     // Fetch the complete event with relations
@@ -579,12 +561,6 @@ export async function POST(request: NextRequest) {
     // Schedule automated notifications for this new event
     const { scheduleEventNotifications } = await import('@/lib/automation-helpers')
     await scheduleEventNotifications(result.id, session.user.churchId)
-
-    console.log('✅ Event created successfully:', { 
-      eventId: result.id, 
-      name, 
-      source: contentType?.includes('application/json') ? 'drag-drop' : 'form' 
-    })
 
     return NextResponse.json({ 
       message: 'Event created successfully',
