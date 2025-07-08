@@ -284,7 +284,7 @@ export function CreateTemplateModal({
       const dataToSend = {
         ...templateData,
         roles: templateData.roles.filter(role => role.name.trim() !== ''),
-        hymns: templateData.hymns.filter(hymn => hymn.title.trim() !== '')
+        hymns: templateData.hymns  // Keep ALL hymns, even empty ones as placeholders
       }
 
       console.log('🚀 Template Modal: About to save template')
