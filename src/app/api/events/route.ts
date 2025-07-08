@@ -415,13 +415,11 @@ export async function POST(request: NextRequest) {
       // Create hymns if provided
       if (validHymns.length > 0) {
         for (const hymn of validHymns) {
-          // Skip empty hymns
-          if (!hymn.title?.trim()) continue
-
+          // Create all hymns, including empty ones as placeholders
           await tx.eventHymn.create({
             data: {
               eventId: event.id,
-              title: hymn.title.trim(),
+              title: hymn.title?.trim() || '', // Allow empty titles
               notes: hymn.notes?.trim() || null,
               servicePartId: hymn.servicePartId === 'custom' || !hymn.servicePartId ? null : hymn.servicePartId
             }
@@ -483,13 +481,11 @@ export async function POST(request: NextRequest) {
           // Copy hymns to recurring events (only if user chose to)
           if (validHymns.length > 0 && copyHymnsToRecurring) {
             for (const hymn of validHymns) {
-              // Skip empty hymns
-              if (!hymn.title?.trim()) continue
-
+              // Create all hymns, including empty ones as placeholders
               await tx.eventHymn.create({
                 data: {
                   eventId: createdEvent.id,
-                  title: hymn.title.trim(),
+                  title: hymn.title?.trim() || '', // Allow empty titles
                   notes: hymn.notes?.trim() || null,
                   servicePartId: hymn.servicePartId === 'custom' || !hymn.servicePartId ? null : hymn.servicePartId
                 }
