@@ -180,26 +180,37 @@ export function CreateTemplateModal({
   }
 
   const addHymn = () => {
-    setTemplateData(prev => ({
-      ...prev,
-      hymns: [...prev.hymns, { title: '', servicePartId: '', servicePartName: '', notes: '' }]
-    }))
+    console.log('➕ Template Modal: Adding new hymn')
+    setTemplateData(prev => {
+      const newHymns = [...prev.hymns, { title: '', servicePartId: '', servicePartName: '', notes: '' }]
+      console.log('➕ Template Modal: New hymns array:', newHymns)
+      return {
+        ...prev,
+        hymns: newHymns
+      }
+    })
   }
 
   const addDefaultServiceParts = (type: 'required' | 'all') => {
+    console.log('🎶 Template Modal: Adding default service parts, type:', type)
     const partsToAdd = type === 'required' 
       ? serviceParts.filter(part => part.isRequired)
       : serviceParts
+
+    console.log('🎶 Template Modal: Service parts to consider:', partsToAdd)
 
     // Filter out parts that are already added
     const existingServicePartIds = templateData.hymns
       .map(hymn => hymn.servicePartId)
       .filter(id => id && id !== 'custom')
 
+    console.log('🎶 Template Modal: Existing service part IDs:', existingServicePartIds)
+
     const newParts = partsToAdd.filter(part => !existingServicePartIds.includes(part.id))
+    console.log('🎶 Template Modal: New parts to add:', newParts)
 
     if (newParts.length === 0) {
-      // Show a brief message if no new parts to add
+      console.log('🎶 Template Modal: No new parts to add')
       return
     }
 
@@ -210,10 +221,16 @@ export function CreateTemplateModal({
       notes: ''
     }))
 
-    setTemplateData(prev => ({
-      ...prev,
-      hymns: [...prev.hymns, ...newHymns]
-    }))
+    console.log('🎶 Template Modal: New hymns from service parts:', newHymns)
+
+    setTemplateData(prev => {
+      const updatedHymns = [...prev.hymns, ...newHymns]
+      console.log('🎶 Template Modal: Updated hymns array:', updatedHymns)
+      return {
+        ...prev,
+        hymns: updatedHymns
+      }
+    })
   }
 
   const updateHymn = (index: number, field: keyof TemplateHymn, value: string) => {
@@ -264,29 +281,46 @@ export function CreateTemplateModal({
         ? `/api/event-templates/${editingTemplate.id}` 
         : '/api/event-templates'
 
+      const dataToSend = {
+        ...templateData,
+        roles: templateData.roles.filter(role => role.name.trim() !== ''),
+        hymns: templateData.hymns.filter(hymn => hymn.title.trim() !== '')
+      }
+
+      console.log('🚀 Template Modal: About to save template')
+      console.log('🚀 Template Modal: Method:', method)
+      console.log('🚀 Template Modal: URL:', url)
+      console.log('🚀 Template Modal: Data being sent:', dataToSend)
+      console.log('🚀 Template Modal: Hymns being sent:', dataToSend.hymns)
+
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...templateData,
-          roles: templateData.roles.filter(role => role.name.trim() !== ''),
-          hymns: templateData.hymns.filter(hymn => hymn.title.trim() !== '')
-        })
+        body: JSON.stringify(dataToSend)
       })
+
+      console.log('📤 Template Modal: API Response status:', response.status)
+      console.log('📤 Template Modal: API Response ok:', response.ok)
 
       if (!response.ok) {
         const errorData = await response.json()
+        console.error('❌ Template Modal: API Error response:', errorData)
         throw new Error(errorData.error || 'Failed to save template')
       }
+
+      const responseData = await response.json()
+      console.log('✅ Template Modal: API Success response:', responseData)
 
       setSuccess(editingTemplate ? 'Template updated successfully!' : 'Template created successfully!')
       
       setTimeout(() => {
+        console.log('🔄 Template Modal: Calling onTemplateCreated and onClose')
         onTemplateCreated?.()
         onClose()
         setSuccess('')
       }, 1500)
     } catch (err) {
+      console.error('💥 Template Modal: Save error:', err)
       setError(err instanceof Error ? err.message : 'Failed to save template')
     } finally {
       setLoading(false)

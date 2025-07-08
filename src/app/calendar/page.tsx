@@ -372,6 +372,10 @@ export default function CalendarPage() {
   }
 
   const handleEventClick = (event: CalendarEvent) => {
+    console.log('🚨 HandleEventClick: Opening event modal for event:', event.name)
+    console.log('🚨 HandleEventClick: Event data:', event)
+    console.trace('🚨 HandleEventClick: Call stack trace')
+    
     // Show modal immediately with no API call - instant response
     setSelectedEvent(event)
     setShowEventDetails(true)
@@ -688,9 +692,14 @@ export default function CalendarPage() {
                         <h3 className="font-medium text-gray-900 text-sm">{template.name}</h3>
                       </div>
                       <button
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          e.preventDefault()
+                          console.log('🎯 Template Edit Button: Clicked for template:', template.name)
+                          console.log('🎯 Template Edit Button: Setting editingTemplate to:', template)
                           setEditingTemplate(template)
                           setShowCreateTemplate(true)
+                          console.log('🎯 Template Edit Button: Called setEditingTemplate and setShowCreateTemplate(true)')
                         }}
                         className="p-1 text-gray-400 hover:text-gray-600"
                         title="Edit template"
