@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import fs from 'fs'
-import path from 'path'
+import { getPresignedUrl } from '@/lib/s3'
 
 export async function GET(
   request: NextRequest,
@@ -29,27 +28,19 @@ export async function GET(
       return NextResponse.json({ error: 'Document not found' }, { status: 404 })
     }
 
-    // Check if the file exists on disk
-    const filePath = path.join(process.cwd(), 'uploads', document.filePath)
+    // Generate presigned URL for S3 file access
+    // The filename field now contains the S3 key
+    const s3Key = document.filename
     
-    if (!fs.existsSync(filePath)) {
-      console.error('File not found on disk:', filePath)
-      return NextResponse.json({ error: 'File not found on disk' }, { status: 404 })
+    const presignedResult = await getPresignedUrl(s3Key, 3600) // 1 hour expiry
+    
+    if (!presignedResult.success || !presignedResult.url) {
+      console.error('Failed to generate presigned URL:', presignedResult.error)
+      return NextResponse.json({ error: 'File not accessible' }, { status: 404 })
     }
 
-    // Read the file
-    const fileBuffer = fs.readFileSync(filePath)
-
-    // Return the file with appropriate headers
-    return new NextResponse(fileBuffer, {
-      status: 200,
-      headers: {
-        'Content-Type': document.mimeType || 'application/pdf',
-        'Content-Disposition': `inline; filename="${document.originalFilename}"`,
-        'Content-Length': document.fileSize.toString(),
-        'Cache-Control': 'private, max-age=3600' // Cache for 1 hour
-      }
-    })
+    // Redirect to the presigned URL for direct S3 access
+    return NextResponse.redirect(presignedResult.url)
   } catch (error) {
     console.error('Error serving document:', error)
     return NextResponse.json({ error: 'Failed to serve document' }, { status: 500 })
