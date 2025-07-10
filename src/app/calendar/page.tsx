@@ -738,87 +738,91 @@ export default function CalendarPage() {
       </div>
 
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mb-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 min-h-[750px]">
-          {/* Left Sidebar - Templates (30%) */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl shadow-sm border max-h-[850px] flex flex-col">
-              <div className="p-6 border-b flex items-center justify-between">
-                <h2 className="text-lg font-bold text-gray-900">Event Templates</h2>
-                <button
-                  onClick={() => setShowCreateTemplate(true)}
-                  className="flex items-center justify-center w-8 h-8 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  title="Create new template"
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
-              </div>
-              
-              <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                {templates.filter(t => t.isActive).map((template) => (
-                  <div
-                    key={template.id}
-                    draggable
-                    onDragStart={() => {
-                      console.log('🚀 Starting drag operation for template:', template.name)
-                      setDraggedTemplate(template)
-                      setDraggedEvent(null)
-                    }}
-                    onDragEnd={() => setDraggedTemplate(null)}
-                    className="p-4 rounded-lg border-2 border-dashed border-gray-200 hover:border-gray-300 cursor-move transition-colors"
-                    style={{ borderColor: template.color + '40', backgroundColor: template.color + '10' }}
+        <div className={`grid grid-cols-1 gap-8 min-h-[750px] ${
+          session?.user?.role === 'MUSICIAN' ? 'lg:grid-cols-1' : 'lg:grid-cols-4'
+        }`}>
+          {/* Left Sidebar - Templates (30%) - Only show for directors/pastors */}
+          {session?.user?.role !== 'MUSICIAN' && (
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-xl shadow-sm border max-h-[850px] flex flex-col">
+                <div className="p-6 border-b flex items-center justify-between">
+                  <h2 className="text-lg font-bold text-gray-900">Event Templates</h2>
+                  <button
+                    onClick={() => setShowCreateTemplate(true)}
+                    className="flex items-center justify-center w-8 h-8 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    title="Create new template"
                   >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center">
-                        <div
-                          className="w-3 h-3 rounded-full mr-2"
-                          style={{ backgroundColor: template.color }}
-                        />
-                        <h3 className="font-medium text-gray-900 text-sm">{template.name}</h3>
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
+                
+                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                  {templates.filter(t => t.isActive).map((template) => (
+                    <div
+                      key={template.id}
+                      draggable
+                      onDragStart={() => {
+                        console.log('🚀 Starting drag operation for template:', template.name)
+                        setDraggedTemplate(template)
+                        setDraggedEvent(null)
+                      }}
+                      onDragEnd={() => setDraggedTemplate(null)}
+                      className="p-4 rounded-lg border-2 border-dashed border-gray-200 hover:border-gray-300 cursor-move transition-colors"
+                      style={{ borderColor: template.color + '40', backgroundColor: template.color + '10' }}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center">
+                          <div
+                            className="w-3 h-3 rounded-full mr-2"
+                            style={{ backgroundColor: template.color }}
+                          />
+                          <h3 className="font-medium text-gray-900 text-sm">{template.name}</h3>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            e.preventDefault()
+                            console.log('🎯 Template Edit Button: Clicked for template:', template.name)
+                            console.log('🎯 Template Edit Button: Setting editingTemplate to:', template)
+                            setEditingTemplate(template)
+                            setShowCreateTemplate(true)
+                            console.log('🎯 Template Edit Button: Called setEditingTemplate and setShowCreateTemplate(true)')
+                          }}
+                          className="p-1 text-gray-400 hover:text-gray-600"
+                          title="Edit template"
+                        >
+                          <Edit className="h-3 w-3" />
+                        </button>
                       </div>
+                      {template.description && (
+                        <p className="text-xs text-gray-600 mb-2">{template.description}</p>
+                      )}
+                      <div className="flex items-center justify-between text-xs text-gray-500">
+                        <span>{template.duration} min</span>
+                        <span>{template.roles.length} roles</span>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {templates.filter(t => t.isActive).length === 0 && (
+                    <div className="text-center py-8">
+                      <Calendar className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+                      <p className="text-sm text-gray-500">No templates yet</p>
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          e.preventDefault()
-                          console.log('🎯 Template Edit Button: Clicked for template:', template.name)
-                          console.log('🎯 Template Edit Button: Setting editingTemplate to:', template)
-                          setEditingTemplate(template)
-                          setShowCreateTemplate(true)
-                          console.log('🎯 Template Edit Button: Called setEditingTemplate and setShowCreateTemplate(true)')
-                        }}
-                        className="p-1 text-gray-400 hover:text-gray-600"
-                        title="Edit template"
+                        onClick={() => setShowCreateTemplate(true)}
+                        className="text-xs text-blue-600 hover:text-blue-700 mt-1"
                       >
-                        <Edit className="h-3 w-3" />
+                        Create your first template
                       </button>
                     </div>
-                    {template.description && (
-                      <p className="text-xs text-gray-600 mb-2">{template.description}</p>
-                    )}
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      <span>{template.duration} min</span>
-                      <span>{template.roles.length} roles</span>
-                    </div>
-                  </div>
-                ))}
-                
-                {templates.filter(t => t.isActive).length === 0 && (
-                  <div className="text-center py-8">
-                    <Calendar className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-                    <p className="text-sm text-gray-500">No templates yet</p>
-                    <button
-                      onClick={() => setShowCreateTemplate(true)}
-                      className="text-xs text-blue-600 hover:text-blue-700 mt-1"
-                    >
-                      Create your first template
-                    </button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Right Side - Calendar or List View (70%) */}
-          <div className="lg:col-span-3">
+          {/* Right Side - Calendar or List View (70% for directors, 100% for musicians) */}
+          <div className={session?.user?.role === 'MUSICIAN' ? 'lg:col-span-1' : 'lg:col-span-3'}>
             {viewMode === 'calendar' ? (
               <div className="bg-white rounded-xl shadow-sm border flex flex-col" style={{ maxHeight: '868px' }}>
                 {/* Calendar Header */}

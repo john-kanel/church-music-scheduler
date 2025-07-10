@@ -292,18 +292,18 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
 
                 {showProfileMenu && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-10">
-                    <a href="/rewards" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                    <Link href="/rewards" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                       <GiftIcon className="h-4 w-4 mr-2" />
                       Rewards
-                    </a>
-                    <a href="/profile" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                    </Link>
+                    <Link href="/profile" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                       <Home className="h-4 w-4 mr-2" />
                       Profile
-                    </a>
-                    <a href="/support" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                    </Link>
+                    <Link href="/support" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                       <LifeBuoy className="h-4 w-4 mr-2" />
                       Support
-                    </a>
+                    </Link>
                     <button
                       onClick={handleSignOut}
                       className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -577,9 +577,9 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
 
               {dashboardData?.upcomingAssignments?.length > 0 && (
                 <div className="mt-4">
-                  <a href="/my-assignments" className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                  <Link href="/my-assignments" className="text-blue-600 hover:text-blue-700 text-sm font-medium">
                     View all assignments →
-                  </a>
+                  </Link>
                 </div>
               )}
             </div>
@@ -662,9 +662,9 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
               </div>
 
               <div className="mt-4">
-                <a href="/available-events" className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                <Link href="/available-events" className="text-blue-600 hover:text-blue-700 text-sm font-medium">
                   View all opportunities →
-                </a>
+                </Link>
               </div>
             </div>
 

@@ -850,13 +850,11 @@ export function EventDetailsModal({
   }
 
   const handleDeleteRole = async (assignmentId: string) => {
-    if (!currentEvent) return
+    if (!currentEvent?.id) return
     
+    setLoading(true)
     try {
-      setLoading(true)
-      setError('')
-      
-      const response = await fetch(`/api/assignments/${assignmentId}`, {
+      const response = await fetch(`/api/events/${currentEvent.id}/assignments/${assignmentId}`, {
         method: 'DELETE'
       })
 
@@ -865,14 +863,77 @@ export function EventDetailsModal({
         throw new Error(errorData.error || 'Failed to delete role')
       }
 
-      showToast('success', 'Role deleted successfully!')
-      
-      // Refresh event data to show updated assignments
+      // Refresh event data
       await fetchEventData()
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to delete role'
-      setError(errorMessage)
-      showToast('error', errorMessage)
+      showToast('success', 'Role deleted successfully')
+    } catch (error) {
+      console.error('Error deleting role:', error)
+      showToast('error', error instanceof Error ? error.message : 'Failed to delete role')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Musician signup function
+  const handleMusicianSignup = async (assignmentId: string) => {
+    if (!currentEvent?.id) return
+    
+    setLoading(true)
+    try {
+      const response = await fetch(`/api/assignments/${assignmentId}/signup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to sign up for assignment')
+      }
+
+      // Refresh event data
+      await fetchEventData()
+      showToast('success', 'Successfully signed up for this role!')
+      
+      // Call the parent's event updated callback to refresh dashboard data
+      onEventUpdated?.()
+    } catch (error) {
+      console.error('Error signing up for assignment:', error)
+      showToast('error', error instanceof Error ? error.message : 'Failed to sign up for assignment')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Musician self-removal function
+  const handleMusicianSelfRemoval = async (assignmentId: string) => {
+    if (!currentEvent?.id) return
+    
+    setLoading(true)
+    try {
+      const response = await fetch(`/api/assignments/${assignmentId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ action: 'decline' })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to remove assignment')
+      }
+
+      // Refresh event data
+      await fetchEventData()
+      showToast('success', 'Successfully removed from this role')
+      
+      // Call the parent's event updated callback to refresh dashboard data
+      onEventUpdated?.()
+    } catch (error) {
+      console.error('Error removing assignment:', error)
+      showToast('error', error instanceof Error ? error.message : 'Failed to remove assignment')
     } finally {
       setLoading(false)
     }
@@ -1855,57 +1916,182 @@ export function EventDetailsModal({
             
             {currentEvent.assignments && currentEvent.assignments.length > 0 ? (
               <div className="space-y-2">
-                {currentEvent.assignments.map((assignment) => (
-                  <div key={assignment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                        <Music className="h-4 w-4 text-blue-600" />
+                {currentEvent.assignments.map((assignment) => {
+                  const isCurrentUserAssigned = assignment.user?.id === session?.user?.id
+                  const isMusicianView = session?.user?.role === 'MUSICIAN'
+                  const isAvailableRole = !assignment.user && !assignment.group
+                  
+                  return (
+                    <div key={assignment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center">
+                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                          <Music className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-900">{assignment.roleName}</div>
+                          {assignment.user ? (
+                            <div className="text-sm text-gray-600">
+                              {assignment.user.firstName} {assignment.user.lastName}
+                            </div>
+                          ) : assignment.group ? (
+                            <div className="text-sm text-gray-600">
+                              {assignment.group.name} (Group)
+                            </div>
+                          ) : (
+                            <div className="text-sm text-gray-500">Open position</div>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <div className="font-medium text-gray-900">{assignment.roleName}</div>
-                        {assignment.user ? (
-                          <div className="text-sm text-gray-600">
-                            {assignment.user.firstName} {assignment.user.lastName}
-                          </div>
-                        ) : assignment.group ? (
-                          <div className="text-sm text-gray-600">
-                            {assignment.group.name} (Group)
-                          </div>
-                        ) : (
-                          <div className="text-sm text-gray-500">Open position</div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2 relative">
-                      {/* Show assigned musician with edit option or assign button */}
-                      {assignment.user ? (
-                        <div className="flex items-center space-x-2 group">
-                          <div className="text-sm text-gray-900">
-                            <span className="font-medium">{assignment.user.firstName} {assignment.user.lastName}</span>
-                          </div>
-                          {/* Edit and Remove buttons for directors - only in edit mode */}
-                          {isDirector && isEditing && (
-                            <div className="flex items-center space-x-1">
-                              {/* Remove musician button - visible on hover */}
+                      
+                      <div className="flex items-center space-x-2 relative">
+                        {/* Musician View Logic */}
+                        {isMusicianView ? (
+                          isCurrentUserAssigned ? (
+                            /* Self-removal for musician's own assignment */
+                            <div className="group relative">
                               <button
-                                onClick={() => handleRemoveMusician(assignment.id)}
+                                onClick={() => handleMusicianSelfRemoval(assignment.id)}
                                 className="p-1 text-gray-400 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100"
-                                title="Remove musician from role"
+                                title="Remove yourself from this role"
                                 disabled={loading}
                               >
                                 <X className="h-4 w-4" />
                               </button>
-                              {/* Edit/change musician button */}
-                              <div className="relative">
+                            </div>
+                          ) : isAvailableRole ? (
+                            /* Signup button for available roles */
+                            <button
+                              onClick={() => handleMusicianSignup(assignment.id)}
+                              disabled={loading}
+                              className="flex items-center px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                            >
+                              {loading ? (
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1"></div>
+                              ) : (
+                                <UserPlus className="h-4 w-4 mr-1" />
+                              )}
+                              Sign Up
+                            </button>
+                          ) : (
+                            /* Non-interactive for other people's assignments */
+                            <div className="text-xs text-gray-500">Assigned</div>
+                          )
+                        ) : (
+                          /* Director View Logic - Original functionality */
+                          assignment.user ? (
+                            <div className="flex items-center space-x-2 group">
+                              <div className="text-sm text-gray-900">
+                                <span className="font-medium">{assignment.user.firstName} {assignment.user.lastName}</span>
+                              </div>
+                              {/* Edit and Remove buttons for directors - only in edit mode */}
+                              {isDirector && isEditing && (
+                                <div className="flex items-center space-x-1">
+                                  {/* Remove musician button - visible on hover */}
+                                  <button
+                                    onClick={() => handleRemoveMusician(assignment.id)}
+                                    className="p-1 text-gray-400 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100"
+                                    title="Remove musician from role"
+                                    disabled={loading}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </button>
+                                  {/* Edit/change musician button */}
+                                  <div className="relative">
+                                    <button
+                                      onClick={() => toggleDropdown(assignment.id)}
+                                      className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                                      title="Change musician assignment"
+                                      disabled={loading}
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </button>
+                                  
+                                    {/* Searchable Dropdown Menu */}
+                                    {openDropdowns[assignment.id] && (
+                                      <div className="dropdown-container absolute right-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                                        <div className="p-2 border-b border-gray-200">
+                                          <input
+                                            type="text"
+                                            placeholder="Search musicians..."
+                                            value={searchTexts[assignment.id] || ''}
+                                            onChange={(e) => handleSearchChange(assignment.id, e.target.value)}
+                                            className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                            autoFocus
+                                          />
+                                        </div>
+                                        <div className="max-h-48 overflow-y-auto">
+                                          {getFilteredMusicians(assignment.id).length > 0 ? (
+                                            <>
+                                              {getFilteredMusicians(assignment.id).map((musician) => (
+                                                <button
+                                                  key={musician.id}
+                                                  onClick={() => handleAssignMusician(assignment.id, musician.id)}
+                                                  className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center space-x-2 border-b border-gray-100 last:border-b-0 disabled:opacity-50"
+                                                  disabled={loading}
+                                                >
+                                                  <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                                                    <Users className="h-3 w-3 text-blue-600" />
+                                                  </div>
+                                                  <div className="flex-1">
+                                                    <div className="text-sm font-medium text-gray-900">
+                                                      {musician.firstName} {musician.lastName}
+                                                    </div>
+                                                    <div className="text-xs text-gray-500">
+                                                      {musician.email}
+                                                    </div>
+                                                    {musician.instrument && (
+                                                      <div className="text-xs text-blue-600">
+                                                        {musician.instrument}
+                                                      </div>
+                                                    )}
+                                                  </div>
+                                                </button>
+                                              ))}
+                                            </>
+                                          ) : (
+                                            <div className="px-3 py-2 text-sm text-gray-500 text-center">
+                                              {searchTexts[assignment.id] 
+                                                ? 'No musicians found' 
+                                                : musicians.length === 0 
+                                                  ? 'No verified musicians available. Musicians need to accept their invitations first.'
+                                                  : 'No musicians available for individual assignment. All verified musicians are already assigned via groups.'
+                                              }
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            /* Show assign musician button for open positions */
+                            isDirector && isEditing ? (
+                              <div className="relative group">
+                                {/* Delete role button - visible on hover */}
                                 <button
-                                  onClick={() => toggleDropdown(assignment.id)}
-                                  className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
-                                  title="Change musician assignment"
+                                  onClick={() => handleDeleteRole(assignment.id)}
+                                  className="absolute -left-8 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100"
+                                  title="Delete this role"
                                   disabled={loading}
                                 >
-                                  <Edit className="h-4 w-4" />
+                                  <X className="h-4 w-4" />
                                 </button>
-                              
+                                
+                                <button
+                                  onClick={() => toggleDropdown(assignment.id)}
+                                  className="flex items-center px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                                  disabled={loading}
+                                >
+                                  {loading ? (
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1"></div>
+                                  ) : (
+                                    <UserPlus className="h-4 w-4 mr-1" />
+                                  )}
+                                  Assign Musician
+                                </button>
+                                
                                 {/* Searchable Dropdown Menu */}
                                 {openDropdowns[assignment.id] && (
                                   <div className="dropdown-container absolute right-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
@@ -1962,150 +2148,13 @@ export function EventDetailsModal({
                                   </div>
                                 )}
                               </div>
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        /* Show assign musician button for open positions */
-                        isDirector && isEditing ? (
-                          <div className="relative group">
-                            {/* Delete role button - visible on hover */}
-                            <button
-                              onClick={() => handleDeleteRole(assignment.id)}
-                              className="absolute -left-8 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100"
-                              title="Delete this role"
-                              disabled={loading}
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                            
-                            <button
-                              onClick={() => toggleDropdown(assignment.id)}
-                              className="flex items-center px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                              disabled={loading}
-                            >
-                              {loading ? (
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1"></div>
-                              ) : (
-                                <UserPlus className="h-4 w-4 mr-1" />
-                              )}
-                              Assign Musician
-                            </button>
-                            
-                            {/* Searchable Dropdown Menu */}
-                            {openDropdowns[assignment.id] && (
-                              <div className="dropdown-container absolute right-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                                <div className="p-2 border-b border-gray-200">
-                                  <input
-                                    type="text"
-                                    placeholder="Search musicians..."
-                                    value={searchTexts[assignment.id] || ''}
-                                    onChange={(e) => handleSearchChange(assignment.id, e.target.value)}
-                                    className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                                    autoFocus
-                                  />
-                                </div>
-                                <div className="max-h-48 overflow-y-auto">
-                                  {getFilteredMusicians(assignment.id).length > 0 ? (
-                                    <>
-                                      {getFilteredMusicians(assignment.id).map((musician) => (
-                                        <button
-                                          key={musician.id}
-                                          onClick={() => handleAssignMusician(assignment.id, musician.id)}
-                                          className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center space-x-2 border-b border-gray-100 last:border-b-0 disabled:opacity-50"
-                                          disabled={loading}
-                                        >
-                                          <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                                            <Users className="h-3 w-3 text-blue-600" />
-                                          </div>
-                                          <div className="flex-1">
-                                            <div className="text-sm font-medium text-gray-900">
-                                              {musician.firstName} {musician.lastName}
-                                            </div>
-                                            <div className="text-xs text-gray-500">
-                                              {musician.email}
-                                            </div>
-                                            {musician.instrument && (
-                                              <div className="text-xs text-blue-600">
-                                                {musician.instrument}
-                                              </div>
-                                            )}
-                                          </div>
-                                        </button>
-                                      ))}
-                                    </>
-                                  ) : (
-                                    <div className="px-3 py-2 text-sm text-gray-500 text-center">
-                                      {searchTexts[assignment.id] 
-                                        ? 'No musicians found' 
-                                        : musicians.length === 0 
-                                          ? 'No verified musicians available. Musicians need to accept their invitations first.'
-                                          : 'No musicians available for individual assignment. All verified musicians are already assigned via groups.'
-                                      }
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          /* Show status for non-directors or non-editing mode */
-                          <span className={`px-2 py-1 text-xs rounded-full ${
-                            assignment.status === 'CONFIRMED' 
-                              ? 'bg-success-100 text-success-800'
-                              : assignment.status === 'PENDING'
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : 'bg-red-100 text-red-800'
-                          }`}>
-                            {assignment.status || 'OPEN'}
-                          </span>
-                        )
-                      )}
-                    </div>
-                  </div>
-                ))}
-                
-                {/* Add Role Form for existing assignments */}
-                {isDirector && isEditing && showAddRole && (
-                  <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div className="space-y-3">
-                      <h4 className="font-medium text-gray-900">Add New Role</h4>
-                      <input
-                        type="text"
-                        value={newRoleName}
-                        onChange={(e) => setNewRoleName(e.target.value)}
-                        placeholder="Enter role name (e.g., Accompanist, Vocalist)"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                        onKeyPress={(e) => e.key === 'Enter' && handleAddRole()}
-                        autoFocus
-                      />
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={handleAddRole}
-                          disabled={addingRole || !newRoleName.trim()}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 text-sm flex items-center"
-                        >
-                          {addingRole ? (
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          ) : (
-                            <Check className="h-4 w-4 mr-2" />
-                          )}
-                          Add Role
-                        </button>
-                        <button
-                          onClick={() => {
-                            setShowAddRole(false)
-                            setNewRoleName('')
-                          }}
-                          disabled={addingRole}
-                          className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 text-sm"
-                        >
-                          Cancel
-                        </button>
+                            ) : null
+                          )
+                        )}
                       </div>
                     </div>
-                  </div>
-                )}
+                  )
+                })}
               </div>
             ) : (
               <div className="text-center py-8 text-gray-500">
@@ -2136,16 +2185,14 @@ export function EventDetailsModal({
                           <button
                             onClick={handleAddRole}
                             disabled={addingRole || !newRoleName.trim()}
-                            className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 text-sm flex items-center justify-center"
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 text-sm flex items-center"
                           >
                             {addingRole ? (
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                             ) : (
-                              <>
-                                <Check className="h-4 w-4 mr-1" />
-                                Add
-                              </>
+                              <Check className="h-4 w-4 mr-2" />
                             )}
+                            Add Role
                           </button>
                           <button
                             onClick={() => {
@@ -2153,7 +2200,7 @@ export function EventDetailsModal({
                               setNewRoleName('')
                             }}
                             disabled={addingRole}
-                            className="flex-1 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 text-sm"
+                            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 text-sm"
                           >
                             Cancel
                           </button>

@@ -17,8 +17,107 @@ export async function PUT(
     }
 
     const { assignmentId } = await params
-    const { musicianId, isPastEvent } = await request.json()
+    const body = await request.json()
+    const { action, musicianId, isPastEvent } = body
 
+    // Handle musician accept/decline actions
+    if (action && ['accept', 'decline'].includes(action)) {
+      // Only musicians can accept/decline their own assignments
+      if (session.user.role !== 'MUSICIAN') {
+        return NextResponse.json({ error: 'Only musicians can accept/decline assignments' }, { status: 403 })
+      }
+
+      // Verify the assignment exists, belongs to the church, and is assigned to this musician
+      const assignment = await prisma.eventAssignment.findFirst({
+        where: {
+          id: assignmentId,
+          userId: session.user.id,
+          event: {
+            churchId: session.user.churchId
+          }
+        },
+        include: {
+          event: {
+            select: {
+              id: true,
+              name: true,
+              startTime: true
+            }
+          }
+        }
+      })
+
+      if (!assignment) {
+        return NextResponse.json({ error: 'Assignment not found or not assigned to you' }, { status: 404 })
+      }
+
+      if (action === 'accept') {
+        // Accept the assignment
+        const updatedAssignment = await prisma.eventAssignment.update({
+          where: { id: assignmentId },
+          data: {
+            status: 'ACCEPTED',
+            respondedAt: new Date()
+          },
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true
+              }
+            },
+            event: {
+              select: {
+                id: true,
+                name: true,
+                startTime: true
+              }
+            }
+          }
+        })
+
+        return NextResponse.json({
+          message: 'Assignment accepted successfully',
+          assignment: updatedAssignment
+        })
+      } else {
+        // Decline the assignment - unassign the musician completely
+        const updatedAssignment = await prisma.eventAssignment.update({
+          where: { id: assignmentId },
+          data: {
+            userId: null,
+            status: 'PENDING', // Make the role available again
+            respondedAt: new Date()
+          },
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true
+              }
+            },
+            event: {
+              select: {
+                id: true,
+                name: true,
+                startTime: true
+              }
+            }
+          }
+        })
+
+        return NextResponse.json({
+          message: 'Assignment declined successfully - role is now available for others',
+          assignment: updatedAssignment
+        })
+      }
+    }
+
+    // Handle director assign/unassign actions (existing code)
     // Only directors and pastors can assign/unassign musicians
     if (!['DIRECTOR', 'ASSOCIATE_DIRECTOR', 'PASTOR'].includes(session.user.role)) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
@@ -125,9 +224,9 @@ export async function PUT(
     })
 
   } catch (error) {
-    console.error('Error assigning musician:', error)
+    console.error('Error updating assignment:', error)
     return NextResponse.json(
-      { error: 'Failed to assign musician' },
+      { error: 'Failed to update assignment' },
       { status: 500 }
     )
   }

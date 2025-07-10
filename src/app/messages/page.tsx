@@ -11,6 +11,9 @@ export default function MessagesPage() {
   const [showMessageModal, setShowMessageModal] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
 
+  // Check if user can send messages (directors, pastors, associates)
+  const canSendMessages = session?.user?.role && ['DIRECTOR', 'ASSOCIATE_DIRECTOR', 'PASTOR', 'ASSOCIATE_PASTOR'].includes(session.user.role)
+
   if (!session) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -45,15 +48,6 @@ export default function MessagesPage() {
                   <p className="text-sm text-gray-600">{session.user?.churchName || 'Your Church'}</p>
                 </div>
               </div>
-            </div>
-            <div className="flex items-center space-x-3">
-              <button 
-                onClick={() => setShowMessageModal(true)}
-                className="flex items-center px-4 py-2 bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors"
-              >
-                <Send className="h-4 w-4 mr-2" />
-                Send Message
-              </button>
             </div>
           </div>
         </div>
@@ -101,7 +95,7 @@ export default function MessagesPage() {
 
           {/* Empty State */}
           <div className="p-8 text-center">
-            <MessageSquare className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+            <MessageSquare className="h-16 w-16 mx-auto text-secondary-600 mb-4" />
             <h3 className="text-xl font-medium text-gray-900 mb-2">No Messages Sent Yet</h3>
             <p className="text-gray-600 mb-6 max-w-md mx-auto">
               Start communicating with your music ministry. Send emails, SMS messages, or both to keep everyone informed about events and updates.
@@ -117,40 +111,42 @@ export default function MessagesPage() {
         </div>
 
         {/* Quick Actions */}
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <button 
-            onClick={() => setShowMessageModal(true)}
-            className="bg-white rounded-xl shadow-sm border p-6 hover:border-blue-300 hover:shadow-md transition-all text-left"
-          >
-            <div className="flex items-center mb-4">
-              <Mail className="h-8 w-8 text-blue-600 mr-3" />
-              <h3 className="font-medium text-gray-900">Email Message</h3>
-            </div>
-            <p className="text-sm text-gray-600">Send detailed emails to musicians and members</p>
-          </button>
+        {canSendMessages && (
+          <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <button 
+              onClick={() => setShowMessageModal(true)}
+              className="bg-white rounded-xl shadow-sm border p-6 hover:border-blue-300 hover:shadow-md transition-all text-left"
+            >
+              <div className="flex items-center mb-4">
+                <Mail className="h-8 w-8 text-blue-600 mr-3" />
+                <h3 className="font-medium text-gray-900">Email Message</h3>
+              </div>
+              <p className="text-sm text-gray-600">Send detailed emails to musicians and members</p>
+            </button>
 
-          <button 
-            onClick={() => setShowMessageModal(true)}
-            className="bg-white rounded-xl shadow-sm border p-6 hover:border-success-300 hover:shadow-md transition-all text-left"
-          >
-            <div className="flex items-center mb-4">
-              <Phone className="h-8 w-8 text-success-600 mr-3" />
-              <h3 className="font-medium text-gray-900">SMS Alert</h3>
-            </div>
-            <p className="text-sm text-gray-600">Send quick text messages for urgent updates</p>
-          </button>
+            <button 
+              onClick={() => setShowMessageModal(true)}
+              className="bg-white rounded-xl shadow-sm border p-6 hover:border-success-300 hover:shadow-md transition-all text-left"
+            >
+              <div className="flex items-center mb-4">
+                <Phone className="h-8 w-8 text-success-600 mr-3" />
+                <h3 className="font-medium text-gray-900">SMS Alert</h3>
+              </div>
+              <p className="text-sm text-gray-600">Send quick text messages for urgent updates</p>
+            </button>
 
-          <button 
-            onClick={() => setShowMessageModal(true)}
-            className="bg-white rounded-xl shadow-sm border p-6 hover:border-secondary-300 hover:shadow-md transition-all text-left"
-          >
-            <div className="flex items-center mb-4">
-              <Send className="h-8 w-8 text-secondary-600 mr-3" />
-              <h3 className="font-medium text-gray-900">Broadcast</h3>
-            </div>
-            <p className="text-sm text-gray-600">Send to everyone via email and SMS</p>
-          </button>
-        </div>
+            <button 
+              onClick={() => setShowMessageModal(true)}
+              className="bg-white rounded-xl shadow-sm border p-6 hover:border-secondary-300 hover:shadow-md transition-all text-left"
+            >
+              <div className="flex items-center mb-4">
+                <Send className="h-8 w-8 text-secondary-600 mr-3" />
+                <h3 className="font-medium text-gray-900">Broadcast</h3>
+              </div>
+              <p className="text-sm text-gray-600">Send to everyone via email and SMS</p>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Send Message Modal */}

@@ -376,20 +376,24 @@ export default function MusiciansPage() {
                   {exporting ? 'Exporting...' : 'Export'}
                 </button>
               )}
-              <button 
-                onClick={() => setShowInvitationLinkModal(true)}
-                className="flex items-center px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors"
-              >
-                <UserPlus className="h-4 w-4 mr-2" />
-                Invitation Link
-              </button>
-              <button 
-                onClick={() => setShowInviteModal(true)}
-                className="flex items-center px-4 py-2 bg-success-600 text-white rounded-lg hover:bg-success-700 transition-colors"
-              >
-                <UserPlus className="h-4 w-4 mr-2" />
-                Email Invites
-              </button>
+              {canEditMusicians && (
+                <button 
+                  onClick={() => setShowInvitationLinkModal(true)}
+                  className="flex items-center px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors"
+                >
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Invitation Link
+                </button>
+              )}
+              {canEditMusicians && (
+                <button 
+                  onClick={() => setShowInviteModal(true)}
+                  className="flex items-center px-4 py-2 bg-success-600 text-white rounded-lg hover:bg-success-700 transition-colors"
+                >
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Email Invites
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -772,40 +776,42 @@ export default function MusiciansPage() {
         </div>
 
         {/* Quick Actions */}
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <button 
-            onClick={() => setShowInvitationLinkModal(true)}
-            className="bg-white rounded-xl shadow-sm border p-6 hover:border-brand-300 hover:shadow-md transition-all text-left"
-          >
-            <div className="flex items-center mb-4">
-              <UserPlus className="h-8 w-8 text-brand-600 mr-3" />
-              <h3 className="font-medium text-gray-900">Invitation Link</h3>
-            </div>
-            <p className="text-sm text-gray-600">Share a link or QR code for musicians to join themselves</p>
-          </button>
+        {canEditMusicians && (
+          <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <button 
+              onClick={() => setShowInvitationLinkModal(true)}
+              className="bg-white rounded-xl shadow-sm border p-6 hover:border-brand-300 hover:shadow-md transition-all text-left"
+            >
+              <div className="flex items-center mb-4">
+                <UserPlus className="h-8 w-8 text-brand-600 mr-3" />
+                <h3 className="font-medium text-gray-900">Invitation Link</h3>
+              </div>
+              <p className="text-sm text-gray-600">Share a link or QR code for musicians to join themselves</p>
+            </button>
 
-          <button 
-            onClick={() => setShowInviteModal(true)}
-            className="bg-white rounded-xl shadow-sm border p-6 hover:border-success-300 hover:shadow-md transition-all text-left"
-          >
-            <div className="flex items-center mb-4">
-              <UserPlus className="h-8 w-8 text-success-600 mr-3" />
-              <h3 className="font-medium text-gray-900">Email Invites</h3>
-            </div>
-            <p className="text-sm text-gray-600">Send personal invitations or import multiple musicians</p>
-          </button>
+            <button 
+              onClick={() => setShowInviteModal(true)}
+              className="bg-white rounded-xl shadow-sm border p-6 hover:border-success-300 hover:shadow-md transition-all text-left"
+            >
+              <div className="flex items-center mb-4">
+                <UserPlus className="h-8 w-8 text-success-600 mr-3" />
+                <h3 className="font-medium text-gray-900">Email Invites</h3>
+              </div>
+              <p className="text-sm text-gray-600">Send personal invitations or import multiple musicians</p>
+            </button>
 
-          <Link 
-            href="/groups"
-            className="bg-white rounded-xl shadow-sm border p-6 hover:border-secondary-300 hover:shadow-md transition-all text-left"
-          >
-            <div className="flex items-center mb-4">
-              <Music className="h-8 w-8 text-secondary-600 mr-3" />
-              <h3 className="font-medium text-gray-900">Create Groups</h3>
-            </div>
-            <p className="text-sm text-gray-600">Organize musicians into choirs or ensembles</p>
-          </Link>
-        </div>
+            <Link 
+              href="/groups"
+              className="bg-white rounded-xl shadow-sm border p-6 hover:border-secondary-300 hover:shadow-md transition-all text-left"
+            >
+              <div className="flex items-center mb-4">
+                <Music className="h-8 w-8 text-secondary-600 mr-3" />
+                <h3 className="font-medium text-gray-900">Create Groups</h3>
+              </div>
+              <p className="text-sm text-gray-600">Organize musicians into choirs or ensembles</p>
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Invite Modal */}
