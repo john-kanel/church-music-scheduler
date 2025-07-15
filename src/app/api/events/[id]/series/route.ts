@@ -9,7 +9,7 @@ import { generateRecurringEvents, parseRecurrencePattern, extendRecurringEvents 
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -28,7 +28,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
-    const rootEventId = params.id
+    const { id: rootEventId } = await params
     const requestData = await request.json()
 
     const {
