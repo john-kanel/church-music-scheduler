@@ -112,11 +112,6 @@ export async function DELETE(request: NextRequest) {
         where: { churchId: churchId }
       })
 
-      // Delete all event templates belonging to this church
-      await tx.eventTemplate.deleteMany({
-        where: { churchId: churchId }
-      })
-
       // Delete all groups belonging to this church
       await tx.group.deleteMany({
         where: { churchId: churchId }

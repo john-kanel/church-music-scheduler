@@ -204,11 +204,7 @@ export const apiCache = {
   
   // Events for a specific month - cache for 3 minutes
   events: (month: number, year: number, userId?: string) =>
-    fetchWithCache('/api/events', {}, 'events', userId, { month: month.toString(), year: year.toString() }),
-  
-  // Event templates - cache for 10 minutes
-  eventTemplates: (userId?: string) =>
-    fetchWithCache('/api/event-templates', {}, 'groups', userId)
+    fetchWithCache('/api/events', {}, 'events', userId, { month: month.toString(), year: year.toString() })
 }
 
 // Cache invalidation helpers
