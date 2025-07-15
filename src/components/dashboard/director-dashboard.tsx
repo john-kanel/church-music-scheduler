@@ -481,7 +481,7 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                           setShowMessagesDropdown(false)
                           setShowEventsDropdown(!showEventsDropdown)
                         }}
-                        className="px-2 py-2 bg-blue-600 text-white border-l border-blue-800 rounded-r-lg hover:bg-blue-700 transition-colors"
+                        className="px-2 py-2 bg-blue-600 text-white rounded-r-lg hover:bg-blue-700 transition-colors"
                       >
                         <ChevronDown className="h-4 w-4" />
                       </button>
@@ -520,7 +520,7 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                           setShowMessagesDropdown(false)
                           setShowMusiciansDropdown(!showMusiciansDropdown)
                         }}
-                        className="px-2 py-2 bg-success-600 text-white border-l border-success-800 rounded-r-lg hover:bg-success-700 transition-colors"
+                        className="px-2 py-2 bg-success-600 text-white rounded-r-lg hover:bg-success-700 transition-colors"
                       >
                         <ChevronDown className="h-4 w-4" />
                       </button>
@@ -559,7 +559,7 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                           setShowMusiciansDropdown(false)
                           setShowMessagesDropdown(!showMessagesDropdown)
                         }}
-                        className="px-2 py-2 bg-secondary-600 text-white border-l border-secondary-800 rounded-r-lg hover:bg-secondary-700 transition-colors"
+                        className="px-2 py-2 bg-secondary-600 text-white rounded-r-lg hover:bg-secondary-700 transition-colors"
                       >
                         <ChevronDown className="h-4 w-4" />
                       </button>

@@ -177,6 +177,34 @@ export default function BillingPage() {
     )
   }
 
+  // Only allow church leadership to access billing
+  if (session.user.role === 'MUSICIAN') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto">
+          <div className="bg-white rounded-lg shadow-sm border p-8">
+            <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Restricted</h1>
+            <p className="text-gray-600 mb-6">
+              Only church leadership (Directors and Pastors) can access billing and subscription management.
+            </p>
+            <div className="space-y-3">
+              <Link 
+                href="/dashboard" 
+                className="w-full inline-flex justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Return to Dashboard
+              </Link>
+              <p className="text-sm text-gray-500">
+                Need billing access? Contact your church director.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}

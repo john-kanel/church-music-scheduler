@@ -158,9 +158,9 @@ export async function PUT(
         id: params.id,
         churchId: session.user.churchId
       },
-      include: {
-        eventType: true
-      }
+              include: {
+          eventType: true
+        }
     })
 
     if (!existingEvent) {
@@ -210,24 +210,22 @@ export async function PUT(
       )
     }
 
-    // TIMEZONE FIX: User input times are in EST (UTC-5), convert to UTC for storage
+    // Combine date and time (consistent with event creation logic)
     const [year, month, day] = startDate.split('-').map(Number)
     const [startHour, startMinute] = startTime.split(':').map(Number)
-    
-    // Create UTC date by adding 5 hours to EST time (EST is UTC-5)
-    const startDateTime = new Date(Date.UTC(year, month - 1, day, startHour + 5, startMinute, 0, 0))
+    const startDateTime = new Date(year, month - 1, day, startHour, startMinute)
     
     let endDateTime = null
     if (endTime) {
       const [endHour, endMinute] = endTime.split(':').map(Number)
-      endDateTime = new Date(Date.UTC(year, month - 1, day, endHour + 5, endMinute, 0, 0))
+      endDateTime = new Date(year, month - 1, day, endHour, endMinute)
     }
 
     console.log('📅 Date/time construction:', {
       input: { startDate, startTime, endTime },
-      estConversion: { 
-        inputTime: `${startTime} EST`, 
-        utcTime: `${startHour + 5}:${startMinute.toString().padStart(2, '0')} UTC` 
+      localTime: { 
+        inputTime: `${startTime} local`, 
+        constructedTime: `${startHour}:${startMinute.toString().padStart(2, '0')} local` 
       },
       constructed: {
         startDateTime: startDateTime.toISOString(),
@@ -235,7 +233,7 @@ export async function PUT(
       },
       originalDateTime: existingEvent.startTime.toISOString(),
       timesMatch: startDateTime.getTime() === existingEvent.startTime.getTime(),
-      note: 'EST input converted to UTC (+5 hours)'
+      note: 'Using local time without timezone conversion (consistent with event creation)'
     })
 
     // Use the provided eventTypeId if available, otherwise keep the existing one

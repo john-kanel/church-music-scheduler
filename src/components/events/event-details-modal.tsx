@@ -5,11 +5,12 @@ import { useSession } from 'next-auth/react'
 import { 
   X, Calendar, Clock, MapPin, Users, Edit, Save, Trash2, 
   UserPlus, MessageCircle, Check, AlertTriangle, XCircle,
-  Download, Upload, Music, Plus, RefreshCw, FileText, GripVertical, ExternalLink
+  Download, Upload, Music, Plus, RefreshCw, FileText, GripVertical, ExternalLink, Printer
 } from 'lucide-react'
 import { InviteModal } from '../musicians/invite-modal'
 import { SendMessageModal } from '../messages/send-message-modal'
 import PdfProcessor from './pdf-processor'
+import jsPDF from 'jspdf'
 
 interface EventDetailsModalProps {
   isOpen: boolean
@@ -260,9 +261,13 @@ export function EventDetailsModal({
         name: currentEvent.name,
         description: currentEvent.description || '',
         location: currentEvent.location || '',
-        startDate: startDate.toISOString().split('T')[0],
-        startTime: startDate.toTimeString().slice(0, 5),
-        endTime: endDate ? endDate.toTimeString().slice(0, 5) : '',
+        startDate: startDate.getFullYear() + '-' + 
+                   String(startDate.getMonth() + 1).padStart(2, '0') + '-' + 
+                   String(startDate.getDate()).padStart(2, '0'),
+        startTime: String(startDate.getHours()).padStart(2, '0') + ':' + 
+                   String(startDate.getMinutes()).padStart(2, '0'),
+        endTime: endDate ? String(endDate.getHours()).padStart(2, '0') + ':' + 
+                          String(endDate.getMinutes()).padStart(2, '0') : '',
         status: (currentEvent.status && ['confirmed', 'tentative', 'cancelled', 'pending', 'error'].includes(currentEvent.status)) ? currentEvent.status : 'confirmed',
         signupType: 'open' as 'open' | 'assigned', // Default to open for existing events
         eventTypeId: currentEvent.eventType?.id || '',
@@ -270,7 +275,12 @@ export function EventDetailsModal({
         eventTypeColor: currentEvent.eventType?.color || '#6B7280',
         isRecurring: currentEvent.isRecurring || false,
         recurrencePattern: currentEvent.recurrencePattern || '',
-        recurrenceEnd: currentEvent.recurrenceEnd ? new Date(currentEvent.recurrenceEnd).toISOString().split('T')[0] : '',
+        recurrenceEnd: currentEvent.recurrenceEnd ? (() => {
+          const recEndDate = new Date(currentEvent.recurrenceEnd);
+          return recEndDate.getFullYear() + '-' + 
+                 String(recEndDate.getMonth() + 1).padStart(2, '0') + '-' + 
+                 String(recEndDate.getDate()).padStart(2, '0');
+        })() : '',
         isPastEvent: new Date(currentEvent.startTime) < new Date()
       }
       
@@ -1034,6 +1044,281 @@ export function EventDetailsModal({
     }
   }
 
+  const handlePrintPDF = async () => {
+    if (!currentEvent) return
+
+    try {
+      const pdf = new jsPDF()
+      const pageWidth = pdf.internal.pageSize.getWidth()
+      const pageHeight = pdf.internal.pageSize.getHeight()
+      let yPosition = 20
+
+      // Load and add Montserrat fonts (same pattern as calendar page)
+      try {
+        const [regularFont, boldFont] = await Promise.all([
+          fetch('/fonts/Montserrat-Regular.ttf').then(res => res.arrayBuffer()),
+          fetch('/fonts/Montserrat-Bold.ttf').then(res => res.arrayBuffer())
+        ])
+        
+        const regularBase64 = btoa(String.fromCharCode(...new Uint8Array(regularFont)))
+        const boldBase64 = btoa(String.fromCharCode(...new Uint8Array(boldFont)))
+        
+        pdf.addFileToVFS('Montserrat-Regular.ttf', regularBase64)
+        pdf.addFileToVFS('Montserrat-Bold.ttf', boldBase64)
+        pdf.addFont('Montserrat-Regular.ttf', 'Montserrat', 'normal')
+        pdf.addFont('Montserrat-Bold.ttf', 'Montserrat', 'bold')
+      } catch (error) {
+        console.warn('Could not load custom fonts, falling back to system fonts:', error)
+      }
+
+      // Convert event color to RGB for PDF styling
+      const hexToRgb = (hex: string) => {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+        return result ? {
+          r: parseInt(result[1], 16),
+          g: parseInt(result[2], 16),
+          b: parseInt(result[3], 16)
+        } : { r: 59, g: 130, b: 246 }
+      }
+      
+      const eventColor = hexToRgb(currentEvent.eventType.color)
+      
+      // Header with minimal ink usage - just a border
+      pdf.setDrawColor(eventColor.r, eventColor.g, eventColor.b)
+      pdf.setLineWidth(0.5)
+      pdf.rect(10, 10, pageWidth - 20, 25, 'D')
+      
+      // Event title in header
+      pdf.setTextColor(eventColor.r, eventColor.g, eventColor.b)
+      pdf.setFont('Montserrat', 'bold')
+      pdf.setFontSize(20)
+      pdf.text(currentEvent.name, pageWidth / 2, 28, { align: 'center' })
+      
+      // Reset text color
+      pdf.setTextColor(0, 0, 0)
+      yPosition = 50
+
+      // Event details section
+      pdf.setFont('Montserrat', 'bold')
+      pdf.setFontSize(16)
+      pdf.text('Event Details', 20, yPosition)
+      yPosition += 15
+
+      const eventDate = new Date(currentEvent.startTime)
+      const eventEndDate = currentEvent.endTime ? new Date(currentEvent.endTime) : null
+      
+      pdf.setFont('Montserrat', 'normal')
+      pdf.setFontSize(12)
+
+      // Date and time
+      const dateStr = eventDate.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })
+      const timeStr = eventDate.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      }) + (eventEndDate ? ` - ${eventEndDate.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      })}` : '')
+      
+      pdf.text(`Date: ${dateStr}`, 25, yPosition)
+      yPosition += 7
+      pdf.text(`Time: ${timeStr}`, 25, yPosition)
+      yPosition += 7
+
+      // Location
+      if (currentEvent.location) {
+        pdf.text(`Location: ${currentEvent.location}`, 25, yPosition)
+        yPosition += 7
+      }
+
+      // Event type
+      pdf.text(`Event Type: ${currentEvent.eventType.name}`, 25, yPosition)
+      yPosition += 7
+
+      // Description
+      if (currentEvent.description && currentEvent.description.trim()) {
+        yPosition += 5
+        pdf.text('Description:', 25, yPosition)
+        yPosition += 7
+        const lines = pdf.splitTextToSize(currentEvent.description, pageWidth - 50)
+        lines.forEach((line: string) => {
+          pdf.text(line, 25, yPosition)
+          yPosition += 6
+        })
+      }
+
+      yPosition += 10
+
+      // Musicians & Assignments section
+      if (currentEvent.assignments && currentEvent.assignments.length > 0) {
+        pdf.setFont('Montserrat', 'bold')
+        pdf.setFontSize(16)
+        pdf.text('Musicians & Assignments', 20, yPosition)
+        yPosition += 15
+
+        const assignedCount = currentEvent.assignments.filter(a => a.user).length
+        const openCount = currentEvent.assignments.filter(a => !a.user).length
+        const totalSpots = currentEvent.assignments.length
+        
+        pdf.setFont('Montserrat', 'normal')
+        pdf.setFontSize(12)
+        pdf.text(`${assignedCount}/${totalSpots} positions filled (${openCount} open)`, 25, yPosition)
+        yPosition += 10
+
+        currentEvent.assignments.forEach((assignment) => {
+          const assigneeText = assignment.user 
+            ? `${assignment.user.firstName} ${assignment.user.lastName}`
+            : assignment.group?.name || 'Open Position'
+          
+          pdf.text(`• ${assignment.roleName}: ${assigneeText}`, 30, yPosition)
+          yPosition += 7
+        })
+        yPosition += 10
+      }
+
+      // Music & Service Parts section - always show
+      pdf.setFont('Montserrat', 'bold')
+      pdf.setFontSize(16)
+      pdf.text('Music & Service Parts', 20, yPosition)
+      yPosition += 15
+
+      pdf.setFont('Montserrat', 'normal')
+      pdf.setFontSize(12)
+      pdf.text(`${eventHymns?.length || 0} songs/pieces planned`, 25, yPosition)
+      yPosition += 10
+
+      // Show all service parts, even if empty
+      if (serviceParts && serviceParts.length > 0) {
+        // Sort service parts by order
+        const sortedServiceParts = [...serviceParts].sort((a, b) => a.order - b.order)
+        
+        sortedServiceParts.forEach((servicePart: ServicePart) => {
+          if (yPosition > pageHeight - 30) {
+            pdf.addPage()
+            yPosition = 30
+          }
+          
+          // Show service part name
+          pdf.setFont('Montserrat', 'bold')
+          pdf.text(`${servicePart.name}:`, 30, yPosition)
+          yPosition += 7
+          
+          // Find hymns for this service part
+          const servicePartHymns = eventHymns?.filter(hymn => hymn.servicePartId === servicePart.id) || []
+          
+          if (servicePartHymns.length > 0) {
+            pdf.setFont('Montserrat', 'normal')
+            servicePartHymns.forEach((hymn: EventHymn) => {
+              const hymnText = `  • ${hymn.title}${hymn.notes ? ` (${hymn.notes})` : ''}`
+              const lines = pdf.splitTextToSize(hymnText, pageWidth - 70)
+              lines.forEach((line: string) => {
+                pdf.text(line, 35, yPosition)
+                yPosition += 6
+              })
+            })
+          } else {
+            pdf.setFont('Montserrat', 'normal')
+            pdf.setTextColor(128, 128, 128)
+            pdf.text('  (None assigned)', 35, yPosition)
+            pdf.setTextColor(0, 0, 0)
+            yPosition += 6
+          }
+          yPosition += 3
+        })
+        
+        // Show hymns not assigned to any service part
+        const unassignedHymns = eventHymns?.filter(hymn => !hymn.servicePartId) || []
+        if (unassignedHymns.length > 0) {
+          if (yPosition > pageHeight - 30) {
+            pdf.addPage()
+            yPosition = 30
+          }
+          
+          pdf.setFont('Montserrat', 'bold')
+          pdf.text('Other/Unassigned:', 30, yPosition)
+          yPosition += 7
+          
+          pdf.setFont('Montserrat', 'normal')
+          unassignedHymns.forEach((hymn: EventHymn) => {
+            const hymnText = `  • ${hymn.title}${hymn.notes ? ` (${hymn.notes})` : ''}`
+            const lines = pdf.splitTextToSize(hymnText, pageWidth - 70)
+            lines.forEach((line: string) => {
+              pdf.text(line, 35, yPosition)
+              yPosition += 6
+            })
+          })
+        }
+      } else if (eventHymns && eventHymns.length > 0) {
+        // Fallback: if no service parts defined, just list all hymns
+        pdf.setFont('Montserrat', 'normal')
+        eventHymns.forEach((hymn: EventHymn, index: number) => {
+          if (yPosition > pageHeight - 30) {
+            pdf.addPage()
+            yPosition = 30
+          }
+          
+          const hymnText = `${index + 1}. ${hymn.title}${hymn.notes ? ` (${hymn.notes})` : ''}`
+          const lines = pdf.splitTextToSize(hymnText, pageWidth - 60)
+          lines.forEach((line: string) => {
+            pdf.text(line, 30, yPosition)
+            yPosition += 6
+          })
+        })
+      } else {
+        // No service parts and no hymns
+        pdf.setFont('Montserrat', 'normal')
+        pdf.setTextColor(128, 128, 128)
+        pdf.text('No service parts or music configured for this event.', 30, yPosition)
+        pdf.setTextColor(0, 0, 0)
+        yPosition += 6
+      }
+      yPosition += 10
+
+      // Documents section
+      if (eventDocuments && eventDocuments.length > 0) {
+        if (yPosition > pageHeight - 40) {
+          pdf.addPage()
+          yPosition = 30
+        }
+
+        pdf.setFont('Montserrat', 'bold')
+        pdf.setFontSize(16)
+        pdf.text('Attached Documents', 20, yPosition)
+        yPosition += 15
+
+        pdf.setFont('Montserrat', 'normal')
+        pdf.setFontSize(12)
+        eventDocuments.forEach((doc: EventDocument) => {
+          pdf.text(`• ${doc.originalFilename}`, 30, yPosition)
+          yPosition += 7
+        })
+      }
+
+      // Footer
+      const footerY = pageHeight - 20
+      pdf.setFontSize(10)
+      pdf.setFont('Montserrat', 'normal')
+      pdf.text(`Generated from Church Music Scheduler on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, pageWidth / 2, footerY, { align: 'center' })
+
+      // Save the PDF
+      const filename = `${currentEvent.name.replace(/[^a-zA-Z0-9]/g, '_')}_Event_Details_${new Date().toISOString().split('T')[0]}.pdf`
+      pdf.save(filename)
+      
+      showToast('success', 'Event PDF downloaded successfully!')
+
+    } catch (error) {
+      console.error('Error generating event PDF:', error)
+      showToast('error', 'Failed to generate PDF. Please try again.')
+    }
+  }
+
   const openPDF = (document: EventDocument) => {
     // Open PDF in new tab
     window.open(`/api/events/${currentEvent?.id}/documents/${document.id}/view`, '_blank')
@@ -1317,6 +1602,13 @@ export function EventDetailsModal({
                 </button>
               </>
             )}
+            <button
+              onClick={handlePrintPDF}
+              className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              title="Print event details as PDF"
+            >
+              <Printer className="h-4 w-4" />
+            </button>
             <button
               onClick={isEditing ? handleCancelEdit : onClose}
               disabled={loading}
@@ -1902,17 +2194,58 @@ export function EventDetailsModal({
                 <Users className="h-5 w-5 mr-2 text-blue-600" />
                 Musicians & Roles ({currentEvent.assignments?.length || 0})
               </h3>
-              {isDirector && isEditing && currentEvent.assignments && currentEvent.assignments.length > 0 && !showAddRole && (
+              {isDirector && isEditing && !showAddRole && (
                 <button
                   onClick={() => setShowAddRole(true)}
                   className="flex items-center px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  title="Add another role"
+                  title="Add role"
                 >
                   <Plus className="h-4 w-4 mr-1" />
                   Add Role
                 </button>
               )}
             </div>
+            
+            {/* Add Role Input Form - Show when adding a role */}
+            {isDirector && isEditing && showAddRole && (
+              <div className="p-4 bg-blue-50 rounded-lg border-2 border-blue-200">
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    value={newRoleName}
+                    onChange={(e) => setNewRoleName(e.target.value)}
+                    placeholder="Enter role name (e.g., Accompanist, Vocalist)"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    onKeyPress={(e) => e.key === 'Enter' && handleAddRole()}
+                    autoFocus
+                  />
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={handleAddRole}
+                      disabled={addingRole || !newRoleName.trim()}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 text-sm flex items-center"
+                    >
+                      {addingRole ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      ) : (
+                        <Check className="h-4 w-4 mr-2" />
+                      )}
+                      Add Role
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowAddRole(false)
+                        setNewRoleName('')
+                      }}
+                      disabled={addingRole}
+                      className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 text-sm"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             
             {currentEvent.assignments && currentEvent.assignments.length > 0 ? (
               <div className="space-y-2">
@@ -2160,55 +2493,6 @@ export function EventDetailsModal({
               <div className="text-center py-8 text-gray-500">
                 <Users className="h-8 w-8 mx-auto mb-2" />
                 <p>No roles available</p>
-                {isDirector && isEditing && (
-                  <div className="mt-4">
-                    {!showAddRole ? (
-                      <button
-                        onClick={() => setShowAddRole(true)}
-                        className="flex items-center mx-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Role
-                      </button>
-                    ) : (
-                      <div className="max-w-xs mx-auto space-y-3">
-                        <input
-                          type="text"
-                          value={newRoleName}
-                          onChange={(e) => setNewRoleName(e.target.value)}
-                          placeholder="Enter role name (e.g., Accompanist, Vocalist)"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                          onKeyPress={(e) => e.key === 'Enter' && handleAddRole()}
-                          autoFocus
-                        />
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={handleAddRole}
-                            disabled={addingRole || !newRoleName.trim()}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 text-sm flex items-center"
-                          >
-                            {addingRole ? (
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                            ) : (
-                              <Check className="h-4 w-4 mr-2" />
-                            )}
-                            Add Role
-                          </button>
-                          <button
-                            onClick={() => {
-                              setShowAddRole(false)
-                              setNewRoleName('')
-                            }}
-                            disabled={addingRole}
-                            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 text-sm"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
             )}
           </div>

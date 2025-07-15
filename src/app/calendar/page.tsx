@@ -10,28 +10,53 @@ import {
 import Link from 'next/link'
 import jsPDF from 'jspdf'
 import { EventDetailsModal } from '@/components/events/event-details-modal'
-import { CreateTemplateModal } from '@/components/events/create-template-modal'
+import { CreateRecurringEventModal } from '@/components/events/create-recurring-event-modal'
 import { CreateEventModal } from '@/components/events/create-event-modal'
+import { EditScopeModal } from '@/components/events/edit-scope-modal'
 
-interface EventTemplate {
+interface RootRecurringEvent {
   id: string
   name: string
   description?: string
-  duration: number // in minutes
-  color: string
+  location: string
+  startTime: string
+  endTime?: string
   isRecurring: boolean
   recurrencePattern?: string
-  roles: {
+  recurrenceEnd?: string
+  eventType: {
+    id: string
     name: string
-    maxCount: number
-    isRequired: boolean
+    color: string
+  }
+  assignments?: {
+    id: string
+    roleName: string
+    status: string
+    user?: {
+      id: string
+      firstName: string
+      lastName: string
+      email: string
+    }
+    group?: {
+      id: string
+      name: string
+    }
   }[]
-  hymns: {
+  hymns?: {
+    id: string
     title: string
-    composer?: string
     notes?: string
+    servicePart?: {
+      id: string
+      name: string
+    }
   }[]
-  isActive: boolean
+  _count?: {
+    assignments: number
+    hymns: number
+  }
 }
 
 interface CalendarEvent {
@@ -46,8 +71,9 @@ interface CalendarEvent {
     name: string
     color: string
   }
-  templateId?: string
   status?: 'confirmed' | 'tentative' | 'cancelled'
+  isRootEvent?: boolean
+  generatedFrom?: string
   assignments?: {
     id: string
     roleName: string
@@ -80,19 +106,6 @@ interface CalendarEvent {
   _tempState?: 'pending' | 'error' // Internal state for UI feedback
 }
 
-const TEMPLATE_COLORS = [
-  '#3B82F6', // Blue
-  '#10B981', // Green
-  '#F59E0B', // Yellow
-  '#EF4444', // Red
-  '#8B5CF6', // Purple
-  '#F97316', // Orange
-  '#06B6D4', // Cyan
-  '#84CC16', // Lime
-  '#EC4899', // Pink
-  '#6B7280'  // Gray
-]
-
 export default function CalendarPage() {
   const { data: session } = useSession()
   const [currentDate, setCurrentDate] = useState(new Date())
@@ -100,10 +113,15 @@ export default function CalendarPage() {
   const [listFilter, setListFilter] = useState<'upcoming' | 'past'>('upcoming')
   const [searchTerm, setSearchTerm] = useState('')
   
-  // Template management
-  const [templates, setTemplates] = useState<EventTemplate[]>([])
-  const [showCreateTemplate, setShowCreateTemplate] = useState(false)
-  const [editingTemplate, setEditingTemplate] = useState<EventTemplate | null>(null)
+  // Root recurring events management
+  const [rootEvents, setRootEvents] = useState<RootRecurringEvent[]>([])
+  const [showCreateRecurringEvent, setShowCreateRecurringEvent] = useState(false)
+  
+  // Edit recurring events
+  const [showEditScopeModal, setShowEditScopeModal] = useState(false)
+  const [showEditRecurringEvent, setShowEditRecurringEvent] = useState(false)
+  const [editingRootEvent, setEditingRootEvent] = useState<RootRecurringEvent | null>(null)
+  const [editScope, setEditScope] = useState<'future' | 'all' | null>(null)
   
   // Calendar events
   const [events, setEvents] = useState<CalendarEvent[]>([])
@@ -118,7 +136,6 @@ export default function CalendarPage() {
   const [showCreateEvent, setShowCreateEvent] = useState(false)
   
   // Drag and drop
-  const [draggedTemplate, setDraggedTemplate] = useState<EventTemplate | null>(null)
   const [draggedEvent, setDraggedEvent] = useState<CalendarEvent | null>(null)
   const [isDragging, setIsDragging] = useState(false)
 
@@ -129,20 +146,20 @@ export default function CalendarPage() {
 
   useEffect(() => {
     if (session) {
-      fetchTemplates()
+      fetchRootEvents()
       fetchEvents()
     }
   }, [session, currentDate])
 
-  const fetchTemplates = async () => {
+  const fetchRootEvents = async () => {
     try {
-      const response = await fetch('/api/event-templates')
+      const response = await fetch('/api/events?rootOnly=true')
       if (response.ok) {
         const data = await response.json()
-        setTemplates(data.templates || [])
+        setRootEvents(data.events || [])
       }
     } catch (error) {
-      console.error('Error fetching templates:', error)
+      console.error('Error fetching root recurring events:', error)
     }
   }
 
@@ -190,7 +207,7 @@ export default function CalendarPage() {
       days.push(null)
     }
     
-    // Add all days of the month
+    // Add days of the month
     for (let day = 1; day <= daysInMonth; day++) {
       days.push(day)
     }
@@ -199,211 +216,130 @@ export default function CalendarPage() {
   }
 
   const getEventsForDay = (day: number) => {
-    const dayDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day)
+    const targetDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day)
     return events.filter(event => {
       const eventDate = new Date(event.startTime)
-      return eventDate.getDate() === day && 
-             eventDate.getMonth() === currentDate.getMonth() && 
-             eventDate.getFullYear() === currentDate.getFullYear()
+      return eventDate.toDateString() === targetDate.toDateString()
     })
-  }
-
-  const handleDrop = async (day: number, hour: number = 10) => {
-    if (!draggedTemplate) return
-
-    const dropDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day, hour, 0)
-    const endDate = new Date(dropDate.getTime() + draggedTemplate.duration * 60000)
-
-    console.log('🎯 Dropping template:', { 
-      templateName: draggedTemplate.name, 
-      day, 
-      hour, 
-      dropDate: dropDate.toISOString() 
-    })
-
-    // Optimistic UI update
-    const newEvent = {
-      id: 'temp-' + Date.now(),
-      name: draggedTemplate.name,
-      description: draggedTemplate.description,
-      location: 'TBD', // Default location
-      startTime: dropDate.toISOString(),
-      endTime: endDate.toISOString(),
-      eventType: {
-        id: 'temp',
-        name: draggedTemplate.name,
-        color: draggedTemplate.color
-      },
-      templateId: draggedTemplate.id,
-      _tempState: 'pending' as const
-    }
-    
-    setEvents(prev => [...prev, newEvent])
-
-    try {
-      const requestBody = {
-        name: draggedTemplate.name,
-        description: draggedTemplate.description || '',
-        location: 'TBD', // Default location required by API
-        startDate: dropDate.toISOString().split('T')[0],
-        startTime: dropDate.toTimeString().slice(0, 5),
-        endTime: endDate.toTimeString().slice(0, 5),
-        eventTypeId: null,
-        templateId: draggedTemplate.id,
-        templateColor: draggedTemplate.color,
-        roles: draggedTemplate.roles || [],
-        hymns: draggedTemplate.hymns || [],
-        isRecurring: draggedTemplate.isRecurring || false,
-        recurrencePattern: draggedTemplate.recurrencePattern || ''
-      }
-
-      console.log('📤 Sending request:', requestBody)
-      console.log('🎭 ROLES DEBUG: Template roles being sent:', JSON.stringify(draggedTemplate.roles, null, 2))
-      console.log('🎭 ROLES DEBUG: Number of roles in template:', (draggedTemplate.roles || []).length)
-
-      const response = await fetch('/api/events', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        console.error('❌ API Error:', { 
-          status: response.status, 
-          statusText: response.statusText, 
-          error: errorData 
-        })
-        
-        throw new Error(errorData.details || errorData.error || `HTTP ${response.status}: ${response.statusText}`)
-      }
-
-      const result = await response.json()
-      console.log('✅ Event created successfully:', result)
-
-      // Remove optimistic update and refresh to get real data
-      setEvents(prev => prev.filter(e => e.id !== newEvent.id))
-      fetchEvents()
-
-    } catch (error) {
-      console.error('❌ Error creating event from template:', error)
-      
-      // Show error state briefly
-      setEvents(prev => prev.map(e => 
-        e.id === newEvent.id 
-          ? { ...e, _tempState: 'error' as const, name: `${e.name} (Failed)` }
-          : e
-      ))
-      
-      // Show user-friendly error message
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
-      alert(`Failed to create event: ${errorMessage}`)
-      
-      // Remove failed event after 3 seconds
-      setTimeout(() => {
-        setEvents(prev => prev.filter(e => e.id !== newEvent.id))
-      }, 3000)
-    } finally {
-      // Always clear the dragged template
-      setDraggedTemplate(null)
-    }
   }
 
   const handleEventDrag = async (day: number, event: CalendarEvent) => {
-    if (!draggedEvent || draggedEvent.id !== event.id) return
+    if (!event) return
+
+    const year = currentDate.getFullYear()
+    const month = currentDate.getMonth()
+    const dropDate = new Date(year, month, day, 10, 0) // Default to 10 AM
+
+    // Create optimistic update
+    const eventDate = new Date(event.startTime)
+    const duration = event.endTime 
+      ? new Date(event.endTime).getTime() - eventDate.getTime() 
+      : 60 * 60 * 1000 // Default 1 hour
+
+    const endDate = new Date(dropDate.getTime() + duration)
+
+    console.log('🎯 Moving event:', {
+      eventName: event.name,
+      fromDate: eventDate.toISOString(),
+      toDate: dropDate.toISOString(),
+      duration: duration / (60 * 1000) // minutes
+    })
+
+    // Optimistic update
+    const updatedEvents = events.map(e => 
+      e.id === event.id 
+        ? { 
+            ...e, 
+            startTime: dropDate.toISOString(),
+            endTime: endDate.toISOString(),
+            _tempState: 'pending' as const
+          }
+        : e
+    )
+    setEvents(updatedEvents)
 
     try {
-      const newDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day)
-      const eventDate = new Date(event.startTime)
-      const timeDiff = eventDate.getTime() - new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate()).getTime()
-      
-      // Preserve the original time
-      newDate.setTime(newDate.getTime() + timeDiff)
-      
-      const endDate = event.endTime ? new Date(event.endTime) : null
-      let newEndDate = null
-      if (endDate) {
-        const endTimeDiff = endDate.getTime() - eventDate.getTime()
-        newEndDate = new Date(newDate.getTime() + endTimeDiff)
-      }
-
-      // Store original event for rollback
-      const originalEvent = { ...event }
-
-      // Optimistic UI update
-      setEvents(prevEvents => prevEvents.map(ev =>
-        ev.id === event.id
-          ? { 
-              ...ev, 
-              startTime: newDate.toISOString(), 
-              endTime: newEndDate ? newEndDate.toISOString() : undefined,
-              _tempState: 'pending'
-            }
-          : ev
-      ))
-
       const response = await fetch(`/api/events/${event.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: event.name,
-          description: event.description,
-          location: event.location,
-          startDate: newDate.toISOString().split('T')[0],
-          startTime: newDate.toTimeString().slice(0, 5),
-          endTime: newEndDate ? newEndDate.toTimeString().slice(0, 5) : null,
-          eventTypeId: event.eventType.id,
-          isPastEvent: newDate < new Date()
-        }),
+          startTime: dropDate.toISOString(),
+          endTime: endDate.toISOString()
+        })
       })
 
-      if (!response.ok) {
-        // Revert optimistic update if failed
-        setEvents(prevEvents => prevEvents.map(ev =>
-          ev.id === event.id ? originalEvent : ev
-        ))
+      if (response.ok) {
+        // Remove pending state
+        const finalEvents = events.map(e => 
+          e.id === event.id 
+            ? { 
+                ...e, 
+                startTime: dropDate.toISOString(),
+                endTime: endDate.toISOString(),
+                _tempState: undefined
+              }
+            : e
+        )
+        setEvents(finalEvents)
+      } else {
         throw new Error('Failed to update event')
       }
-
-      // Fetch fresh data to ensure consistency
-      fetchEvents()
     } catch (error) {
-      console.error('Error moving event:', error)
-      // Show error state briefly
-      setEvents(prevEvents => prevEvents.map(ev =>
-        ev.id === event.id ? { ...event, _tempState: 'error' } : ev
-      ))
-      // Then revert to original after a short delay
+      console.error('❌ Error moving event:', error)
+      
+      // Revert optimistic update and show error
+      const revertedEvents = events.map(e => 
+        e.id === event.id 
+          ? { ...e, _tempState: 'error' as const }
+          : e
+      )
+      setEvents(revertedEvents)
+      
+      // Remove error state after 3 seconds
       setTimeout(() => {
-        setEvents(prevEvents => prevEvents.map(ev =>
-          ev.id === event.id ? event : ev
+        setEvents(events => events.map(e => 
+          e.id === event.id 
+            ? { ...e, _tempState: undefined }
+            : e
         ))
-      }, 2000)
+      }, 3000)
+    } finally {
+      setDraggedEvent(null)
     }
   }
 
   const handleEventClick = (event: CalendarEvent) => {
-    console.log('🚨 HandleEventClick: Opening event modal for event:', event.name)
-    console.log('🚨 HandleEventClick: Event data:', event)
-    console.trace('🚨 HandleEventClick: Call stack trace')
-    
-    // Show modal immediately with no API call - instant response
+    console.log('🎯 Event clicked:', event.name)
     setSelectedEvent(event)
     setShowEventDetails(true)
     setIsEditingEvent(false)
   }
 
   const handleDateClick = (day: number, e: React.MouseEvent) => {
-    // Only show create event modal if not clicking on an event
-    if ((e.target as HTMLElement).closest('[data-event]')) {
-      return
+    if (e.target && (e.target as Element).closest('[data-event="true"]')) {
+      return // Don't handle date click if user clicked on an event
     }
     
+    const clickedDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day, 10, 0)
     setShowCreateEvent(true)
+  }
+
+  const handleEditRootEvent = (rootEvent: RootRecurringEvent) => {
+    setEditingRootEvent(rootEvent)
+    setShowEditScopeModal(true)
+  }
+
+  const handleScopeSelected = (scope: 'future' | 'all') => {
+    setEditScope(scope)
+    setShowEditRecurringEvent(true)
+  }
+
+  const handleEditComplete = () => {
+    fetchRootEvents()
+    fetchEvents()
+    setShowEditRecurringEvent(false)
+    setEditingRootEvent(null)
+    setEditScope(null)
   }
 
   const generatePDF = async () => {
@@ -741,78 +677,81 @@ export default function CalendarPage() {
         <div className={`grid grid-cols-1 gap-8 min-h-[750px] ${
           session?.user?.role === 'MUSICIAN' ? 'lg:grid-cols-1' : 'lg:grid-cols-4'
         }`}>
-          {/* Left Sidebar - Templates (30%) - Only show for directors/pastors */}
+          {/* Left Sidebar - Recurring Events (30%) - Only show for directors/pastors */}
           {session?.user?.role !== 'MUSICIAN' && (
             <div className="lg:col-span-1">
               <div className="bg-white rounded-xl shadow-sm border max-h-[850px] flex flex-col">
                 <div className="p-6 border-b flex items-center justify-between">
-                  <h2 className="text-lg font-bold text-gray-900">Event Templates</h2>
+                  <h2 className="text-lg font-bold text-gray-900">Recurring Events</h2>
                   <button
-                    onClick={() => setShowCreateTemplate(true)}
+                    onClick={() => setShowCreateRecurringEvent(true)}
                     className="flex items-center justify-center w-8 h-8 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    title="Create new template"
+                    title="Create new recurring event"
                   >
                     <Plus className="h-4 w-4" />
                   </button>
                 </div>
                 
                 <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                  {templates.filter(t => t.isActive).map((template) => (
+                  {rootEvents.map((rootEvent) => (
                     <div
-                      key={template.id}
-                      draggable
-                      onDragStart={() => {
-                        console.log('🚀 Starting drag operation for template:', template.name)
-                        setDraggedTemplate(template)
-                        setDraggedEvent(null)
-                      }}
-                      onDragEnd={() => setDraggedTemplate(null)}
-                      className="p-4 rounded-lg border-2 border-dashed border-gray-200 hover:border-gray-300 cursor-move transition-colors"
-                      style={{ borderColor: template.color + '40', backgroundColor: template.color + '10' }}
+                      key={rootEvent.id}
+                      className="p-4 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"
+                      style={{ borderLeftColor: rootEvent.eventType.color, borderLeftWidth: '4px' }}
                     >
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center">
                           <div
                             className="w-3 h-3 rounded-full mr-2"
-                            style={{ backgroundColor: template.color }}
+                            style={{ backgroundColor: rootEvent.eventType.color }}
                           />
-                          <h3 className="font-medium text-gray-900 text-sm">{template.name}</h3>
+                          <h3 className="font-medium text-gray-900 text-sm">{rootEvent.name}</h3>
                         </div>
                         <button
                           onClick={(e) => {
                             e.stopPropagation()
-                            e.preventDefault()
-                            console.log('🎯 Template Edit Button: Clicked for template:', template.name)
-                            console.log('🎯 Template Edit Button: Setting editingTemplate to:', template)
-                            setEditingTemplate(template)
-                            setShowCreateTemplate(true)
-                            console.log('🎯 Template Edit Button: Called setEditingTemplate and setShowCreateTemplate(true)')
+                            handleEditRootEvent(rootEvent)
                           }}
                           className="p-1 text-gray-400 hover:text-gray-600"
-                          title="Edit template"
+                          title="Edit recurring event"
                         >
                           <Edit className="h-3 w-3" />
                         </button>
                       </div>
-                      {template.description && (
-                        <p className="text-xs text-gray-600 mb-2">{template.description}</p>
+                      {rootEvent.description && (
+                        <p className="text-xs text-gray-600 mb-2">{rootEvent.description}</p>
                       )}
                       <div className="flex items-center justify-between text-xs text-gray-500">
-                        <span>{template.duration} min</span>
-                        <span>{template.roles.length} roles</span>
+                        <span>{rootEvent.location}</span>
+                        <span>{rootEvent.assignments?.length || 0} roles</span>
                       </div>
+                      {rootEvent.recurrencePattern && (
+                        <div className="mt-2 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                          {(() => {
+                            try {
+                              const pattern = JSON.parse(rootEvent.recurrencePattern);
+                              return pattern.type === 'weekly' ? 'Weekly' :
+                                     pattern.type === 'biweekly' ? 'Biweekly' :
+                                     pattern.type === 'monthly' ? 'Monthly' :
+                                     'Custom';
+                            } catch {
+                              return 'Recurring';
+                            }
+                          })()} pattern
+                        </div>
+                      )}
                     </div>
                   ))}
                   
-                  {templates.filter(t => t.isActive).length === 0 && (
+                  {rootEvents.length === 0 && (
                     <div className="text-center py-8">
                       <Calendar className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-                      <p className="text-sm text-gray-500">No templates yet</p>
+                      <p className="text-sm text-gray-500">No recurring events yet</p>
                       <button
-                        onClick={() => setShowCreateTemplate(true)}
+                        onClick={() => setShowCreateRecurringEvent(true)}
                         className="text-xs text-blue-600 hover:text-blue-700 mt-1"
                       >
-                        Create your first template
+                        Create your first recurring event
                       </button>
                     </div>
                   )}
@@ -853,7 +792,7 @@ export default function CalendarPage() {
                     </div>
                   </div>
                   <p className="text-sm text-gray-600 mt-1">
-                    Drag a template to any date to create an event, or click a date to start from scratch
+                    Drag a recurring event to any date to create an instance, or click a date to start from scratch
                   </p>
                 </div>
 
@@ -881,15 +820,13 @@ export default function CalendarPage() {
                             : isToday
                             ? 'bg-blue-50'
                             : 'bg-white hover:bg-gray-50'
-                        } ${draggedTemplate || draggedEvent ? 'transition-colors' : ''} ${
+                        } ${draggedEvent ? 'transition-colors' : ''} ${
                           draggedEvent && day ? 'hover:bg-blue-100 hover:border-blue-300' : ''
                         }`}
                         onDragOver={(e) => e.preventDefault()}
                         onDrop={() => {
                           if (day) {
-                            if (draggedTemplate) {
-                              handleDrop(day)
-                            } else if (draggedEvent) {
+                            if (draggedEvent) {
                               handleEventDrag(day, draggedEvent)
                             }
                           }
@@ -922,7 +859,6 @@ export default function CalendarPage() {
                                     draggable
                                     onDragStart={(e) => {
                                       setDraggedEvent(event)
-                                      setDraggedTemplate(null)
                                       setIsDragging(true)
                                       e.dataTransfer.effectAllowed = 'move'
                                       e.dataTransfer.setData('text/plain', event.id)
@@ -1100,9 +1036,9 @@ export default function CalendarPage() {
                                     <h3 className="text-lg font-medium text-gray-900">
                                       {event.name}
                                     </h3>
-                                    {event.templateId && (
+                                    {event.isRootEvent && (
                                       <span className="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">
-                                        Template
+                                        Recurring
                                       </span>
                                     )}
                                     {isToday && (
@@ -1210,21 +1146,6 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* Create Template Modal */}
-      <CreateTemplateModal
-        isOpen={showCreateTemplate}
-        onClose={() => {
-          setShowCreateTemplate(false)
-          setEditingTemplate(null)
-        }}
-        editingTemplate={editingTemplate}
-        onTemplateCreated={() => {
-          fetchTemplates()
-          setShowCreateTemplate(false)
-          setEditingTemplate(null)
-        }}
-      />
-
       {/* Create Event Modal */}
       <CreateEventModal
         isOpen={showCreateEvent}
@@ -1257,6 +1178,44 @@ export default function CalendarPage() {
           setSelectedEvent(null)
           setIsEditingEvent(false)
         }}
+      />
+
+      {/* Create Recurring Event Modal */}
+      <CreateRecurringEventModal
+        isOpen={showCreateRecurringEvent}
+        onClose={() => {
+          setShowCreateRecurringEvent(false)
+        }}
+        onEventCreated={() => {
+          fetchRootEvents()
+          fetchEvents()
+          setShowCreateRecurringEvent(false)
+        }}
+      />
+
+      {/* Edit Scope Modal */}
+      <EditScopeModal
+        isOpen={showEditScopeModal}
+        onClose={() => {
+          setShowEditScopeModal(false)
+          setEditingRootEvent(null)
+          setEditScope(null)
+        }}
+        rootEvent={editingRootEvent}
+        onScopeSelected={handleScopeSelected}
+      />
+
+      {/* Edit Recurring Event Modal */}
+      <CreateRecurringEventModal
+        isOpen={showEditRecurringEvent}
+        onClose={() => {
+          setShowEditRecurringEvent(false)
+          setEditingRootEvent(null)
+          setEditScope(null)
+        }}
+        onEventCreated={handleEditComplete}
+        editingEvent={editingRootEvent}
+        editScope={editScope}
       />
     </div>
   )

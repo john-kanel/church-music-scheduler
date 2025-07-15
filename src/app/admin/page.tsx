@@ -358,14 +358,14 @@ export default function AdminPage() {
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => exportData('churches')}
-                className="flex items-center px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+                className="flex items-center px-3 py-2 text-sm bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors"
               >
                 <Download className="h-4 w-4 mr-2" />
                 Export Churches
               </button>
               <button
                 onClick={() => exportData('users')}
-                className="flex items-center px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+                className="flex items-center px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 <Download className="h-4 w-4 mr-2" />
                 Export Users

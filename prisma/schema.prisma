@@ -29,7 +29,6 @@ model Church {
   activities            Activity[]
   communications        Communication[]
   customRoles           CustomRole[]
-  eventTemplates        EventTemplate[]
   eventTypes            EventType[]
   events                Event[]
   groups                Group[]
@@ -43,6 +42,8 @@ model Church {
   emailSchedules        EmailSchedule[]
   serviceParts          ServicePart[]
   musicianInviteLink    MusicianInviteLink?
+  churchDocuments       ChurchDocument[]
+  churchLinks           ChurchLink[]
 
   @@map("parishes")
 }
@@ -71,9 +72,11 @@ model User {
   groupMemberships   GroupMember[]
   uploadedFiles      MusicFile[]
   church             Church            @relation(fields: [churchId], references: [id], onDelete: Cascade)
-  pastorSettings     PastorSettings?
-  emailSchedules     EmailSchedule[]
-  uploadedDocuments  EventDocument[]
+  pastorSettings       PastorSettings?
+  emailSchedules       EmailSchedule[]
+  uploadedDocuments    EventDocument[]
+  uploadedChurchDocs   ChurchDocument[]
+  createdChurchLinks   ChurchLink[]
 
   @@index([churchId])
   @@index([role])
@@ -114,19 +117,21 @@ model Event {
   startTime         DateTime
   endTime           DateTime?
   isRecurring       Boolean           @default(false)
-  recurrencePattern String?
+  recurrencePattern String?           // JSON string with pattern details
   recurrenceEnd     DateTime?
-  parentEventId     String?
+  parentEventId     String?           // Points to the root event if this is a generated event
+  isRootEvent       Boolean           @default(false)  // True for the root recurring event
+  generatedFrom     String?           // For generated events, stores the root event ID
+  assignedGroups    String[]          @default([])     // Group IDs that auto-assign to this series
+  isModified        Boolean           @default(false)  // True if individual event was edited separately from series
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
   churchId          String
   eventTypeId       String
-  templateId        String?
   communications    Communication[]
   assignments       EventAssignment[]
   church            Church            @relation(fields: [churchId], references: [id], onDelete: Cascade)
   eventType         EventType         @relation(fields: [eventTypeId], references: [id])
-  template          EventTemplate?    @relation(fields: [templateId], references: [id])
   musicFiles        MusicFile[]
   notificationLogs  NotificationLog[]
   hymns             EventHymn[]
@@ -135,6 +140,9 @@ model Event {
   @@index([churchId])
   @@index([startTime])
   @@index([churchId, startTime])
+  @@index([parentEventId])
+  @@index([isRootEvent, churchId])
+  @@index([generatedFrom, isModified])
   @@map("events")
 }
 
@@ -295,52 +303,7 @@ model Activity {
   @@map("activities")
 }
 
-model EventTemplate {
-  id                String         @id @default(cuid())
-  name              String
-  description       String?
-  duration          Int            @default(60)
-  color             String         @default("#3B82F6")
-  isRecurring       Boolean        @default(false)
-  recurrencePattern String?
-  isActive          Boolean        @default(true)
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-  churchId          String
-  church            Church         @relation(fields: [churchId], references: [id], onDelete: Cascade)
-  events            Event[]
-  hymns             TemplateHymn[]
-  roles             TemplateRole[]
 
-  @@unique([name, churchId])
-  @@map("event_templates")
-}
-
-model TemplateRole {
-  id         String        @id @default(cuid())
-  name       String
-  maxCount   Int           @default(1)
-  isRequired Boolean       @default(false)
-  templateId String
-  createdAt  DateTime      @default(now())
-  template   EventTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-
-  @@map("template_roles")
-}
-
-model TemplateHymn {
-  id            String         @id @default(cuid())
-  title         String
-  composer      String?
-  notes         String?
-  templateId    String
-  servicePartId String?
-  createdAt     DateTime       @default(now())
-  template      EventTemplate  @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  servicePart   ServicePart?   @relation(fields: [servicePartId], references: [id])
-
-  @@map("template_hymns")
-}
 
 model ServicePart {
   id            String         @id @default(cuid())
@@ -351,7 +314,6 @@ model ServicePart {
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   church        Church         @relation(fields: [churchId], references: [id], onDelete: Cascade)
-  templateHymns TemplateHymn[]
   eventHymns    EventHymn[]
 
   @@unique([name, churchId])
@@ -533,6 +495,42 @@ model InvitePageView {
 
   @@unique([inviteLinkId, visitorId])  // Prevent duplicate views from same visitor
   @@map("invite_page_views")
+}
+
+model ChurchDocument {
+  id               String   @id @default(cuid())
+  title            String
+  description      String?
+  filename         String   // S3 key
+  originalFilename String
+  filePath         String   // S3 URL
+  fileSize         Int
+  mimeType         String
+  order            Int      @default(0)
+  churchId         String
+  uploadedBy       String
+  uploadedAt       DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  church           Church   @relation(fields: [churchId], references: [id], onDelete: Cascade)
+  uploader         User     @relation(fields: [uploadedBy], references: [id])
+
+  @@map("church_documents")
+}
+
+model ChurchLink {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  url         String
+  order       Int      @default(0)
+  churchId    String
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  church      Church   @relation(fields: [churchId], references: [id], onDelete: Cascade)
+  creator     User     @relation(fields: [createdBy], references: [id])
+
+  @@map("church_links")
 }
 
 enum UserRole {

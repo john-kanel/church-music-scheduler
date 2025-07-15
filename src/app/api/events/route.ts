@@ -1,130 +1,108 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
+import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { Prisma } from '@prisma/client'
 import { logActivity } from '@/lib/activity'
 import { checkSubscriptionStatus, createSubscriptionErrorResponse } from '@/lib/subscription-check'
-import { Prisma } from '@prisma/client'
+import { generateRecurringEvents, parseRecurrencePattern, extendRecurringEvents } from '@/lib/recurrence'
 
-// Helper function to generate recurring events
-function generateRecurringEvents(
-  baseEvent: any,
-  recurrencePattern: string,
-  recurrenceEnd: Date | null,
-  churchId: string
-) {
-  const events: any[] = []
-  const startDate = new Date(baseEvent.startTime)
-  const endDate = baseEvent.endTime ? new Date(baseEvent.endTime) : null
-  
-  // Default to 6 months if no end date specified
-  const finalEndDate = recurrenceEnd || new Date(Date.now() + 6 * 30 * 24 * 60 * 60 * 1000)
-  
-  let currentDate = new Date(startDate)
-  
-  // Skip the first occurrence (that's the original event)
-  switch (recurrencePattern) {
-    case 'weekly':
-      currentDate.setDate(currentDate.getDate() + 7)
-      break
-    case 'biweekly':
-      currentDate.setDate(currentDate.getDate() + 14)
-      break
-    case 'monthly':
-      currentDate.setMonth(currentDate.getMonth() + 1)
-      break
-    case 'quarterly':
-      currentDate.setMonth(currentDate.getMonth() + 3)
-      break
-    default:
-      return events // Unknown pattern
-  }
-  
-  // Generate recurring events
-  while (currentDate <= finalEndDate && events.length < 52) { // Max 52 occurrences
-    const eventStartTime = new Date(currentDate)
-    const eventEndTime = endDate ? new Date(currentDate.getTime() + (endDate.getTime() - startDate.getTime())) : null
-    
-    events.push({
-      name: baseEvent.name,
-      description: baseEvent.description,
-      location: baseEvent.location,
-      startTime: eventStartTime,
-      endTime: eventEndTime,
-      isRecurring: false, // Child events are not recurring themselves
-      recurrencePattern: null,
-      recurrenceEnd: null,
-      churchId: churchId,
-      eventTypeId: baseEvent.eventTypeId,
-      templateId: baseEvent.templateId
-    })
-    
-    // Increment for next occurrence
-    switch (recurrencePattern) {
-      case 'weekly':
-        currentDate.setDate(currentDate.getDate() + 7)
-        break
-      case 'biweekly':
-        currentDate.setDate(currentDate.getDate() + 14)
-        break
-      case 'monthly':
-        currentDate.setMonth(currentDate.getMonth() + 1)
-        break
-      case 'quarterly':
-        currentDate.setMonth(currentDate.getMonth() + 3)
-        break
-    }
-  }
-  
-  return events
-}
-
-// GET /api/events - List events for the church
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.churchId) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Check subscription status
-    const subscriptionStatus = await checkSubscriptionStatus(session.user.churchId)
-    if (!subscriptionStatus.isActive) {
-      return createSubscriptionErrorResponse()
+    const { searchParams } = new URL(request.url)
+    const month = searchParams.get('month')
+    const year = searchParams.get('year')
+    const rootOnly = searchParams.get('rootOnly') === 'true'
+
+    if (rootOnly) {
+      // Fetch only root recurring events for sidebar
+      const rootEvents = await prisma.event.findMany({
+        where: {
+          churchId: session.user.churchId,
+          isRootEvent: true,
+          isRecurring: true
+        },
+        include: {
+          eventType: true,
+          assignments: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true
+                }
+              },
+              group: true
+            }
+          },
+          hymns: {
+            include: {
+              servicePart: true
+            }
+          }
+        },
+        orderBy: { startTime: 'asc' }
+      })
+
+      return NextResponse.json({ events: rootEvents })
     }
 
-    const { searchParams } = new URL(request.url)
-    const startDate = searchParams.get('startDate')
-    const endDate = searchParams.get('endDate')
-    const monthParam = searchParams.get('month')
-    const yearParam = searchParams.get('year')
+    // Regular event fetching with month/year filtering
+    let whereClause: any = {
+      churchId: session.user.churchId
+    }
 
-    // Build date filter
-    const dateFilter: any = {}
-    
-    if (monthParam && yearParam) {
-      // If month and year are provided, filter by that month
-      const targetDate = new Date(parseInt(yearParam), parseInt(monthParam) - 1, 1)
-      const startOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1)
-      const endOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59)
-      dateFilter.gte = startOfMonth
-      dateFilter.lte = endOfMonth
-    } else {
-      // Otherwise use startDate/endDate if provided
-      if (startDate) {
-        dateFilter.gte = new Date(startDate)
+    if (month && year) {
+      const monthNum = parseInt(month)
+      const yearNum = parseInt(year)
+      const startDate = new Date(yearNum, monthNum - 1, 1)
+      const endDate = new Date(yearNum, monthNum, 0, 23, 59, 59)
+
+      whereClause.startTime = {
+        gte: startDate,
+        lte: endDate
       }
-      if (endDate) {
-        dateFilter.lte = new Date(endDate)
+
+      // Auto-extend recurring events for future months
+      const currentDate = new Date()
+      if (startDate > currentDate) {
+        try {
+          // We're viewing a future month, check if we need to extend recurring events
+          const rootEvents = await prisma.event.findMany({
+            where: {
+              churchId: session.user.churchId,
+              isRootEvent: true,
+              isRecurring: true
+            }
+          })
+
+          // Extend each recurring series if needed (run in parallel for performance)
+          await Promise.all(
+            rootEvents.map(async (rootEvent) => {
+              try {
+                await extendRecurringEvents(rootEvent.id, endDate, prisma)
+              } catch (error) {
+                console.error(`Failed to extend recurring events for ${rootEvent.id}:`, error)
+                // Continue with other series even if one fails
+              }
+            })
+          )
+        } catch (error) {
+          console.error('Error extending recurring events:', error)
+          // Continue with regular event fetching even if extension fails
+        }
       }
     }
 
     const events = await prisma.event.findMany({
-      where: {
-        churchId: session.user.churchId,
-        ...(Object.keys(dateFilter).length > 0 && { startTime: dateFilter })
-      },
+      where: whereClause,
       include: {
         eventType: true,
         assignments: {
@@ -137,34 +115,34 @@ export async function GET(request: NextRequest) {
                 email: true
               }
             },
-            group: true,
-            customRole: true
+            group: true
           }
         },
-        musicFiles: true,
         hymns: {
           include: {
             servicePart: true
-          },
-          orderBy: {
-            createdAt: 'asc'
           }
         },
-        _count: {
-          select: {
-            assignments: true,
-            hymns: true
-          }
-        }
+        musicFiles: true
       },
-      orderBy: {
-        startTime: 'asc'
-      }
+      orderBy: { startTime: 'asc' }
     })
 
     return NextResponse.json({ events })
   } catch (error) {
     console.error('Error fetching events:', error)
+    
+    // Check if it's a database connection error
+    if (error instanceof Error && error.message.includes("Can't reach database server")) {
+      return NextResponse.json(
+        { 
+          error: 'Database temporarily unavailable. Please try again in a moment.',
+          code: 'DATABASE_CONNECTION_ERROR'
+        },
+        { status: 503 }
+      )
+    }
+    
     return NextResponse.json(
       { error: 'Failed to fetch events' },
       { status: 500 }
@@ -172,7 +150,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/events - Create a new event
+// POST /api/events - Create a new event (one-off or root recurring)
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -192,45 +170,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
-    let requestData: any = {}
-    
-    // Handle both JSON and FormData requests
-    const contentType = request.headers.get('content-type')
-    
-    if (contentType?.includes('application/json')) {
-      // JSON request (from drag-and-drop)
-      requestData = await request.json()
-      console.log('Processing JSON request for event creation:', { 
-        name: requestData.name, 
-        templateId: requestData.templateId 
-      })
-    } else {
-      // FormData request (from regular form submission)
-      const formData = await request.formData()
-      console.log('Processing FormData request for event creation')
-      
-      // Extract form data
-      requestData = {
-        name: formData.get('name') as string,
-        description: formData.get('description') as string || '',
-        location: formData.get('location') as string,
-        startDate: formData.get('startDate') as string,
-        startTime: formData.get('startTime') as string,
-        endTime: formData.get('endTime') as string || '',
-        eventTypeId: formData.get('eventTypeId') as string || null,
-        templateId: formData.get('templateId') as string || null,
-        templateColor: formData.get('templateColor') as string || null,
-        isRecurring: formData.get('isRecurring') === 'true',
-        recurrencePattern: formData.get('recurrencePattern') as string || '',
-        recurrenceEnd: formData.get('recurrenceEnd') as string || '',
-        roles: formData.get('roles') ? JSON.parse(formData.get('roles') as string) : [],
-        hymns: formData.get('hymns') ? JSON.parse(formData.get('hymns') as string) : [],
-        selectedGroups: formData.get('selectedGroups') ? JSON.parse(formData.get('selectedGroups') as string) : [],
-        copyHymnsToRecurring: formData.get('copyHymnsToRecurring') === 'true'
-      }
-    }
+    const requestData = await request.json()
 
-    // Extract and validate data with safe defaults
     const {
       name,
       description = '',
@@ -239,32 +180,31 @@ export async function POST(request: NextRequest) {
       startTime,
       endTime = '',
       eventTypeId = null,
-      templateId = null,
-      templateColor = null,
       isRecurring = false,
-      recurrencePattern = '',
-      recurrenceEnd = '',
+      recurrencePattern = null,
+      recurrenceEndDate = null,
       roles = [],
       hymns = [],
       selectedGroups = [],
-      copyHymnsToRecurring = false
+      eventTypeColor = null // Added eventTypeColor
     } = requestData
-
-    // Ensure all arrays are properly defined
-    const validRoles = Array.isArray(roles) ? roles : []
-    const validHymns = Array.isArray(hymns) ? hymns : []
-    const validSelectedGroups = Array.isArray(selectedGroups) ? selectedGroups : []
 
     // Validation
     if (!name || !location || !startDate || !startTime) {
-      console.error('Validation failed:', { name, location, startDate, startTime })
       return NextResponse.json(
         { error: 'Name, location, start date, and start time are required' },
         { status: 400 }
       )
     }
 
-    // Combine date and time - treat as local time to avoid timezone issues
+    if (isRecurring && !recurrencePattern) {
+      return NextResponse.json(
+        { error: 'Recurrence pattern is required for recurring events' },
+        { status: 400 }
+      )
+    }
+
+    // Combine date and time
     const [year, month, day] = startDate.split('-').map(Number)
     const [startHour, startMinute] = startTime.split(':').map(Number)
     const startDateTime = new Date(year, month - 1, day, startHour, startMinute)
@@ -275,67 +215,56 @@ export async function POST(request: NextRequest) {
       endDateTime = new Date(year, month - 1, day, endHour, endMinute)
     }
 
-    // Find or create event type
+    // Find or create event type based on color
     let finalEventTypeId = eventTypeId
     
-    if (!finalEventTypeId) {
-      // If we have a template with color, create/find event type with that color
-      if (templateId && templateColor) {
-        // Look for existing event type with the template name and color
-        let templateEventType = await prisma.eventType.findFirst({
-          where: {
-            churchId: session.user.churchId,
-            name: name,
-            color: templateColor
+    if (!finalEventTypeId && eventTypeColor) {
+      // Try to find existing event type with this color
+      let eventType = await prisma.eventType.findFirst({
+        where: {
+          churchId: session.user.churchId,
+          color: eventTypeColor
+        }
+      })
+
+      if (!eventType) {
+        // Create new event type with the specified color
+        eventType = await prisma.eventType.create({
+          data: {
+            name: 'General',
+            color: eventTypeColor,
+            churchId: session.user.churchId
           }
         })
-
-        if (!templateEventType) {
-          templateEventType = await prisma.eventType.create({
-            data: {
-              name: name,
-              color: templateColor,
-              churchId: session.user.churchId
-            }
-          })
+      }
+      finalEventTypeId = eventType.id
+    } else if (!finalEventTypeId) {
+      // Fallback: find or create default event type
+      const defaultEventType = await prisma.eventType.findFirst({
+        where: {
+          churchId: session.user.churchId,
+          name: 'General'
         }
-        finalEventTypeId = templateEventType.id
+      })
+
+      if (!defaultEventType) {
+        const newEventType = await prisma.eventType.create({
+          data: {
+            name: 'General',
+            color: '#3B82F6',
+            churchId: session.user.churchId
+          }
+        })
+        finalEventTypeId = newEventType.id
       } else {
-        // Default event type
-        const defaultEventType = await prisma.eventType.findFirst({
-          where: {
-            churchId: session.user.churchId,
-            name: 'General'
-          }
-        })
-
-        if (!defaultEventType) {
-          const newEventType = await prisma.eventType.create({
-            data: {
-              name: 'General',
-              color: '#3B82F6',
-              churchId: session.user.churchId
-            }
-          })
-          finalEventTypeId = newEventType.id
-        } else {
-          finalEventTypeId = defaultEventType.id
-        }
+        finalEventTypeId = defaultEventType.id
       }
     }
 
-    // Process all data BEFORE starting transaction
-    console.log('🎭 ROLES DEBUG: Processing roles for event:', name)
-    console.log('🎭 ROLES DEBUG: validRoles array:', JSON.stringify(validRoles, null, 2))
-    console.log('🎭 ROLES DEBUG: Number of roles to process:', validRoles.length)
-
-    // Prepare all assignments outside transaction
+    // Prepare assignments
     const assignmentsToCreate: any[] = []
-    for (const role of validRoles) {
-      console.log('🎭 ROLES DEBUG: Processing individual role:', JSON.stringify(role, null, 2))
-      
+    for (const role of roles) {
       if (role.assignedMusicians && role.assignedMusicians.length > 0) {
-        // Create assignments for specific musicians
         for (const musicianId of role.assignedMusicians) {
           assignmentsToCreate.push({
             userId: musicianId,
@@ -344,7 +273,6 @@ export async function POST(request: NextRequest) {
           })
         }
       } else {
-        // Create open assignments
         for (let i = 0; i < role.maxCount; i++) {
           assignmentsToCreate.push({
             roleName: role.name,
@@ -355,19 +283,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Prepare all hymns outside transaction
-    const hymnsToCreate = validHymns.map(hymn => ({
+    // Prepare hymns
+    const hymnsToCreate = hymns.map((hymn: any) => ({
       title: hymn.title?.trim() || '',
       notes: hymn.notes?.trim() || null,
       servicePartId: hymn.servicePartId === 'custom' || !hymn.servicePartId ? null : hymn.servicePartId
     }))
 
-    // Prepare all group assignments outside transaction
+    // Prepare group assignments for auto-assignment
     const groupAssignmentsToCreate: any[] = []
     const individualAssignmentsFromGroups: any[] = []
     
-    for (const groupId of validSelectedGroups) {
-      // Get group data outside transaction
+    for (const groupId of selectedGroups) {
       const group = await prisma.group.findFirst({
         where: { id: groupId, churchId: session.user.churchId },
         include: { members: { include: { user: true } } }
@@ -379,7 +306,6 @@ export async function POST(request: NextRequest) {
           status: 'PENDING'
         })
         
-        // Add individual assignments for group members
         for (const member of group.members) {
           individualAssignmentsFromGroups.push({
             userId: member.user.id,
@@ -390,15 +316,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log('🎭 ROLES DEBUG: Prepared', assignmentsToCreate.length, 'role assignments')
-    console.log('🎭 ROLES DEBUG: Prepared', hymnsToCreate.length, 'hymns')
-    console.log('🎭 ROLES DEBUG: Prepared', groupAssignmentsToCreate.length, 'group assignments')
-
-    // SIMPLE, FAST TRANSACTION
+    // Create the event (and recurring events if specified)
     const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      console.log('🚀 Starting fast transaction')
-      
-      // 1. Create the event
+      // Create the main event (root event for recurring series)
       const event = await tx.event.create({
         data: {
           name: name,
@@ -408,11 +328,15 @@ export async function POST(request: NextRequest) {
           endTime: endDateTime,
           eventTypeId: finalEventTypeId,
           churchId: session.user.churchId,
-          templateId: templateId || null
+          isRecurring: isRecurring,
+          recurrencePattern: isRecurring ? JSON.stringify(recurrencePattern) : null,
+          recurrenceEnd: isRecurring && recurrenceEndDate ? new Date(recurrenceEndDate) : null,
+          isRootEvent: isRecurring,
+          assignedGroups: selectedGroups
         }
       })
 
-      // 2. Create all assignments in one batch
+      // Create assignments for the main event
       const allAssignments = [
         ...assignmentsToCreate.map(a => ({ ...a, eventId: event.id })),
         ...groupAssignmentsToCreate.map(a => ({ ...a, eventId: event.id })),
@@ -423,103 +347,53 @@ export async function POST(request: NextRequest) {
         await tx.eventAssignment.createMany({ data: allAssignments })
       }
 
-      // 3. Create all hymns in one batch
+      // Create hymns for the main event
       if (hymnsToCreate.length > 0) {
-        console.log('📝 Creating hymns in batch')
         await tx.eventHymn.createMany({
-          data: hymnsToCreate.map(h => ({ ...h, eventId: event.id }))
+          data: hymnsToCreate.map((h: any) => ({ ...h, eventId: event.id }))
         })
       }
 
-      // 4. Handle recurring events if needed
-      if (isRecurring && recurrencePattern && recurrenceEnd) {
-        const recurrenceEndDate = new Date(recurrenceEnd)
-        const recurringEventData: any[] = []
-        let currentDate = new Date(startDateTime)
-        
-        while (currentDate <= recurrenceEndDate) {
-          if (recurrencePattern === 'weekly') {
-            currentDate.setDate(currentDate.getDate() + 7)
-          } else if (recurrencePattern === 'biweekly') {
-            currentDate.setDate(currentDate.getDate() + 14)
-          } else if (recurrencePattern === 'monthly') {
-            currentDate.setMonth(currentDate.getMonth() + 1)
-          } else if (recurrencePattern === 'quarterly') {
-            currentDate.setMonth(currentDate.getMonth() + 3)
-        }
-          
-          if (currentDate <= recurrenceEndDate) {
-            const recurringEndTime = new Date(currentDate)
-            if (endDateTime) {
-              recurringEndTime.setTime(recurringEndTime.getTime() + (endDateTime.getTime() - startDateTime.getTime()))
-            }
-            
-            recurringEventData.push({
-              name: name,
-              description: description || null,
-              location: location || null,
-              startTime: new Date(currentDate),
-              endTime: recurringEndTime,
-              eventTypeId: finalEventTypeId,
-              churchId: session.user.churchId,
-              templateId: templateId || null,
-              parentEventId: event.id
-            })
-          }
+      // Generate recurring events if this is a recurring event
+      if (isRecurring && recurrencePattern) {
+        const pattern = parseRecurrencePattern(JSON.stringify(recurrencePattern))
+        if (recurrenceEndDate) {
+          pattern.endDate = new Date(recurrenceEndDate)
         }
         
-        if (recurringEventData.length > 0) {
-          const createdRecurringEvents = await tx.event.createManyAndReturn({
-            data: recurringEventData
-          })
+        const recurringEvents = await generateRecurringEvents(
+          event,
+          pattern,
+          tx,
+          session.user.churchId
+        )
 
-          // Create assignments for recurring events
-          const recurringAssignments: any[] = []
-          const recurringHymns: any[] = []
-          
-          for (const recurringEvent of createdRecurringEvents) {
-            // Add role assignments if there are any
-            if (allAssignments.length > 0) {
-              for (const assignment of allAssignments) {
-                recurringAssignments.push({
-                  ...assignment,
-                  eventId: recurringEvent.id
-                })
-              }
-            }
-            
-            // Add hymns if requested
-            if (copyHymnsToRecurring && hymnsToCreate.length > 0) {
-              for (const hymn of hymnsToCreate) {
-                recurringHymns.push({
-                  ...hymn,
-                  eventId: recurringEvent.id
-                })
-              }
-            }
-          }
-
-          if (recurringAssignments.length > 0) {
+        // Create assignments and hymns for each recurring event
+        for (const recurringEvent of recurringEvents) {
+          // Copy assignments to recurring events
+          if (allAssignments.length > 0) {
+            const recurringAssignments = allAssignments.map(a => ({
+              ...a,
+              eventId: recurringEvent.id
+            }))
             await tx.eventAssignment.createMany({ data: recurringAssignments })
-            }
-          
-          if (recurringHymns.length > 0) {
+          }
+
+          // Copy hymns to recurring events
+          if (hymnsToCreate.length > 0) {
+            const recurringHymns = hymnsToCreate.map((h: any) => ({
+              ...h,
+              eventId: recurringEvent.id
+            }))
             await tx.eventHymn.createMany({ data: recurringHymns })
-                  }
+          }
         }
       }
 
-      console.log('✅ Fast transaction completed')
       return event
     }, {
-      timeout: 30000, // 30 second timeout
-      maxWait: 10000  // 10 second max wait
-    })
-
-    console.log('✅ Event created successfully:', {
-      eventId: result.id,
-      name: result.name,
-      source: templateId ? 'template' : 'manual'
+      timeout: 60000, // 60 second timeout for large recurring series
+      maxWait: 15000  // 15 second max wait
     })
 
     // Fetch the complete event with relations
@@ -547,14 +421,15 @@ export async function POST(request: NextRequest) {
     // Log activity
     await logActivity({
       type: 'EVENT_CREATED',
-      description: `Created event: ${name}`,
+      description: `Created ${isRecurring ? 'recurring' : ''} event: ${name}`,
       churchId: session.user.churchId,
       userId: session.user.id,
       metadata: {
         eventId: result.id,
         eventName: name,
         eventDate: startDateTime.toISOString(),
-        source: contentType?.includes('application/json') ? 'drag-drop' : 'form'
+        isRecurring: isRecurring,
+        isRootEvent: isRecurring
       }
     })
 
@@ -563,17 +438,12 @@ export async function POST(request: NextRequest) {
     await scheduleEventNotifications(result.id, session.user.churchId)
 
     return NextResponse.json({ 
-      message: 'Event created successfully',
+      message: `${isRecurring ? 'Recurring' : ''} event created successfully`,
       event: completeEvent 
     }, { status: 201 })
 
   } catch (error) {
-    console.error('❌ Error creating event:', error)
-    console.error('Error details:', {
-      message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined
-    })
-    
+    console.error('Error creating event:', error)
     return NextResponse.json(
       { 
         error: 'Failed to create event',

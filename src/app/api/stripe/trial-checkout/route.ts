@@ -19,11 +19,37 @@ export async function POST(req: NextRequest) {
     // Determine trial period based on referral code
     const trialDays = referralCode && referralCode.trim() ? 60 : 30 // 60 days if referred, 30 days standard
     
+    // Check if a customer already exists for this church email to prevent duplicates
+    let customerId = null
+    
+    const existingCustomers = await stripe.customers.list({
+      email: email,
+      limit: 1
+    })
+
+    if (existingCustomers.data.length > 0) {
+      customerId = existingCustomers.data[0].id
+    } else {
+      // Create customer for the CHURCH (will be updated with church name after signup)
+      const customer = await stripe.customers.create({
+        email: email,
+        name: churchName, // Use church name, not individual name
+        metadata: {
+          isTrialSignup: 'true',
+          churchName: churchName,
+          role: role,
+          referralCode: referralCode || ''
+        }
+      })
+      customerId = customer.id
+    }
+
     // Create the trial checkout session
     const checkoutSession = await stripe.checkout.sessions.create({
       mode: 'subscription',
       payment_method_types: ['card'],
       payment_method_collection: 'if_required', // Don't require payment method during trial
+      customer: customerId, // Use church customer, not individual email
       line_items: [
         {
           price: PRICE_IDS.monthly, // Default to monthly plan
@@ -45,7 +71,6 @@ export async function POST(req: NextRequest) {
       },
       success_url: `${process.env.NEXTAUTH_URL}/auth/trial-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.NEXTAUTH_URL}/auth/signup?canceled=true`,
-      customer_email: email,
       metadata: {
         isTrialSignup: 'true',
         name,

@@ -30,6 +30,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { EventDetailsModal } from '../events/event-details-modal'
 import { MusicianSignupModal } from '../events/musician-signup-modal'
+import ImportantDocsCard from './important-docs-card'
 
 interface User {
   id: string
@@ -667,6 +668,9 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
                 </Link>
               </div>
             </div>
+
+            {/* Important Docs and Links */}
+            <ImportantDocsCard />
 
             {/* Quick Stats */}
             <div className="bg-white rounded-lg shadow-sm p-6">
