@@ -33,13 +33,6 @@ export async function DELETE(
       return NextResponse.json({ error: 'Service part not found' }, { status: 404 })
     }
 
-    // Check for usage in templates
-    const templateUsageCount = await prisma.templateHymn.count({
-      where: {
-        servicePartId: id
-      }
-    })
-
     // Check for usage in events
     const eventUsageCount = await prisma.eventHymn.count({
       where: {
@@ -47,16 +40,13 @@ export async function DELETE(
       }
     })
 
-    const totalUsage = templateUsageCount + eventUsageCount
-
-    if (totalUsage > 0) {
+    if (eventUsageCount > 0) {
       // Instead of deleting, we could mark existing usages as "Custom"
       // For now, we'll inform the user and prevent deletion
       return NextResponse.json({
         error: 'Cannot delete service part',
-        message: `This service part is used in ${templateUsageCount} template(s) and ${eventUsageCount} event(s). If you delete it, those items will be marked as "Custom". Are you sure you want to continue?`,
-        usageCount: totalUsage,
-        templateUsage: templateUsageCount,
+        message: `This service part is used in ${eventUsageCount} event(s). If you delete it, those items will be marked as "Custom". Are you sure you want to continue?`,
+        usageCount: eventUsageCount,
         eventUsage: eventUsageCount
       }, { status: 400 })
     }
@@ -98,16 +88,6 @@ export async function PUT(
     if (forceDelete) {
       // Force delete - mark all usages as "Custom" and then delete the service part
       
-      // Update template hymns to remove the service part reference
-      await prisma.templateHymn.updateMany({
-        where: {
-          servicePartId: id
-        },
-        data: {
-          servicePartId: null
-        }
-      })
-
       // Update event hymns to remove the service part reference
       await prisma.eventHymn.updateMany({
         where: {
