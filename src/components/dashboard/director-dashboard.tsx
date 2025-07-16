@@ -361,8 +361,8 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
         </div>
       )}
 
-      {/* Main Content - Grayed out when tour is showing */}
-      <div className={showTour ? 'opacity-30 pointer-events-none' : ''}>
+      {/* Main Content - Grayed out when tour is showing or modal is open */}
+      <div className={showTour || showCreateEventModal ? 'opacity-30 pointer-events-none' : ''}>
         {/* Top Navigation */}
         <nav className="bg-white shadow-sm border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

@@ -83,13 +83,13 @@ export async function POST(request: NextRequest) {
 
     // Send invitation email
     try {
+      const inviteLink = `${process.env.NEXTAUTH_URL}/auth/signin?email=${encodeURIComponent(email)}`
       await sendInvitationEmail(
-        email,
-        name,
-        user.firstName + ' ' + user.lastName,
-        user.church.name,
-        invitation.token,
-        'pastor-notifications' // Custom template for pastor invitations
+        email,                                    // to
+        name,                                     // recipientName
+        user.church.name,                         // churchName
+        inviteLink,                               // inviteLink
+        `${user.firstName} ${user.lastName}`      // inviterName
       )
     } catch (emailError) {
       console.error('Error sending invitation email:', emailError)

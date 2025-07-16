@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { ArrowLeft, CreditCard, Check, Zap, Star, AlertCircle } from 'lucide-react'
+import { ArrowLeft, CreditCard, Zap, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 
 interface SubscriptionData {
@@ -28,17 +28,16 @@ export default function BillingPage() {
       name: 'Monthly Plan',
       price: 35,
       interval: 'month',
-      description: 'Full access, billed monthly',
+      description: 'Complete church music scheduling solution',
+      subtext: 'Get started with full access today!',
+      badge: 'One month free trial included!',
       features: [
+        'One month free trial',
         'Unlimited musicians',
         'Unlimited events',
         'Email & SMS messaging',
-        'Advanced scheduling',
-        'Detailed reporting & analytics',
-        'Priority support',
         'Music file sharing',
-        'Calendar integration',
-        'Custom roles & permissions'
+        'Priority support'
       ],
       popular: false,
       stripePriceId: 'price_1RbkRKDKZUjfTbRbPIstDXUV'
@@ -49,19 +48,16 @@ export default function BillingPage() {
       price: 200,
       interval: 'year',
       originalPrice: 420, // 35 * 12 = 420
-      description: 'Best value - save $220 per year!',
+      description: 'Everything included - 2 months free!',
+      badge: 'Save $220 per year!',
+      topBadge: 'Best Value - Save 52%',
       features: [
+        'Two month free trial',
         'Unlimited musicians',
         'Unlimited events',
         'Email & SMS messaging',
-        'Advanced scheduling',
-        'Detailed reporting & analytics',
-        'Priority support',
         'Music file sharing',
-        'Calendar integration',
-        'Custom roles & permissions',
-        '💰 Save $220 per year',
-        '✨ 2 months free'
+        'Priority support'
       ],
       popular: true,
       stripePriceId: 'price_1RbkgaDKZUjfTbRbrVKLe5Hq',
@@ -308,96 +304,137 @@ export default function BillingPage() {
 
         {/* Pricing Plans */}
         <div className="mb-8">
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Choose Your Plan</h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              Select the perfect plan for your church. Upgrade or downgrade at any time.
+          <div className="text-center mb-12">
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
+              Simple, Affordable Pricing
+            </h2>
+            <p className="text-lg text-gray-600">
+              Choose monthly or save big with annual billing
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto md:grid-rows-1 pt-4">
             {plans.map((plan) => (
-              <div
-                key={plan.id}
-                className={`relative bg-white rounded-xl shadow-sm border p-6 ${
-                  plan.popular ? 'border-blue-500 ring-2 ring-blue-200' : ''
-                } ${
-                  currentPlan === plan.id ? 'ring-2 ring-success-200 border-success-500' : ''
-                }`}
-              >
-                {plan.popular && (
-                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center">
-                      <Star className="h-4 w-4 mr-1" />
-                      Most Popular
-                    </span>
-                  </div>
-                )}
-
-                {currentPlan === plan.id && (
-                  <div className="absolute -top-3 right-4">
-                    <span className="bg-success-600 text-white px-3 py-1 rounded-full text-sm font-medium">
-                      Current Plan
-                    </span>
-                  </div>
-                )}
-
-                <div className="text-center mb-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">{plan.name}</h3>
-                  <div className="mb-2">
-                    {plan.originalPrice && (
-                      <div className="text-lg text-gray-500 line-through mb-1">
-                        ${plan.originalPrice}/{plan.interval}
-                      </div>
-                    )}
-                    <div className="flex items-center justify-center space-x-2">
-                      <span className="text-4xl font-bold text-gray-900">${plan.price}</span>
-                      <span className="text-gray-500">/{plan.interval}</span>
-                      {plan.savingsPercent && (
-                        <span className="bg-success-100 text-success-800 text-sm font-medium px-2 py-1 rounded-full">
-                          Save {plan.savingsPercent}%
+              <div key={plan.id}>
+                {plan.id === 'monthly' ? (
+                  /* Monthly Plan */
+                  <div className={`bg-white rounded-2xl shadow-xl p-8 flex flex-col h-full ${
+                    currentPlan === plan.id ? 'ring-2 ring-success-200 border-success-500' : ''
+                  }`}>
+                    {currentPlan === plan.id && (
+                      <div className="absolute -top-3 right-4 z-10">
+                        <span className="bg-success-600 text-white px-3 py-1 rounded-full text-sm font-medium">
+                          Current Plan
                         </span>
-                      )}
-                    </div>
-                    {plan.savings && (
-                      <div className="text-success-600 font-medium text-sm mt-1">
-                        Save ${plan.savings} per year
                       </div>
                     )}
+                    <div className="text-center flex-1">
+                      <h3 className="text-2xl font-bold text-gray-900 mb-2">{plan.name}</h3>
+                      <div className="mb-4">
+                        <span className="text-4xl font-bold text-brand-600">${plan.price}</span>
+                        <span className="text-gray-600">/{plan.interval}</span>
+                      </div>
+                      <p className="text-gray-600 mb-4">
+                        {plan.description}
+                      </p>
+                      <div className="bg-brand-50 text-brand-700 text-sm font-medium px-3 py-1 rounded-full inline-block mb-4">
+                        {plan.badge}
+                      </div>
+                      <p className="text-gray-600 mb-6">
+                        {plan.subtext}
+                      </p>
+
+                      <div className="space-y-3 mb-8 min-h-[144px] flex flex-col justify-between">
+                        {plan.features.map((feature, index) => (
+                          <div key={index} className="flex items-center">
+                            <div className="w-2 h-2 bg-brand-600 rounded-full mr-3"></div>
+                            <span className="text-gray-700">{feature}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="mt-auto">
+                        {currentPlan === plan.id ? (
+                          <button
+                            disabled
+                            className="w-full bg-gray-100 text-gray-500 py-3 px-6 rounded-lg font-medium cursor-not-allowed"
+                          >
+                            Current Plan
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleUpgrade(plan.id)}
+                            disabled={loading}
+                            className="w-full bg-brand-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-brand-700 transition-colors disabled:opacity-50"
+                          >
+                            {loading ? 'Processing...' : 'Start 30-Day Free Trial'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-gray-600">{plan.description}</p>
-                </div>
-
-                <ul className="space-y-3 mb-6">
-                  {plan.features.map((feature, index) => (
-                    <li key={index} className="flex items-center">
-                      <Check className="h-4 w-4 text-success-500 mr-3 flex-shrink-0" />
-                      <span className="text-sm text-gray-700">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                {currentPlan === plan.id ? (
-                  <button
-                    disabled
-                    className="w-full py-3 px-4 bg-gray-100 text-gray-500 rounded-lg font-medium cursor-not-allowed"
-                  >
-                    Current Plan
-                  </button>
                 ) : (
-                  <button
-                    onClick={() => handleUpgrade(plan.id)}
-                    disabled={loading}
-                    className={`w-full py-3 px-4 rounded-lg font-medium transition-colors disabled:opacity-50 ${
-                      plan.popular
-                        ? 'bg-blue-600 text-white hover:bg-blue-700'
-                        : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
-                    }`}
-                  >
-                    {loading ? 'Processing...' : 
-                     currentPlan === 'free' ? 'Start Subscription' : 
-                     'Switch Plan'}
-                  </button>
+                  /* Annual Plan */
+                  <div className={`bg-white rounded-2xl shadow-xl p-8 border-2 border-success-500 relative flex flex-col h-full overflow-visible pt-12 md:pt-10 ${
+                    currentPlan === plan.id ? 'ring-2 ring-success-200' : ''
+                  }`}>
+                    <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
+                      <span className="bg-success-500 text-white px-4 py-1 rounded-full text-sm font-medium whitespace-nowrap">
+                        {plan.topBadge}
+                      </span>
+                    </div>
+                    {currentPlan === plan.id && (
+                      <div className="absolute -top-3 right-4 z-10">
+                        <span className="bg-success-600 text-white px-3 py-1 rounded-full text-sm font-medium">
+                          Current Plan
+                        </span>
+                      </div>
+                    )}
+                    <div className="text-center flex-1">
+                      <h3 className="text-2xl font-bold text-gray-900 mb-2">{plan.name}</h3>
+                      <div className="mb-2">
+                        <div className="text-lg text-gray-500 line-through">${plan.originalPrice}/{plan.interval}</div>
+                        <div className="mb-2">
+                          <span className="text-4xl font-bold text-success-600">${plan.price}</span>
+                          <span className="text-gray-600">/{plan.interval}</span>
+                        </div>
+                      </div>
+                      <div className="bg-success-50 text-success-700 text-sm font-medium px-3 py-1 rounded-full inline-block mb-4">
+                        {plan.badge}
+                      </div>
+                      <p className="text-gray-600 mb-6">
+                        {plan.description}
+                      </p>
+
+                      <div className="space-y-3 mb-8 min-h-[144px] flex flex-col justify-between">
+                        {plan.features.map((feature, index) => (
+                          <div key={index} className="flex items-center">
+                            <div className="w-2 h-2 bg-success-500 rounded-full mr-3"></div>
+                            <span className="text-gray-700">{feature}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="mt-auto -mb-1">
+                        {currentPlan === plan.id ? (
+                          <button
+                            disabled
+                            className="w-full bg-gray-100 text-gray-500 font-medium py-3 px-6 rounded-lg cursor-not-allowed"
+                          >
+                            Current Plan
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleUpgrade(plan.id)}
+                            disabled={loading}
+                            className="w-full bg-success-600 text-white font-medium py-3 px-6 rounded-lg hover:bg-success-700 transition-colors disabled:opacity-50"
+                          >
+                            {loading ? 'Processing...' : 'Start 30-Day Free Trial'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
             ))}

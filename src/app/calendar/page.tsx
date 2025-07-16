@@ -13,6 +13,8 @@ import { EventDetailsModal } from '@/components/events/event-details-modal'
 import { CreateRecurringEventModal } from '@/components/events/create-recurring-event-modal'
 import { CreateEventModal } from '@/components/events/create-event-modal'
 import { EditScopeModal } from '@/components/events/edit-scope-modal'
+import { OpenEventsCard } from '@/components/events/open-events-card'
+import { ViewAllOpenEventsModal } from '@/components/events/view-all-open-events-modal'
 
 interface RootRecurringEvent {
   id: string
@@ -138,6 +140,10 @@ export default function CalendarPage() {
   // Drag and drop
   const [draggedEvent, setDraggedEvent] = useState<CalendarEvent | null>(null)
   const [isDragging, setIsDragging] = useState(false)
+
+  // Open events modal
+  const [showViewAllOpenEvents, setShowViewAllOpenEvents] = useState(false)
+  const [openEventsData, setOpenEventsData] = useState<any[]>([])
 
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -677,10 +683,11 @@ export default function CalendarPage() {
         <div className={`grid grid-cols-1 gap-8 min-h-[750px] ${
           session?.user?.role === 'MUSICIAN' ? 'lg:grid-cols-1' : 'lg:grid-cols-4'
         }`}>
-          {/* Left Sidebar - Recurring Events (30%) - Only show for directors/pastors */}
+          {/* Left Sidebar - Recurring Events & Open Events (30%) - Only show for directors/pastors */}
           {session?.user?.role !== 'MUSICIAN' && (
-            <div className="lg:col-span-1">
-              <div className="bg-white rounded-xl shadow-sm border max-h-[850px] flex flex-col">
+            <div className="lg:col-span-1 space-y-6">
+              {/* Recurring Events Card */}
+              <div className="bg-white rounded-xl shadow-sm border max-h-[400px] flex flex-col">
                 <div className="p-6 border-b flex items-center justify-between">
                   <h2 className="text-lg font-bold text-gray-900">Recurring Events</h2>
                   <button
@@ -757,6 +764,15 @@ export default function CalendarPage() {
                   )}
                 </div>
               </div>
+
+              {/* Open Events Card */}
+              <OpenEventsCard
+                onEventClick={handleEventClick}
+                onViewAllClick={(events) => {
+                  setOpenEventsData(events)
+                  setShowViewAllOpenEvents(true)
+                }}
+              />
             </div>
           )}
 
@@ -1216,6 +1232,17 @@ export default function CalendarPage() {
         onEventCreated={handleEditComplete}
         editingEvent={editingRootEvent}
         editScope={editScope}
+      />
+
+      {/* View All Open Events Modal */}
+      <ViewAllOpenEventsModal
+        isOpen={showViewAllOpenEvents}
+        onClose={() => {
+          setShowViewAllOpenEvents(false)
+          setOpenEventsData([])
+        }}
+        events={openEventsData}
+        onEventClick={handleEventClick}
       />
     </div>
   )

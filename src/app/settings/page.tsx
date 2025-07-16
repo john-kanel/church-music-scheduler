@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { 
   ArrowLeft, User, MapPin, Bell, Lock, CreditCard, Save, Edit3, Zap, Users,
   FileText, ExternalLink, Upload, X, Trash2, Plus, GripVertical, Clock,
-  Mail, Calendar, Settings as SettingsIcon, Globe
+  Mail, Calendar, Settings as SettingsIcon, Globe, UserPlus
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -104,6 +104,15 @@ export default function SettingsPage() {
   })
   const [loadingAutomation, setLoadingAutomation] = useState(false)
 
+  // Musician Availability (Musicians only)
+  const [unavailabilities, setUnavailabilities] = useState<any[]>([])
+  const [loadingAvailability, setLoadingAvailability] = useState(false)
+  const [showAvailabilityModal, setShowAvailabilityModal] = useState(false)
+  const [editingAvailability, setEditingAvailability] = useState<any>(null)
+
+  // Pastor Invitation
+  const [showPastorInviteModal, setShowPastorInviteModal] = useState(false)
+
   useEffect(() => {
     fetchUserProfile()
     if (session?.user?.role === 'DIRECTOR' || session?.user?.role === 'ASSOCIATE_DIRECTOR') {
@@ -111,6 +120,9 @@ export default function SettingsPage() {
       fetchChurchLinks()
       fetchServiceParts()
       fetchAutomationSettings()
+    }
+    if (session?.user?.role === 'MUSICIAN') {
+      fetchAvailability()
     }
   }, [session])
 
@@ -164,6 +176,100 @@ export default function SettingsPage() {
     }
   }
 
+  const fetchAvailability = async () => {
+    try {
+      setLoadingAvailability(true)
+      const response = await fetch('/api/musician-availability')
+      if (response.ok) {
+        const data = await response.json()
+        setUnavailabilities(data.unavailabilities)
+      }
+    } catch (error) {
+      console.error('Error fetching availability:', error)
+    } finally {
+      setLoadingAvailability(false)
+    }
+  }
+
+  const deleteAvailability = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this unavailability?')) return
+    
+    try {
+      const response = await fetch(`/api/musician-availability/${id}`, {
+        method: 'DELETE'
+      })
+      
+      if (response.ok) {
+        setUnavailabilities(prev => prev.filter(item => item.id !== id))
+      } else {
+        throw new Error('Failed to delete availability')
+      }
+    } catch (error) {
+      console.error('Error deleting availability:', error)
+      alert('Failed to delete availability. Please try again.')
+    }
+  }
+
+  const saveAvailability = async (data: any) => {
+    try {
+      const url = editingAvailability 
+        ? `/api/musician-availability/${editingAvailability.id}`
+        : '/api/musician-availability'
+      
+      const method = editingAvailability ? 'PUT' : 'POST'
+      
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        if (editingAvailability) {
+          setUnavailabilities(prev => 
+            prev.map(item => item.id === editingAvailability.id ? result.unavailability : item)
+          )
+        } else {
+          setUnavailabilities(prev => [...prev, result.unavailability])
+        }
+        setShowAvailabilityModal(false)
+        setEditingAvailability(null)
+      } else {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to save availability')
+      }
+    } catch (error) {
+      console.error('Error saving availability:', error)
+      alert(error instanceof Error ? error.message : 'Failed to save availability. Please try again.')
+    }
+  }
+
+  const sendPastorInvitation = async (email: string, name: string) => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/pastor-invitation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, name })
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        setSuccess('Pastor invitation sent successfully!')
+        setShowPastorInviteModal(false)
+      } else {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to send pastor invitation')
+      }
+    } catch (error) {
+      console.error('Error sending pastor invitation:', error)
+      alert(error instanceof Error ? error.message : 'Failed to send pastor invitation. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const fetchServiceParts = async () => {
     try {
       setLoadingServiceParts(true)
@@ -209,6 +315,9 @@ export default function SettingsPage() {
     { id: 'personal', name: 'Personal', icon: User },
     { id: 'church', name: 'Church', icon: MapPin },
     { id: 'notifications', name: 'Notifications', icon: Bell },
+    ...(session?.user?.role === 'MUSICIAN' 
+      ? [{ id: 'availability', name: 'Availability', icon: Calendar }] 
+      : []),
     ...(session?.user?.role === 'DIRECTOR' || session?.user?.role === 'ASSOCIATE_DIRECTOR' 
       ? [
           { id: 'documents-links', name: 'Documents & Links', icon: FileText },
@@ -235,17 +344,29 @@ export default function SettingsPage() {
     setLoading(true)
     
     try {
+      // Split the name into firstName and lastName for the API
+      const nameParts = formData.name.trim().split(' ')
+      const firstName = nameParts[0] || ''
+      const lastName = nameParts.slice(1).join(' ') || ''
+      
+      const dataToSend = {
+        ...formData,
+        firstName,
+        lastName
+      }
+      
       const response = await fetch('/api/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(dataToSend)
       })
 
       if (response.ok) {
         setSuccess('Settings saved successfully!')
         setIsEditing(false)
       } else {
-        throw new Error('Failed to save settings')
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to save settings')
       }
     } catch (error) {
       console.error('Error saving settings:', error)
@@ -734,6 +855,106 @@ export default function SettingsPage() {
               </div>
             )}
 
+            {/* Availability Tab */}
+            {activeTab === 'availability' && session?.user?.role === 'MUSICIAN' && (
+              <div className="bg-white rounded-xl shadow-sm border p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-bold text-gray-900 flex items-center">
+                    <Calendar className="h-5 w-5 mr-2 text-blue-600" />
+                    My Availability
+                  </h2>
+                  <button
+                    onClick={() => setShowAvailabilityModal(true)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Unavailability
+                  </button>
+                </div>
+
+                <div className="mb-6">
+                  <p className="text-sm text-gray-600">
+                    Set your unavailable dates and recurring weekly unavailability. This will be considered during auto-assignment.
+                  </p>
+                </div>
+
+                {loadingAvailability ? (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {unavailabilities.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                        <p>No unavailability set</p>
+                        <p className="text-sm">You're currently available for all events</p>
+                      </div>
+                    ) : (
+                      <div className="grid gap-4">
+                        {unavailabilities.map((unavailability) => (
+                          <div
+                            key={unavailability.id}
+                            className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+                          >
+                            <div className="flex-1">
+                              {unavailability.dayOfWeek !== null ? (
+                                <div>
+                                  <div className="font-medium text-gray-900">
+                                    {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][unavailability.dayOfWeek]}s
+                                  </div>
+                                  <div className="text-sm text-gray-500">
+                                    Recurring weekly unavailability
+                                  </div>
+                                </div>
+                              ) : (
+                                <div>
+                                  <div className="font-medium text-gray-900">
+                                    {unavailability.endDate && unavailability.endDate !== unavailability.startDate
+                                      ? `${new Date(unavailability.startDate).toLocaleDateString()} - ${new Date(unavailability.endDate).toLocaleDateString()}`
+                                      : new Date(unavailability.startDate).toLocaleDateString()
+                                    }
+                                  </div>
+                                  <div className="text-sm text-gray-500">
+                                    {unavailability.endDate && unavailability.endDate !== unavailability.startDate
+                                      ? 'Date range unavailability'
+                                      : 'Single date unavailability'
+                                    }
+                                  </div>
+                                </div>
+                              )}
+                              {unavailability.reason && (
+                                <div className="text-sm text-gray-600 mt-1">
+                                  {unavailability.reason}
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <button
+                                onClick={() => {
+                                  setEditingAvailability(unavailability)
+                                  setShowAvailabilityModal(true)
+                                }}
+                                className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                              >
+                                <Edit3 className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => deleteAvailability(unavailability.id)}
+                                className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Preferences Tab */}
             {activeTab === 'preferences' && (
               <div className="bg-white rounded-xl shadow-sm border p-6">
@@ -1075,6 +1296,20 @@ export default function SettingsPage() {
 
                         <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
                           <div>
+                            <h4 className="font-medium text-gray-900">Invite Pastor</h4>
+                            <p className="text-sm text-gray-500">Invite your pastor to receive automated reports and notifications</p>
+                          </div>
+                          <button
+                            onClick={() => setShowPastorInviteModal(true)}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+                          >
+                            <UserPlus className="h-4 w-4 mr-2" />
+                            Invite Pastor
+                          </button>
+                        </div>
+
+                        <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                          <div>
                             <h4 className="font-medium text-gray-900">Daily Digest</h4>
                             <p className="text-sm text-gray-500">Daily summary of upcoming events</p>
                           </div>
@@ -1235,6 +1470,234 @@ export default function SettingsPage() {
               >
                 Add Link
               </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Availability Modal */}
+      {showAvailabilityModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-900">
+                {editingAvailability ? 'Edit Unavailability' : 'Add Unavailability'}
+              </h3>
+              <button 
+                onClick={() => {
+                  setShowAvailabilityModal(false)
+                  setEditingAvailability(null)
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <form onSubmit={(e) => {
+              e.preventDefault()
+              const formData = new FormData(e.target as HTMLFormElement)
+              const type = formData.get('type') as string
+              const startDate = formData.get('startDate') as string
+              const endDate = formData.get('endDate') as string
+              const dayOfWeek = formData.get('dayOfWeek') as string
+              const reason = formData.get('reason') as string
+
+              if (type === 'date' && startDate) {
+                saveAvailability({
+                  startDate,
+                  endDate: endDate || null,
+                  dayOfWeek: null,
+                  reason: reason || null
+                })
+              } else if (type === 'day' && dayOfWeek) {
+                saveAvailability({
+                  startDate: null,
+                  endDate: null,
+                  dayOfWeek: parseInt(dayOfWeek),
+                  reason: reason || null
+                })
+              }
+            }} className="p-6 space-y-4">
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                <div className="space-y-2">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="type"
+                      value="date"
+                      defaultChecked={!editingAvailability || editingAvailability.startDate}
+                      className="text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">Specific dates</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="type"
+                      value="day"
+                      defaultChecked={editingAvailability && editingAvailability.dayOfWeek !== null}
+                      className="text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">Recurring day of week</span>
+                  </label>
+                </div>
+              </div>
+
+              <div id="date-fields">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                <input
+                  type="date"
+                  name="startDate"
+                  defaultValue={editingAvailability?.startDate ? new Date(editingAvailability.startDate).toISOString().split('T')[0] : ''}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <label className="block text-sm font-medium text-gray-700 mb-1 mt-4">End Date (optional)</label>
+                <input
+                  type="date"
+                  name="endDate"
+                  defaultValue={editingAvailability?.endDate ? new Date(editingAvailability.endDate).toISOString().split('T')[0] : ''}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">Leave end date empty for single day unavailability</p>
+              </div>
+
+              <div id="day-fields" style={{ display: 'none' }}>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Day of Week</label>
+                <select
+                  name="dayOfWeek"
+                  defaultValue={editingAvailability?.dayOfWeek?.toString() || ''}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select a day</option>
+                  <option value="0">Sunday</option>
+                  <option value="1">Monday</option>
+                  <option value="2">Tuesday</option>
+                  <option value="3">Wednesday</option>
+                  <option value="4">Thursday</option>
+                  <option value="5">Friday</option>
+                  <option value="6">Saturday</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Reason (optional)</label>
+                <textarea
+                  name="reason"
+                  rows={3}
+                  defaultValue={editingAvailability?.reason || ''}
+                  placeholder="e.g., Vacation, Work commitment, etc."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAvailabilityModal(false)
+                    setEditingAvailability(null)
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  {editingAvailability ? 'Update' : 'Add'}
+                </button>
+              </div>
+            </form>
+
+            <script dangerouslySetInnerHTML={{
+              __html: `
+                document.addEventListener('change', function(e) {
+                  if (e.target.name === 'type') {
+                    const dateFields = document.getElementById('date-fields');
+                    const dayFields = document.getElementById('day-fields');
+                    if (e.target.value === 'date') {
+                      dateFields.style.display = 'block';
+                      dayFields.style.display = 'none';
+                    } else {
+                      dateFields.style.display = 'none';
+                      dayFields.style.display = 'block';
+                    }
+                  }
+                });
+              `
+            }} />
+          </div>
+        </div>
+      )}
+
+      {/* Pastor Invitation Modal */}
+      {showPastorInviteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full">
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-900">Invite Pastor</h3>
+              <button 
+                onClick={() => setShowPastorInviteModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <form onSubmit={(e) => {
+              e.preventDefault()
+              const formData = new FormData(e.target as HTMLFormElement)
+              const email = formData.get('email') as string
+              const name = formData.get('name') as string
+              sendPastorInvitation(email, name)
+            }} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Pastor's Name
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  required
+                  placeholder="Enter pastor's full name"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Pastor's Email
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  required
+                  placeholder="Enter pastor's email address"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="bg-blue-50 p-3 rounded-lg">
+                <p className="text-sm text-blue-700">
+                  Your pastor will receive an invitation to join the system and automatically receive the email reports you've configured above.
+                </p>
+              </div>
+              <div className="flex space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowPastorInviteModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                >
+                  {loading ? 'Sending...' : 'Send Invitation'}
+                </button>
+              </div>
             </form>
           </div>
         </div>
