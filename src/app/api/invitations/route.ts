@@ -18,9 +18,10 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status') // PENDING, ACCEPTED, EXPIRED
 
-    // Build filter
+    // Build filter - only show musician invitations (exclude pastor invitations)
     const whereClause: any = {
-      churchId: session.user.churchId
+      churchId: session.user.churchId,
+      role: 'MUSICIAN'
     }
 
     if (status) {
@@ -188,6 +189,7 @@ export async function POST(request: NextRequest) {
           firstName,
           lastName,
           phone,
+          role: 'MUSICIAN',
           churchId: session.user.churchId,
           invitedBy: session.user.id,
           token: generateInvitationToken(),
@@ -368,6 +370,7 @@ export async function POST(request: NextRequest) {
               firstName,
               lastName,
               phone,
+              role: 'MUSICIAN',
               churchId: session.user.churchId,
               invitedBy: session.user.id,
               token: generateInvitationToken(),

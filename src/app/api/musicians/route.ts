@@ -86,10 +86,11 @@ export async function GET(request: NextRequest) {
         ]
       }),
       
-      // Invitations query - get all at once
+      // Musician invitations query - exclude pastor invitations
       prisma.invitation.findMany({
         where: {
-          churchId: session.user.churchId
+          churchId: session.user.churchId,
+          role: 'MUSICIAN'
         },
         select: {
           email: true,

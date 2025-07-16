@@ -88,11 +88,12 @@ export async function GET(request: NextRequest) {
           }
         }),
         
-        // Pending invitations count
+        // Pending musician invitations count (exclude pastor invitations)
         prisma.invitation.count({
           where: {
             churchId,
-            status: 'PENDING'
+            status: 'PENDING',
+            role: 'MUSICIAN'
           }
         }),
         
