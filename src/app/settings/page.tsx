@@ -73,6 +73,7 @@ export default function SettingsPage() {
     name: session?.user?.name || '',
     email: session?.user?.email || '',
     phone: '',
+    calendarLink: '',
     churchName: session?.user?.churchName || '',
     parishPhone: '',
     emailNotifications: true,
@@ -137,6 +138,7 @@ export default function SettingsPage() {
           name: `${user.firstName} ${user.lastName}`,
           email: user.email,
           phone: user.phone || '',
+          calendarLink: user.calendarLink || '',
           emailNotifications: user.emailNotifications,
           smsNotifications: user.smsNotifications,
           timezone: user.timezone || 'America/Chicago',
@@ -766,6 +768,25 @@ export default function SettingsPage() {
                       disabled={!isEditing}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 text-gray-900"
                     />
+                  </div>
+                  
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Calendar Link
+                      <span className="text-xs text-gray-500 ml-1">(e.g., Calendly, Google Calendar booking link)</span>
+                    </label>
+                    <input
+                      type="url"
+                      name="calendarLink"
+                      value={formData.calendarLink}
+                      onChange={handleInputChange}
+                      disabled={!isEditing}
+                      placeholder="https://calendly.com/yourname or https://calendar.google.com/..."
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 text-gray-900"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      This link will be shown to musicians so they can easily schedule meetings with you
+                    </p>
                   </div>
                 </div>
               </div>

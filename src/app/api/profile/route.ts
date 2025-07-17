@@ -27,10 +27,12 @@ export async function GET() {
         instruments: true,
         skillLevel: true,
         yearsExperience: true,
+        calendarLink: true,
         createdAt: true,
         church: {
           select: {
-            name: true
+            name: true,
+            phone: true
           }
         }
       }
@@ -69,7 +71,10 @@ export async function PUT(request: NextRequest) {
       timezone,
       instruments,
       skillLevel,
-      yearsExperience
+      yearsExperience,
+      churchName,
+      parishPhone,
+      calendarLink
     } = body
 
     // Validate required fields
@@ -92,7 +97,8 @@ export async function PUT(request: NextRequest) {
         timezone: timezone || 'America/Chicago',
         instruments: instruments || [],
         skillLevel: skillLevel || 'INTERMEDIATE',
-        yearsExperience: yearsExperience ? parseInt(yearsExperience) : null
+        yearsExperience: yearsExperience ? parseInt(yearsExperience) : null,
+        calendarLink: calendarLink || null
       },
       select: {
         id: true,
@@ -109,11 +115,27 @@ export async function PUT(request: NextRequest) {
         yearsExperience: true,
         church: {
           select: {
-            name: true
+            name: true,
+            phone: true
           }
         }
       }
     })
+
+    // Update church information if user has permission and church data provided
+    if ((churchName || parishPhone) && updatedUser.church) {
+      const canUpdateChurch = ['DIRECTOR', 'ASSOCIATE_DIRECTOR', 'PASTOR', 'ASSOCIATE_PASTOR'].includes(session.user.role)
+      
+      if (canUpdateChurch) {
+        await prisma.church.update({
+          where: { id: session.user.churchId },
+          data: {
+            ...(churchName && { name: churchName }),
+            ...(parishPhone && { phone: parishPhone })
+          }
+        })
+      }
+    }
 
     return NextResponse.json({ 
       user: updatedUser,
@@ -126,4 +148,4 @@ export async function PUT(request: NextRequest) {
       { status: 500 }
     )
   }
-} 
+}

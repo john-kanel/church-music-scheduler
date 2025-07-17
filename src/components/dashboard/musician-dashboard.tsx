@@ -61,6 +61,7 @@ interface DashboardData {
     lastName: string
     email: string
     phone: string
+    calendarLink?: string
   }
 }
 
@@ -621,6 +622,19 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
                       <span className="text-sm text-gray-500">No phone number provided</span>
                     )}
                     </div>
+                  {dashboardData.musicDirector.calendarLink && (
+                    <div className="flex items-center">
+                      <Calendar className="h-5 w-5 text-gray-400 mr-2" />
+                      <a 
+                        href={dashboardData.musicDirector.calendarLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-600 hover:text-blue-700"
+                      >
+                        Schedule a meeting
+                      </a>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
