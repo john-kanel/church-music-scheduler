@@ -204,7 +204,7 @@ export function OpenEventsCard({ onEventClick, onViewAllClick }: OpenEventsCardP
         <div className="p-4 border-t bg-gray-50">
           <button
             onClick={() => onViewAllClick(openEvents)}
-            className="w-full py-2 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg border border-blue-200 transition-colors"
+            className="w-full py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg border border-blue-200 transition-colors"
           >
             View All {openEvents.length} Open Events
           </button>

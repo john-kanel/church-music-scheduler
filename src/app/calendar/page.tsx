@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { 
   ArrowLeft, Calendar, Plus, Search, Filter, Users, Clock, MapPin, 
@@ -15,6 +15,7 @@ import { CreateEventModal } from '@/components/events/create-event-modal'
 import { EditScopeModal } from '@/components/events/edit-scope-modal'
 import { OpenEventsCard } from '@/components/events/open-events-card'
 import { ViewAllOpenEventsModal } from '@/components/events/view-all-open-events-modal'
+import { fetchWithCache, invalidateCache } from '@/lib/performance-cache'
 
 interface RootRecurringEvent {
   id: string
@@ -128,6 +129,8 @@ export default function CalendarPage() {
   // Calendar events
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [loading, setLoading] = useState(true)
+  const [eventsLoading, setEventsLoading] = useState(true)
+  const [rootEventsLoading, setRootEventsLoading] = useState(true)
   
   // Event details modal
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
@@ -151,40 +154,94 @@ export default function CalendarPage() {
   ]
 
   useEffect(() => {
-    if (session) {
-      fetchRootEvents()
-      fetchEvents()
+    if (session?.user?.id) {
+      loadDataInParallel()
+      prefetchAdjacentMonths()
     }
   }, [session, currentDate])
 
-  const fetchRootEvents = async () => {
+  const fetchRootEvents = useCallback(async () => {
+    if (!session?.user?.id) return
+
+    setRootEventsLoading(true)
     try {
-      const response = await fetch('/api/events?rootOnly=true')
-      if (response.ok) {
-        const data = await response.json()
-        setRootEvents(data.events || [])
-      }
+      const data = await fetchWithCache<{ events: RootRecurringEvent[] }>(
+        '/api/events',
+        {},
+        'events',
+        session.user.id,
+        { rootOnly: 'true' }
+      )
+      setRootEvents(data.events || [])
     } catch (error) {
       console.error('Error fetching root recurring events:', error)
+    } finally {
+      setRootEventsLoading(false)
     }
-  }
+  }, [session?.user?.id])
 
-  const fetchEvents = async () => {
-    setLoading(true)
+  const fetchEvents = useCallback(async (targetDate?: Date) => {
+    if (!session?.user?.id) return
+
+    const dateToUse = targetDate || currentDate
+    const month = dateToUse.getMonth() + 1
+    const year = dateToUse.getFullYear()
+
+    setEventsLoading(true)
     try {
-      const month = currentDate.getMonth() + 1
-      const year = currentDate.getFullYear()
-      const response = await fetch(`/api/events?month=${month}&year=${year}`)
-      if (response.ok) {
-        const data = await response.json()
+      const data = await fetchWithCache<{ events: CalendarEvent[] }>(
+        '/api/events',
+        {},
+        'events',
+        session.user.id,
+        { month: month.toString(), year: year.toString() }
+      )
+      
+      if (!targetDate || targetDate === currentDate) {
         setEvents(data.events || [])
       }
     } catch (error) {
       console.error('Error fetching events:', error)
     } finally {
+      setEventsLoading(false)
+    }
+  }, [session?.user?.id, currentDate])
+
+  const loadDataInParallel = useCallback(async () => {
+    if (!session?.user?.id) return
+
+    setLoading(true)
+    
+    // Load both root events and calendar events in parallel
+    try {
+      await Promise.allSettled([
+        fetchRootEvents(),
+        fetchEvents()
+      ])
+    } catch (error) {
+      console.error('Error loading calendar data:', error)
+    } finally {
       setLoading(false)
     }
-  }
+  }, [fetchRootEvents, fetchEvents])
+
+  const prefetchAdjacentMonths = useCallback(async () => {
+    if (!session?.user?.id) return
+
+    const prevMonth = new Date(currentDate)
+    prevMonth.setMonth(currentDate.getMonth() - 1)
+    
+    const nextMonth = new Date(currentDate)
+    nextMonth.setMonth(currentDate.getMonth() + 1)
+
+    // Prefetch adjacent months in background (no await to not block UI)
+    Promise.allSettled([
+      fetchEvents(prevMonth),
+      fetchEvents(nextMonth)
+    ]).catch(() => {
+      // Silently handle prefetch errors
+    })
+  }, [session?.user?.id, currentDate, fetchEvents])
 
   const navigateMonth = (direction: 'prev' | 'next') => {
     setCurrentDate(prev => {
@@ -194,6 +251,24 @@ export default function CalendarPage() {
       } else {
         newDate.setMonth(prev.getMonth() + 1)
       }
+      
+      // Trigger immediate prefetch of the next/prev months for faster navigation
+      if (session?.user?.id) {
+        const adjacentMonth = new Date(newDate)
+        if (direction === 'prev') {
+          adjacentMonth.setMonth(newDate.getMonth() - 1)
+        } else {
+          adjacentMonth.setMonth(newDate.getMonth() + 1)
+        }
+        
+        // Prefetch in background
+        setTimeout(() => {
+          fetchEvents(adjacentMonth).catch(() => {
+            // Silently handle prefetch errors
+          })
+        }, 100)
+      }
+      
       return newDate
     })
   }
@@ -341,8 +416,11 @@ export default function CalendarPage() {
   }
 
   const handleEditComplete = () => {
-    fetchRootEvents()
-    fetchEvents()
+    // Invalidate cache and reload data
+    if (session?.user?.id) {
+      invalidateCache.events(session.user.id)
+    }
+    loadDataInParallel()
     setShowEditRecurringEvent(false)
     setEditingRootEvent(null)
     setEditScope(null)
@@ -700,67 +778,92 @@ export default function CalendarPage() {
                 </div>
                 
                 <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                  {rootEvents.map((rootEvent) => (
-                    <div
-                      key={rootEvent.id}
-                      className="p-4 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"
-                      style={{ borderLeftColor: rootEvent.eventType.color, borderLeftWidth: '4px' }}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center">
-                          <div
-                            className="w-3 h-3 rounded-full mr-2"
-                            style={{ backgroundColor: rootEvent.eventType.color }}
-                          />
-                          <h3 className="font-medium text-gray-900 text-sm">{rootEvent.name}</h3>
+                  {rootEventsLoading && rootEvents.length === 0 ? (
+                    // Show skeleton loading for recurring events
+                    <>
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="p-4 rounded-lg border border-gray-200 animate-pulse">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center">
+                              <div className="w-3 h-3 rounded-full bg-gray-300 mr-2"></div>
+                              <div className="h-4 bg-gray-300 rounded w-24"></div>
+                            </div>
+                            <div className="w-4 h-4 bg-gray-300 rounded"></div>
+                          </div>
+                          <div className="h-3 bg-gray-200 rounded w-3/4 mb-2"></div>
+                          <div className="flex items-center justify-between">
+                            <div className="h-3 bg-gray-200 rounded w-16"></div>
+                            <div className="h-3 bg-gray-200 rounded w-12"></div>
+                          </div>
+                          <div className="mt-2 h-5 bg-blue-100 rounded w-20"></div>
                         </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleEditRootEvent(rootEvent)
-                          }}
-                          className="p-1 text-gray-400 hover:text-gray-600"
-                          title="Edit recurring event"
+                      ))}
+                    </>
+                  ) : (
+                    <>
+                      {rootEvents.map((rootEvent) => (
+                        <div
+                          key={rootEvent.id}
+                          className="p-4 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"
+                          style={{ borderLeftColor: rootEvent.eventType.color, borderLeftWidth: '4px' }}
                         >
-                          <Edit className="h-3 w-3" />
-                        </button>
-                      </div>
-                      {rootEvent.description && (
-                        <p className="text-xs text-gray-600 mb-2">{rootEvent.description}</p>
-                      )}
-                      <div className="flex items-center justify-between text-xs text-gray-500">
-                        <span>{rootEvent.location}</span>
-                        <span>{rootEvent.assignments?.length || 0} roles</span>
-                      </div>
-                      {rootEvent.recurrencePattern && (
-                        <div className="mt-2 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
-                          {(() => {
-                            try {
-                              const pattern = JSON.parse(rootEvent.recurrencePattern);
-                              return pattern.type === 'weekly' ? 'Weekly' :
-                                     pattern.type === 'biweekly' ? 'Biweekly' :
-                                     pattern.type === 'monthly' ? 'Monthly' :
-                                     'Custom';
-                            } catch {
-                              return 'Recurring';
-                            }
-                          })()} pattern
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center">
+                              <div
+                                className="w-3 h-3 rounded-full mr-2"
+                                style={{ backgroundColor: rootEvent.eventType.color }}
+                              />
+                              <h3 className="font-medium text-gray-900 text-sm">{rootEvent.name}</h3>
+                            </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleEditRootEvent(rootEvent)
+                              }}
+                              className="p-1 text-gray-400 hover:text-gray-600"
+                              title="Edit recurring event"
+                            >
+                              <Edit className="h-3 w-3" />
+                            </button>
+                          </div>
+                          {rootEvent.description && (
+                            <p className="text-xs text-gray-600 mb-2">{rootEvent.description}</p>
+                          )}
+                          <div className="flex items-center justify-between text-xs text-gray-500">
+                            <span>{rootEvent.location}</span>
+                            <span>{rootEvent.assignments?.length || 0} roles</span>
+                          </div>
+                          {rootEvent.recurrencePattern && (
+                            <div className="mt-2 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                              {(() => {
+                                try {
+                                  const pattern = JSON.parse(rootEvent.recurrencePattern);
+                                  return pattern.type === 'weekly' ? 'Weekly' :
+                                         pattern.type === 'biweekly' ? 'Biweekly' :
+                                         pattern.type === 'monthly' ? 'Monthly' :
+                                         'Custom';
+                                } catch {
+                                  return 'Recurring';
+                                }
+                              })()} pattern
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      
+                      {rootEvents.length === 0 && !rootEventsLoading && (
+                        <div className="text-center py-8">
+                          <Calendar className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+                          <p className="text-sm text-gray-500">No recurring events yet</p>
+                          <button
+                            onClick={() => setShowCreateRecurringEvent(true)}
+                            className="text-xs text-blue-600 hover:text-blue-700 mt-1"
+                          >
+                            Create your first recurring event
+                          </button>
                         </div>
                       )}
-                    </div>
-                  ))}
-                  
-                  {rootEvents.length === 0 && (
-                    <div className="text-center py-8">
-                      <Calendar className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-                      <p className="text-sm text-gray-500">No recurring events yet</p>
-                      <button
-                        onClick={() => setShowCreateRecurringEvent(true)}
-                        className="text-xs text-blue-600 hover:text-blue-700 mt-1"
-                      >
-                        Create your first recurring event
-                      </button>
-                    </div>
+                    </>
                   )}
                 </div>
               </div>
@@ -773,6 +876,27 @@ export default function CalendarPage() {
                   setShowViewAllOpenEvents(true)
                 }}
               />
+
+              {/* Plan Your Events Card */}
+              <div className="bg-white rounded-xl shadow-sm border p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <Calendar className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Plan Your Events</h3>
+                    <p className="text-sm text-gray-600">View all of your events in one seamless view. Save hours of scheduling.</p>
+                  </div>
+                </div>
+                
+                              <Link 
+                href="/plan"
+                className="w-full bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 text-sm"
+              >
+                <Settings className="h-3 w-3" />
+                Open Event Planner
+              </Link>
+              </div>
             </div>
           )}
 
@@ -783,25 +907,36 @@ export default function CalendarPage() {
                 {/* Calendar Header */}
                 <div className="p-6 border-b">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-bold text-gray-900">
-                      {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-                    </h2>
+                    <div className="flex items-center">
+                      <h2 className="text-xl font-bold text-gray-900">
+                        {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+                      </h2>
+                      {eventsLoading && (
+                        <div className="ml-3 flex items-center text-blue-600">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                          <span className="ml-2 text-sm">Loading events...</span>
+                        </div>
+                      )}
+                    </div>
                     <div className="flex items-center space-x-2">
                       <button
                         onClick={() => navigateMonth('prev')}
                         className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                        disabled={eventsLoading}
                       >
                         <ChevronLeft className="h-5 w-5 text-gray-700" />
                       </button>
                       <button
                         onClick={() => setCurrentDate(new Date())}
                         className="px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        disabled={eventsLoading}
                       >
                         Today
                       </button>
                       <button
                         onClick={() => navigateMonth('next')}
                         className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                        disabled={eventsLoading}
                       >
                         <ChevronRight className="h-5 w-5 text-gray-700" />
                       </button>
@@ -809,6 +944,9 @@ export default function CalendarPage() {
                   </div>
                   <p className="text-sm text-gray-600 mt-1">
                     Drag a recurring event to any date to create an instance, or click a date to start from scratch
+                    {!eventsLoading && events.length > 0 && (
+                      <span className="ml-2 text-blue-600">• {events.length} events loaded</span>
+                    )}
                   </p>
                 </div>
 
@@ -857,71 +995,81 @@ export default function CalendarPage() {
                               {day}
                             </div>
                             <div className="space-y-1">
-                              {dayEvents.slice(0, 3).map((event) => {
-                                const eventDate = new Date(event.startTime)
-                                const timeString = eventDate.toLocaleTimeString('en-US', {
-                                  hour: 'numeric',
-                                  minute: '2-digit',
-                                  hour12: true
-                                })
-                                const hasRoles = event.assignments && event.assignments.length > 0
-                                const assignedCount = event.assignments?.filter(a => a.user).length || 0
-                                const totalRoles = event.assignments?.length || 0
-                                
-                                return (
-                                  <div
-                                    key={event.id}
-                                    data-event="true"
-                                    draggable
-                                    onDragStart={(e) => {
-                                      setDraggedEvent(event)
-                                      setIsDragging(true)
-                                      e.dataTransfer.effectAllowed = 'move'
-                                      e.dataTransfer.setData('text/plain', event.id)
-                                    }}
-                                    onDragEnd={() => {
-                                      setDraggedEvent(null)
-                                      setIsDragging(false)
-                                    }}
-                                    className={`text-xs px-2 py-1 rounded cursor-move hover:opacity-80 transition-all duration-200 ${
-                                      isDragging && draggedEvent?.id === event.id 
-                                        ? 'opacity-50 scale-95 shadow-lg' 
-                                        : 'hover:scale-105'
-                                    } ${
-                                      event._tempState === 'pending'
-                                        ? 'animate-pulse'
-                                        : event._tempState === 'error'
-                                        ? 'border-red-500 border-2'
-                                        : ''
-                                    }`}
-                                    style={{ 
-                                      backgroundColor: event.eventType.color + '20',
-                                      color: event.eventType.color,
-                                      borderLeft: `3px solid ${event.eventType.color}`,
-                                      transform: isDragging && draggedEvent?.id === event.id ? 'rotate(2deg)' : 'none'
-                                    }}
-                                    title={`${event.name} at ${timeString}${hasRoles ? `\n👥 ${assignedCount}/${totalRoles} roles filled` : ''} - Click to view details, drag to move`}
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handleEventClick(event)
-                                    }}
-                                  >
-                                    <div className="truncate">
-                                      <span className="font-medium">{timeString}</span> {event.name}
+                              {eventsLoading && dayEvents.length === 0 ? (
+                                // Show skeleton loading for events
+                                <>
+                                  <div className="h-5 bg-gray-200 rounded animate-pulse"></div>
+                                  <div className="h-4 bg-gray-100 rounded animate-pulse w-3/4"></div>
+                                </>
+                              ) : (
+                                <>
+                                  {dayEvents.slice(0, 3).map((event) => {
+                                    const eventDate = new Date(event.startTime)
+                                    const timeString = eventDate.toLocaleTimeString('en-US', {
+                                      hour: 'numeric',
+                                      minute: '2-digit',
+                                      hour12: true
+                                    })
+                                    const hasRoles = event.assignments && event.assignments.length > 0
+                                    const assignedCount = event.assignments?.filter(a => a.user).length || 0
+                                    const totalRoles = event.assignments?.length || 0
+                                    
+                                    return (
+                                      <div
+                                        key={event.id}
+                                        data-event="true"
+                                        draggable
+                                        onDragStart={(e) => {
+                                          setDraggedEvent(event)
+                                          setIsDragging(true)
+                                          e.dataTransfer.effectAllowed = 'move'
+                                          e.dataTransfer.setData('text/plain', event.id)
+                                        }}
+                                        onDragEnd={() => {
+                                          setDraggedEvent(null)
+                                          setIsDragging(false)
+                                        }}
+                                        className={`text-xs px-2 py-1 rounded cursor-move hover:opacity-80 transition-all duration-200 ${
+                                          isDragging && draggedEvent?.id === event.id 
+                                            ? 'opacity-50 scale-95 shadow-lg' 
+                                            : 'hover:scale-105'
+                                        } ${
+                                          event._tempState === 'pending'
+                                            ? 'animate-pulse'
+                                            : event._tempState === 'error'
+                                            ? 'border-red-500 border-2'
+                                            : ''
+                                        }`}
+                                        style={{ 
+                                          backgroundColor: event.eventType.color + '20',
+                                          color: event.eventType.color,
+                                          borderLeft: `3px solid ${event.eventType.color}`,
+                                          transform: isDragging && draggedEvent?.id === event.id ? 'rotate(2deg)' : 'none'
+                                        }}
+                                        title={`${event.name} at ${timeString}${hasRoles ? `\n👥 ${assignedCount}/${totalRoles} roles filled` : ''} - Click to view details, drag to move`}
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          handleEventClick(event)
+                                        }}
+                                      >
+                                        <div className="truncate">
+                                          <span className="font-medium">{timeString}</span> {event.name}
+                                        </div>
+                                        {event._tempState === 'pending' && (
+                                          <div className="text-xs opacity-75 mt-1">(Saving...)</div>
+                                        )}
+                                        {event._tempState === 'error' && (
+                                          <div className="text-xs text-red-600 mt-1">(Failed to save)</div>
+                                        )}
+                                      </div>
+                                    )
+                                  })}
+                                  {dayEvents.length > 3 && (
+                                    <div className="text-xs text-gray-500 text-center">
+                                      +{dayEvents.length - 3} more
                                     </div>
-                                    {event._tempState === 'pending' && (
-                                      <div className="text-xs opacity-75 mt-1">(Saving...)</div>
-                                    )}
-                                    {event._tempState === 'error' && (
-                                      <div className="text-xs text-red-600 mt-1">(Failed to save)</div>
-                                    )}
-                                  </div>
-                                )
-                              })}
-                              {dayEvents.length > 3 && (
-                                <div className="text-xs text-gray-500 text-center">
-                                  +{dayEvents.length - 3} more
-                                </div>
+                                  )}
+                                </>
                               )}
                             </div>
                           </>
@@ -1169,7 +1317,11 @@ export default function CalendarPage() {
           setShowCreateEvent(false)
         }}
         onEventCreated={() => {
-          fetchEvents()
+          // Invalidate cache for faster updates
+          if (session?.user?.id) {
+            invalidateCache.events(session.user.id)
+          }
+          loadDataInParallel()
           setShowCreateEvent(false)
         }}
       />
@@ -1184,12 +1336,18 @@ export default function CalendarPage() {
         }}
         event={selectedEvent}
         onEventUpdated={() => {
-          // Just refresh the calendar events, don't close the modal
+          // Invalidate cache and refresh events without closing modal
+          if (session?.user?.id) {
+            invalidateCache.events(session.user.id)
+          }
           fetchEvents()
         }}
         onEventDeleted={() => {
-          // Only close modal when event is deleted
-          fetchEvents()
+          // Invalidate cache and close modal when event is deleted
+          if (session?.user?.id) {
+            invalidateCache.events(session.user.id)
+          }
+          loadDataInParallel()
           setShowEventDetails(false)
           setSelectedEvent(null)
           setIsEditingEvent(false)
@@ -1203,8 +1361,11 @@ export default function CalendarPage() {
           setShowCreateRecurringEvent(false)
         }}
         onEventCreated={() => {
-          fetchRootEvents()
-          fetchEvents()
+          // Invalidate cache for faster updates
+          if (session?.user?.id) {
+            invalidateCache.events(session.user.id)
+          }
+          loadDataInParallel()
           setShowCreateRecurringEvent(false)
         }}
       />

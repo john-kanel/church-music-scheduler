@@ -361,34 +361,32 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
         throw new Error('Please provide names for all roles')
       }
 
-      // Prepare form data
-      const eventData = new FormData()
-      
-      // Add event details
-      Object.entries(formData).forEach(([key, value]) => {
-        eventData.append(key, value.toString())
-      })
+      // Prepare event data as JSON
+      const eventData = {
+        name: formData.name,
+        description: formData.description,
+        location: formData.location,
+        startDate: formData.startDate,
+        startTime: formData.startTime,
+        endTime: formData.endTime,
+        signupType: formData.signupType,
+        notes: formData.notes,
+        isRecurring: formData.isRecurring,
+        recurrencePattern: formData.recurrencePattern,
+        recurrenceEnd: formData.recurrenceEnd,
+        copyHymnsToRecurring: formData.copyHymnsToRecurring,
+        roles: roles,
+        hymns: hymns,
+        selectedGroups: selectedGroups
+      }
 
-      // Add roles
-      eventData.append('roles', JSON.stringify(roles))
-
-      // Add hymns
-      eventData.append('hymns', JSON.stringify(hymns))
-
-      // Add selected groups
-      eventData.append('selectedGroups', JSON.stringify(selectedGroups))
-      
-      // Add copy hymns option for recurring events
-      eventData.append('copyHymnsToRecurring', formData.copyHymnsToRecurring.toString())
-
-      // Add music files
-      musicFiles.forEach((file, index) => {
-        eventData.append(`musicFile_${index}`, file)
-      })
-
+      // Create the event first
       const response = await fetch('/api/events', {
         method: 'POST',
-        body: eventData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(eventData),
       })
 
       const result = await response.json()
@@ -397,24 +395,47 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
         throw new Error(result.error || 'Failed to create event')
       }
 
+      // If there are music files and the event was created successfully, upload them
+      if (musicFiles.length > 0 && result.event?.id) {
+        try {
+          const fileFormData = new FormData()
+          musicFiles.forEach((file, index) => {
+            fileFormData.append(`musicFile_${index}`, file)
+          })
+
+          const fileResponse = await fetch(`/api/events/${result.event.id}/documents`, {
+            method: 'POST',
+            body: fileFormData,
+          })
+
+          if (!fileResponse.ok) {
+            console.error('Failed to upload some music files')
+            // Don't throw error here as the event was created successfully
+          }
+        } catch (fileError) {
+          console.error('Error uploading music files:', fileError)
+          // Don't throw error here as the event was created successfully
+        }
+      }
+
       setSuccess('Event created successfully!')
       
       // Reset form after short delay
       setTimeout(() => {
-              setFormData({
-        name: '',
-        description: '',
-        location: '',
-        startDate: '',
-        startTime: '',
-        endTime: '',
-        signupType: 'open',
-        notes: '',
-        isRecurring: false,
-        recurrencePattern: '',
-        recurrenceEnd: '',
-        copyHymnsToRecurring: true
-      })
+        setFormData({
+          name: '',
+          description: '',
+          location: '',
+          startDate: '',
+          startTime: '',
+          endTime: '',
+          signupType: 'open',
+          notes: '',
+          isRecurring: false,
+          recurrencePattern: '',
+          recurrenceEnd: '',
+          copyHymnsToRecurring: true
+        })
         setRoles([
           { id: '1', name: 'Accompanist', maxCount: 1, isRequired: true, assignedMusicians: [] },
           { id: '2', name: 'Vocalist', maxCount: 4, isRequired: false, assignedMusicians: [] }
