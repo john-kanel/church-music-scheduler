@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { LoginForm } from '@/components/auth/login-form'
-import { Menu, X, Calendar, Music2, MessageSquare, Mail } from 'lucide-react'
+import { Menu, X, Calendar, Music2, MessageSquare, Mail, Users } from 'lucide-react'
 import { Logo } from '@/components/ui/logo'
 import Image from 'next/image'
 
@@ -169,11 +169,11 @@ export default function HomePage() {
               <div className="space-y-2">
                 <div className="flex items-center">
                   <div className="w-2 h-2 bg-brand-600 rounded-full mr-3"></div>
-                  <span className="text-gray-700">Catholic & Protestant Churches</span>
+                  <span className="text-gray-700">Churches of any denomination</span>
                 </div>
                 <div className="flex items-center">
                   <div className="w-2 h-2 bg-brand-600 rounded-full mr-3"></div>
-                  <span className="text-gray-700">Music Directors & Worship Leaders</span>
+                  <span className="text-gray-700">Pastors, Music Directors, & Worship Leaders</span>
                 </div>
                 <div className="flex items-center">
                   <div className="w-2 h-2 bg-brand-600 rounded-full mr-3"></div>
@@ -267,7 +267,7 @@ export default function HomePage() {
               Built by Music Directors, for Music Directors
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Stop wasting hours on manual scheduling. Our platform solves the real problems music directors face every week.
+              Stop wasting hours on scheduling and organization. Our platform solves the real problems music directors face every week, saving you time and energy.
             </p>
           </div>
 
@@ -291,7 +291,7 @@ export default function HomePage() {
                   Cut Your Scheduling Time in Half
                 </h3>
                 <p className="text-xl text-gray-600 mb-6">
-                  Upload your service PDF and watch song titles automatically populate. No more typing hymn numbers or copying service orders by hand.
+                  Upload a PDF of the songs for any event and watch the titles automatically populate. No more typing hymn numbers or copying service orders by hand.
                 </p>
                 <div className="space-y-3">
                   <div className="flex items-center">
@@ -343,9 +343,7 @@ export default function HomePage() {
                 </div>
                 {/* Colored Icon Bubble */}
                 <div className="absolute -bottom-4 -left-4 w-16 h-16 bg-green-600 rounded-full flex items-center justify-center shadow-lg">
-                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 7.89a2 2 0 002.83 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
+                  <Users className="w-8 h-8 text-white" />
                 </div>
               </div>
             </div>
@@ -367,10 +365,8 @@ export default function HomePage() {
                   />
                 </div>
                 {/* Colored Icon Bubble */}
-                <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center shadow-lg">
-                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
+                <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center shadow-lg">
+                  <Calendar className="w-8 h-8 text-white" />
                 </div>
               </div>
               <div className="lg:pl-8">
@@ -382,15 +378,15 @@ export default function HomePage() {
                 </p>
                 <div className="space-y-3">
                   <div className="flex items-center">
-                    <div className="w-2 h-2 bg-purple-600 rounded-full mr-3"></div>
+                    <div className="w-2 h-2 bg-blue-600 rounded-full mr-3"></div>
                     <span className="text-gray-700">Recurring events with flexible patterns</span>
                   </div>
                   <div className="flex items-center">
-                    <div className="w-2 h-2 bg-purple-600 rounded-full mr-3"></div>
+                    <div className="w-2 h-2 bg-blue-600 rounded-full mr-3"></div>
                     <span className="text-gray-700">Easy substitute management</span>
                   </div>
                   <div className="flex items-center">
-                    <div className="w-2 h-2 bg-purple-600 rounded-full mr-3"></div>
+                    <div className="w-2 h-2 bg-blue-600 rounded-full mr-3"></div>
                     <span className="text-gray-700">Visual calendar shows conflicts instantly</span>
                   </div>
                 </div>
@@ -410,15 +406,15 @@ export default function HomePage() {
                 </p>
                 <div className="space-y-3">
                   <div className="flex items-center">
-                    <div className="w-2 h-2 bg-orange-600 rounded-full mr-3"></div>
+                    <div className="w-2 h-2 bg-success-600 rounded-full mr-3"></div>
                     <span className="text-gray-700">Unlimited musicians and roles</span>
                   </div>
                   <div className="flex items-center">
-                    <div className="w-2 h-2 bg-orange-600 rounded-full mr-3"></div>
+                    <div className="w-2 h-2 bg-success-600 rounded-full mr-3"></div>
                     <span className="text-gray-700">Unlimited events and services</span>
                   </div>
                   <div className="flex items-center">
-                    <div className="w-2 h-2 bg-orange-600 rounded-full mr-3"></div>
+                    <div className="w-2 h-2 bg-success-600 rounded-full mr-3"></div>
                     <span className="text-gray-700">Multiple service types and styles</span>
                   </div>
                 </div>
@@ -436,10 +432,8 @@ export default function HomePage() {
                   />
                 </div>
                 {/* Colored Icon Bubble */}
-                <div className="absolute -bottom-4 -left-4 w-16 h-16 bg-orange-600 rounded-full flex items-center justify-center shadow-lg">
-                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
+                <div className="absolute -bottom-4 -left-4 w-16 h-16 bg-success-600 rounded-full flex items-center justify-center shadow-lg">
+                  <Users className="w-8 h-8 text-white" />
                 </div>
               </div>
             </div>
@@ -461,10 +455,8 @@ export default function HomePage() {
                   />
                 </div>
                 {/* Colored Icon Bubble */}
-                <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-red-600 rounded-full flex items-center justify-center shadow-lg">
-                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
+                <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-secondary-600 rounded-full flex items-center justify-center shadow-lg">
+                  <MessageSquare className="w-8 h-8 text-white" />
                 </div>
               </div>
               <div className="lg:pl-8">
@@ -476,15 +468,15 @@ export default function HomePage() {
                 </p>
                 <div className="space-y-3">
                   <div className="flex items-center">
-                    <div className="w-2 h-2 bg-red-600 rounded-full mr-3"></div>
+                    <div className="w-2 h-2 bg-secondary-600 rounded-full mr-3"></div>
                     <span className="text-gray-700">Weekly activity summaries for leadership</span>
                   </div>
                   <div className="flex items-center">
-                    <div className="w-2 h-2 bg-red-600 rounded-full mr-3"></div>
+                    <div className="w-2 h-2 bg-secondary-600 rounded-full mr-3"></div>
                     <span className="text-gray-700">Musician participation tracking</span>
                   </div>
                   <div className="flex items-center">
-                    <div className="w-2 h-2 bg-red-600 rounded-full mr-3"></div>
+                    <div className="w-2 h-2 bg-secondary-600 rounded-full mr-3"></div>
                     <span className="text-gray-700">Upcoming events and needs</span>
                   </div>
                 </div>
@@ -500,7 +492,7 @@ export default function HomePage() {
               Ready to Transform Your Music Ministry?
             </h3>
             <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-              Join hundreds of music directors who've reclaimed their weekends and reduced scheduling stress.
+              Reclaim your weekends and reduce scheduling stress.
             </p>
             <a 
               href="/auth/signup" 
