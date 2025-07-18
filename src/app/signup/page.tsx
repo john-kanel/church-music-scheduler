@@ -7,7 +7,9 @@ export default function SignupRedirect() {
   const router = useRouter()
 
   useEffect(() => {
-    router.replace('/auth/signup')
+    // Preserve URL parameters when redirecting
+    const urlParams = window.location.search
+    router.replace(`/auth/signup${urlParams}`)
   }, [router])
 
   return (

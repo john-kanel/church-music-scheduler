@@ -21,15 +21,18 @@ function SignUpForm() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  // Pre-fill referral code from URL parameter
+  // Pre-fill form data from URL parameters
   useEffect(() => {
     const refCode = searchParams.get('ref')
-    if (refCode) {
-      setFormData(prev => ({
-        ...prev,
-        referralCode: refCode.toUpperCase()
-      }))
-    }
+    const email = searchParams.get('email')
+    const church = searchParams.get('church')
+    
+    setFormData(prev => ({
+      ...prev,
+      ...(refCode && { referralCode: refCode.toUpperCase() }),
+      ...(email && { email: email }),
+      ...(church && { churchName: church })
+    }))
   }, [searchParams])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
