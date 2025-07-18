@@ -227,7 +227,7 @@ export async function PATCH(
       // Determine which events to update based on scope
       let eventsToUpdate: any[] = []
       if (editScope === 'future') {
-        eventsToUpdate = existingEvents.filter(event => 
+        eventsToUpdate = existingEvents.filter((event: any) => 
           new Date(event.startTime) >= currentDate
         )
       } else {
@@ -245,7 +245,7 @@ export async function PATCH(
       
       if (patternChanged && editScope === 'future') {
         // Delete future events so they can be regenerated with new pattern
-        const futureEvents = existingEvents.filter(event => 
+        const futureEvents = existingEvents.filter((event: any) => 
           new Date(event.startTime) >= currentDate
         )
         
