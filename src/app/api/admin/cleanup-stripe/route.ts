@@ -42,8 +42,8 @@ export async function GET(request: NextRequest) {
     // Analyze the situation
     const analysis = {
       totalChurches: churches.length,
-      churchesWithStripeId: churches.filter(c => c.stripeCustomerId).length,
-      churchesWithoutStripeId: churches.filter(c => !c.stripeCustomerId).length,
+      churchesWithStripeId: churches.filter((c: any) => c.stripeCustomerId).length,
+      churchesWithoutStripeId: churches.filter((c: any) => !c.stripeCustomerId).length,
       totalStripeCustomers: allCustomers.data.length,
       
       // Find potential issues
