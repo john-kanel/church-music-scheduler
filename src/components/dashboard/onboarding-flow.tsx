@@ -235,7 +235,23 @@ export function OnboardingFlow({ isVisible, onComplete }: OnboardingFlowProps) {
           }
           break
         case 2: // Documents & Links
-          // Save documents and links (implementation would depend on upload API)
+          // Save church links that were added during onboarding
+          if (onboardingData.links.length > 0) {
+            try {
+              for (const link of onboardingData.links) {
+                await saveStepData({
+                  title: link.title,
+                  url: link.url,
+                  description: link.description || ''
+                }, '/api/church-links')
+              }
+            } catch (error) {
+              console.error('Error saving church links during onboarding:', error)
+              // Don't block onboarding progression if link saving fails
+            }
+          }
+          // Note: Documents require file upload, so they're skipped in onboarding
+          // Users can upload documents later in settings
           break
         case 3: // Musician Notifications
           // Will be saved with pastor notifications in next step
