@@ -105,6 +105,11 @@ export default function SettingsPage() {
   })
   const [loadingAutomation, setLoadingAutomation] = useState(false)
 
+  // Pastor Invitations Log
+  const [pastorInvitations, setPastorInvitations] = useState<any[]>([])
+  const [existingPastors, setExistingPastors] = useState<any[]>([])
+  const [loadingPastorLog, setLoadingPastorLog] = useState(false)
+
   // Musician Availability (Musicians only)
   const [unavailabilities, setUnavailabilities] = useState<any[]>([])
   const [loadingAvailability, setLoadingAvailability] = useState(false)
@@ -127,6 +132,7 @@ export default function SettingsPage() {
       fetchChurchLinks()
       fetchServiceParts()
       fetchAutomationSettings()
+      fetchPastorInvitations()
     }
     if (session?.user?.role === 'MUSICIAN') {
       fetchAvailability()
@@ -302,6 +308,58 @@ export default function SettingsPage() {
       console.error('Error fetching automation settings:', error)
     } finally {
       setLoadingAutomation(false)
+    }
+  }
+
+  const fetchPastorInvitations = async () => {
+    try {
+      setLoadingPastorLog(true)
+      const response = await fetch('/api/pastor-invitations')
+      if (response.ok) {
+        const data = await response.json()
+        setPastorInvitations(data.invitations || [])
+        setExistingPastors(data.existingPastors || [])
+      }
+    } catch (error) {
+      console.error('Error fetching pastor invitations:', error)
+    } finally {
+      setLoadingPastorLog(false)
+    }
+  }
+
+  const invitePastor = async () => {
+    if (!pastorInfo.name || !pastorInfo.email) {
+      alert('Please fill in pastor name and email')
+      return
+    }
+
+    try {
+      setLoading(true)
+      const response = await fetch('/api/pastor-invitation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: pastorInfo.email,
+          name: pastorInfo.name
+        })
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setSuccess('Pastor invitation sent successfully!')
+        // Clear the form
+        setPastorInfo({ name: '', email: '', phone: '', role: 'PASTOR' })
+        // Refresh the pastor invitations list
+        fetchPastorInvitations()
+      } else {
+        alert(data.error || 'Failed to send pastor invitation')
+      }
+    } catch (error) {
+      console.error('Error inviting pastor:', error)
+      alert('Failed to send pastor invitation')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -1359,6 +1417,21 @@ export default function SettingsPage() {
                               </select>
                             </div>
                           </div>
+                          {isEditing && (
+                            <div className="mt-4 pt-4 border-t border-gray-200">
+                              <button
+                                onClick={invitePastor}
+                                disabled={!pastorInfo.name || !pastorInfo.email || loading}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+                              >
+                                <UserPlus className="h-4 w-4 mr-2" />
+                                {loading ? 'Inviting...' : 'Invite Pastor for Notifications'}
+                              </button>
+                              <p className="text-xs text-gray-500 mt-2">
+                                Pastor will receive notifications based on your current automation settings
+                              </p>
+                            </div>
+                          )}
                         </div>
 
                         <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
@@ -1432,6 +1505,80 @@ export default function SettingsPage() {
                           />
                         </div>
                       </div>
+                    </div>
+
+                    {/* Pastor Notification Log */}
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-4">
+                        Invited Pastors
+                      </h3>
+                      <p className="text-sm text-gray-600 mb-4">
+                        Pastors invited to receive automated notifications
+                      </p>
+                      
+                      {loadingPastorLog ? (
+                        <div className="text-center py-4">
+                          <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                        </div>
+                      ) : (
+                        <div className="overflow-hidden border border-gray-200 rounded-lg">
+                          <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50">
+                              <tr>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Name
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Email
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Date Invited
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                              {/* Existing Pastors */}
+                              {existingPastors.map((pastor) => (
+                                <tr key={`pastor-${pastor.id}`} className="bg-green-50">
+                                  <td className="px-4 py-3 text-sm text-gray-900">
+                                    {pastor.firstName} {pastor.lastName}
+                                  </td>
+                                  <td className="px-4 py-3 text-sm text-gray-600">
+                                    {pastor.email}
+                                  </td>
+                                  <td className="px-4 py-3 text-sm text-gray-600">
+                                    {new Date(pastor.createdAt).toLocaleDateString()} (Active)
+                                  </td>
+                                </tr>
+                              ))}
+                              
+                              {/* Pastor Invitations */}
+                              {pastorInvitations.map((invitation) => (
+                                <tr key={`invitation-${invitation.id}`}>
+                                  <td className="px-4 py-3 text-sm text-gray-900">
+                                    {invitation.firstName || invitation.email.split('@')[0]} {invitation.lastName || ''}
+                                  </td>
+                                  <td className="px-4 py-3 text-sm text-gray-600">
+                                    {invitation.email}
+                                  </td>
+                                  <td className="px-4 py-3 text-sm text-gray-600">
+                                    {new Date(invitation.createdAt).toLocaleDateString()}
+                                  </td>
+                                </tr>
+                              ))}
+                              
+                              {/* Empty State */}
+                              {existingPastors.length === 0 && pastorInvitations.length === 0 && (
+                                <tr>
+                                  <td colSpan={3} className="px-4 py-8 text-center text-gray-500">
+                                    No pastors invited yet
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

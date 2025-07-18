@@ -12,6 +12,37 @@ export default function HomePage() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [showImageModal, setShowImageModal] = useState(false)
+  const [selectedImage, setSelectedImage] = useState<{src: string, alt: string} | null>(null)
+
+  const openImageModal = (src: string, alt: string) => {
+    setSelectedImage({ src, alt })
+    setShowImageModal(true)
+  }
+
+  const closeImageModal = () => {
+    setShowImageModal(false)
+    setSelectedImage(null)
+  }
+
+  // Handle keyboard events for modal
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && showImageModal) {
+        closeImageModal()
+      }
+    }
+
+    if (showImageModal) {
+      document.addEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = 'hidden' // Prevent scrolling when modal is open
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = 'unset' // Restore scrolling
+    }
+  }, [showImageModal])
 
   useEffect(() => {
     if (session) {
@@ -324,9 +355,16 @@ export default function HomePage() {
           <div className="mb-24">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <div className="relative">
-                {/* Screenshot Placeholder */}
-                <div className="bg-gray-100 rounded-2xl shadow-2xl aspect-[4/3] flex items-center justify-center border">
-                  <span className="text-gray-500 text-lg">Smart Scheduling Screenshot</span>
+                {/* Calendar View Screenshot */}
+                <div className="relative rounded-2xl shadow-2xl overflow-hidden cursor-pointer" onClick={() => openImageModal("/calendar view.png", "Calendar view showing church events and scheduling")}>
+                  <Image
+                    src="/calendar view.png"
+                    alt="Calendar view showing church events and scheduling"
+                    width={600}
+                    height={450}
+                    className="w-full h-auto object-contain rounded-2xl"
+                    style={{ backgroundColor: '#f8f9fa' }}
+                  />
                 </div>
                 {/* Colored Icon Bubble */}
                 <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center shadow-lg">
@@ -386,9 +424,16 @@ export default function HomePage() {
                 </div>
               </div>
               <div className="relative order-1 lg:order-2">
-                {/* Screenshot Placeholder */}
-                <div className="bg-gray-100 rounded-2xl shadow-2xl aspect-[4/3] flex items-center justify-center border">
-                  <span className="text-gray-500 text-lg">Unlimited Musicians Screenshot</span>
+                {/* Musicians List Screenshot */}
+                <div className="relative rounded-2xl shadow-2xl overflow-hidden cursor-pointer" onClick={() => openImageModal("/musicians list pic.png", "Musicians list view showing unlimited musicians and their details")}>
+                  <Image
+                    src="/musicians list pic.png"
+                    alt="Musicians list view showing unlimited musicians and their details"
+                    width={600}
+                    height={450}
+                    className="w-full h-auto object-contain rounded-2xl"
+                    style={{ backgroundColor: '#f8f9fa' }}
+                  />
                 </div>
                 {/* Colored Icon Bubble */}
                 <div className="absolute -bottom-4 -left-4 w-16 h-16 bg-orange-600 rounded-full flex items-center justify-center shadow-lg">
@@ -404,9 +449,16 @@ export default function HomePage() {
           <div className="mb-24">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <div className="relative">
-                {/* Screenshot Placeholder */}
-                <div className="bg-gray-100 rounded-2xl shadow-2xl aspect-[4/3] flex items-center justify-center border">
-                  <span className="text-gray-500 text-lg">Pastor Reports Screenshot</span>
+                {/* Pastor Notifications Screenshot */}
+                <div className="relative rounded-2xl shadow-2xl overflow-hidden max-w-md mx-auto cursor-pointer" onClick={() => openImageModal("/Pastor notifications.png", "Pastor notifications settings and automated email reports")}>
+                  <Image
+                    src="/Pastor notifications.png"
+                    alt="Pastor notifications settings and automated email reports"
+                    width={400}
+                    height={600}
+                    className="w-full h-auto object-contain rounded-2xl"
+                    style={{ backgroundColor: '#f8f9fa' }}
+                  />
                 </div>
                 {/* Colored Icon Bubble */}
                 <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-red-600 rounded-full flex items-center justify-center shadow-lg">
@@ -440,45 +492,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Feature 6: Mobile & Onboarding - Right Image, Left Content */}
-          <div className="mb-24">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-              <div className="lg:pr-8 order-2 lg:order-1">
-                <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
-                  Simple for Everyone to Use
-                </h3>
-                <p className="text-xl text-gray-600 mb-6">
-                  Clean mobile design means musicians can check schedules anywhere. One-click musician invites get new team members set up in minutes, not hours.
-                </p>
-                <div className="space-y-3">
-                  <div className="flex items-center">
-                    <div className="w-2 h-2 bg-indigo-600 rounded-full mr-3"></div>
-                    <span className="text-gray-700">Mobile-optimized for musicians on the go</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-2 h-2 bg-indigo-600 rounded-full mr-3"></div>
-                    <span className="text-gray-700">One-click musician invitations</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-2 h-2 bg-indigo-600 rounded-full mr-3"></div>
-                    <span className="text-gray-700">Intuitive interface requires no training</span>
-                  </div>
-                </div>
-              </div>
-              <div className="relative order-1 lg:order-2">
-                {/* Screenshot Placeholder */}
-                <div className="bg-gray-100 rounded-2xl shadow-2xl aspect-[4/3] flex items-center justify-center border">
-                  <span className="text-gray-500 text-lg">Mobile & Onboarding Screenshot</span>
-                </div>
-                {/* Colored Icon Bubble */}
-                <div className="absolute -bottom-4 -left-4 w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center shadow-lg">
-                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </div>
+
 
           {/* CTA Section */}
           <div className="text-center bg-gradient-to-br from-brand-50 to-brand-100 rounded-3xl p-12">
@@ -656,6 +670,45 @@ export default function HomePage() {
           </div>
         </div>
       </footer>
+
+      {/* Image Modal */}
+      {showImageModal && selectedImage && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-75"
+          onClick={closeImageModal}
+        >
+          <div className="relative max-w-5xl max-h-[90vh] w-full h-full flex items-center justify-center">
+            {/* Close Button */}
+            <button
+              onClick={closeImageModal}
+              className="absolute top-4 right-4 z-10 p-2 bg-white bg-opacity-90 hover:bg-white rounded-full shadow-lg transition-all duration-200"
+              aria-label="Close image"
+            >
+              <X className="h-6 w-6 text-gray-800" />
+            </button>
+            
+            {/* Image Container */}
+            <div 
+              className="relative bg-white rounded-lg shadow-2xl overflow-hidden max-w-full max-h-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Image
+                src={selectedImage.src}
+                alt={selectedImage.alt}
+                width={1200}
+                height={900}
+                className="w-full h-auto object-contain max-h-[85vh]"
+                priority
+              />
+              
+              {/* Caption */}
+              <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-75 text-white p-4">
+                <p className="text-sm md:text-base text-center">{selectedImage.alt}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

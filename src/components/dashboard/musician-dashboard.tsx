@@ -23,7 +23,8 @@ import {
   UserCheck,
   Phone,
   Mail,
-  User
+  User,
+  Lightbulb
 } from 'lucide-react'
 import { Logo } from '@/components/ui/logo'
 import { useState, useEffect } from 'react'
@@ -302,10 +303,14 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
                       <Home className="h-4 w-4 mr-2" />
                       Profile
                     </Link>
-                    <Link href="/support" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                      <LifeBuoy className="h-4 w-4 mr-2" />
-                      Support
-                    </Link>
+                                  <Link href="/support" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                <LifeBuoy className="h-4 w-4 mr-2" />
+                Support
+              </Link>
+              <Link href="/featurerequest" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                <Lightbulb className="h-4 w-4 mr-2" />
+                Feature Request
+              </Link>
                     <button
                       onClick={handleSignOut}
                       className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"

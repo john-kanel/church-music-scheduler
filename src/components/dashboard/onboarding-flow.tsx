@@ -251,6 +251,19 @@ export function OnboardingFlow({ isVisible, onComplete }: OnboardingFlowProps) {
             pastorMonthlyReportDay: onboardingData.pastorNotifications.pastorMonthlyReportDay
           }
           await saveStepData(automationData, '/api/automation-settings')
+          
+          // Also send pastor invitation if pastor info is provided
+          if (onboardingData.pastorInfo.name && onboardingData.pastorInfo.email) {
+            try {
+              await saveStepData({
+                email: onboardingData.pastorInfo.email,
+                name: onboardingData.pastorInfo.name
+              }, '/api/pastor-invitation')
+            } catch (error) {
+              console.error('Error sending pastor invitation during onboarding:', error)
+              // Don't block onboarding completion if pastor invitation fails
+            }
+          }
           break
         case 5: // Complete
           // Mark onboarding as complete

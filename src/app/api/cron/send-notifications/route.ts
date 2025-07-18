@@ -212,7 +212,16 @@ async function sendPastorMonthlyReports(church: any) {
       }
     })
 
-    if (pastors.length === 0) return
+    // Also get invited pastors who haven't created accounts yet
+    const invitedPastors = await prisma.invitation.findMany({
+      where: {
+        churchId: church.id,
+        role: { in: ['PASTOR', 'ASSOCIATE_PASTOR'] },
+        status: { in: ['PENDING', 'ACCEPTED'] }
+      }
+    })
+
+    if (pastors.length === 0 && invitedPastors.length === 0) return
 
     // Get events for next month
     const now = new Date()
@@ -244,7 +253,7 @@ async function sendPastorMonthlyReports(church: any) {
       }
     })
 
-    // Send report to each pastor
+    // Send report to each pastor (existing users)
     for (const pastor of pastors) {
       if (pastor.pastorSettings?.monthlyReportEnabled !== false) {
         try {
@@ -275,6 +284,38 @@ async function sendPastorMonthlyReports(church: any) {
         }
       }
     }
+
+    // Send report to each invited pastor (not yet users)
+    for (const invitedPastor of invitedPastors) {
+      try {
+        const pastorName = invitedPastor.firstName || invitedPastor.email.split('@')[0]
+        await sendPastorMonthlyReport(
+          invitedPastor.email,
+          pastorName,
+          church.name,
+          events,
+          nextMonth
+        )
+
+        // Log the notification
+        await prisma.notificationLog.create({
+          data: {
+            type: 'PASTOR_MONTHLY_REPORT',
+            churchId: church.id,
+            recipientEmail: invitedPastor.email,
+            recipientName: `${invitedPastor.firstName || pastorName} ${invitedPastor.lastName || ''}`.trim(),
+            subject: `Monthly Music Schedule Report - ${nextMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}`,
+            metadata: {
+              eventsCount: events.length,
+              month: nextMonth.toISOString(),
+              isInvitedPastor: true
+            }
+          }
+        })
+      } catch (error) {
+        console.error(`Error sending monthly report to invited pastor ${invitedPastor.email}:`, error)
+      }
+    }
   } catch (error) {
     console.error('Error sending pastor monthly reports:', error)
   }
@@ -294,7 +335,16 @@ async function sendPastorWeeklyReports(church: any) {
       }
     })
 
-    if (pastors.length === 0) return
+    // Also get invited pastors who haven't created accounts yet
+    const invitedPastors = await prisma.invitation.findMany({
+      where: {
+        churchId: church.id,
+        role: { in: ['PASTOR', 'ASSOCIATE_PASTOR'] },
+        status: { in: ['PENDING', 'ACCEPTED'] }
+      }
+    })
+
+    if (pastors.length === 0 && invitedPastors.length === 0) return
 
     // Determine the correct week based on the logic:
     // Sunday = current week (Sunday-Saturday)
@@ -346,7 +396,7 @@ async function sendPastorWeeklyReports(church: any) {
       }
     })
 
-    // Send report to each pastor
+    // Send report to each pastor (existing users)
     for (const pastor of pastors) {
       if (pastor.pastorSettings?.monthlyReportEnabled !== false) {
         try {
@@ -378,6 +428,39 @@ async function sendPastorWeeklyReports(church: any) {
         }
       }
     }
+
+    // Send report to each invited pastor (not yet users)
+    for (const invitedPastor of invitedPastors) {
+      try {
+        const pastorName = invitedPastor.firstName || invitedPastor.email.split('@')[0]
+        await sendPastorWeeklyReport(
+          invitedPastor.email,
+          pastorName,
+          church.name,
+          events,
+          weekStartDate
+        )
+
+        // Log the notification
+        await prisma.notificationLog.create({
+          data: {
+            type: 'PASTOR_WEEKLY_REPORT',
+            churchId: church.id,
+            recipientEmail: invitedPastor.email,
+            recipientName: `${invitedPastor.firstName || pastorName} ${invitedPastor.lastName || ''}`.trim(),
+            subject: `Weekly Music Schedule Report - ${weekStartDate.toLocaleDateString()} - ${weekEndDate.toLocaleDateString()}`,
+            metadata: {
+              eventsCount: events.length,
+              weekStartDate: weekStartDate.toISOString(),
+              weekEndDate: weekEndDate.toISOString(),
+              isInvitedPastor: true
+            }
+          }
+        })
+      } catch (error) {
+        console.error(`Error sending weekly report to invited pastor ${invitedPastor.email}:`, error)
+      }
+    }
   } catch (error) {
     console.error('Error sending pastor weekly reports:', error)
   }
@@ -397,7 +480,16 @@ async function sendPastorDailyDigests(church: any) {
       }
     })
 
-    if (pastors.length === 0) return
+    // Also get invited pastors who haven't created accounts yet
+    const invitedPastors = await prisma.invitation.findMany({
+      where: {
+        churchId: church.id,
+        role: { in: ['PASTOR', 'ASSOCIATE_PASTOR'] },
+        status: { in: ['PENDING', 'ACCEPTED'] }
+      }
+    })
+
+    if (pastors.length === 0 && invitedPastors.length === 0) return
 
     // Get activities from yesterday
     const yesterday = new Date()
@@ -427,7 +519,7 @@ async function sendPastorDailyDigests(church: any) {
     // Only send if there were activities
     if (activities.length === 0) return
 
-    // Send digest to each pastor
+    // Send digest to each pastor (existing users)
     for (const pastor of pastors) {
       if (pastor.pastorSettings?.dailyDigestEnabled !== false) {
         try {
@@ -456,6 +548,38 @@ async function sendPastorDailyDigests(church: any) {
         } catch (error) {
           console.error(`Error sending daily digest to ${pastor.email}:`, error)
         }
+      }
+    }
+
+    // Send digest to each invited pastor (not yet users)
+    for (const invitedPastor of invitedPastors) {
+      try {
+        const pastorName = invitedPastor.firstName || invitedPastor.email.split('@')[0]
+        await sendPastorDailyDigest(
+          invitedPastor.email,
+          pastorName,
+          church.name,
+          activities,
+          yesterday
+        )
+
+        // Log the notification
+        await prisma.notificationLog.create({
+          data: {
+            type: 'PASTOR_DAILY_DIGEST',
+            churchId: church.id,
+            recipientEmail: invitedPastor.email,
+            recipientName: `${invitedPastor.firstName || pastorName} ${invitedPastor.lastName || ''}`.trim(),
+            subject: `Daily Music Ministry Update - ${yesterday.toLocaleDateString()}`,
+            metadata: {
+              activitiesCount: activities.length,
+              date: yesterday.toISOString(),
+              isInvitedPastor: true
+            }
+          }
+        })
+      } catch (error) {
+        console.error(`Error sending daily digest to invited pastor ${invitedPastor.email}:`, error)
       }
     }
   } catch (error) {

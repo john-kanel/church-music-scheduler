@@ -295,7 +295,7 @@ export async function sendWelcomeEmail(
           <!-- Logo Section -->
           <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; border-bottom: 3px solid #660033;">
             ${getEmailLogoHtml()}
-            <h1 style="color: #333; margin: 0; font-size: 28px;">🎵 Welcome to Church Music Scheduler!</h1>
+            <div style="margin-bottom: 20px;"></div>
           </div>
           
           <div style="background: white; padding: 40px 20px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">

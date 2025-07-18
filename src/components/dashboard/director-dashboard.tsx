@@ -24,7 +24,8 @@ import {
   Activity,
   GiftIcon,
   LifeBuoy,
-  HandHeart
+  HandHeart,
+  Lightbulb
 } from 'lucide-react'
 import { Logo } from '@/components/ui/logo'
 import Link from 'next/link'
@@ -458,10 +459,14 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                           Transfer Ownership
                         </Link>
                       )}
-                                        <Link href="/support" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                    <LifeBuoy className="h-4 w-4 inline mr-2" />
-                    Support
-                  </Link>
+                                                              <Link href="/support" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                        <LifeBuoy className="h-4 w-4 inline mr-2" />
+                        Support
+                      </Link>
+                      <Link href="/featurerequest" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                        <Lightbulb className="h-4 w-4 inline mr-2" />
+                        Feature Request
+                      </Link>
                       <button
                         onClick={() => signOut()}
                         className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
