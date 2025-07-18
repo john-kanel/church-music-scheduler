@@ -130,15 +130,15 @@ export async function generateMonthlyReportPDF(
 
         // Assignments summary
         if (event.assignments && event.assignments.length > 0) {
-          const assignedCount = event.assignments.filter(a => a.user).length
-          const openCount = event.assignments.filter(a => !a.user).length
+          const assignedCount = event.assignments.filter((a: any) => a.user).length
+          const openCount = event.assignments.filter((a: any) => !a.user).length
           const totalSpots = event.assignments.length
           
           pdf.text(`Assignments: ${assignedCount}/${totalSpots} filled (${openCount} open)`, 25, yPosition)
           yPosition += 5
 
           // List assignments
-          event.assignments.forEach((assignment) => {
+          event.assignments.forEach((assignment: any) => {
             if (yPosition > pageHeight - 20) {
               pdf.addPage()
               yPosition = 20
@@ -223,7 +223,7 @@ export async function generateMonthlyReportPDF(
 
     const totalAssignments = sortedEvents.reduce((sum, event) => sum + event.assignments.length, 0)
     const filledAssignments = sortedEvents.reduce((sum, event) => 
-      sum + event.assignments.filter(a => a.user).length, 0)
+      sum + event.assignments.filter((a: any) => a.user).length, 0)
     
     pdf.text(`Total Assignments: ${filledAssignments}/${totalAssignments} filled`, 25, yPosition)
     yPosition += 5
@@ -370,14 +370,14 @@ export async function generateWeeklyReportPDF(
 
         // Assignments
         if (event.assignments && event.assignments.length > 0) {
-          const assignedCount = event.assignments.filter(a => a.user).length
-          const openCount = event.assignments.filter(a => !a.user).length
+          const assignedCount = event.assignments.filter((a: any) => a.user).length
+          const openCount = event.assignments.filter((a: any) => !a.user).length
           const totalSpots = event.assignments.length
           
           pdf.text(`Assignments: ${assignedCount}/${totalSpots} filled (${openCount} open)`, 25, yPosition)
           yPosition += 5
 
-          event.assignments.forEach((assignment) => {
+          event.assignments.forEach((assignment: any) => {
             if (yPosition > pageHeight - 20) {
               pdf.addPage()
               yPosition = 20
@@ -460,7 +460,7 @@ export async function generateWeeklyReportPDF(
 
     const totalAssignments = weekEvents.reduce((sum, event) => sum + event.assignments.length, 0)
     const filledAssignments = weekEvents.reduce((sum, event) => 
-      sum + event.assignments.filter(a => a.user).length, 0)
+      sum + event.assignments.filter((a: any) => a.user).length, 0)
     
     pdf.text(`Total Assignments: ${filledAssignments}/${totalAssignments} filled`, 25, yPosition)
 
