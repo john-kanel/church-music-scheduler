@@ -225,11 +225,13 @@ export function OnboardingFlow({ isVisible, onComplete }: OnboardingFlowProps) {
           break
         case 1: // Service Parts
           if (onboardingData.serviceParts.length > 0) {
-            await Promise.all(
-              onboardingData.serviceParts.map(part =>
-                saveStepData({ name: part.name, order: part.order }, '/api/service-parts')
-              )
-            )
+            const servicePartsForAPI = onboardingData.serviceParts.map((part, index) => ({
+              id: `temp-${Date.now()}-${index}`,
+              name: part.name,
+              order: part.order,
+              isRequired: false
+            }))
+            await saveStepData({ serviceParts: servicePartsForAPI }, '/api/service-parts')
           }
           break
         case 2: // Documents & Links
@@ -240,7 +242,7 @@ export function OnboardingFlow({ isVisible, onComplete }: OnboardingFlowProps) {
           break
         case 4: // Pastor Notifications
           const automationData = {
-            musicianNotifications: onboardingData.musicianNotifications,
+            musicianNotifications: onboardingData.musicianNotifications || [],
             pastorEmailEnabled: onboardingData.pastorNotifications.pastorEmailEnabled,
             pastorDailyDigestEnabled: onboardingData.pastorNotifications.pastorDailyDigestEnabled,
             pastorDailyDigestTime: onboardingData.pastorNotifications.pastorDailyDigestTime,
@@ -324,7 +326,9 @@ export function OnboardingFlow({ isVisible, onComplete }: OnboardingFlowProps) {
           <button
             onClick={handleNext}
             disabled={isLoading}
-            className="w-full max-w-xs bg-[#660033] text-white py-3 px-4 rounded-lg hover:bg-[#550028] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`py-3 px-4 rounded-lg hover:bg-[#550028] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed bg-[#660033] text-white ${
+              currentStep === 5 ? 'w-full' : 'w-full max-w-xs'
+            }`}
           >
             {isLoading ? 'Saving...' : currentStep === 5 ? 'Get Started' : 'Next'}
           </button>

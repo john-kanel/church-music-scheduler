@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
         pastorDailyDigestEnabled,
         pastorDailyDigestTime,
         musicianNotifications: {
-          create: musicianNotifications.map((notification: any) => ({
+          create: (musicianNotifications || []).map((notification: any) => ({
             hoursBeforeEvent: notification.hoursBeforeEvent,
             isEnabled: notification.isEnabled
           }))
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
         pastorDailyDigestTime,
         musicianNotifications: {
           deleteMany: {},
-          create: musicianNotifications.map((notification: any) => ({
+          create: (musicianNotifications || []).map((notification: any) => ({
             hoursBeforeEvent: notification.hoursBeforeEvent,
             isEnabled: notification.isEnabled
           }))

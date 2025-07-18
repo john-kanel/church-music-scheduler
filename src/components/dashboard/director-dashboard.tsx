@@ -371,7 +371,7 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
             </p>
             <button
               onClick={completeTour}
-              className="w-full bg-red-900 text-white py-3 px-4 rounded-lg hover:bg-red-800 transition-colors font-medium"
+              className="w-full bg-[#660033] text-white py-3 px-4 rounded-lg hover:bg-[#550028] transition-colors font-medium"
             >
               Get Started
             </button>
