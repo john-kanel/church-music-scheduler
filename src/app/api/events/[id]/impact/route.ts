@@ -46,11 +46,11 @@ export async function GET(
 
     // Calculate counts
     const totalEvents = allSeriesEvents.length + 1 // +1 for the root event itself
-    const futureEvents = allSeriesEvents.filter(event => 
+    const futureEvents = allSeriesEvents.filter((event: any) => 
       new Date(event.startTime) >= currentDate
     ).length + (new Date(rootEvent.startTime) >= currentDate ? 1 : 0) // Include root if it's in the future
     
-    const modifiedEvents = allSeriesEvents.filter(event => event.isModified).length
+    const modifiedEvents = allSeriesEvents.filter((event: any) => event.isModified).length
 
     return NextResponse.json({
       future: futureEvents,
