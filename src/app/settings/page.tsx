@@ -112,8 +112,13 @@ export default function SettingsPage() {
   const [editingAvailability, setEditingAvailability] = useState<any>(null)
   const [availabilityType, setAvailabilityType] = useState<'date' | 'day'>('date')
 
-  // Pastor Invitation
-  const [showPastorInviteModal, setShowPastorInviteModal] = useState(false)
+  // Pastor Information
+  const [pastorInfo, setPastorInfo] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    role: 'PASTOR'
+  })
 
   useEffect(() => {
     fetchUserProfile()
@@ -257,30 +262,7 @@ export default function SettingsPage() {
     }
   }
 
-  const sendPastorInvitation = async (email: string, name: string) => {
-    try {
-      setLoading(true)
-      const response = await fetch('/api/pastor-invitation', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, name })
-      })
 
-      if (response.ok) {
-        const result = await response.json()
-        setSuccess('Pastor invitation sent successfully!')
-        setShowPastorInviteModal(false)
-      } else {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to send pastor invitation')
-      }
-    } catch (error) {
-      console.error('Error sending pastor invitation:', error)
-      alert(error instanceof Error ? error.message : 'Failed to send pastor invitation. Please try again.')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const fetchServiceParts = async () => {
     try {
@@ -1325,18 +1307,58 @@ export default function SettingsPage() {
                           </label>
                         </div>
 
-                        <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                          <div>
-                            <h4 className="font-medium text-gray-900">Invite Pastor</h4>
-                            <p className="text-sm text-gray-500">Invite your pastor to receive automated reports and notifications</p>
+                        <div className="p-4 border border-gray-200 rounded-lg">
+                          <div className="mb-4">
+                            <h4 className="font-medium text-gray-900">Pastor Information</h4>
+                            <p className="text-sm text-gray-500">Configure pastor details for email reports</p>
                           </div>
-                          <button
-                            onClick={() => setShowPastorInviteModal(true)}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
-                          >
-                            <UserPlus className="h-4 w-4 mr-2" />
-                            Invite Pastor
-                          </button>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                              <input
+                                type="text"
+                                value={pastorInfo.name}
+                                onChange={(e) => setPastorInfo(prev => ({ ...prev, name: e.target.value }))}
+                                disabled={!isEditing}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 text-sm"
+                                placeholder="Pastor's name"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                              <input
+                                type="email"
+                                value={pastorInfo.email}
+                                onChange={(e) => setPastorInfo(prev => ({ ...prev, email: e.target.value }))}
+                                disabled={!isEditing}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 text-sm"
+                                placeholder="Pastor's email"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                              <input
+                                type="tel"
+                                value={pastorInfo.phone}
+                                onChange={(e) => setPastorInfo(prev => ({ ...prev, phone: e.target.value }))}
+                                disabled={!isEditing}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 text-sm"
+                                placeholder="Pastor's phone"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                              <select
+                                value={pastorInfo.role}
+                                onChange={(e) => setPastorInfo(prev => ({ ...prev, role: e.target.value }))}
+                                disabled={!isEditing}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 text-sm"
+                              >
+                                <option value="PASTOR">Pastor</option>
+                                <option value="ASSOCIATE_PASTOR">Associate Pastor</option>
+                              </select>
+                            </div>
+                          </div>
                         </div>
 
                         <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
@@ -1654,75 +1676,7 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* Pastor Invitation Modal */}
-      {showPastorInviteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full">
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-gray-900">Invite Pastor</h3>
-              <button 
-                onClick={() => setShowPastorInviteModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <form onSubmit={(e) => {
-              e.preventDefault()
-              const formData = new FormData(e.target as HTMLFormElement)
-              const email = formData.get('email') as string
-              const name = formData.get('name') as string
-              sendPastorInvitation(email, name)
-            }} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Pastor's Name
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  required
-                  placeholder="Enter pastor's full name"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Pastor's Email
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  required
-                  placeholder="Enter pastor's email address"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div className="bg-blue-50 p-3 rounded-lg">
-                <p className="text-sm text-blue-700">
-                  Your pastor will receive an invitation to join the system and automatically receive the email reports you've configured above.
-                </p>
-              </div>
-              <div className="flex space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowPastorInviteModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                >
-                  {loading ? 'Sending...' : 'Send Invitation'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+
     </div>
   )
 }

@@ -53,6 +53,100 @@ export async function GET() {
   }
 }
 
+// POST /api/profile - Create/Update current user profile (for onboarding)
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const {
+      firstName,
+      lastName,
+      phone,
+      emailNotifications,
+      smsNotifications,
+      timezone,
+      instruments,
+      skillLevel,
+      yearsExperience,
+      churchName,
+      parishPhone,
+      calendarLink,
+      hasCompletedOnboarding
+    } = body
+
+    // Update user profile (no validation required for onboarding)
+    const updatedUser = await prisma.user.update({
+      where: { id: session.user.id },
+      data: {
+        ...(firstName && { firstName }),
+        ...(lastName && { lastName }),
+        ...(phone !== undefined && { phone: phone || null }),
+        ...(emailNotifications !== undefined && { emailNotifications }),
+        ...(smsNotifications !== undefined && { smsNotifications }),
+        ...(timezone && { timezone }),
+        ...(instruments && { instruments }),
+        ...(skillLevel && { skillLevel }),
+        ...(yearsExperience !== undefined && { yearsExperience: yearsExperience ? parseInt(yearsExperience) : null }),
+        ...(calendarLink !== undefined && { calendarLink: calendarLink || null }),
+        ...(hasCompletedOnboarding !== undefined && { hasCompletedOnboarding })
+      },
+      select: {
+        id: true,
+        email: true,
+        phone: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        emailNotifications: true,
+        smsNotifications: true,
+        timezone: true,
+        instruments: true,
+        skillLevel: true,
+        yearsExperience: true,
+        calendarLink: true,
+        hasCompletedOnboarding: true,
+        church: {
+          select: {
+            name: true,
+            phone: true
+          }
+        }
+      }
+    })
+
+    // Update church information if user has permission and church data provided
+    if ((churchName || parishPhone) && updatedUser.church) {
+      const canUpdateChurch = ['DIRECTOR', 'ASSOCIATE_DIRECTOR', 'PASTOR', 'ASSOCIATE_PASTOR'].includes(session.user.role)
+      
+      if (canUpdateChurch) {
+        await prisma.church.update({
+          where: { id: session.user.churchId },
+          data: {
+            ...(churchName && { name: churchName }),
+            ...(parishPhone && { phone: parishPhone })
+          }
+        })
+      }
+    }
+
+    return NextResponse.json({ 
+      user: updatedUser,
+      message: 'Profile updated successfully'
+    })
+  } catch (error) {
+    console.error('Error updating user profile:', error)
+    return NextResponse.json(
+      { error: 'Failed to update profile' },
+      { status: 500 }
+    )
+  }
+}
+
 // PUT /api/profile - Update current user profile
 export async function PUT(request: NextRequest) {
   try {

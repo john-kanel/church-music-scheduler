@@ -60,16 +60,36 @@ export async function POST(req: NextRequest) {
       }
 
       if (part.id.startsWith('temp-')) {
-        // Create new service part
-        const newPart = await prisma.servicePart.create({
-          data: {
+        // Check if service part already exists, if so skip or update
+        const existingPart = await prisma.servicePart.findFirst({
+          where: {
             name: part.name.trim(),
-            isRequired: part.isRequired || false,
-            order: part.order || 0,
             churchId: session.user.churchId
           }
         })
-        updatedServiceParts.push(newPart)
+
+        if (existingPart) {
+          // Update existing part instead of creating new one
+          const updatedPart = await prisma.servicePart.update({
+            where: { id: existingPart.id },
+            data: {
+              isRequired: part.isRequired || false,
+              order: part.order || 0
+            }
+          })
+          updatedServiceParts.push(updatedPart)
+        } else {
+          // Create new service part
+          const newPart = await prisma.servicePart.create({
+            data: {
+              name: part.name.trim(),
+              isRequired: part.isRequired || false,
+              order: part.order || 0,
+              churchId: session.user.churchId
+            }
+          })
+          updatedServiceParts.push(newPart)
+        }
       } else {
         // Update existing service part
         const updatedPart = await prisma.servicePart.update({
