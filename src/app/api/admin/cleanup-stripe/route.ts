@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Find churches that need Stripe customers
-    churches.filter(c => !c.stripeCustomerId).forEach(church => {
+    churches.filter((c: any) => !c.stripeCustomerId).forEach(church => {
       analysis.issues.churchesNeedingCustomers.push({
         churchId: church.id,
         churchName: church.name,
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
     const customersByEmail = new Map()
     const customersByName = new Map()
 
-    allCustomers.data.forEach(customer => {
+    allCustomers.data.forEach((customer: any) => {
       const email = (customer as any).email
       const name = (customer as any).name
 
@@ -104,9 +104,9 @@ export async function GET(request: NextRequest) {
     })
 
     // Find orphaned customers (not linked to any church)
-    const linkedCustomerIds = new Set(churches.map(c => c.stripeCustomerId).filter(Boolean))
+    const linkedCustomerIds = new Set(churches.map((c: any) => c.stripeCustomerId).filter(Boolean))
     
-    allCustomers.data.forEach(customer => {
+    allCustomers.data.forEach((customer: any) => {
       if (!linkedCustomerIds.has(customer.id)) {
         analysis.issues.orphanedCustomers.push({
           id: customer.id,
