@@ -1,0 +1,15 @@
+{
+  "name": "church-music-scheduler-cron",
+  "version": "1.0.0",
+  "description": "Cron jobs for Church Music Scheduler",
+  "main": "cron-worker.js",
+  "scripts": {
+    "notifications": "node cron-worker.js notifications",
+    "cleanup-pdfs": "node cron-worker.js cleanup-pdfs",
+    "cleanup-tokens": "node cron-worker.js cleanup-tokens",
+    "send-scheduled-emails": "node cron-worker.js send-scheduled-emails"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+} 
