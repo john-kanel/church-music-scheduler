@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Find churches that need Stripe customers
-    churches.filter((c: any) => !c.stripeCustomerId).forEach(church => {
+    churches.filter((c: any) => !c.stripeCustomerId).forEach((church: any) => {
       analysis.issues.churchesNeedingCustomers.push({
         churchId: church.id,
         churchName: church.name,
