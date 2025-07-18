@@ -669,7 +669,7 @@ export default function HomePage() {
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-75"
           onClick={closeImageModal}
         >
-          <div className="relative max-w-5xl max-h-[90vh] w-full h-full flex items-center justify-center">
+          <div className="relative max-w-7xl max-h-[95vh] w-full h-full flex items-center justify-center">
             {/* Close Button */}
             <button
               onClick={closeImageModal}
@@ -687,9 +687,9 @@ export default function HomePage() {
               <Image
                 src={selectedImage.src}
                 alt={selectedImage.alt}
-                width={1200}
-                height={900}
-                className="w-full h-auto object-contain max-h-[85vh]"
+                width={1800}
+                height={1350}
+                className="w-full h-auto object-contain max-h-[90vh]"
                 priority
               />
               
