@@ -30,7 +30,7 @@ export function Logo({
     <div className={cn("flex items-center", className)}>
       <Image
         src="/logo.png"
-        alt="Church Music Scheduler Logo"
+        alt="Church Music Pro Logo"
         width={size === 'sm' ? 24 : size === 'md' ? 32 : size === 'lg' ? 40 : size === 'xl' ? 48 : 64}
         height={size === 'sm' ? 24 : size === 'md' ? 32 : size === 'lg' ? 40 : size === 'xl' ? 48 : 64}
         className={cn(sizeClasses[size], "object-contain")}
@@ -44,7 +44,7 @@ export function Logo({
           size === 'xl' ? "text-2xl" : "text-3xl",
           textClassName
         )}>
-          Church Music Scheduler
+          Church Music Pro
         </span>
       )}
     </div>

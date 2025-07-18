@@ -18,9 +18,9 @@ export async function POST() {
     
     // Send a simple test email
     const result = await resend.emails.send({
-      from: 'Church Music Scheduler <noreply@churchmusicscheduler.com>',
+      from: 'Church Music Pro <noreply@churchmusicpro.com>',
       to: 'john.kanel@hey.com',
-      subject: '🎵 Church Music Scheduler - Email Test',
+      subject: '🎵 Church Music Pro - Email Test',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; border-bottom: 3px solid #660033;">
@@ -34,7 +34,7 @@ export async function POST() {
             </p>
             
             <p style="color: #333; font-size: 16px; line-height: 1.6;">
-              This is a test email to verify that the Church Music Scheduler email system is working correctly.
+              This is a test email to verify that the Church Music Pro email system is working correctly.
             </p>
             
             <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">

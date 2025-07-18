@@ -27,7 +27,7 @@ export async function POST() {
       TEST_EMAIL,
       'John Kanel',
       'St. Mary\'s Catholic Church',
-      'https://churchmusicscheduler.com/auth/signin',
+      'https://churchmusicpro.com/auth/signin',
       'Sarah Thompson',
       'TempPass123!'
     )
@@ -87,9 +87,9 @@ export async function POST() {
     }))
 
     await resend.emails.send({
-      from: 'Church Music Scheduler <noreply@churchmusicscheduler.com>',
+      from: 'Church Music Pro <noreply@churchmusicpro.com>',
       to: TEST_EMAIL,
-      subject: 'Join St. Mary\'s Catholic Church on Church Music Scheduler!',
+      subject: 'Join St. Mary\'s Catholic Church on Church Music Pro!',
       html: referralHtml
     })
     emailResults.push('✅ Referral invitation email sent')
@@ -104,9 +104,9 @@ export async function POST() {
   try {
     console.log('5️⃣ Testing Simple HTML Email...')
     await resend.emails.send({
-      from: 'Church Music Scheduler <noreply@churchmusicscheduler.com>',
+      from: 'Church Music Pro <noreply@churchmusicpro.com>',
       to: TEST_EMAIL,
-      subject: '🎵 Church Music Scheduler - Template Showcase',
+      subject: '🎵 Church Music Pro - Template Showcase',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; border-bottom: 3px solid #660033;">
@@ -120,13 +120,13 @@ export async function POST() {
             </p>
             
             <p style="color: #333; font-size: 16px; line-height: 1.6;">
-              This email showcases the Church Music Scheduler branding and template design. All emails now feature:
+              This email showcases the Church Music Pro branding and template design. All emails now feature:
             </p>
             
             <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
               <h3 style="color: #660033; margin: 0 0 15px 0;">✨ Brand Features:</h3>
               <ul style="color: #333; margin: 0; padding-left: 20px; line-height: 1.8;">
-                <li><strong>Church Music Scheduler Logo</strong> at the top</li>
+                <li><strong>Church Music Pro Logo</strong> at the top</li>
                 <li><strong>Consistent color scheme</strong> (maroon #660033)</li>
                 <li><strong>Professional layout</strong> with clean typography</li>
                 <li><strong>Responsive design</strong> for all devices</li>

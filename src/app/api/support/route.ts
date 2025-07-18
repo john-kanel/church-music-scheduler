@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     const emailHtml = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-          <h2 style="color: #1f2937; margin: 0 0 10px 0;">Support Request from Church Music Scheduler</h2>
+          <h2 style="color: #1f2937; margin: 0 0 10px 0;">Support Request from Church Music Pro</h2>
           <p style="color: #6b7280; margin: 0; font-size: 14px;">
             Received: ${new Date().toLocaleString()}
           </p>
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
         
         <div style="margin-top: 20px; padding: 15px; background-color: #FDF2F8; border-radius: 8px;">
           <p style="margin: 0; font-size: 12px; color: #660033;">
-            This message was sent through the Church Music Scheduler support form.
+            This message was sent through the Church Music Pro support form.
           </p>
         </div>
       </div>
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
 
     // Send email to support
     await resend.emails.send({
-      from: 'Church Music Scheduler <noreply@churchmusicscheduler.com>',
+      from: 'Church Music Pro <noreply@churchmusicpro.com>',
       to: 'john.kanel@hey.com',
       subject: `Support Request: ${subject}`,
       html: emailHtml,

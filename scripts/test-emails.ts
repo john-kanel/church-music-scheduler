@@ -17,7 +17,7 @@ import { resend } from '../src/lib/resend.js'
 const TEST_EMAIL = 'john.kanel@hey.com'
 
 async function sendAllTestEmails() {
-  console.log('🎵 Starting Church Music Scheduler Email Copy Test...')
+  console.log('🎵 Starting Church Music Pro Email Copy Test...')
   console.log(`📧 All emails will be sent to: ${TEST_EMAIL}`)
   
   try {
@@ -27,7 +27,7 @@ async function sendAllTestEmails() {
       TEST_EMAIL,
       'John Kanel',
       'St. Mary\'s Catholic Church',
-      'https://churchmusicscheduler.com/auth/signin',
+      'https://churchmusicpro.com/auth/signin',
       'Sarah Thompson',
       'TempPass123!'
     )
@@ -180,9 +180,9 @@ async function sendAllTestEmails() {
     }))
 
     await resend.emails.send({
-      from: 'Church Music Scheduler <noreply@churchmusicscheduler.com>',
+      from: 'Church Music Pro <noreply@churchmusicpro.com>',
       to: TEST_EMAIL,
-      subject: 'Join St. Mary\'s Catholic Church on Church Music Scheduler!',
+      subject: 'Join St. Mary\'s Catholic Church on Church Music Pro!',
       html: referralHtml
     })
     console.log('✅ Referral invitation email sent')
@@ -202,7 +202,7 @@ async function sendAllTestEmails() {
     }))
 
     await resend.emails.send({
-      from: 'Church Music Scheduler <noreply@churchmusicscheduler.com>',
+      from: 'Church Music Pro <noreply@churchmusicpro.com>',
       to: TEST_EMAIL,
       subject: 'Congratulations! Your Referral Was Successful',
       html: successHtml

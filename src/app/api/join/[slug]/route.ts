@@ -200,7 +200,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // Send welcome email to the new musician
     try {
       await resend.emails.send({
-        from: 'Church Music Scheduler <no-reply@churchmusicscheduler.com>',
+        from: 'Church Music Pro <no-reply@churchmusicpro.com>',
         to: [email],
         subject: `Welcome to ${inviteLink.church.name}!`,
         html: `
@@ -225,7 +225,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             
             <p>If you have any questions, please don't hesitate to reach out to your music director.</p>
             
-            <p>Blessings,<br>The Church Music Scheduler Team</p>
+            <p>Blessings,<br>The Church Music Pro Team</p>
           </div>
         `
       })
@@ -238,7 +238,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       const directors = inviteLink.church.users
       if (directors.length > 0) {
         await resend.emails.send({
-          from: 'Church Music Scheduler <no-reply@churchmusicscheduler.com>',
+          from: 'Church Music Pro <no-reply@churchmusicpro.com>',
           to: directors.map((d: any) => d.email),
           subject: `New Musician Joined: ${firstName} ${lastName}`,
           html: `
@@ -268,7 +268,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
               
               <p>You can now assign them to events and include them in your music ministry communications.</p>
               
-              <p>Blessings,<br>The Church Music Scheduler Team</p>
+              <p>Blessings,<br>The Church Music Pro Team</p>
             </div>
           `
         })

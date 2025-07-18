@@ -22,7 +22,7 @@ import { getEmailLogoHtml } from '../../../components/emails/email-logo'
 const TEST_EMAIL = 'john.kanel@hey.com'
 
 export async function POST() {
-  console.log('🎵 Starting Church Music Scheduler Email Copy Test...')
+  console.log('🎵 Starting Church Music Pro Email Copy Test...')
   console.log(`📧 All emails will be sent to: ${TEST_EMAIL}`)
   
   try {
@@ -38,7 +38,7 @@ export async function POST() {
         TEST_EMAIL,
         'John Kanel',
         'St. Mary\'s Catholic Church',
-        'https://churchmusicscheduler.com/auth/signin',
+        'https://churchmusicpro.com/auth/signin',
         'Sarah Thompson',
         'TempPass123!'
       )
@@ -193,9 +193,9 @@ export async function POST() {
     }))
 
     await resend.emails.send({
-      from: 'Church Music Scheduler <noreply@churchmusicscheduler.com>',
+      from: 'Church Music Pro <noreply@churchmusicpro.com>',
       to: TEST_EMAIL,
-      subject: 'Join St. Mary\'s Catholic Church on Church Music Scheduler!',
+      subject: 'Join St. Mary\'s Catholic Church on Church Music Pro!',
       html: referralHtml
     })
     emailResults.push('✅ Referral invitation email sent')
@@ -213,7 +213,7 @@ export async function POST() {
     }))
 
     await resend.emails.send({
-      from: 'Church Music Scheduler <noreply@churchmusicscheduler.com>',
+      from: 'Church Music Pro <noreply@churchmusicpro.com>',
       to: TEST_EMAIL,
       subject: 'Congratulations! Your Referral Was Successful',
       html: successHtml

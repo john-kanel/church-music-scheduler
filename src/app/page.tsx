@@ -647,17 +647,17 @@ export default function HomePage() {
             <div className="flex items-center justify-center mb-4">
               <Image
                 src="/whitetransparent.png"
-                alt="Church Music Scheduler Logo"
+                alt="Church Music Pro Logo"
                 width={30}
                 height={30}
                 className="object-contain"
               />
               <span className="ml-3 font-bold text-white text-lg">
-                Church Music Scheduler
+                Church Music Pro
               </span>
             </div>
             <p className="text-white opacity-90">
-              © 2024 Church Music Scheduler. All rights reserved.
+              © 2024 Church Music Pro. All rights reserved.
             </p>
           </div>
         </div>

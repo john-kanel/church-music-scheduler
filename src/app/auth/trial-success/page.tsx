@@ -122,7 +122,7 @@ function TrialSuccessContent() {
         <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
           <CheckCircle className="h-16 w-16 text-success-600 mx-auto mb-6" />
           <h1 className="text-2xl font-bold text-gray-900 mb-4">
-            Welcome to Church Music Scheduler!
+            Welcome to Church Music Pro!
           </h1>
           <p className="text-gray-600 mb-6">
             Your 30-day free trial has started successfully. You'll be redirected to sign in shortly.

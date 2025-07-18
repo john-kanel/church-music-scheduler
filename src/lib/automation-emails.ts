@@ -99,7 +99,7 @@ export async function sendMusicianEventNotification(
     let documentsSection = ''
     if (eventDocuments.length > 0) {
       const documentLinks = eventDocuments.map((doc: any) => {
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://churchmusicscheduler.com'
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://churchmusicpro.com'
         const viewUrl = event.id 
           ? `${baseUrl}/api/events/${event.id}/documents/${doc.id}/view`
           : `${baseUrl}/sample-music-files` // Test link for sample documents
@@ -172,7 +172,7 @@ ${hymnsList}
   `
 
   await resend.emails.send({
-    from: 'Church Music Scheduler <notifications@churchmusicscheduler.com>',
+    from: 'Church Music Pro <notifications@churchmusicpro.com>',
     to: email,
     subject,
     html: htmlContent
@@ -295,7 +295,7 @@ export async function sendPastorMonthlyReport(
   `
 
   const emailData: any = {
-    from: 'Church Music Scheduler <notifications@churchmusicscheduler.com>',
+    from: 'Church Music Pro <notifications@churchmusicpro.com>',
     to: email,
     subject,
     html: htmlContent
@@ -353,7 +353,7 @@ export async function sendPastorDailyDigest(
   `
 
   await resend.emails.send({
-    from: 'Church Music Scheduler <notifications@churchmusicscheduler.com>',
+    from: 'Church Music Pro <notifications@churchmusicpro.com>',
     to: email,
     subject,
     html: htmlContent
@@ -479,7 +479,7 @@ export async function sendPastorWeeklyReport(
   `
 
   const emailData: any = {
-    from: 'Church Music Scheduler <notifications@churchmusicscheduler.com>',
+    from: 'Church Music Pro <notifications@churchmusicpro.com>',
     to: email,
     subject,
     html: htmlContent

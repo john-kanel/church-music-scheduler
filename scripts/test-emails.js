@@ -1,7 +1,7 @@
-// Simple email testing script for Church Music Scheduler
+// Simple email testing script for Church Music Pro
 const TEST_EMAIL = 'john.kanel@hey.com'
 
-console.log('🎵 Church Music Scheduler Email Test')
+console.log('🎵 Church Music Pro Email Test')
 console.log(`📧 Testing emails to: ${TEST_EMAIL}`)
 console.log('\nThis script will test 10 different email templates with sample data.')
 console.log('\n⚠️  Note: This is a development script to test email copy and formatting.')

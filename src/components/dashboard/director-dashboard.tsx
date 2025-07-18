@@ -366,7 +366,7 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
       {showTour && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl p-8 max-w-md mx-4 shadow-2xl border">
-            <h2 className="text-2xl font-bold mb-4 text-gray-900">Welcome to Church Music Scheduler!</h2>
+            <h2 className="text-2xl font-bold mb-4 text-gray-900">Welcome to Church Music Pro!</h2>
             <p className="text-gray-700 mb-6 text-base">
               Let's get you started with creating your first event and inviting musicians to your church.
             </p>

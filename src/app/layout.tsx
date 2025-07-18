@@ -4,7 +4,7 @@ import { SessionProvider } from '@/components/providers/session-provider'
 import { SubscriptionWarning } from '@/components/subscription-guard'
 
 export const metadata: Metadata = {
-  title: "Church Music Scheduler",
+  title: "Church Music Pro",
   description: "Simple, intuitive scheduling for church music directors",
 };
 
@@ -31,7 +31,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#660033" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Church Music Scheduler" />
+        <meta name="apple-mobile-web-app-title" content="Church Music Pro" />
       </head>
       <body suppressHydrationWarning={true}>
         <SessionProvider>

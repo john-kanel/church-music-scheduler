@@ -199,7 +199,7 @@ ${musicList}
   const emailPromises = musicians.map(async (musician: any) => {
     try {
       await resend.emails.send({
-        from: 'Church Music Scheduler <notifications@churchmusicscheduler.com>',
+        from: 'Church Music Pro <notifications@churchmusicpro.com>',
         to: musician.email,
         subject,
         html: htmlContent

@@ -231,7 +231,7 @@ export default function InvitationModal({ isOpen, onClose }: InvitationModalProp
         <body>
           <div class="flyer">
             <div class="header">
-              <div class="logo">Church Music Scheduler</div>
+              <div class="logo">Church Music Pro</div>
               <div class="title">Join Our Music Ministry!</div>
               <div class="subtitle">Scan the QR code or visit the link below to sign up</div>
             </div>

@@ -1305,7 +1305,7 @@ export function EventDetailsModal({
       const footerY = pageHeight - 20
       pdf.setFontSize(10)
       pdf.setFont('Montserrat', 'normal')
-      pdf.text(`Generated from Church Music Scheduler on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, pageWidth / 2, footerY, { align: 'center' })
+      pdf.text(`Generated from Church Music Pro on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, pageWidth / 2, footerY, { align: 'center' })
 
       // Save the PDF
       const filename = `${currentEvent.name.replace(/[^a-zA-Z0-9]/g, '_')}_Event_Details_${new Date().toISOString().split('T')[0]}.pdf`

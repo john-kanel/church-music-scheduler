@@ -152,9 +152,9 @@ async function handleSingleReferral(session: any, body: any) {
 
   // Send email
   await resend.emails.send({
-    from: 'Church Music Scheduler <noreply@churchmusicscheduler.com>',
+    from: 'Church Music Pro <noreply@churchmusicpro.com>',
     to: recipientEmail,
-    subject: `${referrerName} invited you to join Church Music Scheduler! Get 60 days FREE!`,
+    subject: `${referrerName} invited you to join Church Music Pro! Get 60 days FREE!`,
     html: emailHtml
   })
 
@@ -271,9 +271,9 @@ async function handleBulkReferrals(session: any, body: any) {
 
       // Send email
       await resend.emails.send({
-        from: 'Church Music Scheduler <noreply@churchmusicscheduler.com>',
+        from: 'Church Music Pro <noreply@churchmusicpro.com>',
         to: cleanEmail,
-        subject: `${referrerName} invited you to join Church Music Scheduler! Get 60 days FREE!`,
+        subject: `${referrerName} invited you to join Church Music Pro! Get 60 days FREE!`,
         html: emailHtml
       })
 

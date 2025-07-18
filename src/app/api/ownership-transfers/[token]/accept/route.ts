@@ -118,7 +118,7 @@ export async function POST(
     try {
       // Email to new owner
       await resend.emails.send({
-        from: 'Church Music Scheduler <noreply@churchmusicscheduler.com>',
+        from: 'Church Music Pro <noreply@churchmusicpro.com>',
         to: transfer.inviteeEmail,
         subject: `Welcome to ${transfer.church.name}!`,
         html: `
@@ -156,7 +156,7 @@ export async function POST(
             
             <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
             <p style="color: #9ca3af; font-size: 12px;">
-              Church Music Scheduler - Simplifying church music coordination
+              Church Music Pro - Simplifying church music coordination
             </p>
           </div>
         `
@@ -169,7 +169,7 @@ export async function POST(
 
       if (inviter) {
         await resend.emails.send({
-          from: 'Church Music Scheduler <noreply@churchmusicscheduler.com>',
+          from: 'Church Music Pro <noreply@churchmusicpro.com>',
           to: inviter.email,
           subject: `${user.firstName} ${user.lastName} accepted your ownership invitation`,
           html: `
@@ -195,7 +195,7 @@ export async function POST(
               
               <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
               <p style="color: #9ca3af; font-size: 12px;">
-                Church Music Scheduler - Simplifying church music coordination
+                Church Music Pro - Simplifying church music coordination
               </p>
             </div>
           `

@@ -1,8 +1,8 @@
-# Church Music Scheduler - Setup Guide
+# Church Music Pro - Setup Guide
 
 ## 🎵 What We've Built
 
-Your Church Music Scheduler is a comprehensive platform for organizing music ministries. Here's what's included:
+Your Church Music Pro is a comprehensive platform for organizing music ministries. Here's what's included:
 
 ### ✅ Core Features Implemented
 

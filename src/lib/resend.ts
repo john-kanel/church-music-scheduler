@@ -19,7 +19,7 @@ const LOGO_HTML = `
       font-family: 'Georgia', serif;
       box-shadow: 0 4px 8px rgba(102, 0, 51, 0.3);
     ">
-      <div style="font-size: 24px; font-weight: bold; margin-bottom: 5px;">♪ Church Music Scheduler</div>
+      <div style="font-size: 24px; font-weight: bold; margin-bottom: 5px;">♪ Church Music Pro</div>
       <div style="font-size: 12px; opacity: 0.9; letter-spacing: 1px;">ORGANIZE • SCHEDULE • WORSHIP</div>
     </div>
   </div>
@@ -65,7 +65,7 @@ export async function sendInvitationEmail(
     const tempPassword = temporaryPassword || generateTemporaryPassword()
     
     // Use verified domain for all environments
-    const fromAddress = 'Church Music Scheduler <noreply@churchmusicscheduler.com>'
+    const fromAddress = 'Church Music Pro <noreply@churchmusicpro.com>'
     
     const emailData = {
       from: fromAddress,
@@ -139,7 +139,7 @@ export async function sendInvitationEmail(
             
             <div style="border-top: 1px solid #eee; margin-top: 30px; padding-top: 20px; text-align: center;">
               <p style="color: #999; font-size: 12px; margin: 0;">
-                Sent by Church Music Scheduler
+                Sent by Church Music Pro
               </p>
             </div>
           </div>
@@ -175,7 +175,7 @@ Accept your invitation: ${inviteLink}
 This invitation will expire in 7 days. If you have any questions, please contact ${inviterName}.
 
 ---
-Sent by Church Music Scheduler
+Sent by Church Music Pro
       `
     }
 
@@ -211,7 +211,7 @@ export async function sendMessageEmail(
 ) {
   try {
     // Use verified domain for all environments
-    const fromAddress = 'Church Music Scheduler <noreply@churchmusicscheduler.com>'
+    const fromAddress = 'Church Music Pro <noreply@churchmusicpro.com>'
     
     const emailData = {
       from: fromAddress,
@@ -284,12 +284,12 @@ export async function sendWelcomeEmail(
   trialDaysRemaining: number = 30
 ) {
   try {
-    const fromAddress = 'Church Music Scheduler <support@churchmusicscheduler.com>'
+    const fromAddress = 'Church Music Pro <support@churchmusicpro.com>'
     
     const emailData = {
       from: fromAddress,
       to,
-      subject: 'Welcome to Church Music Scheduler - Your 30-Day Trial Starts Now!',
+      subject: 'Welcome to Church Music Pro - Your 30-Day Trial Starts Now!',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <!-- Logo Section -->
@@ -302,7 +302,7 @@ export async function sendWelcomeEmail(
             <h2 style="color: #333; margin-bottom: 20px;">Hello ${recipientName}!</h2>
             
             <p style="color: #666; line-height: 1.6; font-size: 16px;">
-              Congratulations on signing up for Church Music Scheduler! We're excited to help ${churchName} streamline your music ministry.
+              Congratulations on signing up for Church Music Pro! We're excited to help ${churchName} streamline your music ministry.
             </p>
 
             <!-- Trial Information Box -->
@@ -315,7 +315,7 @@ export async function sendWelcomeEmail(
               </div>
               <div style="background: #FDF2F8; padding: 12px; border-radius: 6px; border-left: 3px solid #660033;">
                 <p style="margin: 0; color: #660033; font-size: 14px;">
-                  💡 <strong>Perfect timing:</strong> You have plenty of time to explore all features and see how Church Music Scheduler can transform your music ministry!
+                  💡 <strong>Perfect timing:</strong> You have plenty of time to explore all features and see how Church Music Pro can transform your music ministry!
                 </p>
               </div>
             </div>
@@ -327,12 +327,12 @@ export async function sendWelcomeEmail(
                 <strong>Invite all the members of your music ministry</strong> - they can join your trial and start collaborating immediately!
               </p>
               <p style="color: #166534; margin: 0; font-size: 14px;">
-                The more people you invite during your trial, the better you'll understand how powerful Church Music Scheduler can be for your team.
+                The more people you invite during your trial, the better you'll understand how powerful Church Music Pro can be for your team.
               </p>
             </div>
             
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/dashboard" 
+              <a href="${process.env.NEXTAUTH_URL || 'https://churchmusicpro.com'}/dashboard" 
                  style="background: #660033; color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; margin-bottom: 10px; font-size: 16px;">
                 Start Exploring Your Dashboard →
               </a>
@@ -355,28 +355,28 @@ export async function sendWelcomeEmail(
               <h4 style="margin: 0 0 10px 0; color: #dc2626;">Need Help?</h4>
               <p style="color: #991b1b; margin: 0; font-size: 14px;">
                 If you have any questions or run into any issues, please don't hesitate to reach out to us at 
-                <a href="mailto:support@churchmusicscheduler.com" style="color: #dc2626; font-weight: bold;">support@churchmusicscheduler.com</a>
+                <a href="mailto:support@churchmusicpro.com" style="color: #dc2626; font-weight: bold;">support@churchmusicpro.com</a>
               </p>
             </div>
             
             <p style="color: #666; font-size: 16px; text-align: center; margin-top: 30px;">
-              Welcome to the Church Music Scheduler family! 🎵
+              Welcome to the Church Music Pro family! 🎵
             </p>
             
             <div style="border-top: 1px solid #eee; margin-top: 30px; padding-top: 20px; text-align: center;">
               <p style="color: #999; font-size: 12px; margin: 0;">
-                Sent by Church Music Scheduler
+                Sent by Church Music Pro
               </p>
             </div>
           </div>
         </div>
       `,
       text: `
-Welcome to Church Music Scheduler!
+Welcome to Church Music Pro!
 
 Hello ${recipientName}!
 
-Congratulations on signing up for Church Music Scheduler! We're excited to help ${churchName} streamline your music ministry.
+Congratulations on signing up for Church Music Pro! We're excited to help ${churchName} streamline your music ministry.
 
 YOUR FREE TRIAL IS ACTIVE!
 ✅ No credit card required
@@ -384,7 +384,7 @@ YOUR FREE TRIAL IS ACTIVE!
 ✅ All features unlocked
 
 GREAT STARTING TIP:
-Invite all the members of your music ministry - they can join your trial and start collaborating immediately! The more people you invite during your trial, the better you'll understand how powerful Church Music Scheduler can be for your team.
+Invite all the members of your music ministry - they can join your trial and start collaborating immediately! The more people you invite during your trial, the better you'll understand how powerful Church Music Pro can be for your team.
 
 WHAT YOU CAN DO RIGHT NOW:
 • Schedule events - Add your upcoming services and rehearsals
@@ -394,14 +394,14 @@ WHAT YOU CAN DO RIGHT NOW:
 • Create groups - Organize your choir, instrumentalists, and more
 
 NEED HELP?
-If you have any questions or run into any issues, please don't hesitate to reach out to us at support@churchmusicscheduler.com
+If you have any questions or run into any issues, please don't hesitate to reach out to us at support@churchmusicpro.com
 
-Start exploring: ${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/dashboard
+Start exploring: ${process.env.NEXTAUTH_URL || 'https://churchmusicpro.com'}/dashboard
 
-Welcome to the Church Music Scheduler family! 🎵
+Welcome to the Church Music Pro family! 🎵
 
 ---
-Sent by Church Music Scheduler
+Sent by Church Music Pro
       `
     }
 
@@ -430,7 +430,7 @@ export async function sendPaymentConfirmationEmail(
   nextBillingDate: string
 ) {
   try {
-    const fromAddress = 'Church Music Scheduler <support@churchmusicscheduler.com>'
+    const fromAddress = 'Church Music Pro <support@churchmusicpro.com>'
     
     const emailData = {
       from: fromAddress,
@@ -448,7 +448,7 @@ export async function sendPaymentConfirmationEmail(
             <h2 style="color: #333; margin-bottom: 20px;">Thank you, ${recipientName}!</h2>
             
             <p style="color: #666; line-height: 1.6; font-size: 16px;">
-              Your payment has been successfully processed and ${churchName} now has full access to Church Music Scheduler. Thank you for choosing us to support your music ministry!
+              Your payment has been successfully processed and ${churchName} now has full access to Church Music Pro. Thank you for choosing us to support your music ministry!
             </p>
 
             <!-- Subscription Details Box -->
@@ -468,7 +468,7 @@ export async function sendPaymentConfirmationEmail(
                 You can view invoices, update payment methods, or change plans anytime through your billing portal.
               </p>
               <div style="text-align: center;">
-                <a href="${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/billing" 
+                <a href="${process.env.NEXTAUTH_URL || 'https://churchmusicpro.com'}/billing" 
                    style="background: #660033; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 14px;">
                   Manage Billing →
                 </a>
@@ -486,7 +486,7 @@ export async function sendPaymentConfirmationEmail(
             </div>
             
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/dashboard" 
+              <a href="${process.env.NEXTAUTH_URL || 'https://churchmusicpro.com'}/dashboard" 
                  style="background: #660033; color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; margin-bottom: 10px; font-size: 16px;">
                 Continue to Dashboard →
               </a>
@@ -497,17 +497,17 @@ export async function sendPaymentConfirmationEmail(
               <h4 style="margin: 0 0 10px 0; color: #dc2626;">Questions or Need Support?</h4>
               <p style="color: #991b1b; margin: 0; font-size: 14px;">
                 We're here to help! Contact us anytime at 
-                <a href="mailto:support@churchmusicscheduler.com" style="color: #dc2626; font-weight: bold;">support@churchmusicscheduler.com</a>
+                <a href="mailto:support@churchmusicpro.com" style="color: #dc2626; font-weight: bold;">support@churchmusicpro.com</a>
               </p>
             </div>
             
             <p style="color: #666; font-size: 16px; text-align: center; margin-top: 30px;">
-              Thank you for being part of the Church Music Scheduler family! 🎵
+              Thank you for being part of the Church Music Pro family! 🎵
             </p>
             
             <div style="border-top: 1px solid #eee; margin-top: 30px; padding-top: 20px; text-align: center;">
               <p style="color: #999; font-size: 12px; margin: 0;">
-                Sent by Church Music Scheduler
+                Sent by Church Music Pro
               </p>
             </div>
           </div>
@@ -518,7 +518,7 @@ Payment Confirmed!
 
 Thank you, ${recipientName}!
 
-Your payment has been successfully processed and ${churchName} now has full access to Church Music Scheduler. Thank you for choosing us to support your music ministry!
+Your payment has been successfully processed and ${churchName} now has full access to Church Music Pro. Thank you for choosing us to support your music ministry!
 
 YOUR SUBSCRIPTION DETAILS:
 Plan: ${planName}
@@ -527,7 +527,7 @@ Next billing date: ${nextBillingDate}
 
 MANAGE YOUR BILLING:
 You can view invoices, update payment methods, or change plans anytime through your billing portal.
-Visit: ${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/billing
+Visit: ${process.env.NEXTAUTH_URL || 'https://churchmusicpro.com'}/billing
 
 WHAT'S NEXT:
 • Continue building your team - Invite more musicians to join
@@ -535,14 +535,14 @@ WHAT'S NEXT:
 • Schedule upcoming events - Plan your services and rehearsals
 
 QUESTIONS OR NEED SUPPORT?
-We're here to help! Contact us anytime at support@churchmusicscheduler.com
+We're here to help! Contact us anytime at support@churchmusicpro.com
 
-Continue to dashboard: ${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/dashboard
+Continue to dashboard: ${process.env.NEXTAUTH_URL || 'https://churchmusicpro.com'}/dashboard
 
-Thank you for being part of the Church Music Scheduler family! 🎵
+Thank you for being part of the Church Music Pro family! 🎵
 
 ---
-Sent by Church Music Scheduler
+Sent by Church Music Pro
       `
     }
 
@@ -568,8 +568,8 @@ export async function sendReferralPromotionEmail(
   referralCode: string
 ) {
   try {
-    const fromAddress = 'Church Music Scheduler <support@churchmusicscheduler.com>'
-    const referralUrl = `${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/auth/signup?ref=${referralCode}`
+    const fromAddress = 'Church Music Pro <support@churchmusicpro.com>'
+    const referralUrl = `${process.env.NEXTAUTH_URL || 'https://churchmusicpro.com'}/auth/signup?ref=${referralCode}`
     
     const emailData = {
       from: fromAddress,
@@ -587,7 +587,7 @@ export async function sendReferralPromotionEmail(
             <h2 style="color: #333; margin-bottom: 20px;">Hi ${recipientName}!</h2>
             
             <p style="color: #666; line-height: 1.6; font-size: 16px;">
-              Now that ${churchName} is enjoying Church Music Scheduler, we'd love your help spreading the word to other churches in your community!
+              Now that ${churchName} is enjoying Church Music Pro, we'd love your help spreading the word to other churches in your community!
             </p>
 
             <!-- Referral Reward Box -->
@@ -618,7 +618,7 @@ export async function sendReferralPromotionEmail(
 
             
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/rewards" 
+              <a href="${process.env.NEXTAUTH_URL || 'https://churchmusicpro.com'}/rewards" 
                  style="background: #f59e0b; color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; margin-bottom: 10px; font-size: 16px;">
                 Track Your Referrals →
               </a>
@@ -640,7 +640,7 @@ export async function sendReferralPromotionEmail(
               <h4 style="margin: 0 0 10px 0; color: #dc2626;">Questions About Referrals?</h4>
               <p style="color: #991b1b; margin: 0; font-size: 14px;">
                 We're happy to help explain how our referral program works! Contact us at 
-                <a href="mailto:support@churchmusicscheduler.com" style="color: #dc2626; font-weight: bold;">support@churchmusicscheduler.com</a>
+                <a href="mailto:support@churchmusicpro.com" style="color: #dc2626; font-weight: bold;">support@churchmusicpro.com</a>
               </p>
             </div>
             
@@ -650,7 +650,7 @@ export async function sendReferralPromotionEmail(
             
             <div style="border-top: 1px solid #eee; margin-top: 30px; padding-top: 20px; text-align: center;">
               <p style="color: #999; font-size: 12px; margin: 0;">
-                Sent by Church Music Scheduler
+                Sent by Church Music Pro
               </p>
             </div>
           </div>
@@ -661,7 +661,7 @@ Earn Free Months - Refer Other Churches!
 
 Hi ${recipientName}!
 
-Now that ${churchName} is enjoying Church Music Scheduler, we'd love your help spreading the word to other churches in your community!
+Now that ${churchName} is enjoying Church Music Pro, we'd love your help spreading the word to other churches in your community!
 
 REFERRAL REWARDS:
 ✨ Get 1 month free for each church you refer
@@ -682,15 +682,15 @@ HOW IT WORKS:
 3. When they become a paying customer, you get 1 month free!
 4. Your next billing is automatically reduced
 
-Track your referrals: ${process.env.NEXTAUTH_URL || 'https://churchmusicscheduler.com'}/rewards
+Track your referrals: ${process.env.NEXTAUTH_URL || 'https://churchmusicpro.com'}/rewards
 
 QUESTIONS ABOUT REFERRALS?
-We're happy to help explain how our referral program works! Contact us at support@churchmusicscheduler.com
+We're happy to help explain how our referral program works! Contact us at support@churchmusicpro.com
 
 Thank you for helping us serve more churches! 🎵
 
 ---
-Sent by Church Music Scheduler
+Sent by Church Music Pro
       `
     }
 

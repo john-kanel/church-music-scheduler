@@ -74,7 +74,7 @@ export function ReferralSuccessNotification({
           fontSize: '16px',
           marginBottom: '25px'
         }}>
-          Great news! <strong>{referredPersonName}</strong> has successfully signed up for Church Music Scheduler using your referral code and completed their first subscription payment.
+          Great news! <strong>{referredPersonName}</strong> has successfully signed up for Church Music Pro using your referral code and completed their first subscription payment.
         </p>
 
         {/* Success Details */}
@@ -267,7 +267,7 @@ export function ReferralSuccessNotification({
             Keep sharing your referral code with other churches and earn unlimited free months!
           </p>
           <a 
-                            href={`${process.env.NEXT_PUBLIC_APP_URL || 'https://churchmusicscheduler.com'}/rewards`}
+                            href={`${process.env.NEXT_PUBLIC_APP_URL || 'https://churchmusicpro.com'}/rewards`}
             style={{
               display: 'inline-block',
               backgroundColor: '#660033',
@@ -297,14 +297,14 @@ export function ReferralSuccessNotification({
             marginBottom: '10px',
             fontStyle: 'italic'
           }}>
-            "Thank you for helping other churches discover Church Music Scheduler. Together, we're making church music ministry easier and more organized!"
+            "Thank you for helping other churches discover Church Music Pro. Together, we're making church music ministry easier and more organized!"
           </p>
           <p style={{ 
             fontSize: '14px', 
             color: '#6B7280',
             margin: '0'
           }}>
-            - The Church Music Scheduler Team
+            - The Church Music Pro Team
           </p>
         </div>
 

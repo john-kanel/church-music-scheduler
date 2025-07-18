@@ -1,7 +1,7 @@
 {
   "name": "church-music-scheduler-cron",
   "version": "1.0.0",
-  "description": "Cron jobs for Church Music Scheduler",
+  "description": "Cron jobs for Church Music Pro",
   "main": "cron-worker.js",
   "scripts": {
     "notifications": "node cron-worker.js notifications",

@@ -149,4 +149,4 @@ Your 30-day trial system is perfectly configured to:
 - ✅ Professional user experience
 - ✅ Scalable architecture
 
-Just update that one environment variable and you'll have a world-class 30-day trial system ready for your church music scheduler launch! 
+Just update that one environment variable and you'll have a world-class 30-day trial system ready for your Church Music Pro launch! 

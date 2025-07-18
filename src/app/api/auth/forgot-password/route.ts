@@ -75,9 +75,9 @@ export async function POST(request: NextRequest) {
     
     try {
       await resend.emails.send({
-        from: 'Church Music Scheduler <noreply@churchmusicscheduler.com>',
+        from: 'Church Music Pro <noreply@churchmusicpro.com>',
         to: normalizedEmail,
-        subject: 'Reset Your Password - Church Music Scheduler',
+        subject: 'Reset Your Password - Church Music Pro',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             ${getEmailLogoHtml()}
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
               </p>
               
               <p style="color: #666; line-height: 1.6; font-size: 16px;">
-                We received a request to reset your password for your Church Music Scheduler account at <strong>${user.church.name}</strong>.
+                We received a request to reset your password for your Church Music Pro account at <strong>${user.church.name}</strong>.
               </p>
               
               <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #660033;">
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
               
               <div style="border-top: 1px solid #eee; margin-top: 30px; padding-top: 20px; text-align: center;">
                 <p style="color: #999; font-size: 12px; margin: 0;">
-                  Sent by Church Music Scheduler
+                  Sent by Church Music Pro
                 </p>
               </div>
             </div>
@@ -134,7 +134,7 @@ Password Reset Request
 
 Hello ${user.firstName},
 
-We received a request to reset your password for your Church Music Scheduler account at ${user.church.name}.
+We received a request to reset your password for your Church Music Pro account at ${user.church.name}.
 
 Reset your password by clicking this link: ${resetUrl}
 
@@ -145,7 +145,7 @@ If you didn't request this password reset, you can safely ignore this email. You
 If you have any questions, please contact support.
 
 ---
-Sent by Church Music Scheduler
+Sent by Church Music Pro
         `
       })
     } catch (emailError) {

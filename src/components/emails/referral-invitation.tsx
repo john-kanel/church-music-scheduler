@@ -31,7 +31,7 @@ export function ReferralInvitationEmail({
         }}>
           <img 
             src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAACDQAAAK8CAYAAAAax30yAAAACXBIWXMAABnWAAAZ1gEY0crtAAAE5WlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSfvu78nIGlkPSdXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQnPz4KPHg6eG1wbWV0YSB4bWxuczp4PSdhZG9iZT... (TRUNCATED FOR BREVITY - use your full base64 string here) ..."
-            alt="Church Music Scheduler" 
+            alt="Church Music Pro" 
             style={{ width: '100%', height: 'auto', display: 'block', margin: '0 auto' }} 
           />
         </div>
@@ -49,7 +49,7 @@ export function ReferralInvitationEmail({
           marginBottom: '20px',
           textAlign: 'center'
         }}>
-          Join {referrerChurchName} on Church Music Scheduler!
+          Join {referrerChurchName} on Church Music Pro!
         </h1>
 
         <p style={{ 
@@ -67,7 +67,7 @@ export function ReferralInvitationEmail({
           color: '#374151', 
           marginBottom: '20px' 
         }}>
-          <strong>{referrerName}</strong> from <strong>{referrerChurchName}</strong> has invited you to try Church Music Scheduler - the easiest way to organize your church's music ministry!
+          <strong>{referrerName}</strong> from <strong>{referrerChurchName}</strong> has invited you to try Church Music Pro - the easiest way to organize your church's music ministry!
         </p>
 
         {/* Benefits section */}
@@ -156,7 +156,7 @@ export function ReferralInvitationEmail({
             fontWeight: 'bold', 
             marginBottom: '15px' 
           }}>
-            Why Church Music Scheduler?
+            Why Church Music Pro?
           </h3>
           
           <ul style={{ 
@@ -176,7 +176,7 @@ export function ReferralInvitationEmail({
         {/* CTA Button */}
         <div style={{ textAlign: 'center', marginBottom: '25px' }}>
           <a 
-                            href={`${process.env.NEXT_PUBLIC_APP_URL || 'https://churchmusicscheduler.com'}/auth/signup?ref=${referralCode}`}
+                            href={`${process.env.NEXT_PUBLIC_APP_URL || 'https://churchmusicpro.com'}/auth/signup?ref=${referralCode}`}
             style={{
               display: 'inline-block',
               backgroundColor: '#660033',
@@ -215,7 +215,7 @@ export function ReferralInvitationEmail({
           color: '#6B7280', 
           marginBottom: '0' 
         }}>
-          © 2024 Church Music Scheduler. All rights reserved.
+          © 2024 Church Music Pro. All rights reserved.
         </p>
       </div>
     </div>

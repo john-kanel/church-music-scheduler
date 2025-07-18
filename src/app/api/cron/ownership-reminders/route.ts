@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
           const daysRemaining = Math.ceil((transfer.expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
           
           await resend.emails.send({
-            from: 'Church Music Scheduler <noreply@churchmusicscheduler.com>',
+            from: 'Church Music Pro <noreply@churchmusicpro.com>',
             to: inviter.email,
             subject: `Reminder: Ownership invitation still pending`,
             html: `
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
                 
                 <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
                 <p style="color: #9ca3af; font-size: 12px;">
-                  Church Music Scheduler - Simplifying church music coordination
+                  Church Music Pro - Simplifying church music coordination
                 </p>
               </div>
             `
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
           const daysUntilDeactivation = Math.ceil((transfer.currentOwnerRetireAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
           
           await resend.emails.send({
-            from: 'Church Music Scheduler <noreply@churchmusicscheduler.com>',
+            from: 'Church Music Pro <noreply@churchmusicpro.com>',
             to: retiringOwner.email,
             subject: `Important: Your account will be deactivated in ${daysUntilDeactivation} days`,
             html: `
@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
                 
                 <p>Hello ${retiringOwner.firstName},</p>
                 
-                <p>This is an important reminder that your Church Music Scheduler account will be deactivated in <strong>${daysUntilDeactivation} days</strong> on ${transfer.currentOwnerRetireAt.toLocaleDateString()}.</p>
+                <p>This is an important reminder that your Church Music Pro account will be deactivated in <strong>${daysUntilDeactivation} days</strong> on ${transfer.currentOwnerRetireAt.toLocaleDateString()}.</p>
                 
                 <div style="background-color: #fef2f2; border: 1px solid #dc2626; padding: 16px; border-radius: 8px; margin: 20px 0;">
                   <h4 style="color: #dc2626; margin: 0 0 8px 0;">What this means:</h4>
@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
                 
                 <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
                 <p style="color: #9ca3af; font-size: 12px;">
-                  Church Music Scheduler - Simplifying church music coordination
+                  Church Music Pro - Simplifying church music coordination
                 </p>
               </div>
             `
@@ -200,16 +200,16 @@ export async function POST(request: NextRequest) {
 
           // Send final deactivation email
           await resend.emails.send({
-            from: 'Church Music Scheduler <noreply@churchmusicscheduler.com>',
+            from: 'Church Music Pro <noreply@churchmusicpro.com>',
             to: retiringOwner.email,
-            subject: 'Your Church Music Scheduler account has been deactivated',
+            subject: 'Your Church Music Pro account has been deactivated',
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                 <h2 style="color: #dc2626;">Account Deactivated</h2>
                 
                 <p>Hello ${retiringOwner.firstName},</p>
                 
-                <p>Your Church Music Scheduler account has been deactivated as requested when you transferred ownership of your church account.</p>
+                <p>Your Church Music Pro account has been deactivated as requested when you transferred ownership of your church account.</p>
                 
                 <div style="background-color: #f3f4f6; border: 1px solid #d1d5db; padding: 16px; border-radius: 8px; margin: 20px 0;">
                   <h4 style="color: #374151; margin: 0 0 8px 0;">Account Status:</h4>
@@ -221,7 +221,7 @@ export async function POST(request: NextRequest) {
                   </ul>
                 </div>
                 
-                <p>Thank you for using Church Music Scheduler. If you need to access a church music scheduling system in the future, you're welcome to create a new account or join another church's existing account.</p>
+                <p>Thank you for using Church Music Pro. If you need to access a church music scheduling system in the future, you're welcome to create a new account or join another church's existing account.</p>
                 
                 <p>If you have any questions, please contact our support team.</p>
                 
@@ -233,7 +233,7 @@ export async function POST(request: NextRequest) {
                 
                 <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
                 <p style="color: #9ca3af; font-size: 12px;">
-                  Church Music Scheduler - Simplifying church music coordination
+                  Church Music Pro - Simplifying church music coordination
                 </p>
               </div>
             `

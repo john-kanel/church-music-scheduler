@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
 
     try {
       await resend.emails.send({
-        from: 'Church Music Scheduler <noreply@churchmusicscheduler.com>',
+        from: 'Church Music Pro <noreply@churchmusicpro.com>',
         to: email,
         subject: `Invitation to join ${churchName} as ${role.toLowerCase().replace('_', ' ')}`,
         html: `
@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
             
             <p>Hello${firstName ? ` ${firstName}` : ''},</p>
             
-            <p>${inviterName} has invited you to join <strong>${churchName}</strong> as a <strong>${role.toLowerCase().replace('_', ' ')}</strong> on Church Music Scheduler.</p>
+            <p>${inviterName} has invited you to join <strong>${churchName}</strong> as a <strong>${role.toLowerCase().replace('_', ' ')}</strong> on Church Music Pro.</p>
             
             <p>As a ${role.toLowerCase().replace('_', ' ')}, you'll have full access to:</p>
             <ul>
@@ -172,7 +172,7 @@ export async function POST(request: NextRequest) {
             
             <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
             <p style="color: #9ca3af; font-size: 12px;">
-              Church Music Scheduler - Simplifying church music coordination
+              Church Music Pro - Simplifying church music coordination
             </p>
           </div>
         `

@@ -1,6 +1,6 @@
 {
-  "name": "Church Music Scheduler",
-  "short_name": "Church Music Scheduler",
+  "name": "Church Music Pro",
+  "short_name": "Church Music Pro",
   "description": "Simple, intuitive scheduling for church music directors",
   "start_url": "/",
   "display": "standalone",

@@ -679,7 +679,7 @@ export default function CalendarPage() {
       // Add app name centered at bottom
       pdf.setFontSize(12)
       pdf.setFont('Montserrat', 'bold')
-      pdf.text('Church Music Scheduler', pageWidth / 2, logoY, { align: 'center' })
+      pdf.text('Church Music Pro', pageWidth / 2, logoY, { align: 'center' })
       
       // Add generation timestamp and page numbers
       const footerY = pageHeight - 15

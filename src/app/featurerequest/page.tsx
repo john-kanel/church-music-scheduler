@@ -136,7 +136,7 @@ export default function FeatureRequestPage() {
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Have an idea?</h2>
             <p className="text-gray-600">
-              Share your feature suggestions to help us improve Church Music Scheduler.
+              Share your feature suggestions to help us improve Church Music Pro.
             </p>
           </div>
 

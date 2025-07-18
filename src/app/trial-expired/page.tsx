@@ -108,7 +108,7 @@ export default function TrialExpiredPage() {
               <AlertTriangle className="h-8 w-8 text-red-600 mr-3" />
               <h1 className="text-2xl font-bold text-gray-900">Trial Expired</h1>
             </div>
-            <p className="text-gray-600">Your 30-day free trial has ended. Subscribe to continue using Church Music Scheduler.</p>
+            <p className="text-gray-600">Your 30-day free trial has ended. Subscribe to continue using Church Music Pro.</p>
           </div>
         </div>
       </div>
@@ -122,7 +122,7 @@ export default function TrialExpiredPage() {
             <div>
               <h2 className="text-lg font-semibold text-red-900 mb-2">Your Free Trial Has Ended</h2>
               <p className="text-red-700 mb-4">
-                You had full access to all Church Music Scheduler features during your 30-day trial. 
+                You had full access to all Church Music Pro features during your 30-day trial. 
                 To continue managing your music ministry, please choose a subscription plan below.
               </p>
               <div className="bg-white border border-red-200 rounded-lg p-4">
@@ -220,7 +220,7 @@ export default function TrialExpiredPage() {
               If you have questions about pricing or need assistance, we're here to help.
             </p>
             <div className="flex justify-center space-x-4">
-              <a href="mailto:support@churchmusicscheduler.com" className="text-blue-600 hover:text-blue-700">
+              <a href="mailto:support@churchmusicpro.com" className="text-blue-600 hover:text-blue-700">
                 Email Support
               </a>
               <span className="text-gray-300">|</span>

@@ -442,7 +442,7 @@ async function sendReferrerNotificationEmail(
 
     // Send email
     await resend.emails.send({
-      from: 'Church Music Scheduler <noreply@churchmusicscheduler.com>',
+      from: 'Church Music Pro <noreply@churchmusicpro.com>',
       to: referringUser.email,
       subject: `🎉 Your referral was successful! You earned a free month!`,
       html: emailHtml
