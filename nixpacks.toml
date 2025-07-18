@@ -1,0 +1,16 @@
+[variables]
+NODE_VERSION = "18"
+NPM_CONFIG_PRODUCTION = "false"
+
+[phases.setup]
+dependsOn = ["install"]
+
+[phases.install]
+cmd = "npm ci"
+
+[phases.build]
+cmd = "npx prisma generate && npm run build"
+dependsOn = ["install"]
+
+[start]
+cmd = "npm start" 
