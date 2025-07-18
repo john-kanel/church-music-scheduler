@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
     })
 
     return NextResponse.json({
-      assignments: assignments.map(assignment => ({
+      assignments: assignments.map((assignment: any) => ({
         id: assignment.id,
         roleName: assignment.roleName,
         status: assignment.status,
