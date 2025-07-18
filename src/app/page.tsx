@@ -473,11 +473,11 @@ export default function HomePage() {
                   </div>
                   <div className="flex items-center">
                     <div className="w-2 h-2 bg-secondary-600 rounded-full mr-3"></div>
-                    <span className="text-gray-700">Musician participation tracking</span>
+                    <span className="text-gray-700">Low maintenance automations</span>
                   </div>
                   <div className="flex items-center">
                     <div className="w-2 h-2 bg-secondary-600 rounded-full mr-3"></div>
-                    <span className="text-gray-700">Upcoming events and needs</span>
+                    <span className="text-gray-700">Keep everyone informed</span>
                   </div>
                 </div>
               </div>
