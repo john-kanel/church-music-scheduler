@@ -666,10 +666,10 @@ export default function HomePage() {
       {/* Image Modal */}
       {showImageModal && selectedImage && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-75"
+          className="fixed inset-0 z-50 flex items-center justify-center p-2 bg-black bg-opacity-75"
           onClick={closeImageModal}
         >
-          <div className="relative max-w-7xl max-h-[95vh] w-full h-full flex items-center justify-center">
+          <div className="relative w-[90vw] h-[95vh] flex items-center justify-center">
             {/* Close Button */}
             <button
               onClick={closeImageModal}
@@ -681,7 +681,7 @@ export default function HomePage() {
             
             {/* Image Container */}
             <div 
-              className="relative bg-white rounded-lg shadow-2xl overflow-hidden max-w-full max-h-full"
+              className="relative bg-white rounded-lg shadow-2xl overflow-hidden w-full h-full"
               onClick={(e) => e.stopPropagation()}
             >
               <Image
@@ -689,7 +689,7 @@ export default function HomePage() {
                 alt={selectedImage.alt}
                 width={1800}
                 height={1350}
-                className="w-full h-auto object-contain max-h-[90vh]"
+                className="w-full h-full object-contain"
                 priority
               />
               
