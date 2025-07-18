@@ -1,7 +1,7 @@
 import { PrismaAdapter } from '@auth/prisma-adapter'
 import { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
-import { UserRole } from '@prisma/client'
+// import { UserRole } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import { prisma } from './db'
 
@@ -67,7 +67,8 @@ export const authOptions: NextAuthOptions = {
           name: `${user.firstName} ${user.lastName}`,
           role: user.role,
           churchId: user.churchId,
-          churchName: user.church.name
+          churchName: user.church.name,
+          hasCompletedOnboarding: user.hasCompletedOnboarding
         }
       }
     })
@@ -81,15 +82,17 @@ export const authOptions: NextAuthOptions = {
         token.role = user.role
         token.churchId = user.churchId
         token.churchName = user.churchName
+        token.hasCompletedOnboarding = user.hasCompletedOnboarding
       }
       return token
     },
     async session({ session, token }) {
       if (token) {
         session.user.id = token.sub!
-        session.user.role = token.role as UserRole
+        session.user.role = token.role as any
         session.user.churchId = token.churchId as string
         session.user.churchName = token.churchName as string
+        session.user.hasCompletedOnboarding = token.hasCompletedOnboarding as boolean
       }
       return session
     }

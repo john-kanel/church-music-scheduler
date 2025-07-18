@@ -28,6 +28,7 @@ export async function GET() {
         skillLevel: true,
         yearsExperience: true,
         calendarLink: true,
+        hasCompletedOnboarding: true,
         createdAt: true,
         church: {
           select: {
@@ -74,7 +75,8 @@ export async function PUT(request: NextRequest) {
       yearsExperience,
       churchName,
       parishPhone,
-      calendarLink
+      calendarLink,
+      hasCompletedOnboarding
     } = body
 
     // Validate required fields
@@ -98,7 +100,8 @@ export async function PUT(request: NextRequest) {
         instruments: instruments || [],
         skillLevel: skillLevel || 'INTERMEDIATE',
         yearsExperience: yearsExperience ? parseInt(yearsExperience) : null,
-        calendarLink: calendarLink || null
+        calendarLink: calendarLink || null,
+        ...(hasCompletedOnboarding !== undefined && { hasCompletedOnboarding })
       },
       select: {
         id: true,
@@ -113,6 +116,8 @@ export async function PUT(request: NextRequest) {
         instruments: true,
         skillLevel: true,
         yearsExperience: true,
+        calendarLink: true,
+        hasCompletedOnboarding: true,
         church: {
           select: {
             name: true,

@@ -1,5 +1,5 @@
 import 'next-auth'
-import { UserRole } from '@prisma/client'
+// import { UserRole } from '@prisma/client'
 
 declare module 'next-auth' {
   interface Session {
@@ -7,9 +7,10 @@ declare module 'next-auth' {
       id: string
       email: string
       name: string
-      role: UserRole
+      role: string
       churchId: string
       churchName: string
+      hasCompletedOnboarding?: boolean
     }
   }
 
@@ -17,16 +18,18 @@ declare module 'next-auth' {
     id: string
     email: string
     name: string
-    role: UserRole
+    role: string
     churchId: string
     churchName: string
+    hasCompletedOnboarding?: boolean
   }
 }
 
 declare module 'next-auth/jwt' {
   interface JWT {
-    role: UserRole
+    role: string
     churchId: string
     churchName: string
+    hasCompletedOnboarding?: boolean
   }
 } 

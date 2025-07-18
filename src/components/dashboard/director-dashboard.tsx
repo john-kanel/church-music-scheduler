@@ -52,6 +52,11 @@ const SendMessageModal = dynamic(() => import('../messages/send-message-modal').
   loading: () => <div>Loading...</div>
 })
 
+const OnboardingFlow = dynamic(() => import('./onboarding-flow').then(mod => ({ default: mod.OnboardingFlow })), {
+  ssr: false,
+  loading: () => <div>Loading...</div>
+})
+
 const EventDetailsModal = dynamic(() => import('../events/event-details-modal').then(mod => ({ default: mod.EventDetailsModal })), {
   ssr: false,
   loading: () => <div>Loading...</div>
@@ -64,6 +69,7 @@ interface User {
   role: 'DIRECTOR' | 'ASSOCIATE_DIRECTOR' | 'MUSICIAN' | 'PASTOR' | 'ASSOCIATE_PASTOR'
   churchId: string
   churchName: string
+  hasCompletedOnboarding?: boolean
   avatar?: string
 }
 
@@ -104,6 +110,7 @@ interface DirectorDashboardProps {
 export function DirectorDashboard({ user }: DirectorDashboardProps) {
   const { data: session } = useSession()
   const [showTour, setShowTour] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(false)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [showCreateEventModal, setShowCreateEventModal] = useState(false)
   const [showInviteModal, setShowInviteModal] = useState(false)
@@ -149,17 +156,28 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
     loadData()
   }, [currentDate])
 
-  // Show tour for new directors
+  // Show tour and onboarding for new directors
   useEffect(() => {
     const hasSeenTour = localStorage.getItem('hasSeenDirectorTour')
-    if (!hasSeenTour) {
+    if (!hasSeenTour && (user.role === 'DIRECTOR' || user.role === 'PASTOR')) {
       setShowTour(true)
     }
-  }, [])
+  }, [user.role])
 
   const completeTour = () => {
     localStorage.setItem('hasSeenDirectorTour', 'true')
     setShowTour(false)
+    
+    // Check if user needs onboarding (directors/pastors only)
+    if ((user.role === 'DIRECTOR' || user.role === 'PASTOR') && !user.hasCompletedOnboarding) {
+      setShowOnboarding(true)
+    }
+  }
+
+  const completeOnboarding = () => {
+    setShowOnboarding(false)
+    // Refresh the page or update user data to reflect completion
+    window.location.reload()
   }
 
   const refreshDashboardData = async (date?: Date) => {
@@ -353,7 +371,7 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
             </p>
             <button
               onClick={completeTour}
-              className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              className="w-full bg-red-900 text-white py-3 px-4 rounded-lg hover:bg-red-800 transition-colors font-medium"
             >
               Get Started
             </button>
@@ -361,8 +379,14 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
         </div>
       )}
 
-      {/* Main Content - Grayed out when tour is showing or modal is open */}
-      <div className={showTour || showCreateEventModal ? 'opacity-30 pointer-events-none' : ''}>
+      {/* Onboarding Flow */}
+      <OnboardingFlow 
+        isVisible={showOnboarding}
+        onComplete={completeOnboarding}
+      />
+
+      {/* Main Content - Grayed out when tour, onboarding, or modal is open */}
+      <div className={showTour || showOnboarding || showCreateEventModal ? 'opacity-30 pointer-events-none' : ''}>
         {/* Top Navigation */}
         <nav className="bg-white shadow-sm border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
