@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { sendReferralPromotionEmail } from '@/lib/resend'
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
     // Simple auth check - in production you'd want proper cron authentication
     const authHeader = request.headers.get('authorization')
