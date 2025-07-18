@@ -110,6 +110,7 @@ export default function SettingsPage() {
   const [loadingAvailability, setLoadingAvailability] = useState(false)
   const [showAvailabilityModal, setShowAvailabilityModal] = useState(false)
   const [editingAvailability, setEditingAvailability] = useState<any>(null)
+  const [availabilityType, setAvailabilityType] = useState<'date' | 'day'>('date')
 
   // Pastor Invitation
   const [showPastorInviteModal, setShowPastorInviteModal] = useState(false)
@@ -126,6 +127,15 @@ export default function SettingsPage() {
       fetchAvailability()
     }
   }, [session])
+
+  // Set availability type when editing
+  useEffect(() => {
+    if (editingAvailability) {
+      setAvailabilityType(editingAvailability.dayOfWeek !== null ? 'day' : 'date')
+    } else {
+      setAvailabilityType('date')
+    }
+  }, [editingAvailability])
 
   const fetchUserProfile = async () => {
     try {
@@ -1548,7 +1558,8 @@ export default function SettingsPage() {
                       type="radio"
                       name="type"
                       value="date"
-                      defaultChecked={!editingAvailability || editingAvailability.startDate}
+                      checked={availabilityType === 'date'}
+                      onChange={(e) => setAvailabilityType(e.target.value as 'date' | 'day')}
                       className="text-blue-600 focus:ring-blue-500"
                     />
                     <span className="ml-2 text-sm text-gray-700">Specific dates</span>
@@ -1558,7 +1569,8 @@ export default function SettingsPage() {
                       type="radio"
                       name="type"
                       value="day"
-                      defaultChecked={editingAvailability && editingAvailability.dayOfWeek !== null}
+                      checked={availabilityType === 'day'}
+                      onChange={(e) => setAvailabilityType(e.target.value as 'date' | 'day')}
                       className="text-blue-600 focus:ring-blue-500"
                     />
                     <span className="ml-2 text-sm text-gray-700">Recurring day of week</span>
@@ -1566,41 +1578,45 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <div id="date-fields">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-                <input
-                  type="date"
-                  name="startDate"
-                  defaultValue={editingAvailability?.startDate ? new Date(editingAvailability.startDate).toISOString().split('T')[0] : ''}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <label className="block text-sm font-medium text-gray-700 mb-1 mt-4">End Date (optional)</label>
-                <input
-                  type="date"
-                  name="endDate"
-                  defaultValue={editingAvailability?.endDate ? new Date(editingAvailability.endDate).toISOString().split('T')[0] : ''}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <p className="text-xs text-gray-500 mt-1">Leave end date empty for single day unavailability</p>
-              </div>
+              {availabilityType === 'date' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                  <input
+                    type="date"
+                    name="startDate"
+                    defaultValue={editingAvailability?.startDate ? new Date(editingAvailability.startDate).toISOString().split('T')[0] : ''}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <label className="block text-sm font-medium text-gray-700 mb-1 mt-4">End Date (optional)</label>
+                  <input
+                    type="date"
+                    name="endDate"
+                    defaultValue={editingAvailability?.endDate ? new Date(editingAvailability.endDate).toISOString().split('T')[0] : ''}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Leave end date empty for single day unavailability</p>
+                </div>
+              )}
 
-              <div id="day-fields" style={{ display: 'none' }}>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Day of Week</label>
-                <select
-                  name="dayOfWeek"
-                  defaultValue={editingAvailability?.dayOfWeek?.toString() || ''}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Select a day</option>
-                  <option value="0">Sunday</option>
-                  <option value="1">Monday</option>
-                  <option value="2">Tuesday</option>
-                  <option value="3">Wednesday</option>
-                  <option value="4">Thursday</option>
-                  <option value="5">Friday</option>
-                  <option value="6">Saturday</option>
-                </select>
-              </div>
+              {availabilityType === 'day' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Day of Week</label>
+                  <select
+                    name="dayOfWeek"
+                    defaultValue={editingAvailability?.dayOfWeek?.toString() || ''}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select a day</option>
+                    <option value="0">Sunday</option>
+                    <option value="1">Monday</option>
+                    <option value="2">Tuesday</option>
+                    <option value="3">Wednesday</option>
+                    <option value="4">Thursday</option>
+                    <option value="5">Friday</option>
+                    <option value="6">Saturday</option>
+                  </select>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Reason (optional)</label>
@@ -1633,23 +1649,7 @@ export default function SettingsPage() {
               </div>
             </form>
 
-            <script dangerouslySetInnerHTML={{
-              __html: `
-                document.addEventListener('change', function(e) {
-                  if (e.target.name === 'type') {
-                    const dateFields = document.getElementById('date-fields');
-                    const dayFields = document.getElementById('day-fields');
-                    if (e.target.value === 'date') {
-                      dateFields.style.display = 'block';
-                      dayFields.style.display = 'none';
-                    } else {
-                      dateFields.style.display = 'none';
-                      dayFields.style.display = 'block';
-                    }
-                  }
-                });
-              `
-            }} />
+
           </div>
         </div>
       )}
