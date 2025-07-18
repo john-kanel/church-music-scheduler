@@ -296,10 +296,10 @@ export async function generateWeeklyReportPDF(
     yPosition += 20
 
     // Filter and sort events for this week
-    const weekEvents = events.filter(event => {
+    const weekEvents = events.filter((event: any) => {
       const eventDate = new Date(event.startTime)
       return eventDate >= weekStartDate && eventDate <= weekEndDate
-    }).sort((a, b) => {
+    }).sort((a: any, b: any) => {
       const dateA = new Date(a.startTime)
       const dateB = new Date(b.startTime)
       return dateA.getTime() - dateB.getTime()

@@ -269,7 +269,7 @@ export async function sendPastorMonthlyReport(
       `}
       
       <div style="margin: 20px 0;">
-        ${events.map(event => `
+        ${events.map((event: any) => `
           <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #660033;">
             <h4 style="margin: 0 0 10px 0; color: #1f2937;">${event.name}</h4>
             <p style="margin: 5px 0;"><strong>Date:</strong> ${new Date(event.startTime).toLocaleDateString()}</p>
@@ -453,7 +453,7 @@ export async function sendPastorWeeklyReport(
       `}
       
       <div style="margin: 20px 0;">
-        ${events.map(event => `
+        ${events.map((event: any) => `
           <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #660033;">
             <h4 style="margin: 0 0 10px 0; color: #1f2937;">${event.name}</h4>
             <p style="margin: 5px 0;"><strong>Date:</strong> ${new Date(event.startTime).toLocaleDateString()}</p>
