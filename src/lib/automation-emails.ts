@@ -127,9 +127,12 @@ ${hymnsList}
     `
   }
 
-  const musiciansList = event.assignments
-    .map((assignment: any) => `${assignment.user.firstName} ${assignment.user.lastName}`)
-    .join(', ')
+  const musiciansList = event.assignments && event.assignments.length > 0
+    ? event.assignments
+        .filter((assignment: any) => assignment.user)
+        .map((assignment: any) => `${assignment.user.firstName} ${assignment.user.lastName}`)
+        .join(', ')
+    : 'No assignments yet'
 
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">

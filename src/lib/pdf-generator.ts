@@ -124,8 +124,9 @@ export async function generateMonthlyReportPDF(
           yPosition += 5
         }
 
-        // Event type
-        pdf.text(`Type: ${event.eventType.name}`, 25, yPosition)
+        // Event type (with fallback for missing eventType)
+        const eventTypeName = event.eventType?.name || 'General Event'
+        pdf.text(`Type: ${eventTypeName}`, 25, yPosition)
         yPosition += 5
 
         // Assignments summary
@@ -230,7 +231,8 @@ export async function generateMonthlyReportPDF(
 
     // Event types breakdown
     const eventTypeCount = sortedEvents.reduce((acc, event) => {
-      acc[event.eventType.name] = (acc[event.eventType.name] || 0) + 1
+      const typeName = event.eventType?.name || 'General Event'
+      acc[typeName] = (acc[typeName] || 0) + 1
       return acc
     }, {} as Record<string, number>)
 
@@ -364,8 +366,9 @@ export async function generateWeeklyReportPDF(
           yPosition += 5
         }
 
-        // Event type
-        pdf.text(`Type: ${event.eventType.name}`, 25, yPosition)
+        // Event type (with fallback for missing eventType)
+        const weeklyEventTypeName = event.eventType?.name || 'General Event'
+        pdf.text(`Type: ${weeklyEventTypeName}`, 25, yPosition)
         yPosition += 5
 
         // Assignments
