@@ -284,10 +284,11 @@ export async function sendWelcomeEmail(
   trialDaysRemaining: number = 30
 ) {
   try {
-    const fromAddress = 'Church Music Pro <support@churchmusicpro.com>'
+    const fromAddress = 'Church Music Pro <noreply@churchmusicpro.com>'
     
     const emailData = {
       from: fromAddress,
+      replyTo: 'support@churchmusicpro.com',
       to,
       subject: 'Welcome to Church Music Pro - Your 30-Day Trial Starts Now!',
       html: `
@@ -430,10 +431,11 @@ export async function sendPaymentConfirmationEmail(
   nextBillingDate: string
 ) {
   try {
-    const fromAddress = 'Church Music Pro <support@churchmusicpro.com>'
+    const fromAddress = 'Church Music Pro <noreply@churchmusicpro.com>'
     
     const emailData = {
       from: fromAddress,
+      replyTo: 'support@churchmusicpro.com',
       to,
       subject: 'Payment Confirmed - Welcome to Your Full Subscription!',
       html: `
@@ -568,11 +570,12 @@ export async function sendReferralPromotionEmail(
   referralCode: string
 ) {
   try {
-    const fromAddress = 'Church Music Pro <support@churchmusicpro.com>'
+    const fromAddress = 'Church Music Pro <noreply@churchmusicpro.com>'
     const referralUrl = `${process.env.NEXTAUTH_URL || 'https://churchmusicpro.com'}/auth/signup?ref=${referralCode}`
     
     const emailData = {
       from: fromAddress,
+      replyTo: 'support@churchmusicpro.com',
       to,
       subject: 'Earn Free Months - Refer Other Churches!',
       html: `
