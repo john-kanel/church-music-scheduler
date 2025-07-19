@@ -6,6 +6,7 @@ import { ArrowLeft, Plus, Filter, Calendar, FileText, Zap, ChevronLeft, ChevronR
 import Link from 'next/link'
 import { CreateEventModal } from '@/components/events/create-event-modal'
 import { ServicePartEditModal } from '@/components/events/service-part-edit-modal'
+import { AutoAssignModal } from '@/components/events/auto-assign-modal'
 import dynamic from 'next/dynamic'
 
 // Dynamically import PdfProcessor to prevent SSR issues
@@ -47,6 +48,7 @@ interface Event {
     id: string
     roleName: string
     status: string
+    isAutoAssigned?: boolean
     user?: {
       id: string
       firstName: string
@@ -158,6 +160,12 @@ export default function EventPlannerPage() {
   const [openGroupDropdown, setOpenGroupDropdown] = useState<string | null>(null)
   const [selectedGroups, setSelectedGroups] = useState<Record<string, string[]>>({})
 
+  // Auto-assignment state
+  const [selectedEvents, setSelectedEvents] = useState<Set<string>>(new Set())
+  const [showAutoAssignModal, setShowAutoAssignModal] = useState(false)
+  const [lastAutoAssignBatch, setLastAutoAssignBatch] = useState<string[]>([]) // Track last batch for undo
+  const [openFilterDropdown, setOpenFilterDropdown] = useState<string | null>(null)
+
   // Toast functions
   const showToast = (type: 'success' | 'error', message: string) => {
     const id = Date.now().toString()
@@ -183,6 +191,20 @@ export default function EventPlannerPage() {
       restoreBackedUpChanges()
     }
   }, [session?.user?.id])
+
+  // Click outside handler for filter dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (openFilterDropdown) {
+        setOpenFilterDropdown(null)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [openFilterDropdown])
 
   // Recovery mechanism for backed-up changes
   const restoreBackedUpChanges = () => {
@@ -299,6 +321,74 @@ export default function EventPlannerPage() {
       newVisible.add(color)
     }
     setVisibleEventColors(newVisible)
+  }
+
+  // Auto-assignment functions
+  const toggleEventSelection = (eventId: string) => {
+    const newSelected = new Set(selectedEvents)
+    if (newSelected.has(eventId)) {
+      newSelected.delete(eventId)
+    } else {
+      newSelected.add(eventId)
+    }
+    setSelectedEvents(newSelected)
+  }
+
+  const selectAllEventsForFilter = (eventNames: string[]) => {
+    const eventsToSelect = data?.events.filter(event => 
+      eventNames.includes(event.name) && visibleEventColors.has(event.eventType.color)
+    ).map(event => event.id) || []
+    
+    const newSelected = new Set(selectedEvents)
+    eventsToSelect.forEach(eventId => newSelected.add(eventId))
+    setSelectedEvents(newSelected)
+    setOpenFilterDropdown(null) // Close dropdown after selection
+  }
+
+  const clearEventSelection = () => {
+    setSelectedEvents(new Set())
+  }
+
+  const toggleFilterDropdown = (filterKey: string) => {
+    setOpenFilterDropdown(openFilterDropdown === filterKey ? null : filterKey)
+  }
+
+  const getEventsForFilterGroup = (eventName: string) => {
+    return data?.events.filter(event => event.name === eventName && visibleEventColors.has(event.eventType.color)) || []
+  }
+
+  const handleUndoAutoAssignment = async () => {
+    if (lastAutoAssignBatch.length === 0) return
+
+    try {
+      const undoPromises = lastAutoAssignBatch.map(async (assignmentId) => {
+        try {
+          const response = await fetch(`/api/assignments/${assignmentId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ musicianId: null })
+          })
+          return response.ok
+        } catch (error) {
+          console.error(`Failed to undo assignment ${assignmentId}:`, error)
+          return false
+        }
+      })
+
+      const results = await Promise.all(undoPromises)
+      const successCount = results.filter(Boolean).length
+
+      if (successCount > 0) {
+        setLastAutoAssignBatch([]) // Clear the batch
+        await fetchPlannerData() // Refresh data
+        showToast('success', `Undid ${successCount} auto-assignments`)
+      } else {
+        showToast('error', 'Failed to undo auto-assignments')
+      }
+    } catch (error) {
+      console.error('Error undoing auto-assignments:', error)
+      showToast('error', 'Error undoing auto-assignments')
+    }
   }
 
   const updateHymnTitle = async (eventId: string, newTitle: string, servicePartId: string, hymnId?: string) => {
@@ -878,14 +968,41 @@ export default function EventPlannerPage() {
               <p className="text-sm text-gray-500">View all events in one seamless view</p>
             </div>
 
-            {/* Create Event Button */}
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Create Event</span>
-            </button>
+            {/* Action Buttons */}
+            <div className="flex items-center gap-3">
+              {/* Undo Auto Assignment Button - only show if there's a recent batch */}
+              {lastAutoAssignBatch.length > 0 && (
+                <button
+                  onClick={handleUndoAutoAssignment}
+                  className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors flex items-center gap-2"
+                >
+                  <X className="w-4 h-4" />
+                  <span className="hidden sm:inline">Undo Auto Assign ({lastAutoAssignBatch.length})</span>
+                  <span className="sm:hidden">Undo ({lastAutoAssignBatch.length})</span>
+                </button>
+              )}
+              
+              {/* Auto Assign Button - only show if events selected */}
+              {selectedEvents.size > 0 && (
+                <button
+                  onClick={() => setShowAutoAssignModal(true)}
+                  className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                >
+                  <Zap className="w-4 h-4" />
+                  <span className="hidden sm:inline">Auto Assign ({selectedEvents.size})</span>
+                  <span className="sm:hidden">{selectedEvents.size}</span>
+                </button>
+              )}
+              
+              {/* Create Event Button */}
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">Create Event</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -897,22 +1014,87 @@ export default function EventPlannerPage() {
             <Filter className="w-4 h-4 text-gray-400 flex-shrink-0" />
             <span className="text-sm font-medium text-gray-700 flex-shrink-0">Events:</span>
             <div className="flex gap-4 min-w-0">
-              {uniqueEvents.map((event: any) => (
-                <label key={event.id} className="flex items-center gap-2 flex-shrink-0">
-                  <input
-                    type="checkbox"
-                    checked={visibleEventColors.has(event.color)}
-                    onChange={() => toggleEventColor(event.color)}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <div 
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: event.color }}
-                  />
-                  <span className="text-sm text-gray-700">{event.name}</span>
-                </label>
-              ))}
+              {uniqueEvents.map((event: any) => {
+                const eventsInGroup = getEventsForFilterGroup(event.name)
+                const allSelected = eventsInGroup.every(e => selectedEvents.has(e.id))
+                const someSelected = eventsInGroup.some(e => selectedEvents.has(e.id))
+                
+                return (
+                  <div key={event.id} className="relative flex-shrink-0">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={visibleEventColors.has(event.color)}
+                        onChange={() => toggleEventColor(event.color)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <div 
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: event.color }}
+                      />
+                      <span className="text-sm text-gray-700">{event.name}</span>
+                      
+                      {/* Dropdown arrow - only show if multiple events and events are visible */}
+                      {eventsInGroup.length > 1 && visibleEventColors.has(event.color) && (
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            toggleFilterDropdown(event.name)
+                          }}
+                          className="p-1 hover:bg-gray-100 rounded"
+                        >
+                          <ChevronDown className={`w-3 h-3 text-gray-500 transition-transform ${
+                            openFilterDropdown === event.name ? 'rotate-180' : ''
+                          }`} />
+                        </button>
+                      )}
+                    </label>
+                    
+                    {/* Dropdown Menu */}
+                    {openFilterDropdown === event.name && eventsInGroup.length > 1 && (
+                      <div 
+                        className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-48"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="p-2">
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              selectAllEventsForFilter([event.name])
+                            }}
+                            className={`w-full text-left px-3 py-2 text-sm rounded hover:bg-gray-50 flex items-center gap-2 transition-colors ${
+                              allSelected ? 'text-green-700 bg-green-50' : 'text-gray-700 hover:bg-blue-50'
+                            }`}
+                          >
+                            {allSelected ? <Check className="w-4 h-4" /> : <div className="w-4 h-4" />}
+                            Select All ({eventsInGroup.length})
+                          </button>
+                          
+                          <div className="mt-1 pt-1 border-t border-gray-100">
+                            <div className="text-xs text-gray-500 px-3 py-1">
+                              {someSelected ? `${eventsInGroup.filter(e => selectedEvents.has(e.id)).length} of ${eventsInGroup.length} selected` : 'None selected'}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
+            
+            {/* Clear Selection Button */}
+            {selectedEvents.size > 0 && (
+              <button
+                onClick={clearEventSelection}
+                className="flex items-center gap-1 px-2 py-1 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded flex-shrink-0"
+              >
+                <X className="w-3 h-3" />
+                Clear ({selectedEvents.size})
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -962,6 +1144,12 @@ export default function EventPlannerPage() {
                       {/* Event Header */}
                       <div className="p-4 border-b border-gray-200 bg-gray-50">
                         <div className="flex items-center gap-2 mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedEvents.has(event.id)}
+                            onChange={() => toggleEventSelection(event.id)}
+                            className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                          />
                           <div 
                             className="w-3 h-3 rounded-full"
                             style={{ backgroundColor: event.eventType.color }}
@@ -1215,9 +1403,16 @@ export default function EventPlannerPage() {
                               <div className="relative">
                                 <button
                                   onClick={() => toggleDropdown(assignment.id)}
-                                  className="w-full text-sm text-gray-900 text-left hover:bg-gray-100 rounded-sm px-2 py-1 font-normal"
+                                  className="w-full text-sm text-gray-900 text-left hover:bg-gray-100 rounded-sm px-2 py-1 font-normal flex items-center gap-2"
                                 >
-                                  {assignment.user.firstName} {assignment.user.lastName}
+                                  <span className="flex-1 truncate">
+                                    {assignment.user.firstName} {assignment.user.lastName}
+                                  </span>
+                                  {assignment.isAutoAssigned && (
+                                    <span className="px-1.5 py-0.5 text-xs bg-green-100 text-green-700 rounded font-medium flex-shrink-0">
+                                      AUTO
+                                    </span>
+                                  )}
                                 </button>
                                 
                                 {/* Dropdown for changing assignment */}
@@ -1314,6 +1509,12 @@ export default function EventPlannerPage() {
                           {/* Event Header */}
                           <div className="p-4 border-b border-gray-200 bg-gray-50">
                             <div className="flex items-center gap-2 mb-2">
+                              <input
+                                type="checkbox"
+                                checked={selectedEvents.has(event.id)}
+                                onChange={() => toggleEventSelection(event.id)}
+                                className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                              />
                               <div 
                                 className="w-3 h-3 rounded-full"
                                 style={{ backgroundColor: event.eventType.color }}
@@ -1567,9 +1768,16 @@ export default function EventPlannerPage() {
                                   <div className="relative">
                                     <button
                                       onClick={() => toggleDropdown(assignment.id)}
-                                      className="w-full text-sm text-gray-900 text-left hover:bg-gray-100 rounded-sm px-2 py-1 font-normal"
+                                      className="w-full text-sm text-gray-900 text-left hover:bg-gray-100 rounded-sm px-2 py-1 font-normal flex items-center gap-2"
                                     >
-                                      {assignment.user.firstName} {assignment.user.lastName}
+                                      <span className="flex-1 truncate">
+                                        {assignment.user.firstName} {assignment.user.lastName}
+                                      </span>
+                                      {assignment.isAutoAssigned && (
+                                        <span className="px-1.5 py-0.5 text-xs bg-green-100 text-green-700 rounded font-medium flex-shrink-0">
+                                          AUTO
+                                        </span>
+                                      )}
                                     </button>
                                     
                                     {/* Dropdown for changing assignment */}
@@ -1713,7 +1921,24 @@ export default function EventPlannerPage() {
         clickPosition={clickPosition}
       />
 
-
+      {/* Auto Assign Modal */}
+      {showAutoAssignModal && (
+        <AutoAssignModal
+          isOpen={showAutoAssignModal}
+          onClose={() => setShowAutoAssignModal(false)}
+          selectedEventIds={Array.from(selectedEvents)}
+          groups={groups}
+          onAssignComplete={async (assignmentIds) => {
+            setLastAutoAssignBatch(assignmentIds)
+            const eventCount = selectedEvents.size
+            setSelectedEvents(new Set()) // Clear selection after assignment
+            setShowAutoAssignModal(false)
+            // Refresh data to show assignments
+            await fetchPlannerData()
+            showToast('success', `Auto-assigned musicians to ${eventCount} events`)
+          }}
+        />
+      )}
 
       {/* Toast Notifications */}
       <ToastContainer toasts={toasts} removeToast={removeToast} />

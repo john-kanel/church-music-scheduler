@@ -24,7 +24,7 @@ export async function PUT(
 
     const { musicianId } = await params
     const body = await request.json()
-    const { firstName, lastName, email, phone, isVerified, status } = body
+    const { firstName, lastName, email, phone, isVerified, status, instruments } = body
 
     // Validation
     if (!firstName || !lastName || !email) {
@@ -71,6 +71,7 @@ export async function PUT(
         lastName: lastName.trim(),
         email: email.trim().toLowerCase(),
         phone: phone ? phone.trim() : null,
+        ...(Array.isArray(instruments) && { instruments }),
         ...(typeof isVerified === 'boolean' && { isVerified }),
         ...(status && { 
           isVerified: status === 'active'
@@ -82,6 +83,7 @@ export async function PUT(
         lastName: true,
         email: true,
         phone: true,
+        instruments: true,
         isVerified: true,
         createdAt: true
       }
@@ -105,6 +107,7 @@ export async function PUT(
       message: 'Musician updated successfully',
       musician: {
         ...updatedMusician,
+        instruments: updatedMusician.instruments || [],
         status: status || (updatedMusician.isVerified ? 'active' : 'pending')
       }
     })
@@ -145,6 +148,7 @@ export async function GET(
         email: true,
         phone: true,
         role: true,
+        instruments: true,
         isVerified: true,
         emailNotifications: true,
         smsNotifications: true,
@@ -213,6 +217,7 @@ export async function GET(
       email: musician.email,
       phone: musician.phone,
       role: musician.role,
+      instruments: musician.instruments || [],
       isVerified: musician.isVerified,
       status: status,
       emailNotifications: musician.emailNotifications,

@@ -58,6 +58,7 @@ export async function GET(request: NextRequest) {
           isVerified: true,
           emailNotifications: true,
           smsNotifications: true,
+          instruments: true,
           createdAt: true,
           groupMemberships: {
             select: {
@@ -126,7 +127,7 @@ export async function GET(request: NextRequest) {
         emailNotifications: musician.emailNotifications,
         smsNotifications: musician.smsNotifications,
         createdAt: musician.createdAt.toISOString(), // Convert Date to ISO string
-        instrument: 'Musician', // Placeholder - we can add proper instrument field later
+        instruments: musician.instruments || [],
         groups: musician.groupMemberships.map((gm: any) => gm.group),
         upcomingEvents: [], // Removed for performance - can be loaded separately if needed
         totalAcceptedAssignments: musician._count.eventAssignments

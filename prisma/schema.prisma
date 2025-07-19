@@ -176,20 +176,21 @@ model GroupMember {
 }
 
 model EventAssignment {
-  id           String           @id @default(cuid())
-  eventId      String
-  userId       String?
-  groupId      String?
-  roleName     String?
-  customRoleId String?
-  maxMusicians Int?
-  status       AssignmentStatus @default(PENDING)
-  assignedAt   DateTime         @default(now())
-  respondedAt  DateTime?
-  customRole   CustomRole?      @relation(fields: [customRoleId], references: [id])
-  event        Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  group        Group?           @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  user         User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String           @id @default(cuid())
+  eventId        String
+  userId         String?
+  groupId        String?
+  roleName       String?
+  customRoleId   String?
+  maxMusicians   Int?
+  status         AssignmentStatus @default(PENDING)
+  assignedAt     DateTime         @default(now())
+  respondedAt    DateTime?
+  isAutoAssigned Boolean          @default(false)
+  customRole     CustomRole?      @relation(fields: [customRoleId], references: [id])
+  event          Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  group          Group?           @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user           User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, userId])
   @@index([userId])

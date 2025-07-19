@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const { eventIds, preview = false } = await request.json()
+    const { eventIds, preview = false, groupFilter } = await request.json()
 
     if (!eventIds || !Array.isArray(eventIds) || eventIds.length === 0) {
       return NextResponse.json({ error: 'Event IDs are required' }, { status: 400 })
@@ -148,13 +148,27 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Get all available musicians (verified and active)
+    // Build musician query with optional group filtering
+    const musicianWhere: any = {
+      churchId: session.user.churchId,
+      role: 'MUSICIAN',
+      isVerified: true
+    }
+
+    // Add group filter if specified
+    if (groupFilter && Array.isArray(groupFilter) && groupFilter.length > 0) {
+      musicianWhere.groupMemberships = {
+        some: {
+          groupId: {
+            in: groupFilter
+          }
+        }
+      }
+    }
+
+    // Get all available musicians (verified and active, optionally filtered by groups)
     const musicians = await prisma.user.findMany({
-      where: {
-        churchId: session.user.churchId,
-        role: 'MUSICIAN',
-        isVerified: true
-      },
+      where: musicianWhere,
       include: {
         eventAssignments: {
           where: {
@@ -174,7 +188,17 @@ export async function POST(request: NextRequest) {
             }
           }
         },
-        unavailabilities: true
+        unavailabilities: true,
+        groupMemberships: {
+          include: {
+            group: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        }
       }
     })
 
@@ -229,13 +253,39 @@ export async function POST(request: NextRequest) {
     // Function to check if musician is qualified for role
     const isMusicianQualified = (musician: any, roleName: string) => {
       if (!musician.instruments || musician.instruments.length === 0) {
-        return true // Allow assignment if no instruments specified
+        return false // Don't auto-assign if no instruments specified
       }
       
       const roleNameLower = roleName.toLowerCase()
-      return musician.instruments.some((instrument: string) => 
-        instrument.toLowerCase().includes(roleNameLower) || 
-        roleNameLower.includes(instrument.toLowerCase())
+      const musicianInstruments = musician.instruments.map((i: string) => i.toLowerCase())
+      
+      // Define role-to-instrument mappings
+      const roleInstrumentMap: { [key: string]: string[] } = {
+        'accompanist': ['accompanist', 'pianist', 'organist'],
+        'pianist': ['pianist', 'accompanist'],
+        'organist': ['organist', 'accompanist'],
+        'vocalist': ['vocalist', 'cantor'],
+        'cantor': ['cantor', 'vocalist'],
+        'guitarist': ['guitarist'],
+        'drummer': ['drummer'],
+        'bassist': ['bassist'],
+        'violinist': ['violinist'],
+        'musician': ['musician', 'accompanist', 'pianist', 'organist', 'vocalist', 'cantor', 'guitarist', 'drummer', 'bassist', 'violinist']
+      }
+      
+      // Check for direct role match in mappings
+      for (const [role, validInstruments] of Object.entries(roleInstrumentMap)) {
+        if (roleNameLower.includes(role)) {
+          return musicianInstruments.some((instrument: string) => 
+            validInstruments.includes(instrument)
+          )
+        }
+      }
+      
+      // Fallback: check if role name matches any instrument
+      return musicianInstruments.some((instrument: string) => 
+        instrument.includes(roleNameLower) || 
+        roleNameLower.includes(instrument)
       )
     }
 
@@ -248,11 +298,19 @@ export async function POST(request: NextRequest) {
       const eventEnd = assignment.event.endTime ? new Date(assignment.event.endTime as any) : null
       
       // Find qualified and available musicians
-      const qualifiedMusicians = musicians.filter(musician => 
-        !usedMusicians.has(musician.id) &&
-        isMusicianQualified(musician, assignment.roleName || '') &&
-        isMusicianAvailable(musician, eventStart, eventEnd)
-      )
+      const qualifiedMusicians = musicians.filter(musician => {
+        if (usedMusicians.has(musician.id)) return false
+        
+        const isQualified = isMusicianQualified(musician, assignment.roleName || '')
+        const isAvailable = isMusicianAvailable(musician, eventStart, eventEnd)
+        
+        // Debug logging for troubleshooting
+        if (!isQualified) {
+          console.log(`Musician ${musician.firstName} ${musician.lastName} not qualified for ${assignment.roleName}. Instruments: [${musician.instruments?.join(', ') || 'none'}]`)
+        }
+        
+        return isQualified && isAvailable
+      })
 
       if (qualifiedMusicians.length > 0) {
         // Randomly select from qualified musicians
@@ -305,9 +363,12 @@ export async function POST(request: NextRequest) {
           await prisma.eventAssignment.update({
             where: { id: proposal.assignmentId },
             data: {
-              userId: proposal.musicianId,
-              status: 'PENDING' // Musician still needs to accept
-            }
+              user: {
+                connect: { id: proposal.musicianId }
+              },
+              status: 'PENDING', // Musician still needs to accept
+              isAutoAssigned: true
+            } as any
           })
           successfulAssignments.push(proposal)
         } catch (error) {

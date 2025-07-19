@@ -40,6 +40,7 @@ export async function GET(req: NextRequest) {
         lastName: true,
         email: true,
         phone: true,
+        instruments: true,
         isVerified: true,
         createdAt: true,
         groupMemberships: {
@@ -64,6 +65,7 @@ export async function GET(req: NextRequest) {
       'Last Name', 
       'Email',
       'Phone',
+      'Instruments/Role',
       'Status',
       'Groups',
       'Date Joined'
@@ -72,6 +74,11 @@ export async function GET(req: NextRequest) {
     const csvRows = musicians.map((musician: any) => {
       // Determine status based on isVerified
       const status = musician.isVerified ? 'Active' : 'Pending'
+
+      // Format instruments
+      const instruments = musician.instruments && musician.instruments.length > 0
+        ? musician.instruments.map((i: string) => i.charAt(0).toUpperCase() + i.slice(1)).join('; ')
+        : 'No instruments specified'
 
       // Format groups
       const groups = musician.groupMemberships
@@ -86,6 +93,7 @@ export async function GET(req: NextRequest) {
         musician.lastName,
         musician.email,
         musician.phone || '',
+        instruments,
         status,
         groups || 'No groups',
         joinedDate

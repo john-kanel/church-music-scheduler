@@ -16,6 +16,7 @@ interface Musician {
   isVerified: boolean
   createdAt: string
   status?: 'active' | 'pending' | 'inactive'
+  instruments?: string[]
   groups?: Array<{
     id: string
     name: string
@@ -29,6 +30,7 @@ interface EditingMusician {
   email: string
   phone: string
   status: 'active' | 'pending' | 'inactive'
+  instruments: string[]
   groups: Array<{
     id: string
     name: string
@@ -110,6 +112,7 @@ export default function MusiciansPage() {
       email: musician.email,
       phone: musician.phone || '',
       status: musician.status || (musician.isVerified ? 'active' : 'pending'),
+      instruments: musician.instruments || [],
       groups: musician.groups || []
     })
     // Fetch available groups when editing starts
@@ -141,7 +144,8 @@ export default function MusiciansPage() {
           lastName: editingData.lastName,
           email: editingData.email,
           phone: editingData.phone || null,
-          status: editingData.status
+          status: editingData.status,
+          instruments: editingData.instruments
         }),
       })
 
@@ -220,6 +224,7 @@ export default function MusiciansPage() {
               phone: editingData.phone || undefined,
               status: editingData.status,
               isVerified: editingData.status === 'active',
+              instruments: editingData.instruments,
               groups: editingData.groups
             }
           : musician
@@ -257,6 +262,26 @@ export default function MusiciansPage() {
       setEditingData({
         ...editingData,
         groups: [...editingData.groups, { id: group.id, name: group.name }]
+      })
+    }
+  }
+
+  const handleInstrumentToggle = (instrument: string) => {
+    if (!editingData) return
+
+    const isCurrentlySelected = editingData.instruments.includes(instrument)
+    
+    if (isCurrentlySelected) {
+      // Remove from instruments
+      setEditingData({
+        ...editingData,
+        instruments: editingData.instruments.filter(i => i !== instrument)
+      })
+    } else {
+      // Add to instruments
+      setEditingData({
+        ...editingData,
+        instruments: [...editingData.instruments, instrument]
       })
     }
   }
@@ -309,6 +334,21 @@ export default function MusiciansPage() {
 
   // Check if user can edit musicians
   const canEditMusicians = session?.user?.role && ['DIRECTOR', 'ASSOCIATE_DIRECTOR', 'PASTOR', 'ASSOCIATE_PASTOR'].includes(session.user.role)
+
+  // Available instrument/role options
+  const availableInstruments = [
+    'musician',
+    'accompanist',
+    'vocalist',
+    'cantor',
+    'organist',
+    'pianist',
+    'guitarist',
+    'drummer',
+    'bassist',
+    'violinist',
+    'other'
+  ]
 
   // Filter musicians based on search term and status
   const filteredMusicians = musicians.filter(musician => {
@@ -471,6 +511,9 @@ export default function MusiciansPage() {
                       Contact
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Instruments/Role
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       <div className="flex items-center space-x-2">
                         <span>Status</span>
                         <div className="relative">
@@ -541,7 +584,7 @@ export default function MusiciansPage() {
                   {filteredMusicians.length === 0 ? (
                     /* No results message */
                     <tr>
-                      <td colSpan={6} className="px-6 py-12 text-center">
+                      <td colSpan={7} className="px-6 py-12 text-center">
                         <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
                         <h3 className="text-lg font-medium text-gray-900 mb-2">
                           No musicians match this filter
@@ -641,6 +684,49 @@ export default function MusiciansPage() {
                                 <Phone className="h-4 w-4 text-gray-400 mr-2" />
                                 {musician.phone}
                               </div>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {editingId === musician.id && editingData ? (
+                          <div className="max-w-48">
+                            <div className="space-y-1">
+                              <div className="text-xs font-medium text-gray-700 mb-2">Select Instruments/Roles:</div>
+                              <div className="max-h-32 overflow-y-auto space-y-1">
+                                {availableInstruments.map((instrument) => {
+                                  const isSelected = editingData.instruments.includes(instrument)
+                                  return (
+                                    <label
+                                      key={instrument}
+                                      className="flex items-center space-x-2 text-xs cursor-pointer hover:bg-gray-50 px-2 py-1 rounded"
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={isSelected}
+                                        onChange={() => handleInstrumentToggle(instrument)}
+                                        className="h-3 w-3 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                                      />
+                                      <span className="text-gray-700 capitalize">{instrument}</span>
+                                    </label>
+                                  )
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-wrap gap-1">
+                            {musician.instruments && musician.instruments.length > 0 ? (
+                              musician.instruments.map((instrument, index) => (
+                                <span
+                                  key={index}
+                                  className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800"
+                                >
+                                  {instrument.charAt(0).toUpperCase() + instrument.slice(1)}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-xs text-gray-400 italic">No instruments specified</span>
                             )}
                           </div>
                         )}
