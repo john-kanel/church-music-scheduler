@@ -104,11 +104,29 @@ export async function PUT(
               select: {
                 id: true,
                 name: true,
-                startTime: true
+                startTime: true,
+                location: true
               }
             }
           }
         })
+
+        // Create cancellation notification (musician self-removal)
+        try {
+          const { createCancellationNotification } = await import('@/lib/cancellation-notifications')
+          await createCancellationNotification({
+            eventId: updatedAssignment.event.id,
+            eventName: updatedAssignment.event.name,
+            eventStartTime: updatedAssignment.event.startTime,
+            eventLocation: updatedAssignment.event.location || '',
+            roleName: assignment.roleName || undefined,
+            cancelledByUserId: session.user.id,
+            churchId: session.user.churchId
+          })
+        } catch (error) {
+          console.error('Error creating cancellation notification:', error)
+          // Don't fail the assignment decline if notification fails
+        }
 
         return NextResponse.json({
           message: 'Assignment declined successfully - role is now available for others',

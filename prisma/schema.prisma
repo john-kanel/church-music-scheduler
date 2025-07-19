@@ -80,6 +80,7 @@ model User {
   uploadedChurchDocs   ChurchDocument[]
   createdChurchLinks   ChurchLink[]
   unavailabilities     MusicianUnavailability[]
+  cancellationNotifications CancellationNotification[]
 
   @@index([churchId])
   @@index([role])
@@ -139,6 +140,7 @@ model Event {
   notificationLogs  NotificationLog[]
   hymns             EventHymn[]
   documents         EventDocument[]
+  cancellationNotifications CancellationNotification[]
 
   @@index([churchId])
   @@index([startTime])
@@ -568,6 +570,23 @@ model MusicianUnavailability {
   @@map("musician_unavailabilities")
 }
 
+model CancellationNotification {
+  id              String                      @id @default(cuid())
+  eventId         String
+  roleName        String?                     // The role that became available (e.g., "Accompanist")
+  cancelledBy     String                      // User ID of who cancelled (for tracking, not displayed)
+  batchKey        String                      // For grouping notifications within 1 hour: eventId + date hour
+  sentAt          DateTime?                   // When notification was sent (null if still batching)
+  createdAt       DateTime                    @default(now())
+  updatedAt       DateTime                    @updatedAt
+  
+  event           Event                       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  cancelledByUser User                        @relation(fields: [cancelledBy], references: [id])
+  
+  @@index([batchKey, sentAt])
+  @@map("cancellation_notifications")
+}
+
 enum UserRole {
   DIRECTOR
   ASSOCIATE_DIRECTOR
@@ -627,6 +646,7 @@ enum NotificationType {
   PASTOR_WEEKLY_REPORT
   EVENT_CANCELLED
   EVENT_UPDATED
+  MUSICIAN_CANCELLATION
 }
 
 enum EmailType {

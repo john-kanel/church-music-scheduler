@@ -21,20 +21,30 @@ function SignUpForm() {
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [isHydrated, setIsHydrated] = useState(false)
 
-  // Pre-fill form data from URL parameters
+  // Handle hydration and pre-fill form data from URL parameters
   useEffect(() => {
+    setIsHydrated(true)
+    
     const refCode = searchParams.get('ref')
     const email = searchParams.get('email')
     const church = searchParams.get('church')
     
-    setFormData(prev => ({
-      ...prev,
-      ...(refCode && { referralCode: refCode.toUpperCase() }),
-      ...(email && { email: email }),
-      ...(church && { churchName: church })
-    }))
+    if (refCode || email || church) {
+      setFormData(prev => ({
+        ...prev,
+        ...(refCode && { referralCode: refCode.toUpperCase() }),
+        ...(email && { email: email }),
+        ...(church && { churchName: church })
+      }))
+    }
   }, [searchParams])
+
+  // Don't render form until hydrated to prevent mismatch
+  if (!isHydrated) {
+    return <LoadingFallback />
+  }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target

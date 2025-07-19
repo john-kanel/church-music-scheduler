@@ -366,10 +366,18 @@ export async function POST(request: NextRequest) {
               user: {
                 connect: { id: proposal.musicianId }
               },
-              status: 'PENDING', // Musician still needs to accept
-              isAutoAssigned: true
-            } as any
+              status: 'PENDING' // Musician still needs to accept
+            }
           })
+          
+          // Update the isAutoAssigned field separately if needed
+          if (proposal.assignmentId) {
+            await prisma.$executeRaw`
+              UPDATE "EventAssignment" 
+              SET "isAutoAssigned" = true 
+              WHERE id = ${proposal.assignmentId}
+            `
+          }
           successfulAssignments.push(proposal)
         } catch (error) {
           console.error(`Failed to assign ${proposal.musicianName} to ${proposal.roleName}:`, error)

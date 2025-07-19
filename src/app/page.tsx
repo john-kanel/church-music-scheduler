@@ -525,7 +525,7 @@ export default function HomePage() {
       </div>
 
       {/* Pricing Section */}
-      <div id="pricing" className="bg-gray-50 py-16">
+      <div id="pricing" className="bg-gray-50 pt-16 pb-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
@@ -650,6 +650,26 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Questions Section */}
+      <div className="bg-gray-50 pb-12 pt-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-4">
+              Got questions?
+            </h3>
+            <p className="text-lg text-gray-600">
+              Email{' '}
+              <a 
+                href="mailto:support@churchmusicpro.com" 
+                className="text-brand-600 hover:text-brand-700 transition-colors font-medium"
+              >
+                support@churchmusicpro.com
+              </a>
+            </p>
           </div>
         </div>
       </div>
