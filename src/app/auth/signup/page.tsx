@@ -16,7 +16,8 @@ function SignUpForm() {
     confirmPassword: '',
     churchName: '',
     role: 'DIRECTOR' as 'DIRECTOR' | 'PASTOR',
-    referralCode: ''
+    referralCode: '',
+    smsOptIn: false
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -73,7 +74,8 @@ function SignUpForm() {
           password: formData.password,
           churchName: formData.churchName,
           role: formData.role,
-          referralCode: formData.referralCode || undefined
+          referralCode: formData.referralCode || undefined,
+          smsOptIn: formData.smsOptIn
         }),
       })
 
@@ -237,6 +239,28 @@ function SignUpForm() {
             <p className="text-xs text-gray-500 mt-1">
               🎁 Have a referral code? Enter it here to get an extra 30 days free trial!
             </p>
+          </div>
+
+          {/* SMS Opt-In */}
+          <div className="flex items-start">
+            <div className="flex items-center h-5">
+              <input
+                type="checkbox"
+                id="smsOptIn"
+                name="smsOptIn"
+                checked={formData.smsOptIn}
+                onChange={(e) => setFormData(prev => ({ ...prev, smsOptIn: e.target.checked }))}
+                className="h-4 w-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500"
+              />
+            </div>
+            <div className="ml-3 text-sm">
+              <label htmlFor="smsOptIn" className="font-medium text-gray-700">
+                Receive text message notifications
+              </label>
+              <p className="text-gray-500">
+                Get important updates and reminders via SMS. You can opt out anytime.
+              </p>
+            </div>
           </div>
 
           <button

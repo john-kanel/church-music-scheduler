@@ -9,7 +9,8 @@ export async function POST(req: NextRequest) {
       password,
       churchName, 
       role, 
-      referralCode 
+      referralCode,
+      smsOptIn 
     } = await req.json()
     
     if (!email || !name || !password || !churchName || !role) {
@@ -65,7 +66,8 @@ export async function POST(req: NextRequest) {
             password,
             churchName,
             role,
-            referralCode: referralCode || null
+            referralCode: referralCode || null,
+            smsOptIn: smsOptIn || false
           })
         },
       },

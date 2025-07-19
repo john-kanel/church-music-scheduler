@@ -6,7 +6,7 @@ import { generateReferralCode, isValidReferralCode } from '@/lib/utils'
 
 export async function POST(request: NextRequest) {
   try {
-    const { name, email, password, churchName, role, referralCode, ownershipToken, firstName, lastName } = await request.json()
+    const { name, email, password, churchName, role, referralCode, ownershipToken, firstName, lastName, smsOptIn } = await request.json()
 
     // Handle ownership token signup (different validation)
     if (ownershipToken) {
@@ -70,6 +70,7 @@ export async function POST(request: NextRequest) {
           password: hashedPassword,
           role: transfer.inviteeRole,
           churchId: transfer.churchId,
+          smsNotifications: smsOptIn || false,
         },
         select: {
           id: true,
@@ -196,6 +197,7 @@ export async function POST(request: NextRequest) {
           password: hashedPassword,
           role: role || 'DIRECTOR',
           churchId: church.id,
+          smsNotifications: smsOptIn || false,
         },
         select: {
           id: true,

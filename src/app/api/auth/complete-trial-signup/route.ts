@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { name, email, password, churchName, role, referralCode } = signupData
+    const { name, email, password, churchName, role, referralCode, smsOptIn } = signupData
 
     if (!name || !email || !password || !churchName || !role) {
       return NextResponse.json(
@@ -170,6 +170,7 @@ export async function POST(request: NextRequest) {
           password: hashedPassword,
           role: 'DIRECTOR',
           churchId: church.id,
+          smsNotifications: smsOptIn || false,
         },
         select: {
           id: true,
