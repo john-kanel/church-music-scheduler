@@ -75,6 +75,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const {
       musicianNotifications,
+      allowMusiciansToSendMessages,
       pastorEmailEnabled,
       pastorMonthlyReportDay,
       pastorWeeklyReportEnabled,
@@ -88,6 +89,7 @@ export async function POST(request: NextRequest) {
       where: { churchId: user.churchId },
       create: {
         churchId: user.churchId,
+        allowMusiciansToSendMessages,
         pastorEmailEnabled,
         pastorMonthlyReportDay,
         pastorWeeklyReportEnabled,
@@ -102,6 +104,7 @@ export async function POST(request: NextRequest) {
         }
       },
       update: {
+        allowMusiciansToSendMessages,
         pastorEmailEnabled,
         pastorMonthlyReportDay,
         pastorWeeklyReportEnabled,
@@ -132,6 +135,7 @@ export async function POST(request: NextRequest) {
         userId: user.id,
         metadata: {
           musicianNotificationsCount: musicianNotifications.length,
+          allowMusiciansToSendMessages,
           pastorEmailEnabled,
           pastorWeeklyReportEnabled,
           pastorDailyDigestEnabled

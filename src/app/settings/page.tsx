@@ -53,6 +53,7 @@ interface MusicianNotification {
 interface AutomationSettings {
   id?: string
   musicianNotifications: MusicianNotification[]
+  allowMusiciansToSendMessages: boolean
   pastorEmailEnabled: boolean
   pastorMonthlyReportDay: number
   pastorWeeklyReportEnabled: boolean
@@ -92,10 +93,13 @@ export default function SettingsPage() {
   const [serviceParts, setServiceParts] = useState<ServicePart[]>([])
   const [loadingServiceParts, setLoadingServiceParts] = useState(false)
   const [editingServiceParts, setEditingServiceParts] = useState(false)
+  const [draggedItem, setDraggedItem] = useState<string | null>(null)
+  const [dropTarget, setDropTarget] = useState<string | null>(null)
 
   // Automation Settings
   const [automationSettings, setAutomationSettings] = useState<AutomationSettings>({
     musicianNotifications: [],
+    allowMusiciansToSendMessages: false,
     pastorEmailEnabled: true,
     pastorMonthlyReportDay: 27,
     pastorWeeklyReportEnabled: false,
@@ -276,7 +280,8 @@ export default function SettingsPage() {
       const response = await fetch('/api/service-parts')
       if (response.ok) {
         const data = await response.json()
-        setServiceParts(data.serviceParts || [])
+        const sortedParts = (data.serviceParts || []).sort((a: ServicePart, b: ServicePart) => a.order - b.order)
+        setServiceParts(sortedParts)
       }
     } catch (error) {
       console.error('Error fetching service parts:', error)
@@ -295,6 +300,7 @@ export default function SettingsPage() {
           setAutomationSettings({
             id: data.id,
             musicianNotifications: data.musicianNotifications || [],
+            allowMusiciansToSendMessages: data.allowMusiciansToSendMessages ?? false,
             pastorEmailEnabled: data.pastorEmailEnabled ?? true,
             pastorMonthlyReportDay: data.pastorMonthlyReportDay ?? 27,
             pastorWeeklyReportEnabled: data.pastorWeeklyReportEnabled ?? false,
@@ -538,11 +544,12 @@ export default function SettingsPage() {
   }
 
   const addServicePart = () => {
+    const maxOrder = serviceParts.length > 0 ? Math.max(...serviceParts.map(p => p.order)) : -1
     const newPart = {
       id: `temp-${Date.now()}`,
       name: '',
       isRequired: false,
-      order: serviceParts.length
+      order: maxOrder + 1
     }
     setServiceParts([...serviceParts, newPart])
   }
@@ -922,6 +929,29 @@ export default function SettingsPage() {
                       <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                     </label>
                   </div>
+
+                  {/* Musician Messaging Permission - Directors only */}
+                  {(session?.user?.role === 'DIRECTOR' || session?.user?.role === 'ASSOCIATE_DIRECTOR') && (
+                    <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                      <div>
+                        <h3 className="font-medium text-gray-900">Allow Musicians to Send Messages</h3>
+                        <p className="text-sm text-gray-500">
+                          When enabled, musicians can send messages to other musicians and ministry members. 
+                          When disabled, only directors and pastors can send messages.
+                        </p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={automationSettings.allowMusiciansToSendMessages}
+                          onChange={(e) => setAutomationSettings(prev => ({ ...prev, allowMusiciansToSendMessages: e.target.checked }))}
+                          disabled={!isEditing}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                      </label>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1189,6 +1219,11 @@ export default function SettingsPage() {
                   </h2>
                   <p className="text-sm text-gray-600 mt-1">
                     Define the parts of your service where music is played (e.g., "Prelude", "Hymn", "Offertory", "Postlude").
+                    {isEditing && (
+                      <span className="text-blue-600 font-medium ml-2">
+                        💡 Drag the grip handles to reorder service parts.
+                      </span>
+                    )}
                   </p>
                 </div>
 
@@ -1200,12 +1235,64 @@ export default function SettingsPage() {
                 ) : (
                   <div className="space-y-4">
                     {serviceParts.map((part, index) => (
-                      <div key={part.id} className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg">
-                        {isEditing && (
-                          <div className="flex-shrink-0">
-                            <GripVertical className="h-5 w-5 text-gray-400" />
-                          </div>
-                        )}
+                                              <div
+                          key={part.id}
+                          className={`flex items-center space-x-3 p-4 border rounded-lg transition-all ${
+                            draggedItem === part.id 
+                              ? 'opacity-50 scale-95 border-blue-300 bg-blue-50' 
+                              : dropTarget === part.id 
+                                ? 'border-blue-500 bg-blue-50' 
+                                : 'border-gray-200'
+                          }`}
+                          draggable={isEditing}
+                          onDragStart={(e) => {
+                            setDraggedItem(part.id)
+                            e.dataTransfer.effectAllowed = 'move'
+                          }}
+                          onDragOver={(e) => {
+                            e.preventDefault()
+                            e.dataTransfer.dropEffect = 'move'
+                            if (draggedItem !== part.id) {
+                              setDropTarget(part.id)
+                            }
+                          }}
+                          onDragEnd={() => {
+                            setDraggedItem(null)
+                            setDropTarget(null)
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault()
+                            if (draggedItem && dropTarget && draggedItem !== dropTarget) {
+                              const draggedIndex = serviceParts.findIndex(p => p.id === draggedItem)
+                              const dropIndex = serviceParts.findIndex(p => p.id === dropTarget)
+                              if (draggedIndex !== -1 && dropIndex !== -1) {
+                                const newParts = [...serviceParts]
+                                const [movedItem] = newParts.splice(draggedIndex, 1)
+                                newParts.splice(dropIndex, 0, movedItem)
+                                
+                                // Update order values
+                                const updatedParts = newParts.map((item, index) => ({
+                                  ...item,
+                                  order: index
+                                }))
+                                setServiceParts(updatedParts)
+                              }
+                            }
+                            setDraggedItem(null)
+                            setDropTarget(null)
+                          }}
+                          onDragLeave={(e) => {
+                            // Only reset if we're leaving the entire element
+                            if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                              setDropTarget(null)
+                            }
+                          }}
+                        >
+                          {isEditing && (
+                            <div className={`flex-shrink-0 ${isEditing ? 'cursor-grab active:cursor-grabbing' : ''}`}>
+                              <GripVertical className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                            </div>
+                          )}
                         <div className="flex-1">
                           <input
                             type="text"

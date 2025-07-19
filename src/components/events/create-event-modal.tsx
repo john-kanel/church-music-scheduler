@@ -903,14 +903,14 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Music & Hymns</h3>
               <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowPdfProcessor(true)}
-                  className="flex items-center px-3 py-2 bg-[#660033] text-white rounded-lg hover:bg-[#800041] transition-colors"
-                >
-                  <FileText className="h-4 w-4 mr-1" />
-                  Auto Populate Service Parts
-                </button>
+                                  <button
+                    type="button"
+                    onClick={() => setShowPdfProcessor(true)}
+                    className="flex items-center px-3 py-2 bg-[#660033] text-white rounded-lg hover:bg-[#800041] transition-colors"
+                  >
+                    <FileText className="h-4 w-4 mr-1" />
+                    Auto Populate from Document
+                  </button>
                 <button
                   type="button"
                   onClick={addHymn}

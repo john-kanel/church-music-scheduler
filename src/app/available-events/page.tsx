@@ -246,7 +246,7 @@ export default function AvailableEventsPage() {
                   </div>
 
                   {/* Event Title */}
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">{event.name}</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3 break-words">{event.name}</h3>
 
                   {/* Date and Time */}
                   <div className="space-y-2 mb-4">

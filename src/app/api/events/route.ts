@@ -7,6 +7,7 @@ import { logActivity } from '@/lib/activity'
 import { checkSubscriptionStatus, createSubscriptionErrorResponse } from '@/lib/subscription-check'
 import { generateRecurringEvents, parseRecurrencePattern, extendRecurringEvents } from '@/lib/recurrence'
 
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -204,16 +205,29 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Combine date and time
+    // Create dates properly accounting for user timezone
     const [year, month, day] = startDate.split('-').map(Number)
     const [startHour, startMinute] = startTime.split(':').map(Number)
-    const startDateTime = new Date(year, month - 1, day, startHour, startMinute)
+    
+    // Create date string that will be interpreted correctly
+    // Format: YYYY-MM-DDTHH:MM:SS (without timezone - this gets interpreted as local server time)
+    const dateString = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}T${startHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}:00`
+    const startDateTime = new Date(dateString)
     
     let endDateTime = null
     if (endTime) {
       const [endHour, endMinute] = endTime.split(':').map(Number)
-      endDateTime = new Date(year, month - 1, day, endHour, endMinute)
+      const endDateString = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}T${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}:00`
+      endDateTime = new Date(endDateString)
     }
+
+    console.log('🕐 Date creation with ISO string:', {
+      inputTime: `${startTime} on ${startDate}`,
+      dateString,
+      startDateTime: startDateTime.toISOString(),
+      localDisplay: startDateTime.toLocaleString('en-US', { timeZone: 'America/Chicago' }),
+      note: 'Using ISO string without timezone specifier'
+    })
 
     // Find or create event type based on color
     let finalEventTypeId = eventTypeId

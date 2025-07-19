@@ -26,7 +26,6 @@ export function SendMessageModal({ isOpen, onClose, onMessageSent, recipients, g
     recipients: recipients && recipients.length > 0 ? 'group' : 'all', // 'all', 'musicians', 'specific', 'event', 'group'
     specificEmails: '',
     sendMethod: 'email', // 'email', 'sms', 'both'
-    urgent: false,
     scheduleSend: false,
     scheduleDate: '',
     scheduleTime: ''
@@ -157,16 +156,24 @@ export function SendMessageModal({ isOpen, onClose, onMessageSent, recipients, g
         'both': 'BOTH'
       }
 
+      // Prepare scheduled date if applicable
+      let scheduledFor: string | undefined = undefined
+      if (messageData.scheduleSend && messageData.scheduleDate && messageData.scheduleTime) {
+        const scheduleDateTime = new Date(`${messageData.scheduleDate}T${messageData.scheduleTime}`)
+        scheduledFor = scheduleDateTime.toISOString()
+      }
+
       const response = await fetch('/api/messages', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          subject: messageData.subject,
+          subject: messageData.sendMethod === 'sms' ? 'SMS Message' : messageData.subject,
           content: messageData.message,
           type: messageType,
           recipientIds: Array.isArray(recipientList) ? recipientList : [],
+          scheduledFor: scheduledFor,
           // eventId could be added later for event-specific messages
         })
       })
@@ -188,7 +195,6 @@ export function SendMessageModal({ isOpen, onClose, onMessageSent, recipients, g
         recipients: 'all',
         specificEmails: '',
         sendMethod: 'email',
-        urgent: false,
         scheduleSend: false,
         scheduleDate: '',
         scheduleTime: ''
@@ -464,18 +470,21 @@ export function SendMessageModal({ isOpen, onClose, onMessageSent, recipients, g
           <section>
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Message Content</h3>
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Subject *</label>
-                <input
-                  type="text"
-                  name="subject"
-                  value={messageData.subject}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent text-gray-900"
-                  placeholder="Message subject..."
-                />
-              </div>
+              {/* Only show subject line for email messages */}
+              {messageData.sendMethod !== 'sms' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Subject *</label>
+                  <input
+                    type="text"
+                    name="subject"
+                    value={messageData.subject}
+                    onChange={handleInputChange}
+                    required={messageData.sendMethod !== 'sms'}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent text-gray-900"
+                    placeholder="Message subject..."
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Message *</label>
@@ -501,20 +510,6 @@ export function SendMessageModal({ isOpen, onClose, onMessageSent, recipients, g
           <section>
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Options</h3>
             <div className="space-y-4">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  name="urgent"
-                  checked={messageData.urgent}
-                  onChange={handleInputChange}
-                  className="mr-3"
-                />
-                <div>
-                  <span className="font-medium text-gray-900">Mark as Urgent</span>
-                  <p className="text-sm text-gray-500">Adds priority flags and urgent indicators</p>
-                </div>
-              </label>
-
               <label className="flex items-center">
                 <input
                   type="checkbox"

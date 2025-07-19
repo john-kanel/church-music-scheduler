@@ -809,7 +809,7 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                                     return (
                                       <div
                                         key={event.id}
-                                        className="text-xs px-1 py-0.5 rounded truncate cursor-pointer hover:opacity-80 transition-opacity"
+                                        className="text-xs px-1 py-0.5 rounded cursor-pointer hover:opacity-80 transition-opacity overflow-hidden"
                                         style={{
                                           backgroundColor: event.eventType.color + '20',
                                           color: event.eventType.color,
@@ -821,7 +821,9 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                                           handleEventClick(event)
                                         }}
                                       >
-                                        {timeString} {event.name}
+                                        <div className="truncate">
+                                          {timeString} {event.name}
+                                        </div>
                                       </div>
                                     )
                                   })

@@ -31,8 +31,14 @@ export default function PdfProcessor({ onSuggestionsAccepted, onClose }: PdfProc
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
     if (selectedFile) {
-      if (selectedFile.type !== 'application/pdf') {
-        setError('Please select a PDF file');
+      const allowedTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      ];
+      
+      if (!allowedTypes.includes(selectedFile.type)) {
+        setError('Please select a PDF or Word document (.pdf, .doc, .docx)');
         return;
       }
       if (selectedFile.size > 10 * 1024 * 1024) {
@@ -46,7 +52,7 @@ export default function PdfProcessor({ onSuggestionsAccepted, onClose }: PdfProc
 
   const processWithAI = async () => {
     if (!file) {
-      setError('Please select a PDF file first');
+      setError('Please select a document first');
       return;
     }
 
@@ -54,9 +60,9 @@ export default function PdfProcessor({ onSuggestionsAccepted, onClose }: PdfProc
     setError('');
 
     try {
-      // Create FormData to upload the PDF
+      // Create FormData to upload the document
       const formData = new FormData();
-      formData.append('pdf', file);
+      formData.append('document', file);
 
       const response = await fetch('/api/process-pdf', {
         method: 'POST',
@@ -115,7 +121,7 @@ export default function PdfProcessor({ onSuggestionsAccepted, onClose }: PdfProc
         <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[80vh] overflow-y-auto">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold text-gray-900">
-              Review AI Suggestions
+              Review Suggestions
             </h2>
             <button
               onClick={onClose}
@@ -270,19 +276,19 @@ export default function PdfProcessor({ onSuggestionsAccepted, onClose }: PdfProc
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Upload Service Bulletin PDF
+              Upload Service Bulletin (PDF or Word Document)
             </label>
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".pdf"
+                accept=".pdf,.doc,.docx"
                 onChange={handleFileSelect}
                 className="hidden"
-                id="pdf-upload"
+                id="document-upload"
               />
               <label
-                htmlFor="pdf-upload"
+                htmlFor="document-upload"
                 className="cursor-pointer flex flex-col items-center space-y-2"
               >
                 {file ? (
@@ -297,7 +303,7 @@ export default function PdfProcessor({ onSuggestionsAccepted, onClose }: PdfProc
                   <>
                     <Upload className="w-8 h-8 text-gray-400" />
                     <div className="text-sm text-gray-600">
-                      Click to upload PDF (max 10MB)
+                      Click to upload document (PDF or Word, max 10MB)
                     </div>
                   </>
                 )}
@@ -320,7 +326,7 @@ export default function PdfProcessor({ onSuggestionsAccepted, onClose }: PdfProc
               {processing ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 inline-block" />
-                  Analyzing PDF...
+                  Analyzing document...
                 </>
               ) : (
                 'Auto Populate'

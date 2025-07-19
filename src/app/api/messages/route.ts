@@ -52,7 +52,10 @@ export async function GET(request: NextRequest) {
       sender: message.sender,
       recipientCount: message.recipients.length,
       recipients: message.recipients, // Array of user IDs
-      sentAt: message.sentAt
+      sentAt: message.sentAt,
+      scheduledFor: message.scheduledFor,
+      isScheduled: message.isScheduled,
+      status: message.sentAt ? 'sent' : (message.isScheduled ? 'scheduled' : 'draft')
     }))
 
     return NextResponse.json({ messages: formattedMessages })
@@ -80,12 +83,21 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { subject, content, type, recipientIds } = body
+    const { subject, content, type, recipientIds, scheduledFor } = body
 
     // Validation
     if (!subject || !content || !type) {
       return NextResponse.json(
         { error: 'Subject, content, and type are required' },
+        { status: 400 }
+      )
+    }
+
+    // Validate scheduled date if provided
+    const isScheduled = scheduledFor && new Date(scheduledFor) > new Date()
+    if (scheduledFor && !isScheduled) {
+      return NextResponse.json(
+        { error: 'Scheduled time must be in the future' },
         { status: 400 }
       )
     }
@@ -147,42 +159,51 @@ export async function POST(request: NextRequest) {
         type: 'EMAIL', // Map to the enum value
         churchId: session.user.churchId,
         sentBy: session.user.id,
-        recipients: recipients.map((r: any) => r.id)
+        recipients: recipients.map((r: any) => r.id),
+        isScheduled: isScheduled,
+        scheduledFor: isScheduled ? new Date(scheduledFor) : undefined,
+        sentAt: isScheduled ? undefined : new Date()
       }
     })
 
-    // Send email notifications to recipients who have email notifications enabled
-    const emailRecipients = recipients.filter((r: any) => r.emailNotifications)
+    // Determine how many emails were sent
+    let emailsSent = 0
     
-    if (emailRecipients.length > 0) {
-      // Get church and sender info for email templates
-      const church = await prisma.church.findUnique({
-        where: { id: session.user.churchId },
-        select: { name: true }
-      })
+    // Send email notifications immediately only if not scheduled
+    if (!isScheduled) {
+      const emailRecipients = recipients.filter((r: any) => r.emailNotifications)
+      
+      if (emailRecipients.length > 0) {
+        // Get church and sender info for email templates
+        const church = await prisma.church.findUnique({
+          where: { id: session.user.churchId },
+          select: { name: true }
+        })
 
-      const sender = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { firstName: true, lastName: true }
-      })
+        const sender = await prisma.user.findUnique({
+          where: { id: session.user.id },
+          select: { firstName: true, lastName: true }
+        })
 
-      const churchName = church?.name || 'Church Music Ministry'
-      const senderName = sender ? `${sender.firstName} ${sender.lastName}` : 'Music Director'
+        const churchName = church?.name || 'Church Music Ministry'
+        const senderName = sender ? `${sender.firstName} ${sender.lastName}` : 'Music Director'
 
-      // Send emails
-      for (const recipient of emailRecipients) {
-        try {
-          await sendNotificationEmail(
-            recipient.email,
-            `${recipient.firstName} ${recipient.lastName}`,
-            subject,
-            content,
-            senderName,
-            churchName
-          )
-        } catch (emailError) {
-          console.error(`Failed to send email to ${recipient.email}:`, emailError)
-          // Continue sending to other recipients even if one fails
+        // Send emails
+        for (const recipient of emailRecipients) {
+          try {
+            await sendNotificationEmail(
+              recipient.email,
+              `${recipient.firstName} ${recipient.lastName}`,
+              subject,
+              content,
+              senderName,
+              churchName
+            )
+            emailsSent++
+          } catch (emailError) {
+            console.error(`Failed to send email to ${recipient.email}:`, emailError)
+            // Continue sending to other recipients even if one fails
+          }
         }
       }
     }
@@ -203,10 +224,10 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json({
-      message: 'Message sent successfully',
+      message: isScheduled ? 'Message scheduled successfully' : 'Message sent successfully',
       communication: communication,
       recipientCount: recipients.length,
-      emailsSent: emailRecipients.length
+      emailsSent: emailsSent
     }, { status: 201 })
 
   } catch (error) {

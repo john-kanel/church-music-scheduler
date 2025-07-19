@@ -275,9 +275,16 @@ export default function HomePage() {
           <div className="mb-24">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <div className="relative">
-                {/* Screenshot Placeholder */}
-                <div className="bg-gray-100 rounded-2xl shadow-2xl aspect-[4/3] flex items-center justify-center border">
-                  <span className="text-gray-500 text-lg">PDF Upload Screenshot</span>
+                {/* Planner View Screenshot */}
+                <div className="relative rounded-2xl shadow-2xl overflow-hidden cursor-pointer" onClick={() => openImageModal("/planner view.png", "Planner view showing PDF auto-populate functionality and event scheduling")}>
+                  <Image
+                    src="/planner view.png"
+                    alt="Planner view showing PDF auto-populate functionality and event scheduling"
+                    width={600}
+                    height={450}
+                    className="w-full h-auto object-contain rounded-2xl"
+                    style={{ backgroundColor: '#f8f9fa' }}
+                  />
                 </div>
                 {/* Colored Icon Bubble */}
                 <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center shadow-lg">
@@ -337,9 +344,16 @@ export default function HomePage() {
                 </div>
               </div>
               <div className="relative order-1 lg:order-2">
-                {/* Screenshot Placeholder */}
-                <div className="bg-gray-100 rounded-2xl shadow-2xl aspect-[4/3] flex items-center justify-center border">
-                  <span className="text-gray-500 text-lg">Email Notifications Screenshot</span>
+                {/* Message View Screenshot */}
+                <div className="relative rounded-2xl shadow-2xl overflow-hidden cursor-pointer" onClick={() => openImageModal("/Message View.png", "Message view showing communication features and messaging interface")}>
+                  <Image
+                    src="/Message View.png"
+                    alt="Message view showing communication features and messaging interface"
+                    width={600}
+                    height={450}
+                    className="w-full h-auto object-contain rounded-2xl"
+                    style={{ backgroundColor: '#f8f9fa' }}
+                  />
                 </div>
                 {/* Colored Icon Bubble */}
                 <div className="absolute -bottom-4 -left-4 w-16 h-16 bg-green-600 rounded-full flex items-center justify-center shadow-lg">

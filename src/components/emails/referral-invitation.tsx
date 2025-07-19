@@ -1,4 +1,5 @@
 import React from 'react'
+import { getEmailLogoHtml } from './email-logo'
 
 interface ReferralInvitationEmailProps {
   referrerName: string
@@ -15,33 +16,20 @@ export function ReferralInvitationEmail({
 }: ReferralInvitationEmailProps) {
   return (
     <div style={{ fontFamily: 'Arial, sans-serif', maxWidth: '600px', margin: '0 auto' }}>
-      {/* Logo placeholder section */}
+      {/* Logo Section */}
       <div style={{ 
+        background: '#f8f9fa', 
+        padding: '20px', 
         textAlign: 'center', 
-        padding: '30px 20px 20px 20px', 
-        backgroundColor: '#F8F9FA',
-        borderBottom: '2px solid #E5E7EB' 
+        borderRadius: '8px 8px 0 0', 
+        borderBottom: '3px solid #660033'
       }}>
-        <div style={{
-          height: '80px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginBottom: '20px'
-        }}>
-          <img 
-            src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAACDQAAAK8CAYAAAAax30yAAAACXBIWXMAABnWAAAZ1gEY0crtAAAE5WlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSfvu78nIGlkPSdXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQnPz4KPHg6eG1wbWV0YSB4bWxuczp4PSdhZG9iZT... (TRUNCATED FOR BREVITY - use your full base64 string here) ..."
-            alt="Church Music Pro" 
-            style={{ width: '100%', height: 'auto', display: 'block', margin: '0 auto' }} 
-          />
-        </div>
-        <div style={{ fontFamily: 'Montserrat, Arial, sans-serif', fontSize: '18px', color: '#800000', marginTop: '8px' }}>
-          ORGANIZE • SCHEDULE • WORSHIP
-        </div>
+        <div dangerouslySetInnerHTML={{ __html: getEmailLogoHtml() }} />
+        <h1 style={{ color: '#333', margin: '10px 0 0 0', fontSize: '28px' }}>🎁 You're Invited!</h1>
       </div>
 
       {/* Main content */}
-      <div style={{ padding: '30px 20px' }}>
+      <div style={{ background: 'white', padding: '40px 20px', borderRadius: '0 0 8px 8px', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}>
         <h1 style={{ 
           color: '#1F2937', 
           fontSize: '28px', 

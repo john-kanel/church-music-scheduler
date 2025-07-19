@@ -1,7 +1,7 @@
-# PDF Processing Setup Guide
+# Document Processing Setup Guide
 
 ## Overview
-The PDF processing feature allows directors to upload service bulletins and automatically extract music information using AI.
+The document processing feature allows directors to upload service bulletins (PDF or Word documents) and automatically extract music information using AI.
 
 ## Required Environment Variables
 
@@ -24,9 +24,9 @@ OPENAI_ASSISTANT_ID=your_assistant_id_here
 
 2. **Assistant System Instructions:**
 ```
-You are a Church Music PDF Analyzer. Extract hymn and song information from church service bulletins, worship guides, and music sheets.
+You are a Church Music Document Analyzer. Extract hymn and song information from church service bulletins, worship guides, and music sheets in PDF or Word document format.
 
-TASK: Analyze uploaded PDFs and extract song titles with their corresponding service parts.
+TASK: Analyze uploaded documents (PDF or Word) and extract song titles with their corresponding service parts.
 
 RESPONSE FORMAT: Always respond with valid JSON:
 {
@@ -68,11 +68,11 @@ Focus on extracting actionable music information for church music directors.
 
 ## File Storage
 
-PDFs are temporarily stored locally during processing and automatically cleaned up after AI analysis.
+Documents (PDF and Word) are temporarily stored locally during processing and automatically cleaned up after AI analysis.
 
 ## Auto-Deletion System
 
-The system includes a weekly cron job that will automatically delete PDF files older than 18 months from events.
+The system includes a weekly cron job that will automatically delete document files older than 18 months from events.
 
 ### Cron Job Setup
 
@@ -92,22 +92,22 @@ CRON_SECRET=your_secure_random_string_here
 
 ## Testing
 
-To test the PDF processing:
+To test the document processing:
 
 1. Ensure environment variables are set
 2. Create an OpenAI Assistant with the provided instructions
-3. Upload a PDF through the "Auto Populate Service Parts" button in event creation
+3. Upload a PDF or Word document through the "Auto Populate" button in event creation
 4. Review and edit AI suggestions before accepting
 
 ## Error Handling
 
 - File size limit: 10MB
-- File type: PDF only
+- File types: PDF, DOC, DOCX
 - Processing timeout: 30 seconds
 - Fallback: Manual entry if AI processing fails
 
 ## Cost Considerations
 
-- OpenAI API charges apply for each PDF processed
-- File search capability may incur additional costs
+- OpenAI API charges apply for each document processed
+- File search capability may incur additional costs  
 - Monitor usage through OpenAI dashboard 

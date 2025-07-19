@@ -238,18 +238,21 @@ model Invitation {
 }
 
 model Communication {
-  id         String            @id @default(cuid())
-  subject    String
-  message    String
-  type       CommunicationType
-  churchId   String
-  eventId    String?
-  sentBy     String
-  recipients String[]
-  sentAt     DateTime          @default(now())
-  church     Church            @relation(fields: [churchId], references: [id], onDelete: Cascade)
-  event      Event?            @relation(fields: [eventId], references: [id])
-  sender     User              @relation(fields: [sentBy], references: [id])
+  id             String            @id @default(cuid())
+  subject        String
+  message        String
+  type           CommunicationType
+  churchId       String
+  eventId        String?
+  sentBy         String
+  recipients     String[]
+  sentAt         DateTime?
+  scheduledFor   DateTime?
+  isScheduled    Boolean           @default(false)
+  createdAt      DateTime          @default(now())
+  church         Church            @relation(fields: [churchId], references: [id], onDelete: Cascade)
+  event          Event?            @relation(fields: [eventId], references: [id])
+  sender         User              @relation(fields: [sentBy], references: [id])
 
   @@map("communications")
 }
@@ -385,6 +388,9 @@ model AutomationSettings {
   
   // Musician Notification Settings
   musicianNotifications     MusicianNotification[]
+  
+  // Musician Permission Settings
+  allowMusiciansToSendMessages Boolean              @default(false) // Allow musicians to send messages to other musicians
   
   // Pastor Notification Settings  
   pastorEmailEnabled        Boolean                 @default(true)

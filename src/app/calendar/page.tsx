@@ -1052,7 +1052,7 @@ export default function CalendarPage() {
                                           handleEventClick(event)
                                         }}
                                       >
-                                        <div className="truncate">
+                                        <div className="truncate overflow-hidden">
                                           <span className="font-medium">{timeString}</span> {event.name}
                                         </div>
                                         {event._tempState === 'pending' && (

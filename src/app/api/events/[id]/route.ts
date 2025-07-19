@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 
+
+
 // Helper function to generate recurring events
 function generateRecurringEvents(
   baseEvent: any,
@@ -210,15 +212,18 @@ export async function PUT(
       )
     }
 
-    // Combine date and time (consistent with event creation logic)
+    // Create dates using ISO string format (consistent with event creation logic)
     const [year, month, day] = startDate.split('-').map(Number)
     const [startHour, startMinute] = startTime.split(':').map(Number)
-    const startDateTime = new Date(year, month - 1, day, startHour, startMinute)
+    
+    const dateString = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}T${startHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}:00`
+    const startDateTime = new Date(dateString)
     
     let endDateTime = null
     if (endTime) {
       const [endHour, endMinute] = endTime.split(':').map(Number)
-      endDateTime = new Date(year, month - 1, day, endHour, endMinute)
+      const endDateString = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}T${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}:00`
+      endDateTime = new Date(endDateString)
     }
 
     console.log('📅 Date/time construction:', {

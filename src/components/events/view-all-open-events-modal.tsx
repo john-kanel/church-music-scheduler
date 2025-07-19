@@ -309,14 +309,14 @@ export function ViewAllOpenEventsModal({
                         </button>
 
                         {/* Event Details */}
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center">
+                            <div className="flex items-center min-w-0 flex-1">
                               <div
-                                className="w-3 h-3 rounded-full mr-2"
+                                className="w-3 h-3 rounded-full mr-2 flex-shrink-0"
                                 style={{ backgroundColor: event.eventType.color }}
                               />
-                              <h3 className="font-medium text-gray-900">
+                              <h3 className="font-medium text-gray-900 truncate">
                                 {event.name}
                               </h3>
                             </div>

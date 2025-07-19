@@ -455,7 +455,7 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
                                 return (
                                   <div
                                     key={event.id}
-                                    className="text-xs px-1 py-0.5 rounded truncate cursor-pointer hover:opacity-80 transition-opacity"
+                                    className="text-xs px-1 py-0.5 rounded cursor-pointer hover:opacity-80 transition-opacity overflow-hidden"
                                     style={{
                                       backgroundColor: event.eventType.color + '20',
                                       color: event.eventType.color,
@@ -467,7 +467,9 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
                                       handleEventClick(event)
                                     }}
                                   >
-                                    {timeString} {event.name}
+                                    <div className="truncate">
+                                      {timeString} {event.name}
+                                    </div>
                                   </div>
                                 )
                               })
@@ -658,8 +660,8 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
                   return (
                     <div key={event.id} className="p-3 bg-orange-50 rounded-lg border border-orange-200">
                       <div className="flex items-start justify-between">
-                        <div>
-                          <h3 className="font-medium text-gray-900 text-sm">{event.name}</h3>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-gray-900 text-sm truncate">{event.name}</h3>
                           <p className="text-xs text-gray-600">
                             {new Date(event.startTime).toLocaleDateString()} at {' '}
                             {new Date(event.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

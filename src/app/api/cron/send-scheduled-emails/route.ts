@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { sendReferralPromotionEmail } from '@/lib/resend'
+import { sendReferralPromotionEmail, sendNotificationEmail } from '@/lib/resend'
 
 export async function POST(request: NextRequest) {
   try {
@@ -104,11 +104,115 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Also process scheduled messages
+    const scheduledMessages = await prisma.communication.findMany({
+      where: {
+        isScheduled: true,
+        sentAt: null,
+        scheduledFor: {
+          lte: new Date()
+        }
+      },
+      include: {
+        church: true,
+        sender: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true
+          }
+        }
+      },
+      take: 20 // Process up to 20 messages at a time
+    })
+
+    let messageSuccessCount = 0
+    let messageErrorCount = 0
+
+    if (scheduledMessages.length > 0) {
+      console.log(`📧 Processing ${scheduledMessages.length} scheduled messages`)
+
+      for (const message of scheduledMessages) {
+        try {
+          // Get recipients
+          const recipients = await prisma.user.findMany({
+            where: {
+              id: { in: message.recipients },
+              emailNotifications: true
+            },
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true
+            }
+          })
+
+          const churchName = message.church?.name || 'Church Music Ministry'
+          const senderName = `${message.sender.firstName} ${message.sender.lastName}`
+
+          // Send emails to recipients
+          for (const recipient of recipients) {
+            try {
+              await sendNotificationEmail(
+                recipient.email,
+                `${recipient.firstName} ${recipient.lastName}`,
+                message.subject,
+                message.message,
+                senderName,
+                churchName
+              )
+            } catch (emailError) {
+              console.error(`Failed to send scheduled message to ${recipient.email}:`, emailError)
+            }
+          }
+
+          // Mark message as sent
+          await prisma.communication.update({
+            where: { id: message.id },
+            data: {
+              sentAt: new Date(),
+              isScheduled: false
+            }
+          })
+
+          // Create activity log
+          await prisma.activity.create({
+            data: {
+              type: 'MESSAGE_SENT',
+              description: `Sent scheduled message: ${message.subject}`,
+              churchId: message.churchId,
+              userId: message.sentBy,
+              metadata: {
+                subject: message.subject,
+                recipientCount: recipients.length,
+                messageType: 'SCHEDULED'
+              }
+            }
+          })
+
+          messageSuccessCount++
+          console.log(`✅ Sent scheduled message: ${message.subject}`)
+
+        } catch (messageError) {
+          console.error(`❌ Failed to process scheduled message ${message.id}:`, messageError)
+          messageErrorCount++
+        }
+      }
+    }
+
     return NextResponse.json({
-      message: `Processed ${scheduledEmails.length} scheduled emails`,
-      processed: scheduledEmails.length,
-      successful: successCount,
-      failed: errorCount
+      message: `Processed ${scheduledEmails.length} scheduled emails and ${scheduledMessages.length} scheduled messages`,
+      emails: {
+        processed: scheduledEmails.length,
+        successful: successCount,
+        failed: errorCount
+      },
+      messages: {
+        processed: scheduledMessages.length,
+        successful: messageSuccessCount,
+        failed: messageErrorCount
+      }
     })
 
   } catch (error) {

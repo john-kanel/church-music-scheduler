@@ -7,6 +7,8 @@ import { logActivity } from '@/lib/activity'
 import { checkSubscriptionStatus, createSubscriptionErrorResponse } from '@/lib/subscription-check'
 import { generateRecurringEvents, parseRecurrencePattern, extendRecurringEvents } from '@/lib/recurrence'
 
+
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -81,15 +83,18 @@ export async function PATCH(
       return NextResponse.json({ error: 'Root recurring event not found' }, { status: 404 })
     }
 
-    // Combine date and time
+    // Create dates using ISO string format (consistent with event creation logic)
     const [year, month, day] = startDate.split('-').map(Number)
     const [startHour, startMinute] = startTime.split(':').map(Number)
-    const startDateTime = new Date(year, month - 1, day, startHour, startMinute)
+    
+    const dateString = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}T${startHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}:00`
+    const startDateTime = new Date(dateString)
     
     let endDateTime = null
     if (endTime) {
       const [endHour, endMinute] = endTime.split(':').map(Number)
-      endDateTime = new Date(year, month - 1, day, endHour, endMinute)
+      const endDateString = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}T${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}:00`
+      endDateTime = new Date(endDateString)
     }
 
     // Find or create event type based on color (similar to main events API)

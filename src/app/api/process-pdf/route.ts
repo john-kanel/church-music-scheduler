@@ -10,20 +10,34 @@ export async function POST(request: NextRequest) {
   let tempFilePath: string | null = null;
   
   try {
-    console.log('Processing PDF with OpenAI Assistant...');
+    console.log('Processing document with OpenAI Assistant...');
 
-    // Get the PDF file from FormData
+    // Get the document file from FormData (could be PDF or Word doc)
     const formData = await request.formData();
-    const file = formData.get('pdf') as File;
+    const file = formData.get('document') as File;
 
     if (!file) {
       return NextResponse.json(
-        { error: 'No PDF file provided' },
+        { error: 'No document file provided' },
         { status: 400 }
       );
     }
 
-    console.log('File received:', file.name, 'Size:', file.size);
+    console.log('File received:', file.name, 'Size:', file.size, 'Type:', file.type);
+
+    // Validate file type
+    const allowedTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ];
+    
+    if (!allowedTypes.includes(file.type)) {
+      return NextResponse.json(
+        { error: 'Invalid file type. Please upload a PDF or Word document (.pdf, .doc, .docx)' },
+        { status: 400 }
+      );
+    }
 
     // Save the file temporarily for cleanup tracking
     const bytes = await file.arrayBuffer();
@@ -37,11 +51,11 @@ export async function POST(request: NextRequest) {
     await writeFile(tempFilePath, buffer);
     console.log('File written to:', tempFilePath);
 
-    // Upload PDF to OpenAI for Assistant processing
-    console.log('Uploading PDF to OpenAI...');
+    // Upload document to OpenAI for Assistant processing
+    console.log('Uploading document to OpenAI...');
     
     const uploadedFile = await openai.files.create({
-      file: new File([buffer], file.name, { type: 'application/pdf' }),
+      file: new File([buffer], file.name, { type: file.type }),
       purpose: 'assistants'
     });
     
@@ -54,7 +68,7 @@ export async function POST(request: NextRequest) {
     // Add message to thread with file
     await openai.beta.threads.messages.create(thread.id, {
       role: "user",
-      content: `Please analyze this church music PDF and extract all song titles and their service parts. This document contains musical scores, sheet music, or service bulletins with song information that needs to be identified. Look carefully for song titles that may appear above musical staves, in headers, footers, or within the musical notation itself.`,
+      content: `Please analyze this church music document and extract all song titles and their service parts. This document may be a PDF or Word document containing musical scores, sheet music, service bulletins, or worship guides with song information that needs to be identified. Look carefully for song titles that may appear above musical staves, in headers, footers, within the musical notation itself, or in formatted text lists.`,
       attachments: [
         {
           file_id: uploadedFile.id,
@@ -66,9 +80,9 @@ export async function POST(request: NextRequest) {
     // Run the assistant
     const run = await openai.beta.threads.runs.create(thread.id, {
       assistant_id: process.env.OPENAI_ASSISTANT_ID!,
-      instructions: `You are a Church Music PDF Analyzer specialized in reading musical scores, sheet music, and church service bulletins.
+      instructions: `You are a Church Music Document Analyzer specialized in reading musical scores, sheet music, and church service bulletins from PDF and Word documents.
 
-TASK: Extract song titles and service parts from church music PDFs that may contain:
+TASK: Extract song titles and service parts from church music documents (PDF or Word) that may contain:
 - Musical notation/scores with titles above staves
 - Sheet music with song titles in headers/footers
 - Service bulletins with hymn lists
@@ -191,11 +205,11 @@ IMPORTANT: Look closely at the actual content of the PDF. If it contains musical
     } catch (parseError) {
       console.error('Failed to parse AI response:', parseError);
       console.error('Original response:', aiResponse);
-      throw new Error('Invalid response format from AI');
+      throw new Error('Invalid response format from document processor');
     }
 
     if (!parsedResponse.songs || !Array.isArray(parsedResponse.songs)) {
-      throw new Error('Invalid response structure from AI');
+      throw new Error('Invalid response structure from document processor');
     }
 
     console.log('Successfully processed PDF, returning suggestions:', parsedResponse.songs.length, 'songs');

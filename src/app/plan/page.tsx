@@ -155,9 +155,8 @@ export default function EventPlannerPage() {
 
   // Group assignment
   const [groups, setGroups] = useState<Array<{id: string, name: string, description?: string, members: Array<{id: string, firstName: string, lastName: string}>}>>([])
-  const [showGroupAssignmentModal, setShowGroupAssignmentModal] = useState(false)
-  const [editingGroupEventId, setEditingGroupEventId] = useState<string>('')
-  const [selectedGroups, setSelectedGroups] = useState<string[]>([])
+  const [openGroupDropdown, setOpenGroupDropdown] = useState<string | null>(null)
+  const [selectedGroups, setSelectedGroups] = useState<Record<string, string[]>>({})
 
   // Toast functions
   const showToast = (type: 'success' | 'error', message: string) => {
@@ -176,14 +175,14 @@ export default function EventPlannerPage() {
   }
 
   useEffect(() => {
-    if (session?.user) {
+    if (session?.user?.id) {
       fetchPlannerData()
       fetchMusicians()
       fetchGroups()
       // Check for backed-up changes on page load
       restoreBackedUpChanges()
     }
-  }, [session])
+  }, [session?.user?.id])
 
   // Recovery mechanism for backed-up changes
   const restoreBackedUpChanges = () => {
@@ -513,23 +512,64 @@ export default function EventPlannerPage() {
 
   const handlePdfSuggestions = async (suggestions: Array<{servicePartName: string, songTitle: string, notes: string}>) => {
     try {
-      // Convert suggestions to hymns and update the event
-      for (const suggestion of suggestions) {
-        const servicePart = data?.serviceParts.find(sp => 
-          sp.name.toLowerCase().includes(suggestion.servicePartName.toLowerCase()) ||
-          suggestion.servicePartName.toLowerCase().includes(sp.name.toLowerCase())
+      if (!currentEventIdForUpload) {
+        console.error('No event ID set for PDF suggestions')
+        return
+      }
+
+      // Get current event hymns
+      const currentEvent = data?.events.find(e => e.id === currentEventIdForUpload)
+      const existingHymns = currentEvent?.hymns || []
+
+      // Convert suggestions to hymns format
+      const newHymns = suggestions.map((suggestion) => {
+        // Find matching service part
+        const matchingPart = data?.serviceParts.find(part => 
+          part.name.toLowerCase().includes(suggestion.servicePartName.toLowerCase()) ||
+          suggestion.servicePartName.toLowerCase().includes(part.name.toLowerCase())
         )
         
-        if (servicePart) {
-          await updateHymnTitle(currentEventIdForUpload, suggestion.songTitle, servicePart.id)
+        return {
+          title: suggestion.songTitle,
+          notes: suggestion.notes || '',
+          servicePartId: matchingPart?.id || null
         }
+      })
+
+      // Combine existing hymns with new ones (keeping existing hymns)
+      const allHymns = [
+        ...existingHymns.map(hymn => ({
+          title: hymn.title,
+          notes: hymn.notes || '',
+          servicePartId: hymn.servicePartId || null
+        })),
+        ...newHymns
+      ]
+
+      // Save all hymns to the event using the correct API format
+      const response = await fetch(`/api/events/${currentEventIdForUpload}/hymns`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          hymns: allHymns,
+          isAutoPopulate: true  // Skip email notifications for auto-populate
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to save hymns')
       }
+
+      showToast('success', `Added ${suggestions.length} songs from document`)
       
       // Refresh the data to show updated hymns
       await fetchPlannerData()
       setShowPdfProcessor(false)
+      setCurrentEventIdForUpload('')
     } catch (error) {
       console.error('Error processing PDF suggestions:', error)
+      showToast('error', 'Failed to save songs from document')
     }
   }
 
@@ -711,46 +751,51 @@ export default function EventPlannerPage() {
     }
   }
 
-  const handleOpenGroupAssignment = (eventId: string, clickEvent?: React.MouseEvent) => {
-    setEditingGroupEventId(eventId)
-    
-    // Get current groups assigned to this event
-    const event = data?.events.find(e => e.id === eventId)
-    const currentGroups = event?.assignments
-      ?.filter(assignment => assignment.group)
-      .map(assignment => assignment.group!.id) || []
-    
-    setSelectedGroups(currentGroups)
-    
-    // Set click position for modal positioning
-    if (clickEvent) {
-      setClickPosition({ x: clickEvent.clientX, y: clickEvent.clientY })
+  const toggleGroupDropdown = (eventId: string) => {
+    if (openGroupDropdown === eventId) {
+      setOpenGroupDropdown(null)
     } else {
-      setClickPosition(undefined)
+      setOpenGroupDropdown(eventId)
+      
+      // Get current groups assigned to this event
+      const event = data?.events.find(e => e.id === eventId)
+      const currentGroups = event?.assignments
+        ?.filter(assignment => assignment.group)
+        .map(assignment => assignment.group!.id) || []
+      
+      setSelectedGroups(prev => ({ ...prev, [eventId]: currentGroups }))
     }
-    
-    setShowGroupAssignmentModal(true)
   }
 
-  const handleSaveGroupAssignment = async () => {
-    if (!editingGroupEventId) return
-    
+  const handleToggleGroup = (eventId: string, groupId: string) => {
+    setSelectedGroups(prev => {
+      const currentGroups = prev[eventId] || []
+      const isSelected = currentGroups.includes(groupId)
+      
+      if (isSelected) {
+        return { ...prev, [eventId]: currentGroups.filter(id => id !== groupId) }
+      } else {
+        return { ...prev, [eventId]: [...currentGroups, groupId] }
+      }
+    })
+  }
+
+  const handleSaveGroupAssignment = async (eventId: string) => {
     try {
-      const response = await fetch(`/api/events/${editingGroupEventId}/groups`, {
+      const groupIds = selectedGroups[eventId] || []
+      const response = await fetch(`/api/events/${eventId}/groups`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          selectedGroups: selectedGroups
+          selectedGroups: groupIds
         })
       })
 
       if (response.ok) {
         showToast('success', 'Group assignments updated successfully!')
         await fetchPlannerData()
-        setShowGroupAssignmentModal(false)
-        setEditingGroupEventId('')
-        setSelectedGroups([])
-        setClickPosition(undefined)
+        setOpenGroupDropdown(null)
+        setSelectedGroups(prev => ({ ...prev, [eventId]: [] }))
       } else {
         const errorData = await response.json()
         showToast('error', errorData.error || 'Failed to update group assignments')
@@ -792,9 +837,13 @@ export default function EventPlannerPage() {
     visibleEventColors.has(event.eventType.color)
   ) || []
 
-  // Get unique event types for filter
-  const uniqueEventTypes = data ? 
-    [...new Map(data.events.map(event => [event.eventType.color, event.eventType])).values()] 
+  // Get unique event names for filter (grouped by event name instead of event type)
+  const uniqueEvents = data ? 
+    [...new Map(data.events.map(event => [event.name, { 
+      name: event.name, 
+      color: event.eventType.color,
+      id: event.id 
+    }])).values()] 
     : []
 
   if (loading) {
@@ -841,26 +890,26 @@ export default function EventPlannerPage() {
         </div>
       </div>
 
-      {/* Event Color Filter Bar */}
-      {uniqueEventTypes.length > 0 && (
+      {/* Event Filter Bar */}
+      {uniqueEvents.length > 0 && (
         <div className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-3">
           <div className="flex items-center gap-3 overflow-x-auto">
             <Filter className="w-4 h-4 text-gray-400 flex-shrink-0" />
-            <span className="text-sm font-medium text-gray-700 flex-shrink-0">Event Types:</span>
+            <span className="text-sm font-medium text-gray-700 flex-shrink-0">Events:</span>
             <div className="flex gap-4 min-w-0">
-              {uniqueEventTypes.map(eventType => (
-                <label key={eventType.id} className="flex items-center gap-2 flex-shrink-0">
+              {uniqueEvents.map((event: any) => (
+                <label key={event.id} className="flex items-center gap-2 flex-shrink-0">
                   <input
                     type="checkbox"
-                    checked={visibleEventColors.has(eventType.color)}
-                    onChange={() => toggleEventColor(eventType.color)}
+                    checked={visibleEventColors.has(event.color)}
+                    onChange={() => toggleEventColor(event.color)}
                     className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
                   <div 
                     className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: eventType.color }}
+                    style={{ backgroundColor: event.color }}
                   />
-                  <span className="text-sm text-gray-700">{eventType.name}</span>
+                  <span className="text-sm text-gray-700">{event.name}</span>
                 </label>
               ))}
             </div>
@@ -1058,7 +1107,7 @@ export default function EventPlannerPage() {
                               <div 
                                 key={`group-${assignment.id}-${index}`} 
                                 className="border-b border-gray-100 p-3 min-h-[60px] bg-white group hover:bg-gray-50 transition-colors relative cursor-pointer"
-                                onClick={(e) => handleOpenGroupAssignment(event.id, e)}
+                                onClick={() => toggleGroupDropdown(event.id)}
                               >
                                 <div className="text-xs text-gray-500 mb-1 font-normal">Group</div>
                                 <div className="text-sm text-gray-900 font-normal">
@@ -1068,10 +1117,85 @@ export default function EventPlannerPage() {
                             ))
                         ) : (
                           <div 
-                            className="border-b border-gray-100 p-3 min-h-[60px] bg-white hover:bg-gray-50 transition-colors cursor-pointer"
-                            onClick={(e) => handleOpenGroupAssignment(event.id, e)}
+                            className="border-b border-gray-100 p-3 min-h-[60px] bg-white hover:bg-gray-50 transition-colors cursor-pointer relative"
+                            onClick={() => toggleGroupDropdown(event.id)}
                           >
                             <div className="text-xs text-blue-600 hover:text-blue-800">+ Assign groups</div>
+                            
+                            {/* Group Assignment Dropdown */}
+                            {openGroupDropdown === event.id && (
+                              <div className="absolute top-full left-0 mt-1 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                                <div className="p-4 border-b border-gray-200">
+                                  <h4 className="text-sm font-medium text-gray-900 mb-2">Assign Groups</h4>
+                                  <p className="text-xs text-gray-600">
+                                    Select groups to automatically assign all members to this event.
+                                  </p>
+                                </div>
+                                
+                                <div className="p-3 max-h-48 overflow-y-auto">
+                                  {groups.length > 0 ? (
+                                    <div className="space-y-2">
+                                      {groups.map((group) => {
+                                        const isSelected = (selectedGroups[event.id] || []).includes(group.id)
+                                        return (
+                                          <label
+                                            key={group.id}
+                                            className={`flex items-center p-2 rounded border cursor-pointer transition-colors ${
+                                              isSelected 
+                                                ? 'bg-green-50 border-green-200 text-green-900' 
+                                                : 'bg-white border-gray-200 hover:bg-gray-50'
+                                            }`}
+                                          >
+                                            <input
+                                              type="checkbox"
+                                              checked={isSelected}
+                                              onChange={() => handleToggleGroup(event.id, group.id)}
+                                              className="mr-3"
+                                            />
+                                            <div className="flex-1 min-w-0">
+                                              <div className="text-sm font-medium truncate">
+                                                {group.name}
+                                              </div>
+                                              <div className="text-xs text-gray-500 truncate">
+                                                {group.description && (
+                                                  <span className="mr-2">{group.description}</span>
+                                                )}
+                                                {group.members?.length || 0} member{(group.members?.length || 0) !== 1 ? 's' : ''}
+                                              </div>
+                                            </div>
+                                          </label>
+                                        )
+                                      })}
+                                    </div>
+                                  ) : (
+                                    <div className="text-sm text-gray-500 text-center py-4">
+                                      No groups available
+                                    </div>
+                                  )}
+                                </div>
+                                
+                                <div className="flex justify-end space-x-2 p-3 border-t">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setOpenGroupDropdown(null)
+                                    }}
+                                    className="px-3 py-1 text-sm border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleSaveGroupAssignment(event.id)
+                                    }}
+                                    className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                                  >
+                                    Save
+                                  </button>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1335,7 +1459,7 @@ export default function EventPlannerPage() {
                                   <div 
                                     key={`group-mobile-${assignment.id}-${index}`} 
                                     className="border-b border-gray-100 p-3 min-h-[60px] bg-white group hover:bg-gray-50 transition-colors relative cursor-pointer"
-                                    onClick={(e) => handleOpenGroupAssignment(event.id, e)}
+                                    onClick={() => toggleGroupDropdown(event.id)}
                                   >
                                     <div className="text-xs text-gray-500 mb-1 font-normal">Group</div>
                                     <div className="text-sm text-gray-900 font-normal">
@@ -1345,10 +1469,85 @@ export default function EventPlannerPage() {
                                 ))
                             ) : (
                               <div 
-                                className="border-b border-gray-100 p-3 min-h-[60px] bg-white hover:bg-gray-50 transition-colors cursor-pointer"
-                                onClick={(e) => handleOpenGroupAssignment(event.id, e)}
+                                className="border-b border-gray-100 p-3 min-h-[60px] bg-white hover:bg-gray-50 transition-colors cursor-pointer relative"
+                                onClick={() => toggleGroupDropdown(event.id)}
                               >
                                 <div className="text-xs text-blue-600 hover:text-blue-800">+ Assign groups</div>
+                                
+                                {/* Group Assignment Dropdown - Mobile */}
+                                {openGroupDropdown === event.id && (
+                                  <div className="absolute top-full left-0 mt-1 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                                    <div className="p-4 border-b border-gray-200">
+                                      <h4 className="text-sm font-medium text-gray-900 mb-2">Assign Groups</h4>
+                                      <p className="text-xs text-gray-600">
+                                        Select groups to automatically assign all members to this event.
+                                      </p>
+                                    </div>
+                                    
+                                    <div className="p-3 max-h-48 overflow-y-auto">
+                                      {groups.length > 0 ? (
+                                        <div className="space-y-2">
+                                          {groups.map((group) => {
+                                            const isSelected = (selectedGroups[event.id] || []).includes(group.id)
+                                            return (
+                                              <label
+                                                key={group.id}
+                                                className={`flex items-center p-2 rounded border cursor-pointer transition-colors ${
+                                                  isSelected 
+                                                    ? 'bg-green-50 border-green-200 text-green-900' 
+                                                    : 'bg-white border-gray-200 hover:bg-gray-50'
+                                                }`}
+                                              >
+                                                <input
+                                                  type="checkbox"
+                                                  checked={isSelected}
+                                                  onChange={() => handleToggleGroup(event.id, group.id)}
+                                                  className="mr-3"
+                                                />
+                                                <div className="flex-1 min-w-0">
+                                                  <div className="text-sm font-medium truncate">
+                                                    {group.name}
+                                                  </div>
+                                                  <div className="text-xs text-gray-500 truncate">
+                                                    {group.description && (
+                                                      <span className="mr-2">{group.description}</span>
+                                                    )}
+                                                    {group.members?.length || 0} member{(group.members?.length || 0) !== 1 ? 's' : ''}
+                                                  </div>
+                                                </div>
+                                              </label>
+                                            )
+                                          })}
+                                        </div>
+                                      ) : (
+                                        <div className="text-sm text-gray-500 text-center py-4">
+                                          No groups available
+                                        </div>
+                                      )}
+                                    </div>
+                                    
+                                    <div className="flex justify-end space-x-2 p-3 border-t">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          setOpenGroupDropdown(null)
+                                        }}
+                                        className="px-3 py-1 text-sm border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
+                                      >
+                                        Cancel
+                                      </button>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          handleSaveGroupAssignment(event.id)
+                                        }}
+                                        className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                                      >
+                                        Save
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
@@ -1514,123 +1713,7 @@ export default function EventPlannerPage() {
         clickPosition={clickPosition}
       />
 
-      {/* Group Assignment Modal */}
-      {showGroupAssignmentModal && (
-        <>
-          <div className="fixed inset-0 bg-gray-500 bg-opacity-50 z-40" />
-          <div 
-            className="fixed bg-white rounded-xl shadow-xl border z-50"
-            style={{
-              left: clickPosition ? Math.min(clickPosition.x - 200, window.innerWidth - 400) : '50%',
-              top: clickPosition ? Math.min(clickPosition.y - 50, window.innerHeight - 400) : '50%',
-              transform: clickPosition ? 'none' : 'translate(-50%, -50%)',
-              maxWidth: '400px',
-              width: 'auto',
-              minWidth: '350px',
-              maxHeight: '80vh',
-              overflowY: 'auto'
-            }}
-          >
-            <div className="flex items-center justify-between p-6 border-b">
-              <h2 className="text-lg font-bold text-gray-900">Assign Groups</h2>
-              <button
-                onClick={() => {
-                  setShowGroupAssignmentModal(false)
-                  setEditingGroupEventId('')
-                  setSelectedGroups([])
-                  setClickPosition(undefined)
-                }}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-700 hover:text-gray-900"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
 
-            <div className="p-6">
-              <p className="text-sm text-gray-600 mb-4">
-                Select groups to automatically assign all members to this event. All group members will receive notifications.
-              </p>
-              
-              {groups.length > 0 ? (
-                <div className="space-y-3">
-                  {groups.map((group) => {
-                    const isSelected = selectedGroups.includes(group.id)
-                    return (
-                      <label
-                        key={group.id}
-                        className={`flex items-center p-3 rounded-lg border cursor-pointer transition-colors ${
-                          isSelected 
-                            ? 'bg-green-50 border-green-200 text-green-900' 
-                            : 'bg-white border-gray-200 hover:bg-gray-50'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedGroups([...selectedGroups, group.id])
-                            } else {
-                              setSelectedGroups(selectedGroups.filter(id => id !== group.id))
-                            }
-                          }}
-                          className="mr-3"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium truncate">
-                            {group.name}
-                          </div>
-                          <div className="text-xs text-gray-500 truncate">
-                            {group.description && (
-                              <span className="mr-2">{group.description}</span>
-                            )}
-                            {group.members.length} member{group.members.length !== 1 ? 's' : ''}
-                          </div>
-                        </div>
-                      </label>
-                    )
-                  })}
-                </div>
-              ) : (
-                <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-lg text-center">
-                  No groups available. You can create groups in the Groups section to organize your musicians.
-                </div>
-              )}
-              
-              {selectedGroups.length > 0 && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-3 mt-4">
-                  <p className="text-sm text-green-800 font-medium">
-                    {selectedGroups.length} group{selectedGroups.length !== 1 ? 's' : ''} selected
-                  </p>
-                  <p className="text-xs text-green-700 mt-1">
-                    All members of selected groups will be automatically assigned to this event and receive notifications.
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-end space-x-3 p-6 border-t">
-              <button
-                onClick={() => {
-                  setShowGroupAssignmentModal(false)
-                  setEditingGroupEventId('')
-                  setSelectedGroups([])
-                  setClickPosition(undefined)
-                }}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveGroupAssignment}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-              >
-                Save Groups
-              </button>
-            </div>
-          </div>
-        </>
-      )}
 
       {/* Toast Notifications */}
       <ToastContainer toasts={toasts} removeToast={removeToast} />

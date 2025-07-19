@@ -46,94 +46,119 @@ export async function PUT(
 
     const resolvedParams = await params
     const eventId = resolvedParams.id
-    const { hymns } = await request.json()
+    const { hymns, isAutoPopulate = false } = await request.json()
 
-    // Get original hymns to compare for changes
-    const originalHymns = await prisma.eventHymn.findMany({
-      where: { eventId },
-      include: { servicePart: true }
-    })
+    // Get original hymns to compare for changes (only if not auto-populate)
+    let originalHymns: any[] = []
+    if (!isAutoPopulate) {
+      originalHymns = await prisma.eventHymn.findMany({
+        where: { eventId },
+        select: { title: true, notes: true, servicePartId: true }
+      })
+    }
 
     // Delete all existing hymns for this event
     await prisma.eventHymn.deleteMany({
       where: { eventId }
     })
 
-    // Create new hymns with proper ordering
-    const createdHymns = []
-    for (let i = 0; i < hymns.length; i++) {
-      const hymn = hymns[i]
-      
-      // Skip empty hymns
-      if (!hymn.title?.trim()) continue
+    // Filter out empty hymns and prepare data for bulk insert
+    const validHymns = hymns
+      .filter((hymn: any) => hymn.title?.trim())
+      .map((hymn: any) => ({
+        eventId,
+        title: hymn.title.trim(),
+        notes: hymn.notes?.trim() || null,
+        servicePartId: hymn.servicePartId === 'custom' || !hymn.servicePartId ? null : hymn.servicePartId
+      }))
 
-      const createdHymn = await prisma.eventHymn.create({
-        data: {
-          eventId,
-          title: hymn.title.trim(),
-          notes: hymn.notes?.trim() || null,
-          servicePartId: hymn.servicePartId === 'custom' || !hymn.servicePartId ? null : hymn.servicePartId
-        },
-        include: {
-          servicePart: true
-        }
-      })
-      createdHymns.push(createdHymn)
-    }
-
-    // Check if changes were made
-    const hymnsChanged = JSON.stringify(originalHymns.map((h: any) => ({
-      name: h.name,
-      composer: h.composer,
-      pageNumber: h.pageNumber
-    }))) !== JSON.stringify(createdHymns.map((h: any) => ({
-      name: h.name,
-      composer: h.composer,
-      pageNumber: h.pageNumber
-    })))
-
-    // Send notifications if changes were made
-    if (hymnsChanged) {
-      // Get event details
-      const event = await prisma.event.findUnique({
-        where: { id: eventId },
-        include: {
-          eventType: true,
-          assignments: {
-            include: {
-              user: true
-            }
-          }
-        }
+    // Bulk create hymns for better performance
+    let createdHymns: any[] = []
+    if (validHymns.length > 0) {
+      await prisma.eventHymn.createMany({
+        data: validHymns
       })
 
-      if (event) {
-        // Get all assigned musicians
-        const assignedMusicians = event.assignments
-          .filter((assignment: any) => assignment.user)
-          .map((assignment: any) => assignment.user!)
-
-        // Check if this is a past event
-        const eventDateTime = new Date(event.startTime)
-        const now = new Date()
-        const isPastEvent = eventDateTime < now
-
-        // Only send notifications for future events
-        if (!isPastEvent && assignedMusicians.length > 0) {
-          // Send notification emails (implement this based on your email service)
-          try {
-            await sendMusicChangeNotifications(event, assignedMusicians, createdHymns)
-          } catch (emailError) {
-            console.error('Failed to send notification emails:', emailError)
-            // Don't fail the request if email fails
-          }
-        }
+      // Fetch the created hymns with service parts (only if we need them for notifications)
+      if (!isAutoPopulate) {
+        createdHymns = await prisma.eventHymn.findMany({
+          where: { eventId },
+          include: { servicePart: true },
+          orderBy: { createdAt: 'asc' }
+        })
       }
     }
 
+    // Check if changes were made (only for manual updates, not auto-populate)
+    let hymnsChanged = false
+    if (!isAutoPopulate && originalHymns.length > 0) {
+      // Compare the actual hymn data
+      const originalData = originalHymns.map((h: any) => ({
+        title: h.title,
+        notes: h.notes,
+        servicePartId: h.servicePartId
+      }))
+      
+      const newData = validHymns.map((h: any) => ({
+        title: h.title,
+        notes: h.notes,
+        servicePartId: h.servicePartId
+      }))
+      
+      hymnsChanged = JSON.stringify(originalData) !== JSON.stringify(newData)
+    }
+
+    // Send notifications only for manual changes (not auto-populate) to future events
+    if (!isAutoPopulate && hymnsChanged && createdHymns.length > 0) {
+      try {
+        // Get event details
+        const event = await prisma.event.findUnique({
+          where: { id: eventId },
+          include: {
+            eventType: true,
+            assignments: {
+              include: {
+                user: true
+              }
+            }
+          }
+        })
+
+        if (event) {
+          // Get all assigned musicians
+          const assignedMusicians = event.assignments
+            .filter((assignment: any) => assignment.user)
+            .map((assignment: any) => assignment.user!)
+
+          // Check if this is a past event
+          const eventDateTime = new Date(event.startTime)
+          const now = new Date()
+          const isPastEvent = eventDateTime < now
+
+          // Only send notifications for future events with assigned musicians
+          if (!isPastEvent && assignedMusicians.length > 0) {
+            // Send notifications in background to avoid blocking the response
+            setImmediate(() => {
+              sendMusicChangeNotifications(event, assignedMusicians, createdHymns)
+                .catch(error => console.error('Failed to send notification emails:', error))
+            })
+          }
+        }
+      } catch (error) {
+        console.error('Error preparing notifications:', error)
+        // Don't fail the request if notification preparation fails
+      }
+    }
+
+    const message = isAutoPopulate 
+      ? `Auto-populated ${validHymns.length} songs successfully`
+      : hymnsChanged 
+        ? 'Music updated successfully' 
+        : 'No changes detected'
+
     return NextResponse.json({ 
-      hymns: createdHymns,
-      message: hymnsChanged ? 'Music updated successfully' : 'No changes detected'
+      hymns: createdHymns.length > 0 ? createdHymns : validHymns,
+      message
     })
   } catch (error) {
     console.error('Error updating event hymns:', error)
