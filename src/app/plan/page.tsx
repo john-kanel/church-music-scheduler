@@ -1372,7 +1372,11 @@ export default function EventPlannerPage() {
                     <label className="flex items-center gap-2">
                       <input
                         type="checkbox"
-                        checked={visibleEventColors.has(eventGroup.color)}
+                        checked={
+                          eventGroup.name === 'General' 
+                            ? eventsInThisGroup.some(e => visibleEventColors.has(e.eventType.color))
+                            : visibleEventColors.has(eventGroup.color)
+                        }
                         onChange={() => toggleEventColor(eventGroup.color)}
                         className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
@@ -1382,8 +1386,8 @@ export default function EventPlannerPage() {
                       />
                       <span className="text-sm text-gray-700">{eventGroup.name}</span>
                       
-                      {/* Dropdown arrow - only show if multiple events and events are visible */}
-                      {eventsInThisGroup.length > 1 && visibleEventColors.has(eventGroup.color) && (
+                      {/* Dropdown arrow - only show if multiple events and any events in group are visible */}
+                      {eventsInThisGroup.length > 1 && eventsInThisGroup.some(e => visibleEventColors.has(e.eventType.color)) && (
                         <button
                           onClick={() => toggleFilterDropdown(eventGroup.name)}
                           className="ml-1 p-1 text-gray-400 hover:text-gray-600"
