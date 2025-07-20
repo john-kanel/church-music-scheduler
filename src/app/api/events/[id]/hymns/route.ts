@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { resend } from '@/lib/resend'
 import { getEmailLogoHtml } from '@/components/emails/email-logo'
+import { markEventForCalendarUpdate } from '@/lib/calendar-updates'
 
 export async function GET(
   request: NextRequest,
@@ -78,6 +79,9 @@ export async function PUT(
       await prisma.eventHymn.createMany({
         data: validHymns
       })
+
+      // Mark event for calendar update (hymns are part of event details)
+      await markEventForCalendarUpdate(eventId)
 
       // Fetch the created hymns with service parts (only if we need them for notifications)
       if (!isAutoPopulate) {

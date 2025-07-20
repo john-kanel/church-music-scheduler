@@ -50,7 +50,24 @@ export async function GET(request: NextRequest) {
     // Use churchId from session for faster lookup
     const churchId = session.user.churchId
     if (!churchId) {
-      return NextResponse.json({ error: 'Church not found' }, { status: 404 })
+      console.error('User has no churchId in session:', session.user.id)
+      
+      // Try to get churchId from database
+      const user = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { churchId: true, email: true }
+      })
+      
+      if (!user || !user.churchId) {
+        console.error('User not found or has no church association:', session.user.id)
+        return NextResponse.json({ 
+          error: 'Church not found. Please contact support.' 
+        }, { status: 404 })
+      }
+      
+      // Use churchId from database
+      const result = await fetchSubscriptionData(user.churchId)
+      return NextResponse.json(result)
     }
 
     // Check cache first

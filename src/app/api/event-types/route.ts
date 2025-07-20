@@ -3,40 +3,36 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 
-// GET /api/event-types - Fetch all event types for the church
-export async function GET(request: NextRequest) {
+// GET - Fetch all event types for the user's church
+export async function GET() {
   try {
     const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.churchId) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Fetch all event types for this church
-    let eventTypes = await prisma.eventType.findMany({
-      where: {
-        churchId: session.user.churchId
-      },
-      orderBy: {
-        name: 'asc'
-      }
+    // Get user's church ID
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { churchId: true }
     })
 
-    // If no event types exist, create a default "General" event type
-    if (eventTypes.length === 0) {
-      const defaultEventType = await prisma.eventType.create({
-        data: {
-          name: 'General',
-          color: '#3B82F6',
-          churchId: session.user.churchId
-        }
-      })
-      eventTypes = [defaultEventType]
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    return NextResponse.json({ 
-      eventTypes 
+    // Fetch all event types for the church
+    const eventTypes = await prisma.eventType.findMany({
+      where: { churchId: user.churchId },
+      select: {
+        id: true,
+        name: true,
+        color: true,
+      },
+      orderBy: { name: 'asc' }
     })
+
+    return NextResponse.json(eventTypes)
 
   } catch (error) {
     console.error('Error fetching event types:', error)

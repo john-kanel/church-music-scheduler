@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
+import { markEventForCalendarUpdate } from '@/lib/calendar-updates'
 
 
 
@@ -293,6 +294,9 @@ export async function PUT(
         updatedStartTime: updatedEvent.startTime.toISOString(),
         updatedEndTime: updatedEvent.endTime?.toISOString()
       })
+
+      // Mark event for calendar update
+      await markEventForCalendarUpdate(updatedEvent.id)
 
       // If roles provided, update assignments
       if (validRoles.length > 0) {

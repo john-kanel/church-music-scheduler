@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { scheduleEventNotifications } from '@/lib/automation-helpers'
+import { markEventForCalendarUpdate } from '@/lib/calendar-updates'
 
 // PUT /api/assignments/[assignmentId] - Accept or decline assignment
 export async function PUT(
@@ -78,6 +79,9 @@ export async function PUT(
           }
         })
 
+        // Mark event for calendar update (assignment change)
+        await markEventForCalendarUpdate(assignment.event.id)
+
         return NextResponse.json({
           message: 'Assignment accepted successfully',
           assignment: updatedAssignment
@@ -110,6 +114,9 @@ export async function PUT(
             }
           }
         })
+
+        // Mark event for calendar update (assignment change)
+        await markEventForCalendarUpdate(assignment.event.id)
 
         // Create cancellation notification (musician self-removal)
         try {

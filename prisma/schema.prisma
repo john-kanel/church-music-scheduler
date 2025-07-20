@@ -81,6 +81,7 @@ model User {
   createdChurchLinks   ChurchLink[]
   unavailabilities     MusicianUnavailability[]
   cancellationNotifications CancellationNotification[]
+  calendarSubscriptions CalendarSubscription[]
 
   @@index([churchId])
   @@index([role])
@@ -128,6 +129,7 @@ model Event {
   generatedFrom     String?           // For generated events, stores the root event ID
   assignedGroups    String[]          @default([])     // Group IDs that auto-assign to this series
   isModified        Boolean           @default(false)  // True if individual event was edited separately from series
+  calendarNeedsUpdate Boolean         @default(true)   // True when event changes require calendar feed updates
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
   churchId          String
@@ -148,6 +150,7 @@ model Event {
   @@index([parentEventId])
   @@index([isRootEvent, churchId])
   @@index([generatedFrom, isModified])
+  @@index([calendarNeedsUpdate])
   @@map("events")
 }
 
@@ -587,6 +590,28 @@ model CancellationNotification {
   @@map("cancellation_notifications")
 }
 
+model CalendarSubscription {
+  id                String                    @id @default(cuid())
+  userId            String
+  subscriptionToken String                    @unique @default(cuid())
+  filterType        CalendarFilterType        @default(ALL)
+  groupIds          String[]                  @default([])  // Group IDs when filterType is GROUPS
+  eventTypeIds      String[]                  @default([])  // Event type IDs when filterType is EVENT_TYPES
+  isActive          Boolean                   @default(true)
+  lastUpdated       DateTime                  @default(now())
+  feedUrl           String?                   // Generated feed URL for user reference
+  needsUpdate       Boolean                   @default(true) // Flag to track if feed needs regeneration
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+  
+  user              User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId]) // One subscription per user
+  @@index([needsUpdate])
+  @@index([subscriptionToken])
+  @@map("calendar_subscriptions")
+}
+
 enum UserRole {
   DIRECTOR
   ASSOCIATE_DIRECTOR
@@ -660,4 +685,10 @@ enum SkillLevel {
   INTERMEDIATE
   ADVANCED
   PROFESSIONAL
+}
+
+enum CalendarFilterType {
+  ALL
+  GROUPS
+  EVENT_TYPES
 }
