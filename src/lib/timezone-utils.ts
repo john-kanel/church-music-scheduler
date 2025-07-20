@@ -1,88 +1,76 @@
-/**
- * Timezone utilities for handling date/time conversions with user timezone preferences
- */
+import { fromZonedTime, toZonedTime, format } from 'date-fns-tz'
 
 /**
- * Creates a Date object from date/time components in the user's timezone
- * This ensures the date is created as the user intended, regardless of server timezone
+ * Converts user input (date + time in their timezone) to UTC for database storage
+ * @param dateStr - Date string like "2025-07-24" 
+ * @param timeStr - Time string like "10:00"
+ * @param timezone - User's timezone like "America/Chicago"
+ * @returns UTC Date object for database storage
  */
-export function createDateInUserTimezone(
-  year: number,
-  month: number, // 1-based month
-  day: number,
-  hour: number,
-  minute: number,
-  userTimezone: string = 'America/Chicago'
-): Date {
-  // Create the date string in the user's timezone
-  const dateString = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}T${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:00`
+export function createEventDateTime(dateStr: string, timeStr: string, timezone: string): Date {
+  // Create ISO string in user's timezone
+  const isoString = `${dateStr}T${timeStr}:00`
   
-  // Parse the date as if it's in the user's timezone
-  // This prevents timezone conversion issues
-  return new Date(dateString + getTimezoneOffset(userTimezone))
-}
-
-/**
- * Gets the timezone offset string for a given timezone
- */
-function getTimezoneOffset(timezone: string): string {
-  const now = new Date()
-  const utc = new Date(now.getTime() + (now.getTimezoneOffset() * 60000))
-  const targetTime = new Date(utc.toLocaleString("en-US", {timeZone: timezone}))
-  const offset = (utc.getTime() - targetTime.getTime()) / (1000 * 60)
+  // Parse as if it's in the user's timezone, then convert to UTC
+  const zonedTime = new Date(isoString)
+  const utcTime = fromZonedTime(zonedTime, timezone)
   
-  const hours = Math.floor(Math.abs(offset) / 60)
-  const minutes = Math.abs(offset) % 60
-  const sign = offset <= 0 ? '+' : '-'
-  
-  return `${sign}${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
-}
-
-/**
- * Creates a Date object preserving the exact user input time regardless of server timezone
- * Uses UTC to avoid any timezone interpretation issues
- */
-export function createDatePreservingUserTime(
-  year: number,
-  month: number, // 1-based month  
-  day: number,
-  hour: number,
-  minute: number
-): Date {
-  // Use UTC methods to avoid any timezone interpretation issues
-  // This preserves the exact time the user entered regardless of server timezone
-  return new Date(Date.UTC(year, month - 1, day, hour, minute, 0))
-}
-
-/**
- * Formats a date for display in the user's timezone
- */
-export function formatDateInUserTimezone(
-  date: Date,
-  userTimezone: string = 'America/Chicago',
-  options: Intl.DateTimeFormatOptions = {}
-): string {
-  return date.toLocaleString('en-US', {
-    timeZone: userTimezone,
-    ...options
+  console.log('🕐 Timezone conversion:', {
+    input: `${dateStr} ${timeStr} in ${timezone}`,
+    zonedTime: isoString,
+    utcTime: utcTime.toISOString(),
+    verification: format(utcTime, 'yyyy-MM-dd HH:mm:ss zzz', { timeZone: timezone })
   })
+  
+  return utcTime
 }
 
 /**
- * Extracts date and time components from a Date object for form editing
+ * Converts UTC date from database to user's timezone for display
+ * @param utcDate - UTC Date from database
+ * @param timezone - User's timezone
+ * @returns Date in user's timezone
  */
-export function extractDateTimeComponents(date: Date): {
-  startDate: string
-  startTime: string
-} {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  const hours = String(date.getHours()).padStart(2, '0')
-  const minutes = String(date.getMinutes()).padStart(2, '0')
+export function displayEventDateTime(utcDate: Date, timezone: string): Date {
+  return toZonedTime(utcDate, timezone)
+}
+
+/**
+ * Formats date for ICS with proper timezone
+ * @param utcDate - UTC Date from database  
+ * @param timezone - Timezone for the event
+ * @returns Properly formatted ICS datetime string
+ */
+export function formatICSDateTime(utcDate: Date, timezone: string): string {
+  // Convert to user's timezone first
+  const zonedDate = toZonedTime(utcDate, timezone)
   
-  return {
-    startDate: `${year}-${month}-${day}`,
-    startTime: `${hours}:${minutes}`
+  // Format as YYYYMMDDTHHMMSS (local time, not UTC)
+  const year = zonedDate.getFullYear()
+  const month = String(zonedDate.getMonth() + 1).padStart(2, '0')
+  const day = String(zonedDate.getDate()).padStart(2, '0')
+  const hours = String(zonedDate.getHours()).padStart(2, '0')
+  const minutes = String(zonedDate.getMinutes()).padStart(2, '0')
+  const seconds = String(zonedDate.getSeconds()).padStart(2, '0')
+  
+  return `${year}${month}${day}T${hours}${minutes}${seconds}`
+}
+
+/**
+ * Gets the user's timezone from the database or returns default
+ * @param userId - User ID
+ * @returns Promise<string> - User's timezone
+ */
+export async function getUserTimezone(userId: string): Promise<string> {
+  try {
+    const { prisma } = await import('@/lib/db')
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { timezone: true }
+    })
+    return user?.timezone || 'America/Chicago'
+  } catch (error) {
+    console.error('Error fetching user timezone:', error)
+    return 'America/Chicago'
   }
 } 

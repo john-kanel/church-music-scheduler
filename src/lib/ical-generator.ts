@@ -59,7 +59,7 @@ export function generateICalFeed(events: EventWithDetails[], churchName: string,
 
   const calendarFooter = 'END:VCALENDAR'
 
-  const icalContent = icalEvents.map(event => formatICalEvent(event)).join('\r\n')
+  const icalContent = icalEvents.map(event => formatICalEvent(event, timezone)).join('\r\n')
 
   return calendarHeader + icalContent + '\r\n' + calendarFooter
 }
@@ -201,18 +201,18 @@ function buildEventDescription(event: EventWithDetails): string {
 /**
  * Formats an iCal event object into the proper iCal format
  */
-function formatICalEvent(event: ICalEvent): string {
+function formatICalEvent(event: ICalEvent, timezone: string = 'America/Chicago'): string {
   const lines = [
     'BEGIN:VEVENT',
     `UID:${event.uid}`,
     `SUMMARY:${escapeICalText(event.summary)}`,
     `DESCRIPTION:${escapeICalText(event.description)}`,
     `LOCATION:${escapeICalText(event.location)}`,
-    `DTSTART:${formatICalDate(event.startDate)}`,
-    `DTEND:${formatICalDate(event.endDate)}`,
-    `DTSTAMP:${formatICalDate(new Date())}`,
-    `LAST-MODIFIED:${formatICalDate(event.lastModified)}`,
-    `CREATED:${formatICalDate(event.created)}`,
+    `DTSTART:${formatICalDate(event.startDate, timezone)}`,
+    `DTEND:${formatICalDate(event.endDate, timezone)}`,
+    `DTSTAMP:${formatICalDate(new Date(), timezone)}`,
+    `LAST-MODIFIED:${formatICalDate(event.lastModified, timezone)}`,
+    `CREATED:${formatICalDate(event.created, timezone)}`,
     'STATUS:CONFIRMED',
     'TRANSP:OPAQUE',
     'END:VEVENT',
@@ -223,19 +223,11 @@ function formatICalEvent(event: ICalEvent): string {
 }
 
 /**
- * Formats a date for iCal with timezone support
+ * Formats a date for iCal with proper timezone support
  */
-function formatICalDate(date: Date, timezone?: string): string {
-  // For now, format as local time without timezone conversion
-  // TODO: Add proper timezone handling when timezone data is available
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  const hours = String(date.getHours()).padStart(2, '0')
-  const minutes = String(date.getMinutes()).padStart(2, '0')
-  const seconds = String(date.getSeconds()).padStart(2, '0')
-  
-  return `${year}${month}${day}T${hours}${minutes}${seconds}`
+function formatICalDate(date: Date, timezone: string = 'America/Chicago'): string {
+  const { formatICSDateTime } = require('@/lib/timezone-utils')
+  return formatICSDateTime(date, timezone)
 }
 
 /**

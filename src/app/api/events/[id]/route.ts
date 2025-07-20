@@ -228,53 +228,19 @@ export async function PUT(
       )
     }
 
-    // Get user's timezone for proper date creation
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { timezone: true }
-    })
+    // Get user's timezone and create proper datetime
+    const { getUserTimezone, createEventDateTime } = await import('@/lib/timezone-utils')
+    const userTimezone = await getUserTimezone(session.user.id)
 
-    const userTimezone = user?.timezone || 'America/Chicago'
-
-    // Create dates preserving user's intended local time using timezone-aware creation
-    const [year, month, day] = startDate.split('-').map(Number)
-    const [startHour, startMinute] = startTime.split(':').map(Number)
-    
-    // PROPER timezone handling: Convert Chicago time to UTC
-    // Create date string and explicitly handle Chicago timezone conversion
-    const inputDateStr = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}T${startHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}:00`
-    
-    // For Chicago timezone (America/Chicago):
-    // In summer (DST): UTC-5 (CDT), in winter: UTC-6 (CST)
-    // August is definitely DST, so Chicago is UTC-5
-    const chicagoOffsetHours = -5 // CDT (adjust to -6 for CST months if needed)
-    
-    // Parse as if it's local time, then shift to represent UTC storage
-    const localTime = new Date(inputDateStr)
-    const startDateTime = new Date(localTime.getTime() - (chicagoOffsetHours * 60 * 60 * 1000))
+    // Create dates using proper timezone handling
+    const startDateTime = createEventDateTime(startDate, startTime, userTimezone)
     
     let endDateTime = null
     if (endTime) {
-      const [endHour, endMinute] = endTime.split(':').map(Number)
-      const endInputDateStr = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}T${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}:00`
-      const localEndTime = new Date(endInputDateStr)
-      endDateTime = new Date(localEndTime.getTime() - (chicagoOffsetHours * 60 * 60 * 1000))
+      endDateTime = createEventDateTime(startDate, endTime, userTimezone)
     }
 
-    console.log('📅 Date/time construction:', {
-      input: { startDate, startTime, endTime },
-      localTime: { 
-        inputTime: `${startTime} local`, 
-        constructedTime: `${startHour}:${startMinute.toString().padStart(2, '0')} local` 
-      },
-      constructed: {
-        startDateTime: startDateTime.toISOString(),
-        endDateTime: endDateTime?.toISOString()
-      },
-      originalDateTime: existingEvent.startTime.toISOString(),
-      timesMatch: startDateTime.getTime() === existingEvent.startTime.getTime(),
-      note: 'Using local time without timezone conversion (consistent with event creation)'
-    })
+
 
     // Use the provided eventTypeId if available, otherwise keep the existing one
     let finalEventTypeId = eventTypeId || existingEvent.eventTypeId
