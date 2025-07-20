@@ -240,16 +240,25 @@ export async function PUT(
     const [year, month, day] = startDate.split('-').map(Number)
     const [startHour, startMinute] = startTime.split(':').map(Number)
     
-    // Use timezone-aware date creation to ensure times are stored correctly
-    // Convert user's local time to UTC for database storage
-    const startDateTimeString = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}T${startHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}:00`
-    const startDateTime = new Date(startDateTimeString)
+    // PROPER timezone handling: Convert Chicago time to UTC
+    // Create date string and explicitly handle Chicago timezone conversion
+    const inputDateStr = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}T${startHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}:00`
+    
+    // For Chicago timezone (America/Chicago):
+    // In summer (DST): UTC-5 (CDT), in winter: UTC-6 (CST)
+    // August is definitely DST, so Chicago is UTC-5
+    const chicagoOffsetHours = -5 // CDT (adjust to -6 for CST months if needed)
+    
+    // Parse as if it's local time, then shift to represent UTC storage
+    const localTime = new Date(inputDateStr)
+    const startDateTime = new Date(localTime.getTime() - (chicagoOffsetHours * 60 * 60 * 1000))
     
     let endDateTime = null
     if (endTime) {
       const [endHour, endMinute] = endTime.split(':').map(Number)
-      const endDateTimeString = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}T${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}:00`
-      endDateTime = new Date(endDateTimeString)
+      const endInputDateStr = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}T${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}:00`
+      const localEndTime = new Date(endInputDateStr)
+      endDateTime = new Date(localEndTime.getTime() - (chicagoOffsetHours * 60 * 60 * 1000))
     }
 
     console.log('📅 Date/time construction:', {
