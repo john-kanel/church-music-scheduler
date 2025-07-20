@@ -228,18 +228,18 @@ export async function PUT(
       )
     }
 
-    // Create dates preserving user's intended local time (timezone-aware)
+    // Create dates preserving user's intended local time using UTC to avoid timezone conversion
     const [year, month, day] = startDate.split('-').map(Number)
     const [startHour, startMinute] = startTime.split(':').map(Number)
     
-    // Use Date constructor with individual components to avoid timezone interpretation issues
-    // This creates the date in the server's timezone but with the user's intended time values
-    const startDateTime = new Date(year, month - 1, day, startHour, startMinute, 0)
+    // Use UTC methods to avoid any timezone interpretation issues
+    // This preserves the exact time the user entered regardless of server timezone
+    const startDateTime = new Date(Date.UTC(year, month - 1, day, startHour, startMinute, 0))
     
     let endDateTime = null
     if (endTime) {
       const [endHour, endMinute] = endTime.split(':').map(Number)
-      endDateTime = new Date(year, month - 1, day, endHour, endMinute, 0)
+      endDateTime = new Date(Date.UTC(year, month - 1, day, endHour, endMinute, 0))
     }
 
     console.log('📅 Date/time construction:', {

@@ -115,7 +115,7 @@ function buildEventDescription(event: EventWithDetails): string {
   }
 
   // Add musician assignments with better formatting
-  const acceptedAssignments = event.assignments.filter(a => a.user && a.status === 'ACCEPTED')
+  const acceptedAssignments = event.assignments.filter(a => a.user && (a.status === 'ACCEPTED' || a.status === 'PENDING'))
   const pendingAssignments = event.assignments.filter(a => !a.user && a.status === 'PENDING')
   
   if (acceptedAssignments.length > 0 || pendingAssignments.length > 0) {

@@ -611,20 +611,55 @@ export default function EventPlannerPage() {
       const currentEvent = data?.events.find(e => e.id === currentEventIdForUpload)
       const existingHymns = currentEvent?.hymns || []
 
-      // Convert suggestions to hymns format
-      const newHymns = suggestions.map((suggestion) => {
+      // Convert suggestions to hymns format, creating service parts as needed
+      const newHymns = await Promise.all(suggestions.map(async (suggestion) => {
         // Find matching service part
-        const matchingPart = data?.serviceParts.find(part => 
+        let matchingPart = data?.serviceParts.find(part => 
           part.name.toLowerCase().includes(suggestion.servicePartName.toLowerCase()) ||
           suggestion.servicePartName.toLowerCase().includes(part.name.toLowerCase())
         )
+        
+        // If no matching service part found, create it automatically
+        if (!matchingPart && suggestion.servicePartName?.trim()) {
+          try {
+            const response = await fetch('/api/service-parts', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                serviceParts: [{
+                  id: `temp-${Date.now()}`,
+                  name: suggestion.servicePartName.trim(),
+                  isRequired: false,
+                  order: (data?.serviceParts.length || 0) + 1
+                }]
+              })
+            })
+            
+            if (response.ok) {
+              const result = await response.json()
+              if (result.serviceParts && result.serviceParts.length > 0) {
+                matchingPart = result.serviceParts[0]
+                                 // Update local data to include the new service part
+                 setData(prev => {
+                   if (!prev || !matchingPart) return prev
+                   return {
+                     ...prev,
+                     serviceParts: [...prev.serviceParts, matchingPart].sort((a, b) => (a?.order || 0) - (b?.order || 0))
+                   }
+                 })
+              }
+            }
+          } catch (error) {
+            console.error('Error creating service part:', error)
+          }
+        }
         
         return {
           title: suggestion.songTitle,
           notes: suggestion.notes || '',
           servicePartId: matchingPart?.id || null
         }
-      })
+      }))
 
       // Combine existing hymns with new ones (keeping existing hymns)
       const allHymns = [
