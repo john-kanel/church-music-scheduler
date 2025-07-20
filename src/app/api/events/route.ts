@@ -217,13 +217,13 @@ export async function POST(request: NextRequest) {
     const [year, month, day] = startDate.split('-').map(Number)
     const [startHour, startMinute] = startTime.split(':').map(Number)
     
-    // Use timezone-aware date creation to preserve user's intended time
-    const startDateTime = new Date(`${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}T${startHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}:00`)
+    // Create timezone-aware dates - treat input as local time in user's timezone
+    const startDateTime = new Date(year, month - 1, day, startHour, startMinute, 0)
     
     let endDateTime = null
     if (endTime) {
       const [endHour, endMinute] = endTime.split(':').map(Number)
-      endDateTime = new Date(`${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}T${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}:00`)
+      endDateTime = new Date(year, month - 1, day, endHour, endMinute, 0)
     }
 
     console.log('🕐 Date creation with user timezone awareness:', {

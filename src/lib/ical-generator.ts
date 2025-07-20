@@ -102,8 +102,6 @@ function convertEventToICal(event: EventWithDetails, timezone: string): ICalEven
 function buildEventDescription(event: EventWithDetails): string {
   const lines: string[] = []
 
-  lines.push('-----')
-
   // Add location prominently at the top  
   if (event.location) {
     lines.push(`📍 Location: ${event.location}`)
@@ -196,7 +194,6 @@ function buildEventDescription(event: EventWithDetails): string {
 
   // Add event type
   lines.push(`📅 Event Type: ${event.eventType.name}`)
-  lines.push('-----')
   
   return lines.join('\n')
 }
