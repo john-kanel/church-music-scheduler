@@ -171,13 +171,28 @@ export async function PUT(
     }
 
     const body = await request.json()
+    
+    // Handle drag-and-drop format (ISO strings) vs form format (separate date/time)
+    let startDate, startTime, endTime
+    if (body.startTime && body.startTime.includes('T')) {
+      // Drag-and-drop format: ISO strings
+      const startDateTime = new Date(body.startTime)
+      const endDateTime = body.endTime ? new Date(body.endTime) : null
+      
+      startDate = startDateTime.toISOString().split('T')[0] // "2025-07-24"
+      startTime = startDateTime.toTimeString().slice(0, 5) // "10:00"
+      endTime = endDateTime ? endDateTime.toTimeString().slice(0, 5) : body.endTime
+    } else {
+      // Form format: separate fields
+      startDate = body.startDate
+      startTime = body.startTime
+      endTime = body.endTime
+    }
+    
     const {
       name,
       description,
       location,
-      startDate,
-      startTime,
-      endTime,
       eventTypeId,
       roles = [],
       isRecurring,
@@ -213,18 +228,18 @@ export async function PUT(
       )
     }
 
-    // Create dates using ISO string format (consistent with event creation logic)
+    // Create dates preserving user's intended local time (timezone-aware)
     const [year, month, day] = startDate.split('-').map(Number)
     const [startHour, startMinute] = startTime.split(':').map(Number)
     
-    const dateString = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}T${startHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}:00`
-    const startDateTime = new Date(dateString)
+    // Use Date constructor with individual components to avoid timezone interpretation issues
+    // This creates the date in the server's timezone but with the user's intended time values
+    const startDateTime = new Date(year, month - 1, day, startHour, startMinute, 0)
     
     let endDateTime = null
     if (endTime) {
       const [endHour, endMinute] = endTime.split(':').map(Number)
-      const endDateString = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}T${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}:00`
-      endDateTime = new Date(endDateString)
+      endDateTime = new Date(year, month - 1, day, endHour, endMinute, 0)
     }
 
     console.log('📅 Date/time construction:', {

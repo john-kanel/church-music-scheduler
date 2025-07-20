@@ -205,28 +205,26 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create dates properly accounting for user timezone
+    // Create dates preserving user's intended local time (timezone-aware)
     const [year, month, day] = startDate.split('-').map(Number)
     const [startHour, startMinute] = startTime.split(':').map(Number)
     
-    // Create date string that will be interpreted correctly
-    // Format: YYYY-MM-DDTHH:MM:SS (without timezone - this gets interpreted as local server time)
-    const dateString = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}T${startHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}:00`
-    const startDateTime = new Date(dateString)
+    // Use Date constructor with individual components to avoid timezone interpretation issues
+    // This creates the date in the server's timezone but with the user's intended time values
+    const startDateTime = new Date(year, month - 1, day, startHour, startMinute, 0)
     
     let endDateTime = null
     if (endTime) {
       const [endHour, endMinute] = endTime.split(':').map(Number)
-      const endDateString = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}T${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}:00`
-      endDateTime = new Date(endDateString)
+      endDateTime = new Date(year, month - 1, day, endHour, endMinute, 0)
     }
 
-    console.log('🕐 Date creation with ISO string:', {
+    console.log('🕐 Date creation with timezone preservation:', {
       inputTime: `${startTime} on ${startDate}`,
-      dateString,
+      constructedTime: `${startHour}:${startMinute} on ${year}-${month}-${day}`,
       startDateTime: startDateTime.toISOString(),
-      localDisplay: startDateTime.toLocaleString('en-US', { timeZone: 'America/Chicago' }),
-      note: 'Using ISO string without timezone specifier'
+      localDisplay: startDateTime.toLocaleString(),
+      note: 'Using Date constructor with components to preserve user time'
     })
 
     // Find or create event type based on color
