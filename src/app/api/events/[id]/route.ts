@@ -457,6 +457,15 @@ export async function PUT(
   }
 }
 
+// PATCH /api/events/[id] - Partial update event (for drag and drop)
+export async function PATCH(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  // PATCH calls the same logic as PUT for simplicity
+  return PUT(request, context)
+}
+
 // DELETE /api/events/[id] - Delete event
 export async function DELETE(
   request: NextRequest,
