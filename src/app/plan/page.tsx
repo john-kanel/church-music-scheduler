@@ -438,7 +438,7 @@ export default function EventPlannerPage() {
         hymnsToSend.push({
           title: newTitle,
           notes: '',
-          servicePartId: servicePartId || undefined
+          servicePartId: servicePartId ?? undefined
         })
       }
 
@@ -462,7 +462,7 @@ export default function EventPlannerPage() {
 
   // More aggressive auto-save with refs to avoid stale closures
   const [updateTimeouts, setUpdateTimeouts] = useState<Record<string, NodeJS.Timeout>>({})
-  const pendingUpdatesRef = useRef<Record<string, {eventId: string, title: string, servicePartId: string, hymnId?: string}>>({})
+  const pendingUpdatesRef = useRef<Record<string, {eventId: string, title: string, servicePartId: string | null, hymnId?: string}>>({})
   const updateTimeoutsRef = useRef<Record<string, NodeJS.Timeout>>({})
   
   // Auto-save when page becomes hidden (user switches tabs)
@@ -568,7 +568,7 @@ export default function EventPlannerPage() {
     const key = `${eventId}-${servicePartId || 'no-service-part'}`
     
     // Store pending update in ref (survives tab switches)
-    pendingUpdatesRef.current[key] = { eventId, title: newTitle, servicePartId: servicePartId || undefined, hymnId }
+    pendingUpdatesRef.current[key] = { eventId, title: newTitle, servicePartId: servicePartId, hymnId }
     
     // Clear existing timeout
     if (updateTimeoutsRef.current[key]) {
