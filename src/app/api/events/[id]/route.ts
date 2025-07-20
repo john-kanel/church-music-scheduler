@@ -240,13 +240,16 @@ export async function PUT(
     const [year, month, day] = startDate.split('-').map(Number)
     const [startHour, startMinute] = startTime.split(':').map(Number)
     
-    // Create timezone-aware dates - treat input as local time in user's timezone
-    const startDateTime = new Date(year, month - 1, day, startHour, startMinute, 0)
+    // Use timezone-aware date creation to ensure times are stored correctly
+    // Convert user's local time to UTC for database storage
+    const startDateTimeString = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}T${startHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}:00`
+    const startDateTime = new Date(startDateTimeString)
     
     let endDateTime = null
     if (endTime) {
       const [endHour, endMinute] = endTime.split(':').map(Number)
-      endDateTime = new Date(year, month - 1, day, endHour, endMinute, 0)
+      const endDateTimeString = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}T${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}:00`
+      endDateTime = new Date(endDateTimeString)
     }
 
     console.log('📅 Date/time construction:', {
@@ -267,8 +270,8 @@ export async function PUT(
     // Use the provided eventTypeId if available, otherwise keep the existing one
     let finalEventTypeId = eventTypeId || existingEvent.eventTypeId
 
-    // Update event in transaction
-    console.log('🔄 Starting event update transaction:', { 
+    // Split the update into smaller operations to avoid transaction timeout
+    console.log('🔄 Starting event update in smaller operations:', { 
       eventId: params.id,
       name, 
       location, 
@@ -277,53 +280,49 @@ export async function PUT(
       finalEventTypeId 
     })
     
-    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      console.log('📝 Updating event in database...')
-      
-      // Update the event
-      const updateData = {
-        name,
-        description,
-        location,
-        startTime: startDateTime,
-        endTime: endDateTime,
-        isRecurring,
-        recurrencePattern,
-        recurrenceEnd: recurrenceEnd ? new Date(recurrenceEnd) : null,
-        ...(finalEventTypeId && { eventTypeId: finalEventTypeId })
+    // Step 1: Update the main event
+    console.log('📝 Updating event in database...')
+    const updateData = {
+      name,
+      description,
+      location,
+      startTime: startDateTime,
+      endTime: endDateTime,
+      isRecurring,
+      recurrencePattern,
+      recurrenceEnd: recurrenceEnd ? new Date(recurrenceEnd) : null,
+      ...(finalEventTypeId && { eventTypeId: finalEventTypeId })
+    }
+
+    console.log('💾 About to update event with data:', {
+      eventId: params.id,
+      updateData: {
+        name: updateData.name,
+        location: updateData.location,
+        startTime: updateData.startTime.toISOString(),
+        endTime: updateData.endTime?.toISOString(),
+        description: updateData.description
       }
+    })
 
-      console.log('💾 About to update event with data:', {
-        eventId: params.id,
-        updateData: {
-          name: updateData.name,
-          location: updateData.location,
-          startTime: updateData.startTime.toISOString(),
-          endTime: updateData.endTime?.toISOString(),
-          description: updateData.description
-        }
-      })
+    const updatedEvent = await prisma.event.update({
+      where: { id: params.id },
+      data: updateData
+    })
+    
+    console.log('✅ Event updated in database:', { 
+      eventId: updatedEvent.id,
+      updatedName: updatedEvent.name,
+      updatedLocation: updatedEvent.location,
+      updatedStartTime: updatedEvent.startTime.toISOString(),
+      updatedEndTime: updatedEvent.endTime?.toISOString()
+    })
 
-      const updatedEvent = await tx.event.update({
-        where: { id: params.id },
-        data: updateData
-      })
+    // Step 2: Update role assignments (separate operation)
+    if (validRoles.length > 0) {
+      console.log('👥 Updating role assignments...')
       
-      console.log('✅ Event updated in database:', { 
-        eventId: updatedEvent.id,
-        updatedName: updatedEvent.name,
-        updatedLocation: updatedEvent.location,
-        updatedStartTime: updatedEvent.startTime.toISOString(),
-        updatedEndTime: updatedEvent.endTime?.toISOString()
-      })
-
-      // Mark event for calendar update
-      await markEventForCalendarUpdate(updatedEvent.id)
-
-      // If roles provided, update assignments
-      if (validRoles.length > 0) {
-        console.log('👥 Updating role assignments...')
-        
+      await prisma.$transaction(async (tx) => {
         // Remove existing unassigned roles
         await tx.eventAssignment.deleteMany({
           where: {
@@ -342,14 +341,16 @@ export async function PUT(
             status: 'PENDING'
           }))
         })
-        
-        console.log('✅ Role assignments updated')
-      }
+      }, { timeout: 10000 })
+      
+      console.log('✅ Role assignments updated')
+    }
 
-      // If this event is now recurring, create recurring instances
-      if (isRecurring && recurrencePattern) {
-        console.log('🔄 Processing recurring event settings...')
-        
+    // Step 3: Handle recurring events (separate operation)
+    if (isRecurring && recurrencePattern) {
+      console.log('🔄 Processing recurring event settings...')
+      
+      await prisma.$transaction(async (tx) => {
         // Remove any existing recurring events for this parent
         await tx.event.deleteMany({
           where: {
@@ -395,23 +396,24 @@ export async function PUT(
             })
           }
         }
-        
-        console.log('✅ Recurring events created')
-      } else if (!isRecurring) {
-        // If no longer recurring, remove any child events
-        await tx.event.deleteMany({
-          where: {
-            parentEventId: params.id
-          }
-        })
-        
-        console.log('✅ Removed recurring events (no longer recurring)')
-      }
+      }, { timeout: 30000 })
+      
+      console.log('✅ Recurring events created')
+    } else if (!isRecurring) {
+      // If no longer recurring, remove any child events
+      await prisma.event.deleteMany({
+        where: {
+          parentEventId: params.id
+        }
+      })
+      
+      console.log('✅ Removed recurring events (no longer recurring)')
+    }
 
-      return updatedEvent
-    })
+    // Step 4: Mark event for calendar update
+    await markEventForCalendarUpdate(updatedEvent.id)
 
-    console.log('✅ Transaction completed successfully')
+    console.log('✅ All operations completed successfully')
 
     // Fetch the complete updated event
     console.log('📄 Fetching complete event data...')
