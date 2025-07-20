@@ -2,11 +2,16 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
-import { ArrowLeft, Plus, Filter, Calendar, FileText, Zap, ChevronLeft, ChevronRight, Edit, ChevronUp, ChevronDown, Check, XCircle, X, Trash2, ExternalLink } from 'lucide-react'
+import { 
+  ArrowLeft, Calendar, Plus, Search, Filter, Users, Clock, MapPin, 
+  ChevronLeft, ChevronRight, Settings, Trash2, Edit, Eye, EyeOff,
+  Palette, Save, X, FileText, Zap, ChevronDown, Check, ExternalLink, ChevronUp
+  } from 'lucide-react'
 import Link from 'next/link'
 import { CreateEventModal } from '@/components/events/create-event-modal'
 import { ServicePartEditModal } from '@/components/events/service-part-edit-modal'
 import { AutoAssignModal } from '@/components/events/auto-assign-modal'
+import { EventDetailsModal } from '@/components/events/event-details-modal'
 import dynamic from 'next/dynamic'
 
 // Dynamically import PdfProcessor to prevent SSR issues
@@ -69,6 +74,8 @@ interface Event {
     mimeType: string
     uploadedAt: string
   }>
+  isRootEvent?: boolean
+  generatedFrom?: string
 }
 
 interface EventPlannerData {
@@ -98,7 +105,7 @@ function ToastContainer({ toasts, removeToast }: { toasts: ToastMessage[], remov
             {toast.type === 'success' ? (
               <Check className="h-4 w-4" />
             ) : (
-              <XCircle className="h-4 w-4" />
+              <X className="h-4 w-4" />
             )}
             <span className="text-sm font-medium">{toast.message}</span>
           </div>
@@ -166,6 +173,10 @@ export default function EventPlannerPage() {
   const [showAutoAssignModal, setShowAutoAssignModal] = useState(false)
   const [lastAutoAssignBatch, setLastAutoAssignBatch] = useState<string[]>([]) // Track last batch for undo
   const [openFilterDropdown, setOpenFilterDropdown] = useState<string | null>(null)
+  
+  // Event details modal state
+  const [showEventDetailsModal, setShowEventDetailsModal] = useState(false)
+  const [selectedEventForEdit, setSelectedEventForEdit] = useState<Event | null>(null)
 
   // Toast functions
   const showToast = (type: 'success' | 'error', message: string) => {
@@ -354,8 +365,22 @@ export default function EventPlannerPage() {
     setOpenFilterDropdown(openFilterDropdown === filterKey ? null : filterKey)
   }
 
-  const getEventsForFilterGroup = (eventName: string) => {
-    return data?.events.filter(event => event.name === eventName && visibleEventColors.has(event.eventType.color)) || []
+  const getEventsForFilterGroup = (eventName: string): Event[] => {
+    if (!data?.events) return []
+    
+    if (eventName === 'General') {
+      // Return all non-recurring events
+      return data.events.filter(event => 
+        !event.isRootEvent && !event.generatedFrom && 
+        visibleEventColors.has(event.eventType.color)
+      )
+    } else {
+      // Return events with matching name (recurring events)
+      return data.events.filter(event => 
+        event.name === eventName && 
+        visibleEventColors.has(event.eventType.color)
+      )
+    }
   }
 
   const handleUndoAutoAssignment = async () => {
@@ -602,14 +627,22 @@ export default function EventPlannerPage() {
   }
 
   const handleAddDefaultServiceParts = async (eventId: string) => {
+    console.log('🔧 BUTTON CLICKED: Add Default Service Parts for event:', eventId)
     try {
-      if (!data) return
+      if (!data) {
+        console.log('🔧 ERROR: No data available')
+        return
+      }
 
+      console.log('🔧 DEBUG: Available service parts:', data.serviceParts)
+      
       // Get all default service parts
       const defaultServiceParts = data.serviceParts.filter(sp => sp.isRequired)
       
+      console.log('🔧 DEBUG: Default service parts (isRequired=true):', defaultServiceParts)
+      
       if (defaultServiceParts.length === 0) {
-        showToast('error', 'No default service parts are configured')
+        showToast('error', 'No default service parts are configured. Please mark some service parts as "Required" in your church settings.')
         return
       }
 
@@ -624,9 +657,15 @@ export default function EventPlannerPage() {
       const currentEvent = data.events.find(e => e.id === eventId)
       const existingHymns = currentEvent?.hymns || []
 
+      console.log('🔧 DEBUG: Current event hymns:', existingHymns)
+      console.log('🔧 DEBUG: New default hymns to add:', defaultHymns)
+
       // Combine existing hymns with new default parts (avoiding duplicates)
       const existingServicePartIds = existingHymns.map(h => h.servicePartId).filter(Boolean)
       const newHymns = defaultHymns.filter(h => !existingServicePartIds.includes(h.servicePartId))
+
+      console.log('🔧 DEBUG: Existing service part IDs:', existingServicePartIds)
+      console.log('🔧 DEBUG: New hymns after duplicate removal:', newHymns)
 
       if (newHymns.length === 0) {
         showToast('error', 'All default service parts are already added to this event')
@@ -642,19 +681,31 @@ export default function EventPlannerPage() {
         ...newHymns
       ]
 
+      console.log('🔧 DEBUG: Final hymns array to save:', allHymns)
+
       // Save to the event
+      console.log('🔧 DEBUG: Making API call to:', `/api/events/${eventId}/hymns`)
       const response = await fetch(`/api/events/${eventId}/hymns`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ hymns: allHymns })
       })
 
+      console.log('🔧 DEBUG: API response status:', response.status)
+      
       if (!response.ok) {
-        throw new Error('Failed to add default service parts')
+        const errorText = await response.text()
+        console.log('🔧 ERROR: API response error:', errorText)
+        throw new Error(`Failed to add default service parts: ${errorText}`)
       }
 
+      const responseData = await response.json()
+      console.log('🔧 DEBUG: API response data:', responseData)
+
       showToast('success', `Added ${newHymns.length} default service parts`)
+      console.log('🔧 DEBUG: Refreshing planner data...')
       await fetchPlannerData()
+      console.log('🔧 DEBUG: Planner data refreshed')
     } catch (error) {
       console.error('Error adding default service parts:', error)
       showToast('error', 'Failed to add default service parts')
@@ -662,12 +713,19 @@ export default function EventPlannerPage() {
   }
 
   const handleAddSingleSong = async (eventId: string) => {
+    console.log('🎵 BUTTON CLICKED: Add Single Song for event:', eventId)
     try {
-      if (!data) return
+      if (!data) {
+        console.log('🎵 ERROR: No data available')
+        return
+      }
 
       // Get current event hymns
       const currentEvent = data.events.find(e => e.id === eventId)
       const existingHymns = currentEvent?.hymns || []
+      
+      console.log('🎵 DEBUG: Current event:', currentEvent?.name)
+      console.log('🎵 DEBUG: Existing hymns count:', existingHymns.length)
 
       // Add a new hymn without a service part (general music)
       const newHymn = {
@@ -685,19 +743,31 @@ export default function EventPlannerPage() {
         newHymn
       ]
 
+      console.log('🎵 DEBUG: Final hymns array with new song:', allHymns)
+
       // Save to the event
+      console.log('🎵 DEBUG: Making API call to:', `/api/events/${eventId}/hymns`)
       const response = await fetch(`/api/events/${eventId}/hymns`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ hymns: allHymns })
       })
 
+      console.log('🎵 DEBUG: API response status:', response.status)
+
       if (!response.ok) {
-        throw new Error('Failed to add song')
+        const errorText = await response.text()
+        console.log('🎵 ERROR: API response error:', errorText)
+        throw new Error(`Failed to add song: ${errorText}`)
       }
 
+      const responseData = await response.json()
+      console.log('🎵 DEBUG: API response data:', responseData)
+
       showToast('success', 'Added new song slot')
+      console.log('🎵 DEBUG: Refreshing planner data...')
       await fetchPlannerData()
+      console.log('🎵 DEBUG: Planner data refreshed')
     } catch (error) {
       console.error('Error adding song:', error)
       showToast('error', 'Failed to add song')
@@ -1090,12 +1160,45 @@ export default function EventPlannerPage() {
 
   // Get unique event names for filter (grouped by event name instead of event type)
   const uniqueEvents = data ? 
-    [...new Map(data.events.map(event => [event.name, { 
-      name: event.name, 
-      color: event.eventType.color,
-      id: event.id 
-    }])).values()] 
+    [...new Map(data.events.map(event => {
+      // Show recurring events by their name, non-recurring as "General"
+      const displayName = event.isRootEvent || event.generatedFrom ? event.name : 'General'
+      return [displayName, { 
+        name: displayName, 
+        color: event.eventType.color,
+        id: event.id,
+        isRecurring: event.isRootEvent || !!event.generatedFrom
+      }]
+    })).values()] 
     : []
+
+  const handleDeleteEvent = async (eventId: string) => {
+    if (!window.confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/events/${eventId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to delete event')
+      }
+
+      showToast('success', 'Event deleted successfully')
+      await fetchPlannerData()
+    } catch (error) {
+      console.error('Error deleting event:', error)
+      showToast('error', 'Failed to delete event')
+    }
+  }
+
+  const handleEditEvent = (event: Event) => {
+    setSelectedEventForEdit(event)
+    setShowEventDetailsModal(true)
+  }
 
   if (loading) {
     return (
@@ -1175,68 +1278,66 @@ export default function EventPlannerPage() {
             <Filter className="w-4 h-4 text-gray-400 flex-shrink-0" />
             <span className="text-sm font-medium text-gray-700 flex-shrink-0">Events:</span>
             <div className="flex gap-4 min-w-0">
-              {uniqueEvents.map((event: any) => {
-                const eventsInGroup = getEventsForFilterGroup(event.name)
-                const allSelected = eventsInGroup.every(e => selectedEvents.has(e.id))
-                const someSelected = eventsInGroup.some(e => selectedEvents.has(e.id))
+              {uniqueEvents.map((eventGroup: any) => {
+                const eventsInThisGroup = getEventsForFilterGroup(eventGroup.name)
+                const allSelected = eventsInThisGroup.every((e: any) => selectedEvents.has(e.id))
+                const someSelected = eventsInThisGroup.some((e: any) => selectedEvents.has(e.id))
                 
                 return (
-                  <div key={event.id} className="relative flex-shrink-0">
+                  <div key={eventGroup.id} className="relative flex-shrink-0">
                     <label className="flex items-center gap-2">
                       <input
                         type="checkbox"
-                        checked={visibleEventColors.has(event.color)}
-                        onChange={() => toggleEventColor(event.color)}
+                        checked={visibleEventColors.has(eventGroup.color)}
+                        onChange={() => toggleEventColor(eventGroup.color)}
                         className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
                       <div 
                         className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: event.color }}
+                        style={{ backgroundColor: eventGroup.color }}
                       />
-                      <span className="text-sm text-gray-700">{event.name}</span>
+                      <span className="text-sm text-gray-700">{eventGroup.name}</span>
                       
                       {/* Dropdown arrow - only show if multiple events and events are visible */}
-                      {eventsInGroup.length > 1 && visibleEventColors.has(event.color) && (
+                      {eventsInThisGroup.length > 1 && visibleEventColors.has(eventGroup.color) && (
                         <button
-                          onClick={(e) => {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            toggleFilterDropdown(event.name)
-                          }}
-                          className="p-1 hover:bg-gray-100 rounded"
+                          onClick={() => toggleFilterDropdown(eventGroup.name)}
+                          className="ml-1 p-1 text-gray-400 hover:text-gray-600"
+                          title="Show individual events"
                         >
-                          <ChevronDown className={`w-3 h-3 text-gray-500 transition-transform ${
-                            openFilterDropdown === event.name ? 'rotate-180' : ''
-                          }`} />
+                          <ChevronDown 
+                            className={`w-3 h-3 transition-transform ${
+                              openFilterDropdown === eventGroup.name ? 'rotate-180' : ''
+                            }`} 
+                          />
                         </button>
                       )}
                     </label>
                     
-                    {/* Dropdown Menu */}
-                    {openFilterDropdown === event.name && eventsInGroup.length > 1 && (
-                      <div 
-                        className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-48"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <div className="p-2">
+                    {/* Dropdown for individual event selection */}
+                    {openFilterDropdown === eventGroup.name && eventsInThisGroup.length > 1 && (
+                      <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-10 min-w-[200px]">
+                        <div className="p-2 space-y-1">
                           <button
-                            onClick={(e) => {
-                              e.preventDefault()
-                              e.stopPropagation()
-                              selectAllEventsForFilter([event.name])
-                            }}
-                            className={`w-full text-left px-3 py-2 text-sm rounded hover:bg-gray-50 flex items-center gap-2 transition-colors ${
-                              allSelected ? 'text-green-700 bg-green-50' : 'text-gray-700 hover:bg-blue-50'
-                            }`}
+                            onClick={() => selectAllEventsForFilter([eventGroup.name])}
+                            className="w-full text-left px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded"
                           >
-                            {allSelected ? <Check className="w-4 h-4" /> : <div className="w-4 h-4" />}
-                            Select All ({eventsInGroup.length})
+                            {allSelected ? 'Deselect All' : 'Select All'}
                           </button>
-                          
-                          <div className="mt-1 pt-1 border-t border-gray-100">
-                            <div className="text-xs text-gray-500 px-3 py-1">
-                              {someSelected ? `${eventsInGroup.filter(e => selectedEvents.has(e.id)).length} of ${eventsInGroup.length} selected` : 'None selected'}
-                            </div>
+                          <div className="border-t border-gray-100 mt-1 pt-1">
+                            {eventsInThisGroup.map((individualEvent: any) => (
+                              <label key={individualEvent.id} className="flex items-center gap-2 px-2 py-1 text-xs hover:bg-gray-50 rounded cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedEvents.has(individualEvent.id)}
+                                  onChange={() => toggleEventSelection(individualEvent.id)}
+                                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                />
+                                <span className="text-gray-700 truncate">
+                                  {new Date(individualEvent.startTime).toLocaleDateString()} - {individualEvent.location}
+                                </span>
+                              </label>
+                            ))}
                           </div>
                         </div>
                       </div>
@@ -1304,18 +1405,38 @@ export default function EventPlannerPage() {
                     <div key={event.id} className="flex-shrink-0 w-80 border-r border-gray-200 bg-white">
                       {/* Event Header */}
                       <div className="p-4 border-b border-gray-200 bg-gray-50">
-                        <div className="flex items-center gap-2 mb-2">
-                          <input
-                            type="checkbox"
-                            checked={selectedEvents.has(event.id)}
-                            onChange={() => toggleEventSelection(event.id)}
-                            className="rounded border-gray-300 text-green-600 focus:ring-green-500"
-                          />
-                          <div 
-                            className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: event.eventType.color }}
-                          />
-                          <h3 className="font-semibold text-gray-900 truncate">{event.name}</h3>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={selectedEvents.has(event.id)}
+                              onChange={() => toggleEventSelection(event.id)}
+                              className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                            />
+                            <div 
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: event.eventType.color }}
+                            />
+                            <h3 className="font-semibold text-gray-900 truncate">{event.name}</h3>
+                          </div>
+                          
+                          {/* Edit and Delete buttons */}
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => handleEditEvent(event)}
+                              className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                              title="Edit event"
+                            >
+                              <Edit className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteEvent(event.id)}
+                              className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                              title="Delete event"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
                         </div>
                         <p className="text-xs text-gray-500 mb-1">
                           {new Date(event.startTime).toLocaleDateString()} at{' '}
@@ -1720,18 +1841,38 @@ export default function EventPlannerPage() {
                         <>
                           {/* Event Header */}
                           <div className="p-4 border-b border-gray-200 bg-gray-50">
-                            <div className="flex items-center gap-2 mb-2">
-                              <input
-                                type="checkbox"
-                                checked={selectedEvents.has(event.id)}
-                                onChange={() => toggleEventSelection(event.id)}
-                                className="rounded border-gray-300 text-green-600 focus:ring-green-500"
-                              />
-                              <div 
-                                className="w-3 h-3 rounded-full"
-                                style={{ backgroundColor: event.eventType.color }}
-                              />
-                              <h3 className="font-semibold text-gray-900 truncate">{event.name}</h3>
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedEvents.has(event.id)}
+                                  onChange={() => toggleEventSelection(event.id)}
+                                  className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                                />
+                                <div 
+                                  className="w-3 h-3 rounded-full"
+                                  style={{ backgroundColor: event.eventType.color }}
+                                />
+                                <h3 className="font-semibold text-gray-900 truncate">{event.name}</h3>
+                              </div>
+                              
+                                                             {/* Edit and Delete buttons */}
+                               <div className="flex items-center gap-1">
+                                 <button
+                                   onClick={() => handleEditEvent(event)}
+                                   className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                                   title="Edit event"
+                                 >
+                                   <Edit className="w-3 h-3" />
+                                 </button>
+                                 <button
+                                   onClick={() => handleDeleteEvent(event.id)}
+                                   className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                                   title="Delete event"
+                                 >
+                                   <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
                             </div>
                             <p className="text-xs text-gray-500 mb-1">
                               {new Date(event.startTime).toLocaleDateString()} at{' '}
@@ -2165,6 +2306,24 @@ export default function EventPlannerPage() {
           }}
         />
       )}
+
+      {/* Event Details Modal */}
+      <EventDetailsModal
+        isOpen={showEventDetailsModal}
+        onClose={() => {
+          setShowEventDetailsModal(false)
+          setSelectedEventForEdit(null)
+        }}
+        event={selectedEventForEdit}
+        onEventUpdated={() => {
+          fetchPlannerData() // Refresh data after event update
+        }}
+        onEventDeleted={() => {
+          setShowEventDetailsModal(false)
+          setSelectedEventForEdit(null)
+          fetchPlannerData() // Refresh data after event deletion
+        }}
+      />
 
       {/* Toast Notifications */}
       <ToastContainer toasts={toasts} removeToast={removeToast} />
