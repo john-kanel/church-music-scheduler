@@ -155,6 +155,11 @@ export default function EventPlannerPage() {
   const [editingServicePart, setEditingServicePart] = useState<ServicePart | null>(null)
   const [editingEventId, setEditingEventId] = useState<string>('')
   const [clickPosition, setClickPosition] = useState<{ x: number, y: number } | undefined>(undefined)
+  
+  // Individual hymn editing
+  const [showIndividualHymnEditModal, setShowIndividualHymnEditModal] = useState(false)
+  const [editingIndividualHymn, setEditingIndividualHymn] = useState<{id: string, title: string, notes?: string} | null>(null)
+  
   // Event-specific service part ordering
   const [eventServicePartOrder, setEventServicePartOrder] = useState<Record<string, string[]>>({})
   
@@ -879,6 +884,13 @@ export default function EventPlannerPage() {
     setShowServicePartEditModal(true)
   }
 
+  const handleEditIndividualHymn = (hymn: {id: string, title: string, notes?: string}, eventId: string, event: React.MouseEvent) => {
+    setEditingIndividualHymn(hymn)
+    setEditingEventId(eventId)
+    setClickPosition({ x: event.clientX, y: event.clientY })
+    setShowIndividualHymnEditModal(true)
+  }
+
   const handleSaveServicePart = async (servicePartId: string, name: string, notes: string) => {
     if (!editingEventId) return
     
@@ -901,6 +913,55 @@ export default function EventPlannerPage() {
       setEditingEventId('')
     } catch (error) {
       console.error('Error saving service part:', error)
+    }
+  }
+
+  const handleSaveIndividualHymn = async (title: string, notes: string) => {
+    if (!editingEventId || !editingIndividualHymn) return
+    
+    try {
+      // Update the hymn via API
+      const response = await fetch(`/api/events/${editingEventId}/hymns`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          hymns: data?.events.find(e => e.id === editingEventId)?.hymns.map(h => 
+            h.id === editingIndividualHymn.id 
+              ? { ...h, title, notes }
+              : { title: h.title, notes: h.notes || '', servicePartId: h.servicePartId }
+          ) || []
+        })
+      })
+
+      if (response.ok) {
+        // Update local state
+        setData(prev => {
+          if (!prev) return prev
+          return {
+            ...prev,
+            events: prev.events.map(ev => 
+              ev.id === editingEventId 
+                ? {
+                    ...ev,
+                    hymns: ev.hymns.map(h => 
+                      h.id === editingIndividualHymn.id ? { ...h, title, notes } : h
+                    )
+                  }
+                : ev
+            )
+          }
+        })
+        showToast('success', 'Song updated successfully')
+      } else {
+        showToast('error', 'Failed to update song')
+      }
+      
+      setShowIndividualHymnEditModal(false)
+      setEditingIndividualHymn(null)
+      setEditingEventId('')
+    } catch (error) {
+      console.error('Error saving individual hymn:', error)
+      showToast('error', 'Error updating song')
     }
   }
 
@@ -1690,6 +1751,13 @@ export default function EventPlannerPage() {
                                     <ChevronDown className="h-3 w-3" />
                                   </button>
                                   <button
+                                    onClick={(e) => handleEditIndividualHymn(hymn, event.id, e)}
+                                    className="p-1 text-gray-400 hover:text-gray-600 transition-all"
+                                    title="Edit song notes"
+                                  >
+                                    <Edit className="h-3 w-3" />
+                                  </button>
+                                  <button
                                     onClick={() => handleDeleteIndividualHymn(hymn.id, event.id)}
                                     className="p-1 text-gray-400 hover:text-red-600 transition-all"
                                     title="Delete song"
@@ -2401,6 +2469,27 @@ export default function EventPlannerPage() {
         }}
         servicePart={editingServicePart}
         onSave={handleSaveServicePart}
+        clickPosition={clickPosition}
+      />
+
+      {/* Individual Hymn Edit Popup */}
+      <ServicePartEditModal
+        isOpen={showIndividualHymnEditModal}
+        onClose={() => {
+          setShowIndividualHymnEditModal(false)
+          setEditingIndividualHymn(null)
+          setEditingEventId('')
+          setClickPosition(undefined)
+        }}
+        servicePart={editingIndividualHymn ? {
+          id: editingIndividualHymn.id,
+          name: editingIndividualHymn.title,
+          notes: editingIndividualHymn.notes || '',
+          order: 0
+        } : null}
+        onSave={(hymnId: string, title: string, notes: string) => {
+          handleSaveIndividualHymn(title, notes)
+        }}
         clickPosition={clickPosition}
       />
 
