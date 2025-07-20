@@ -5,9 +5,10 @@ import { generateICalFeed } from '@/lib/ical-generator'
 // GET - Serve calendar feed as .ics file
 export async function GET(
   request: NextRequest,
-  { params }: { params: { token: string } }
-) {
+  context: { params: Promise<{ token: string }> }
+): Promise<NextResponse> {
   try {
+    const params = await context.params
     const tokenParam = params.token
     
     // Extract token from filename (remove .ics extension if present)
@@ -33,7 +34,7 @@ export async function GET(
     const church = user.church
 
     // Get church timezone for proper date formatting
-    const timezone = church.timezone || 'America/Chicago'
+    const timezone = 'America/Chicago' // Default timezone - can be made configurable later
 
     // Build event query based on filter type
     let eventQuery: any = {
