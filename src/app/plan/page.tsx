@@ -646,9 +646,9 @@ export default function EventPlannerPage() {
         return
       }
 
-      // Create empty hymns for each default service part
+      // Create placeholder hymns for each default service part
       const defaultHymns = defaultServiceParts.map(sp => ({
-        title: '',
+        title: 'New Song',
         notes: '',
         servicePartId: sp.id
       }))
