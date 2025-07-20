@@ -943,6 +943,90 @@ export default function EventPlannerPage() {
     return event.hymns.filter(h => !h.servicePartId)
   }
 
+  // Function to reorder individual hymns (without service parts)
+  const handleReorderIndividualHymn = async (hymnId: string, direction: 'up' | 'down', eventId: string) => {
+    try {
+      const event = data?.events.find(e => e.id === eventId)
+      if (!event) return
+
+      const individualHymns = event.hymns.filter(h => !h.servicePartId)
+      const hymnIndex = individualHymns.findIndex(h => h.id === hymnId)
+      
+      if (hymnIndex === -1) return
+      
+      const newIndex = direction === 'up' ? hymnIndex - 1 : hymnIndex + 1
+      if (newIndex < 0 || newIndex >= individualHymns.length) return
+
+      // Reorder the hymns array
+      const reorderedHymns = [...individualHymns]
+      const [movedHymn] = reorderedHymns.splice(hymnIndex, 1)
+      reorderedHymns.splice(newIndex, 0, movedHymn)
+
+      // Combine with service part hymns and save
+      const servicePartHymns = event.hymns.filter(h => h.servicePartId)
+      const allHymns = [
+        ...servicePartHymns.map(hymn => ({
+          title: hymn.title,
+          notes: hymn.notes || '',
+          servicePartId: hymn.servicePartId
+        })),
+        ...reorderedHymns.map(hymn => ({
+          title: hymn.title,
+          notes: hymn.notes || '',
+          servicePartId: null
+        }))
+      ]
+
+      const response = await fetch(`/api/events/${eventId}/hymns`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hymns: allHymns })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to reorder hymn')
+      }
+
+      await fetchPlannerData()
+    } catch (error) {
+      console.error('Error reordering individual hymn:', error)
+      showToast('error', 'Failed to reorder hymn')
+    }
+  }
+
+  // Function to delete individual hymn
+  const handleDeleteIndividualHymn = async (hymnId: string, eventId: string) => {
+    try {
+      const event = data?.events.find(e => e.id === eventId)
+      if (!event) return
+
+      // Remove the hymn from the list
+      const updatedHymns = event.hymns
+        .filter(h => h.id !== hymnId)
+        .map(hymn => ({
+          title: hymn.title,
+          notes: hymn.notes || '',
+          servicePartId: hymn.servicePartId || null
+        }))
+
+      const response = await fetch(`/api/events/${eventId}/hymns`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hymns: updatedHymns })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to delete hymn')
+      }
+
+      showToast('success', 'Song deleted successfully')
+      await fetchPlannerData()
+    } catch (error) {
+      console.error('Error deleting individual hymn:', error)
+      showToast('error', 'Failed to delete song')
+    }
+  }
+
   const handleReorderServicePart = async (servicePartId: string, direction: 'up' | 'down', eventId: string) => {
     if (!data) return
     
@@ -1578,41 +1662,69 @@ export default function EventPlannerPage() {
                           })}
                         
                         {/* Individual Songs (without service parts) */}
-                        {getHymnsWithoutServiceParts(event.id).map((hymn, index) => (
-                          <div key={`no-service-part-${hymn.id || index}`} className="border-b border-gray-100 p-3 min-h-[60px] bg-white group hover:bg-gray-50 transition-colors relative">
-                            <div className="flex items-center justify-between mb-1">
-                              <div className="text-xs text-gray-500 font-normal">Individual Song</div>
+                        {getHymnsWithoutServiceParts(event.id).map((hymn, index) => {
+                          const individualHymns = getHymnsWithoutServiceParts(event.id)
+                          return (
+                            <div key={`no-service-part-${hymn.id || index}`} className="border-b border-gray-100 p-3 min-h-[60px] bg-white group hover:bg-gray-50 transition-colors relative">
+                              <div className="flex items-center justify-between mb-1">
+                                <div className="text-xs text-gray-500 font-normal">Individual Song</div>
+                                <div className="flex items-center opacity-0 group-hover:opacity-100 transition-all">
+                                  <button
+                                    onClick={() => handleReorderIndividualHymn(hymn.id, 'up', event.id)}
+                                    disabled={index === 0}
+                                    className="p-1 text-gray-400 hover:text-gray-600 transition-all disabled:opacity-30"
+                                    title="Move up"
+                                  >
+                                    <ChevronUp className="h-3 w-3" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleReorderIndividualHymn(hymn.id, 'down', event.id)}
+                                    disabled={index === individualHymns.length - 1}
+                                    className="p-1 text-gray-400 hover:text-gray-600 transition-all disabled:opacity-30"
+                                    title="Move down"
+                                  >
+                                    <ChevronDown className="h-3 w-3" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteIndividualHymn(hymn.id, event.id)}
+                                    className="p-1 text-gray-400 hover:text-red-600 transition-all"
+                                    title="Delete song"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              </div>
+                              <input
+                                type="text"
+                                value={hymn.title || ''}
+                                onChange={(e) => {
+                                  const newTitle = e.target.value
+                                  // Update immediately in local state for responsive UI
+                                  setData(prev => {
+                                    if (!prev) return prev
+                                    return {
+                                      ...prev,
+                                      events: prev.events.map(ev => 
+                                        ev.id === event.id 
+                                          ? {
+                                              ...ev,
+                                              hymns: ev.hymns.map(h => 
+                                                h.id === hymn.id ? { ...h, title: newTitle } : h
+                                              )
+                                            }
+                                          : ev
+                                      )
+                                    }
+                                  })
+                                  // Debounced save to server
+                                  debouncedUpdateHymn(event.id, newTitle, null, hymn.id)
+                                }}
+                                placeholder="Enter song title..."
+                                className="w-full text-sm text-gray-900 border-none outline-none bg-transparent placeholder-gray-400 focus:bg-gray-50 rounded-sm px-2 py-1 font-normal"
+                              />
                             </div>
-                            <input
-                              type="text"
-                              value={hymn.title || ''}
-                              onChange={(e) => {
-                                const newTitle = e.target.value
-                                // Update immediately in local state for responsive UI
-                                setData(prev => {
-                                  if (!prev) return prev
-                                  return {
-                                    ...prev,
-                                    events: prev.events.map(ev => 
-                                      ev.id === event.id 
-                                        ? {
-                                            ...ev,
-                                            hymns: ev.hymns.map(h => 
-                                              h.id === hymn.id ? { ...h, title: newTitle } : h
-                                            )
-                                          }
-                                        : ev
-                                    )
-                                  }
-                                })
-                                // Debounced save to server
-                                debouncedUpdateHymn(event.id, newTitle, null, hymn.id)
-                              }}
-                              placeholder="Enter song title..."
-                              className="w-full text-sm text-gray-900 border-none outline-none bg-transparent placeholder-gray-400 focus:bg-gray-50 rounded-sm px-2 py-1 font-normal"
-                            />
-                          </div>
-                        ))}
+                          )
+                        })}
                       </div>
 
                       {/* Groups Section */}
