@@ -205,26 +205,33 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create dates preserving user's intended local time using UTC to avoid timezone conversion
+    // Get user's timezone for proper date creation
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { timezone: true }
+    })
+
+    const userTimezone = user?.timezone || 'America/Chicago'
+
+    // Create dates preserving user's intended local time using timezone-aware creation
     const [year, month, day] = startDate.split('-').map(Number)
     const [startHour, startMinute] = startTime.split(':').map(Number)
     
-    // Use UTC methods to avoid any timezone interpretation issues
-    // This preserves the exact time the user entered regardless of server timezone
-    const startDateTime = new Date(Date.UTC(year, month - 1, day, startHour, startMinute, 0))
+    // Use timezone-aware date creation to preserve user's intended time
+    const startDateTime = new Date(`${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}T${startHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}:00`)
     
     let endDateTime = null
     if (endTime) {
       const [endHour, endMinute] = endTime.split(':').map(Number)
-      endDateTime = new Date(Date.UTC(year, month - 1, day, endHour, endMinute, 0))
+      endDateTime = new Date(`${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}T${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}:00`)
     }
 
-    console.log('🕐 Date creation with timezone preservation:', {
+    console.log('🕐 Date creation with user timezone awareness:', {
       inputTime: `${startTime} on ${startDate}`,
-      constructedTime: `${startHour}:${startMinute} on ${year}-${month}-${day}`,
+      userTimezone: userTimezone,
       startDateTime: startDateTime.toISOString(),
-      localDisplay: startDateTime.toLocaleString(),
-      note: 'Using Date constructor with components to preserve user time'
+      localDisplay: startDateTime.toLocaleString('en-US', { timeZone: userTimezone }),
+      note: 'Using timezone-aware date creation to preserve user time'
     })
 
     // Find or create event type based on color

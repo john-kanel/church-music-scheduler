@@ -19,6 +19,7 @@ interface ServicePart {
   id: string
   name: string
   order: number
+  isRequired?: boolean
 }
 
 interface ToastMessage {
@@ -391,7 +392,7 @@ export default function EventPlannerPage() {
     }
   }
 
-  const updateHymnTitle = async (eventId: string, newTitle: string, servicePartId: string, hymnId?: string) => {
+  const updateHymnTitle = async (eventId: string, newTitle: string, servicePartId: string | null, hymnId?: string) => {
     try {
       // First update local state immediately for responsiveness
       let currentHymns: any[] = []
@@ -437,7 +438,7 @@ export default function EventPlannerPage() {
         hymnsToSend.push({
           title: newTitle,
           notes: '',
-          servicePartId
+          servicePartId: servicePartId || undefined
         })
       }
 
@@ -563,11 +564,11 @@ export default function EventPlannerPage() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [])
   
-  const debouncedUpdateHymn = (eventId: string, newTitle: string, servicePartId: string, hymnId?: string) => {
-    const key = `${eventId}-${servicePartId}`
+  const debouncedUpdateHymn = (eventId: string, newTitle: string, servicePartId: string | null, hymnId?: string) => {
+    const key = `${eventId}-${servicePartId || 'no-service-part'}`
     
     // Store pending update in ref (survives tab switches)
-    pendingUpdatesRef.current[key] = { eventId, title: newTitle, servicePartId, hymnId }
+    pendingUpdatesRef.current[key] = { eventId, title: newTitle, servicePartId: servicePartId || undefined, hymnId }
     
     // Clear existing timeout
     if (updateTimeoutsRef.current[key]) {
@@ -598,6 +599,109 @@ export default function EventPlannerPage() {
   const handleAutoPopulate = (eventId: string) => {
     setCurrentEventIdForUpload(eventId)
     setShowPdfProcessor(true)
+  }
+
+  const handleAddDefaultServiceParts = async (eventId: string) => {
+    try {
+      if (!data) return
+
+      // Get all default service parts
+      const defaultServiceParts = data.serviceParts.filter(sp => sp.isRequired)
+      
+      if (defaultServiceParts.length === 0) {
+        showToast('error', 'No default service parts are configured')
+        return
+      }
+
+      // Create empty hymns for each default service part
+      const defaultHymns = defaultServiceParts.map(sp => ({
+        title: '',
+        notes: '',
+        servicePartId: sp.id
+      }))
+
+      // Get current event hymns
+      const currentEvent = data.events.find(e => e.id === eventId)
+      const existingHymns = currentEvent?.hymns || []
+
+      // Combine existing hymns with new default parts (avoiding duplicates)
+      const existingServicePartIds = existingHymns.map(h => h.servicePartId).filter(Boolean)
+      const newHymns = defaultHymns.filter(h => !existingServicePartIds.includes(h.servicePartId))
+
+      if (newHymns.length === 0) {
+        showToast('error', 'All default service parts are already added to this event')
+        return
+      }
+
+      const allHymns = [
+        ...existingHymns.map(hymn => ({
+          title: hymn.title,
+          notes: hymn.notes || '',
+          servicePartId: hymn.servicePartId || null
+        })),
+        ...newHymns
+      ]
+
+      // Save to the event
+      const response = await fetch(`/api/events/${eventId}/hymns`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hymns: allHymns })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to add default service parts')
+      }
+
+      showToast('success', `Added ${newHymns.length} default service parts`)
+      await fetchPlannerData()
+    } catch (error) {
+      console.error('Error adding default service parts:', error)
+      showToast('error', 'Failed to add default service parts')
+    }
+  }
+
+  const handleAddSingleSong = async (eventId: string) => {
+    try {
+      if (!data) return
+
+      // Get current event hymns
+      const currentEvent = data.events.find(e => e.id === eventId)
+      const existingHymns = currentEvent?.hymns || []
+
+      // Add a new hymn without a service part (general music)
+      const newHymn = {
+        title: '',
+        notes: '',
+        servicePartId: null
+      }
+
+      const allHymns = [
+        ...existingHymns.map(hymn => ({
+          title: hymn.title,
+          notes: hymn.notes || '',
+          servicePartId: hymn.servicePartId || null
+        })),
+        newHymn
+      ]
+
+      // Save to the event
+      const response = await fetch(`/api/events/${eventId}/hymns`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hymns: allHymns })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to add song')
+      }
+
+      showToast('success', 'Added new song slot')
+      await fetchPlannerData()
+    } catch (error) {
+      console.error('Error adding song:', error)
+      showToast('error', 'Failed to add song')
+    }
   }
 
   const handlePdfSuggestions = async (suggestions: Array<{servicePartName: string, songTitle: string, notes: string}>) => {
@@ -734,17 +838,39 @@ export default function EventPlannerPage() {
   const getOrderedServicePartsForEvent = (eventId: string) => {
     if (!data) return []
     
+    const event = data.events.find(e => e.id === eventId)
+    if (!event) return []
+    
+    // Get service parts that actually have hymns for this event
+    const servicePartsWithHymns = event.hymns
+      .filter(h => h.servicePartId) // Only hymns with service parts
+      .map(h => h.servicePartId) // Get service part IDs
+      .filter((id, index, arr) => arr.indexOf(id) === index) // Remove duplicates
+      .map(id => data.serviceParts.find(sp => sp.id === id)) // Get service part objects
+      .filter(Boolean) as ServicePart[] // Remove any undefined
+    
     const customOrder = eventServicePartOrder[eventId]
     if (customOrder) {
-      // Use custom order for this event
-      const visibleParts = data.serviceParts.filter(sp => visibleServiceParts.has(sp.id))
+      // Use custom order for this event, but only show parts with hymns
       return customOrder
-        .map(id => visibleParts.find(sp => sp.id === id))
+        .map(id => servicePartsWithHymns.find(sp => sp.id === id))
         .filter(Boolean) as ServicePart[]
     }
     
-    // Use default global order
-    return data.serviceParts.filter(sp => visibleServiceParts.has(sp.id))
+    // Use default global order, but only show parts with hymns
+    return servicePartsWithHymns
+      .filter(sp => visibleServiceParts.has(sp.id))
+      .sort((a, b) => a.order - b.order)
+  }
+
+  // Helper function to get hymns without service parts for a specific event  
+  const getHymnsWithoutServiceParts = (eventId: string) => {
+    if (!data) return []
+    
+    const event = data.events.find(e => e.id === eventId)
+    if (!event) return []
+    
+    return event.hymns.filter(h => !h.servicePartId)
   }
 
   const handleReorderServicePart = async (servicePartId: string, direction: 'up' | 'down', eventId: string) => {
@@ -1198,20 +1324,34 @@ export default function EventPlannerPage() {
                         <p className="text-xs text-gray-500">{event.location}</p>
                         
                         {/* Action Buttons */}
-                        <div className="flex gap-2 mt-3">
+                        <div className="grid grid-cols-2 gap-2 mt-3">
                           <button 
                             onClick={() => handleAutoPopulate(event.id)}
-                            className="flex-1 bg-[#660033] text-white px-3 py-1.5 rounded text-xs hover:bg-[#800041] transition-colors flex items-center justify-center gap-1"
+                            className="bg-[#660033] text-white px-3 py-1.5 rounded text-xs hover:bg-[#800041] transition-colors flex items-center justify-center gap-1"
                           >
                             <Zap className="w-3 h-3" />
                             Auto-populate
                           </button>
                           <button 
                             onClick={() => handleAddDocument(event.id)}
-                            className="flex-1 bg-gray-50 text-gray-600 px-3 py-1.5 rounded text-xs hover:bg-gray-100 transition-colors flex items-center justify-center gap-1"
+                            className="bg-gray-50 text-gray-600 px-3 py-1.5 rounded text-xs hover:bg-gray-100 transition-colors flex items-center justify-center gap-1"
                           >
                             <FileText className="w-3 h-3" />
                             Add Document
+                          </button>
+                          <button 
+                            onClick={() => handleAddDefaultServiceParts(event.id)}
+                            className="bg-blue-50 text-blue-600 px-3 py-1.5 rounded text-xs hover:bg-blue-100 transition-colors flex items-center justify-center gap-1"
+                          >
+                            <Plus className="w-3 h-3" />
+                            Add Default Parts
+                          </button>
+                          <button 
+                            onClick={() => handleAddSingleSong(event.id)}
+                            className="bg-green-50 text-green-600 px-3 py-1.5 rounded text-xs hover:bg-green-100 transition-colors flex items-center justify-center gap-1"
+                          >
+                            <Plus className="w-3 h-3" />
+                            Add Song
                           </button>
                         </div>
                         
@@ -1315,6 +1455,43 @@ export default function EventPlannerPage() {
                               </div>
                             )
                           })}
+                        
+                        {/* Individual Songs (without service parts) */}
+                        {getHymnsWithoutServiceParts(event.id).map((hymn, index) => (
+                          <div key={`no-service-part-${hymn.id || index}`} className="border-b border-gray-100 p-3 min-h-[60px] bg-white group hover:bg-gray-50 transition-colors relative">
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="text-xs text-gray-500 font-normal">Individual Song</div>
+                            </div>
+                            <input
+                              type="text"
+                              value={hymn.title || ''}
+                              onChange={(e) => {
+                                const newTitle = e.target.value
+                                // Update immediately in local state for responsive UI
+                                setData(prev => {
+                                  if (!prev) return prev
+                                  return {
+                                    ...prev,
+                                    events: prev.events.map(ev => 
+                                      ev.id === event.id 
+                                        ? {
+                                            ...ev,
+                                            hymns: ev.hymns.map(h => 
+                                              h.id === hymn.id ? { ...h, title: newTitle } : h
+                                            )
+                                          }
+                                        : ev
+                                    )
+                                  }
+                                })
+                                // Debounced save to server
+                                debouncedUpdateHymn(event.id, newTitle, null, hymn.id)
+                              }}
+                              placeholder="Enter song title..."
+                              className="w-full text-sm text-gray-900 border-none outline-none bg-transparent placeholder-gray-400 focus:bg-gray-50 rounded-sm px-2 py-1 font-normal"
+                            />
+                          </div>
+                        ))}
                       </div>
 
                       {/* Groups Section */}
@@ -1563,20 +1740,34 @@ export default function EventPlannerPage() {
                             <p className="text-xs text-gray-500">{event.location}</p>
                             
                             {/* Action Buttons */}
-                            <div className="flex gap-2 mt-3">
+                            <div className="grid grid-cols-2 gap-2 mt-3">
                               <button 
                                 onClick={() => handleAutoPopulate(event.id)}
-                                className="flex-1 bg-[#660033] text-white px-3 py-1.5 rounded text-xs hover:bg-[#800041] transition-colors flex items-center justify-center gap-1"
+                                className="bg-[#660033] text-white px-3 py-1.5 rounded text-xs hover:bg-[#800041] transition-colors flex items-center justify-center gap-1"
                               >
                                 <Zap className="w-3 h-3" />
                                 Auto-populate
                               </button>
                               <button 
                                 onClick={() => handleAddDocument(event.id)}
-                                className="flex-1 bg-gray-50 text-gray-600 px-3 py-1.5 rounded text-xs hover:bg-gray-100 transition-colors flex items-center justify-center gap-1"
+                                className="bg-gray-50 text-gray-600 px-3 py-1.5 rounded text-xs hover:bg-gray-100 transition-colors flex items-center justify-center gap-1"
                               >
                                 <FileText className="w-3 h-3" />
                                 Add Document
+                              </button>
+                              <button 
+                                onClick={() => handleAddDefaultServiceParts(event.id)}
+                                className="bg-blue-50 text-blue-600 px-3 py-1.5 rounded text-xs hover:bg-blue-100 transition-colors flex items-center justify-center gap-1"
+                              >
+                                <Plus className="w-3 h-3" />
+                                Add Default Parts
+                              </button>
+                              <button 
+                                onClick={() => handleAddSingleSong(event.id)}
+                                className="bg-green-50 text-green-600 px-3 py-1.5 rounded text-xs hover:bg-green-100 transition-colors flex items-center justify-center gap-1"
+                              >
+                                <Plus className="w-3 h-3" />
+                                Add Song
                               </button>
                             </div>
                             

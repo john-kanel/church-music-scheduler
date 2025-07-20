@@ -102,9 +102,11 @@ function convertEventToICal(event: EventWithDetails, timezone: string): ICalEven
 function buildEventDescription(event: EventWithDetails): string {
   const lines: string[] = []
 
-  // Add location prominently at the top
+  lines.push('-----')
+
+  // Add location prominently at the top  
   if (event.location) {
-    lines.push(`📍 LOCATION: ${event.location}`)
+    lines.push(`📍 Location: ${event.location}`)
     lines.push('')
   }
 
@@ -114,7 +116,7 @@ function buildEventDescription(event: EventWithDetails): string {
     lines.push('')
   }
 
-  // Add musician assignments with better formatting
+  // Add musician assignments with cleaner formatting
   const acceptedAssignments = event.assignments.filter(a => a.user && (a.status === 'ACCEPTED' || a.status === 'PENDING'))
   const pendingAssignments = event.assignments.filter(a => !a.user && a.status === 'PENDING')
   
@@ -130,16 +132,32 @@ function buildEventDescription(event: EventWithDetails): string {
       }
     })
     
-    // Show open positions
+    // Show open positions (simplified format)
     pendingAssignments.forEach(assignment => {
       const role = assignment.roleName || 'Musician'
-      lines.push(`🔍 ${role}: OPEN POSITION`)
+      lines.push(`🔍 ${role}: `)
     })
     
     lines.push('')
   }
 
-  // Add service parts and music with better formatting
+  // Add group information if event has groups assigned
+  const eventGroups = event.assignments.filter(a => a.group).map(a => a.group)
+  if (eventGroups.length > 0) {
+    const uniqueGroups = Array.from(new Set(eventGroups.map(g => g?.id))).map(id => 
+      eventGroups.find(g => g?.id === id)
+    ).filter(Boolean)
+    
+    lines.push('👥 GROUP:')
+    uniqueGroups.forEach(group => {
+      if (group) {
+        lines.push(`🎭 ${group.name}`)
+      }
+    })
+    lines.push('')
+  }
+
+  // Add service parts and music with simplified formatting
   const hymns = event.hymns.filter(h => h.title)
   if (hymns.length > 0) {
     lines.push('🎵 MUSIC:')
@@ -164,9 +182,8 @@ function buildEventDescription(event: EventWithDetails): string {
 
     sortedParts.forEach(([partName, partHymns]) => {
       if (partHymns.length > 0) {
-        lines.push(`  📋 ${partName}:`)
         partHymns.forEach(hymn => {
-          let musicLine = `    🎶 ${hymn.title}`
+          let musicLine = `- ${partName}: ${hymn.title}`
           if (hymn.notes) {
             musicLine += ` (${hymn.notes})`
           }
@@ -175,13 +192,11 @@ function buildEventDescription(event: EventWithDetails): string {
       }
     })
     lines.push('')
-  } else {
-    lines.push('🎵 MUSIC: To be determined')
-    lines.push('')
   }
 
-  // Add event type and timing information
+  // Add event type
   lines.push(`📅 Event Type: ${event.eventType.name}`)
+  lines.push('-----')
   
   return lines.join('\n')
 }
