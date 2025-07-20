@@ -729,7 +729,7 @@ export default function EventPlannerPage() {
 
       // Add a new hymn without a service part (general music)
       const newHymn = {
-        title: '',
+        title: 'New Song',
         notes: '',
         servicePartId: null
       }
