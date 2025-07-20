@@ -28,7 +28,8 @@ export async function GET(request: NextRequest) {
       select: {
         id: true,
         name: true,
-        order: true
+        order: true,
+        isRequired: true
       }
     })
 
