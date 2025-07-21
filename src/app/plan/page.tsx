@@ -12,6 +12,8 @@ import { CreateEventModal } from '@/components/events/create-event-modal'
 import { ServicePartEditModal } from '@/components/events/service-part-edit-modal'
 import { AutoAssignModal } from '@/components/events/auto-assign-modal'
 import { EventDetailsModal } from '@/components/events/event-details-modal'
+import { IndividualSongEditModal } from '@/components/events/individual-song-edit-modal'
+import { CreateGroupModal } from '@/components/groups/create-group-modal'
 import dynamic from 'next/dynamic'
 
 // Dynamically import PdfProcessor to prevent SSR issues
@@ -158,7 +160,7 @@ export default function EventPlannerPage() {
   
   // Individual hymn editing
   const [showIndividualHymnEditModal, setShowIndividualHymnEditModal] = useState(false)
-  const [editingIndividualHymn, setEditingIndividualHymn] = useState<{id: string, title: string, notes?: string} | null>(null)
+  const [editingIndividualHymn, setEditingIndividualHymn] = useState<{id: string, title: string, notes?: string, partName?: string} | null>(null)
   
   // Event-specific service part ordering
   const [eventServicePartOrder, setEventServicePartOrder] = useState<Record<string, string[]>>({})
@@ -182,6 +184,9 @@ export default function EventPlannerPage() {
   // Event details modal state
   const [showEventDetailsModal, setShowEventDetailsModal] = useState(false)
   const [selectedEventForEdit, setSelectedEventForEdit] = useState<Event | null>(null)
+  
+  // Create group modal state
+  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false)
 
   // Toast functions
   const showToast = (type: 'success' | 'error', message: string) => {
@@ -885,7 +890,21 @@ export default function EventPlannerPage() {
   }
 
   const handleEditIndividualHymn = (hymn: {id: string, title: string, notes?: string}, eventId: string, event: React.MouseEvent) => {
-    setEditingIndividualHymn(hymn)
+    // Extract partName from notes if it exists (format: "PART:partName|notes")
+    let partName = 'Individual Song'
+    let cleanNotes = hymn.notes || ''
+    
+    if (cleanNotes.startsWith('PART:')) {
+      const parts = cleanNotes.split('|', 2)
+      partName = parts[0].replace('PART:', '')
+      cleanNotes = parts[1] || ''
+    }
+    
+    setEditingIndividualHymn({
+      ...hymn,
+      notes: cleanNotes,
+      partName: partName
+    })
     setEditingEventId(eventId)
     setClickPosition({ x: event.clientX, y: event.clientY })
     setShowIndividualHymnEditModal(true)
@@ -916,25 +935,51 @@ export default function EventPlannerPage() {
     }
   }
 
-  const handleSaveIndividualHymn = async (title: string, notes: string) => {
+  const handleSaveIndividualHymn = async (songId: string, title: string, notes: string, partName: string) => {
     if (!editingEventId || !editingIndividualHymn) return
     
     try {
+      // Combine partName and notes in a special format
+      const combinedNotes = partName && partName !== 'Individual Song' 
+        ? `PART:${partName}|${notes}` 
+        : notes
+
+      // Optimistic update first
+      setData(prev => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          events: prev.events.map(ev => 
+            ev.id === editingEventId 
+              ? {
+                  ...ev,
+                  hymns: ev.hymns.map(h => 
+                    h.id === editingIndividualHymn.id ? { ...h, title, notes: combinedNotes } : h
+                  )
+                }
+              : ev
+          )
+        }
+      })
+
       // Update the hymn via API
+      const currentEvent = data?.events.find(e => e.id === editingEventId)
+      const updatedHymns = currentEvent?.hymns.map(h => 
+        h.id === editingIndividualHymn.id 
+          ? { title, notes: combinedNotes, servicePartId: h.servicePartId }
+          : { title: h.title, notes: h.notes || '', servicePartId: h.servicePartId }
+      ) || []
+
       const response = await fetch(`/api/events/${editingEventId}/hymns`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          hymns: data?.events.find(e => e.id === editingEventId)?.hymns.map(h => 
-            h.id === editingIndividualHymn.id 
-              ? { ...h, title, notes }
-              : { title: h.title, notes: h.notes || '', servicePartId: h.servicePartId }
-          ) || []
-        })
+        body: JSON.stringify({ hymns: updatedHymns })
       })
 
       if (response.ok) {
-        // Update local state
+        showToast('success', 'Song updated successfully')
+      } else {
+        // Revert optimistic update on failure
         setData(prev => {
           if (!prev) return prev
           return {
@@ -944,15 +989,15 @@ export default function EventPlannerPage() {
                 ? {
                     ...ev,
                     hymns: ev.hymns.map(h => 
-                      h.id === editingIndividualHymn.id ? { ...h, title, notes } : h
+                      h.id === editingIndividualHymn.id 
+                        ? { ...h, title: editingIndividualHymn.title, notes: editingIndividualHymn.notes || '' } 
+                        : h
                     )
                   }
                 : ev
             )
           }
         })
-        showToast('success', 'Song updated successfully')
-      } else {
         showToast('error', 'Failed to update song')
       }
       
@@ -1048,7 +1093,24 @@ export default function EventPlannerPage() {
         throw new Error('Failed to reorder hymn')
       }
 
-      await fetchPlannerData()
+      // Optimistic update instead of full reload
+      setData(prev => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          events: prev.events.map(ev => 
+            ev.id === eventId 
+              ? { ...ev, hymns: allHymns.map((h, i) => ({ 
+                  id: reorderedHymns.find(rh => rh.title === h.title)?.id || servicePartHymns.find(sh => sh.title === h.title)?.id || `temp-${i}`, 
+                  title: h.title, 
+                  notes: h.notes || undefined, 
+                  servicePartId: h.servicePartId || undefined 
+                })) }
+              : ev
+          )
+        }
+      })
+      showToast('success', 'Song reordered successfully')
     } catch (error) {
       console.error('Error reordering individual hymn:', error)
       showToast('error', 'Failed to reorder hymn')
@@ -1080,8 +1142,24 @@ export default function EventPlannerPage() {
         throw new Error('Failed to delete hymn')
       }
 
+      // Optimistic update instead of full reload
+      setData(prev => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          events: prev.events.map(ev => 
+            ev.id === eventId 
+              ? { ...ev, hymns: updatedHymns.map((h, i) => ({ 
+                  id: event.hymns.find(eh => eh.title === h.title && eh.servicePartId === h.servicePartId)?.id || `temp-${i}`, 
+                  title: h.title, 
+                  notes: h.notes || undefined, 
+                  servicePartId: h.servicePartId || undefined 
+                })) }
+              : ev
+          )
+        }
+      })
       showToast('success', 'Song deleted successfully')
-      await fetchPlannerData()
     } catch (error) {
       console.error('Error deleting individual hymn:', error)
       showToast('error', 'Failed to delete song')
@@ -1332,11 +1410,63 @@ export default function EventPlannerPage() {
         throw new Error('Failed to delete event')
       }
 
+      // Optimistic update instead of full reload
+      setData(prev => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          events: prev.events.filter(ev => ev.id !== eventId)
+        }
+      })
       showToast('success', 'Event deleted successfully')
-      await fetchPlannerData()
     } catch (error) {
       console.error('Error deleting event:', error)
       showToast('error', 'Failed to delete event')
+    }
+  }
+
+  const handleDeleteMultipleEvents = async () => {
+    const selectedEventIds = Array.from(selectedEvents)
+    if (selectedEventIds.length === 0) return
+
+    const confirmMessage = `Are you sure you want to delete ${selectedEventIds.length} selected events? This action cannot be undone.`
+    if (!window.confirm(confirmMessage)) {
+      return
+    }
+
+    try {
+      // Delete all selected events
+      const deletePromises = selectedEventIds.map(eventId => 
+        fetch(`/api/events/${eventId}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' }
+        })
+      )
+
+      const responses = await Promise.all(deletePromises)
+      const successfulDeletes = responses.filter(response => response.ok)
+
+      if (successfulDeletes.length > 0) {
+        // Optimistic update instead of full reload
+        setData(prev => {
+          if (!prev) return prev
+          return {
+            ...prev,
+            events: prev.events.filter(ev => !selectedEventIds.includes(ev.id))
+          }
+        })
+        
+        setSelectedEvents(new Set()) // Clear selection
+        showToast('success', `Successfully deleted ${successfulDeletes.length} events`)
+      }
+
+      if (successfulDeletes.length < selectedEventIds.length) {
+        const failedCount = selectedEventIds.length - successfulDeletes.length
+        showToast('error', `Failed to delete ${failedCount} events`)
+      }
+    } catch (error) {
+      console.error('Error deleting multiple events:', error)
+      showToast('error', 'Failed to delete events')
     }
   }
 
@@ -1400,6 +1530,18 @@ export default function EventPlannerPage() {
                   <Zap className="w-4 h-4" />
                   <span className="hidden sm:inline">Auto Assign ({selectedEvents.size})</span>
                   <span className="sm:hidden">{selectedEvents.size}</span>
+                </button>
+              )}
+              
+              {/* Delete Multiple Events Button - only show if events selected */}
+              {selectedEvents.size > 0 && (
+                <button
+                  onClick={handleDeleteMultipleEvents}
+                  className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span className="hidden sm:inline">Delete ({selectedEvents.size})</span>
+                  <span className="sm:hidden">Delete ({selectedEvents.size})</span>
                 </button>
               )}
               
@@ -1729,10 +1871,20 @@ export default function EventPlannerPage() {
                         {/* Individual Songs (without service parts) */}
                         {getHymnsWithoutServiceParts(event.id).map((hymn, index) => {
                           const individualHymns = getHymnsWithoutServiceParts(event.id)
+                          
+                          // Extract part name from notes if it exists
+                          let partName = 'Individual Song'
+                          let cleanNotes = hymn.notes || ''
+                          if (cleanNotes.startsWith('PART:')) {
+                            const parts = cleanNotes.split('|', 2)
+                            partName = parts[0].replace('PART:', '')
+                            cleanNotes = parts[1] || ''
+                          }
+                          
                           return (
                             <div key={`no-service-part-${hymn.id || index}`} className="border-b border-gray-100 p-3 min-h-[60px] bg-white group hover:bg-gray-50 transition-colors relative">
                               <div className="flex items-center justify-between mb-1">
-                                <div className="text-xs text-gray-500 font-normal">Individual Song</div>
+                                <div className="text-xs text-gray-500 font-normal">{partName}</div>
                                 <div className="flex items-center opacity-0 group-hover:opacity-100 transition-all">
                                   <button
                                     onClick={() => handleReorderIndividualHymn(hymn.id, 'up', event.id)}
@@ -1873,8 +2025,19 @@ export default function EventPlannerPage() {
                                       })}
                                     </div>
                                   ) : (
-                                    <div className="text-sm text-gray-500 text-center py-4">
-                                      No groups available
+                                    <div className="text-center py-4">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          setShowCreateGroupModal(true)
+                                        }}
+                                        className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-4 py-2 rounded transition-colors text-sm font-medium"
+                                      >
+                                        + Create Group
+                                      </button>
+                                      <p className="text-xs text-gray-500 mt-1">
+                                        Create your first group to assign multiple musicians at once
+                                      </p>
                                     </div>
                                   )}
                                 </div>
@@ -2272,8 +2435,19 @@ export default function EventPlannerPage() {
                                           })}
                                         </div>
                                       ) : (
-                                        <div className="text-sm text-gray-500 text-center py-4">
-                                          No groups available
+                                        <div className="text-center py-4">
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              setShowCreateGroupModal(true)
+                                            }}
+                                            className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-4 py-2 rounded transition-colors text-sm font-medium"
+                                          >
+                                            + Create Group
+                                          </button>
+                                          <p className="text-xs text-gray-500 mt-1">
+                                            Create your first group to assign multiple musicians at once
+                                          </p>
                                         </div>
                                       )}
                                     </div>
@@ -2472,8 +2646,8 @@ export default function EventPlannerPage() {
         clickPosition={clickPosition}
       />
 
-      {/* Individual Hymn Edit Popup */}
-      <ServicePartEditModal
+      {/* Individual Song Edit Modal */}
+      <IndividualSongEditModal
         isOpen={showIndividualHymnEditModal}
         onClose={() => {
           setShowIndividualHymnEditModal(false)
@@ -2481,15 +2655,8 @@ export default function EventPlannerPage() {
           setEditingEventId('')
           setClickPosition(undefined)
         }}
-        servicePart={editingIndividualHymn ? {
-          id: editingIndividualHymn.id,
-          name: editingIndividualHymn.title,
-          notes: editingIndividualHymn.notes || '',
-          order: 0
-        } : null}
-        onSave={(hymnId: string, title: string, notes: string) => {
-          handleSaveIndividualHymn(title, notes)
-        }}
+        song={editingIndividualHymn}
+        onSave={handleSaveIndividualHymn}
         clickPosition={clickPosition}
       />
 
@@ -2528,6 +2695,18 @@ export default function EventPlannerPage() {
           setSelectedEventForEdit(null)
           fetchPlannerData() // Refresh data after event deletion
         }}
+      />
+
+      {/* Create Group Modal */}
+      <CreateGroupModal
+        isOpen={showCreateGroupModal}
+        onClose={() => setShowCreateGroupModal(false)}
+        onGroupCreated={async () => {
+          setShowCreateGroupModal(false)
+          await fetchGroups() // Refresh groups list
+          showToast('success', 'Group created successfully')
+        }}
+        onMessageGroup={() => {}} // Not needed for this context
       />
 
       {/* Toast Notifications */}
