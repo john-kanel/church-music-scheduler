@@ -217,7 +217,16 @@ export default function EventPlannerPage() {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (openFilterDropdown) {
-        setOpenFilterDropdown(null)
+        // Check if the click was outside the dropdown
+        const target = event.target as Element
+        const dropdown = target?.closest('[data-filter-dropdown]')
+        const chevronButton = target?.closest('[data-chevron-button]')
+        
+        // Only close if click was not on dropdown or chevron button
+        if (!dropdown && !chevronButton) {
+          console.log('🖱️ Click outside detected, closing dropdown')
+          setOpenFilterDropdown(null)
+        }
       }
     }
 
@@ -371,6 +380,11 @@ export default function EventPlannerPage() {
   }
 
   const toggleFilterDropdown = (filterKey: string) => {
+    console.log('🔽 Toggle filter dropdown:', { 
+      filterKey, 
+      currentOpen: openFilterDropdown, 
+      willOpen: openFilterDropdown === filterKey ? null : filterKey 
+    })
     setOpenFilterDropdown(openFilterDropdown === filterKey ? null : filterKey)
   }
 
@@ -1600,9 +1614,14 @@ export default function EventPlannerPage() {
                       {/* Dropdown arrow - only show if multiple events and any events in group are visible */}
                       {eventsInThisGroup.length > 1 && eventsInThisGroup.some(e => visibleEventColors.has(e.eventType.color)) && (
                         <button
-                          onClick={() => toggleFilterDropdown(eventGroup.name)}
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            toggleFilterDropdown(eventGroup.name)
+                          }}
                           className="ml-1 p-1 text-gray-400 hover:text-gray-600"
                           title="Show individual events"
+                          data-chevron-button
                         >
                           <ChevronDown 
                             className={`w-3 h-3 transition-transform ${
@@ -1615,7 +1634,7 @@ export default function EventPlannerPage() {
                     
                     {/* Dropdown for individual event selection */}
                     {openFilterDropdown === eventGroup.name && eventsInThisGroup.length > 1 && (
-                      <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-10 min-w-[200px]">
+                      <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-10 min-w-[200px]" data-filter-dropdown>
                         <div className="p-2 space-y-1">
                           <button
                             onClick={() => selectAllEventsForFilter([eventGroup.name])}
