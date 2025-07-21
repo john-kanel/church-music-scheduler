@@ -377,18 +377,34 @@ export default function EventPlannerPage() {
   const getEventsForFilterGroup = (eventName: string): Event[] => {
     if (!data?.events) return []
     
+    console.log(`🔍 Getting events for filter group: "${eventName}"`)
+    
     if (eventName === 'General') {
       // Return all non-recurring events
-      return data.events.filter(event => 
+      const generalEvents = data.events.filter(event => 
         !event.isRootEvent && !event.generatedFrom && 
         visibleEventColors.has(event.eventType.color)
       )
+      console.log(`📋 General events found: ${generalEvents.length}`, generalEvents.map(e => ({
+        name: e.name, 
+        id: e.id, 
+        isRootEvent: e.isRootEvent, 
+        generatedFrom: e.generatedFrom
+      })))
+      return generalEvents
     } else {
       // Return events with matching name (recurring events)
-      return data.events.filter(event => 
+      const matchingEvents = data.events.filter(event => 
         event.name === eventName && 
         visibleEventColors.has(event.eventType.color)
       )
+      console.log(`📋 Events for "${eventName}": ${matchingEvents.length}`, matchingEvents.map(e => ({
+        name: e.name, 
+        id: e.id, 
+        isRootEvent: e.isRootEvent, 
+        generatedFrom: e.generatedFrom
+      })))
+      return matchingEvents
     }
   }
 
@@ -1366,6 +1382,18 @@ export default function EventPlannerPage() {
     [...new Map(data.events.map(event => {
       // Show recurring events by their name, non-recurring as "General"
       const displayName = event.isRootEvent || event.generatedFrom ? event.name : 'General'
+      
+      // Debug logging for filter categorization
+      console.log('🏷️ Filter categorization:', {
+        eventName: event.name,
+        eventId: event.id,
+        isRootEvent: event.isRootEvent,
+        generatedFrom: event.generatedFrom,
+        displayName: displayName,
+        eventTypeColor: event.eventType.color,
+        eventTypeName: event.eventType.name
+      })
+      
       return [displayName, { 
         name: displayName, 
         color: event.eventType.color,
