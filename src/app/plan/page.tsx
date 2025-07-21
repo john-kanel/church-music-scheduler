@@ -12,7 +12,6 @@ import { CreateEventModal } from '@/components/events/create-event-modal'
 import { ServicePartEditModal } from '@/components/events/service-part-edit-modal'
 import { AutoAssignModal } from '@/components/events/auto-assign-modal'
 import { EventDetailsModal } from '@/components/events/event-details-modal'
-import { IndividualSongEditModal } from '@/components/events/individual-song-edit-modal'
 import { CreateGroupModal } from '@/components/groups/create-group-modal'
 import dynamic from 'next/dynamic'
 
@@ -158,9 +157,9 @@ export default function EventPlannerPage() {
   const [editingEventId, setEditingEventId] = useState<string>('')
   const [clickPosition, setClickPosition] = useState<{ x: number, y: number } | undefined>(undefined)
   
-  // Individual hymn editing
+  // Individual hymn editing (using same modal as service parts)
   const [showIndividualHymnEditModal, setShowIndividualHymnEditModal] = useState(false)
-  const [editingIndividualHymn, setEditingIndividualHymn] = useState<{id: string, title: string, notes?: string, partName?: string} | null>(null)
+  const [editingIndividualHymn, setEditingIndividualHymn] = useState<{id: string, name: string, notes?: string, order: number} | null>(null)
   
   // Event-specific service part ordering
   const [eventServicePartOrder, setEventServicePartOrder] = useState<Record<string, string[]>>({})
@@ -890,7 +889,7 @@ export default function EventPlannerPage() {
   }
 
   const handleEditIndividualHymn = (hymn: {id: string, title: string, notes?: string}, eventId: string, event: React.MouseEvent) => {
-    // Extract partName from notes if it exists (format: "PART:partName|notes")
+    // Extract part name from notes if it exists (format: "PART:partName|notes")
     let partName = 'Individual Song'
     let cleanNotes = hymn.notes || ''
     
@@ -900,10 +899,12 @@ export default function EventPlannerPage() {
       cleanNotes = parts[1] || ''
     }
     
+    // Map to service part format for the modal
     setEditingIndividualHymn({
-      ...hymn,
+      id: hymn.id,
+      name: partName, // Use extracted part name as the "service part" name
       notes: cleanNotes,
-      partName: partName
+      order: 0 // Individual songs don't have order
     })
     setEditingEventId(eventId)
     setClickPosition({ x: event.clientX, y: event.clientY })
@@ -935,11 +936,20 @@ export default function EventPlannerPage() {
     }
   }
 
-  const handleSaveIndividualHymn = async (songId: string, title: string, notes: string, partName: string) => {
+  const handleSaveIndividualHymn = async (hymnId: string, partName: string, notes: string) => {
     if (!editingEventId || !editingIndividualHymn) return
     
     try {
-      // Combine partName and notes in a special format
+      // Find the original hymn to get the title
+      const currentEvent = data?.events.find(e => e.id === editingEventId)
+      const originalHymn = currentEvent?.hymns.find(h => h.id === editingIndividualHymn.id)
+      
+      if (!originalHymn) {
+        showToast('error', 'Song not found')
+        return
+      }
+
+      // Combine part name and notes in special format
       const combinedNotes = partName && partName !== 'Individual Song' 
         ? `PART:${partName}|${notes}` 
         : notes
@@ -954,7 +964,7 @@ export default function EventPlannerPage() {
               ? {
                   ...ev,
                   hymns: ev.hymns.map(h => 
-                    h.id === editingIndividualHymn.id ? { ...h, title, notes: combinedNotes } : h
+                    h.id === editingIndividualHymn.id ? { ...h, notes: combinedNotes } : h
                   )
                 }
               : ev
@@ -962,11 +972,10 @@ export default function EventPlannerPage() {
         }
       })
 
-      // Update the hymn via API
-      const currentEvent = data?.events.find(e => e.id === editingEventId)
+      // Update the hymn via API (keeping original title)
       const updatedHymns = currentEvent?.hymns.map(h => 
         h.id === editingIndividualHymn.id 
-          ? { title, notes: combinedNotes, servicePartId: h.servicePartId }
+          ? { title: h.title, notes: combinedNotes, servicePartId: h.servicePartId }
           : { title: h.title, notes: h.notes || '', servicePartId: h.servicePartId }
       ) || []
 
@@ -990,7 +999,7 @@ export default function EventPlannerPage() {
                     ...ev,
                     hymns: ev.hymns.map(h => 
                       h.id === editingIndividualHymn.id 
-                        ? { ...h, title: editingIndividualHymn.title, notes: editingIndividualHymn.notes || '' } 
+                        ? { ...h, notes: originalHymn.notes || '' } 
                         : h
                     )
                   }
@@ -1874,11 +1883,11 @@ export default function EventPlannerPage() {
                           
                           // Extract part name from notes if it exists
                           let partName = 'Individual Song'
-                          let cleanNotes = hymn.notes || ''
-                          if (cleanNotes.startsWith('PART:')) {
-                            const parts = cleanNotes.split('|', 2)
+                          let displayNotes = hymn.notes || ''
+                          if (hymn.notes && hymn.notes.startsWith('PART:')) {
+                            const parts = hymn.notes.split('|', 2)
                             partName = parts[0].replace('PART:', '')
-                            cleanNotes = parts[1] || ''
+                            displayNotes = parts[1] || ''
                           }
                           
                           return (
@@ -2646,8 +2655,8 @@ export default function EventPlannerPage() {
         clickPosition={clickPosition}
       />
 
-      {/* Individual Song Edit Modal */}
-      <IndividualSongEditModal
+      {/* Individual Song Edit Modal - Uses same modal as service parts */}
+      <ServicePartEditModal
         isOpen={showIndividualHymnEditModal}
         onClose={() => {
           setShowIndividualHymnEditModal(false)
@@ -2655,7 +2664,7 @@ export default function EventPlannerPage() {
           setEditingEventId('')
           setClickPosition(undefined)
         }}
-        song={editingIndividualHymn}
+        servicePart={editingIndividualHymn}
         onSave={handleSaveIndividualHymn}
         clickPosition={clickPosition}
       />
