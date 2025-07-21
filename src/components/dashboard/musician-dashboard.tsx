@@ -4,7 +4,6 @@ import { signOut, useSession } from 'next-auth/react'
 import { 
   Calendar, 
   FileText, 
-  Bell,
   LogOut,
   ChevronDown,
   Home,
@@ -272,12 +271,7 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
                 <h2 className="text-lg font-medium text-gray-700">{user.churchName}</h2>
               </div>
 
-              <button className="relative p-2 text-gray-400 hover:text-gray-600">
-                <Bell className="h-6 w-6" />
-                {dashboardData?.stats?.pendingResponses > 0 && (
-                  <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full"></span>
-                )}
-              </button>
+
 
               <div className="relative">
                 <button

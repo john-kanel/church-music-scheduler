@@ -7,7 +7,6 @@ import {
   Users, 
   Calendar, 
   Settings, 
-  Bell, 
   ChevronDown,
   TrendingUp,
   Clock,
@@ -116,7 +115,7 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
   const [showCreateEventModal, setShowCreateEventModal] = useState(false)
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [showMessageModal, setShowMessageModal] = useState(false)
-  const [showNotifications, setShowNotifications] = useState(false)
+
   const [selectedEvent, setSelectedEvent] = useState<any>(null)
   const [showEventDetails, setShowEventDetails] = useState(false)
   const [currentDate, setCurrentDate] = useState(new Date())
@@ -404,28 +403,7 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                   <h2 className="text-lg font-medium text-gray-700">{user.churchName}</h2>
                 </div>
 
-                {/* Notifications */}
-                <div className="relative">
-                  <button 
-                    onClick={() => setShowNotifications(!showNotifications)}
-                    className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-                  >
-                    <Bell className="h-6 w-6" />
-                  </button>
 
-                  {showNotifications && (
-                    <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border py-2 z-20">
-                      <div className="px-4 py-2 border-b">
-                        <h3 className="font-medium text-gray-900">Notifications</h3>
-                      </div>
-                      <div className="p-4 text-center text-gray-500">
-                        <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">No new notifications</p>
-                        <p className="text-xs text-gray-400 mt-1">You'll see updates about events and invitations here</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
 
                 {/* Profile Menu */}
                 <div className="relative">
