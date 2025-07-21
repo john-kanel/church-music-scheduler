@@ -364,6 +364,15 @@ export function CreateRecurringEventModal({
     setError('')
     setSuccess('')
 
+    // Debug logging
+    console.log('🔍 Recurring event modal submit:', {
+      isEditing,
+      editingEvent: editingEvent ? { id: editingEvent.id, name: editingEvent.name } : null,
+      editScope,
+      isEditingCheck: !!editingEvent,
+      modalProps: { editingEvent: editingEvent !== null, editScope }
+    })
+
     try {
       // Validation
       if (!formData.name || !formData.location || !formData.startDate || !formData.startTime) {
@@ -395,8 +404,16 @@ export function CreateRecurringEventModal({
       let response
       let successMessage
 
+      console.log('🎯 API path decision:', { 
+        isEditing, 
+        hasEditingEvent: !!editingEvent, 
+        condition: isEditing && editingEvent,
+        willEdit: isEditing && editingEvent ? 'YES - PATCH' : 'NO - POST'
+      })
+
       if (isEditing && editingEvent) {
         // Edit existing recurring series
+        console.log('✅ Taking EDIT path - PATCH /api/events/${editingEvent.id}/series')
         response = await fetch(`/api/events/${editingEvent.id}/series`, {
           method: 'PATCH',
           headers: {
@@ -407,6 +424,7 @@ export function CreateRecurringEventModal({
         successMessage = `Recurring event series updated successfully! (${editScope === 'future' ? 'Future events' : 'All events'} affected)`
       } else {
         // Create new recurring series
+        console.log('❌ Taking CREATE path - POST /api/events (this should NOT happen during edit)')
         response = await fetch('/api/events', {
           method: 'POST',
           headers: {

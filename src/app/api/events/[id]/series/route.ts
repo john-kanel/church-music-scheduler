@@ -294,6 +294,8 @@ export async function PATCH(
 
     // Update in transaction
     const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const currentDate = new Date() // Current date for scope filtering
+      
       // Update the root event
       const updatedRootEvent = await tx.event.update({
         where: { id: rootEventId },

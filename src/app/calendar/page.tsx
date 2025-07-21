@@ -406,6 +406,11 @@ export default function CalendarPage() {
   }
 
   const handleEditRootEvent = (rootEvent: RootRecurringEvent) => {
+    console.log('📝 Starting edit of root event:', { 
+      id: rootEvent.id, 
+      name: rootEvent.name,
+      isRecurring: rootEvent.isRecurring 
+    })
     setEditingRootEvent(rootEvent)
     setShowEditScopeModal(true)
   }
@@ -442,6 +447,10 @@ export default function CalendarPage() {
   }
 
   const handleScopeSelected = (scope: 'future' | 'all') => {
+    console.log('🎯 Scope selected for edit:', { 
+      scope, 
+      editingRootEvent: editingRootEvent ? { id: editingRootEvent.id, name: editingRootEvent.name } : null 
+    })
     setEditScope(scope)
     setShowEditRecurringEvent(true)
   }
