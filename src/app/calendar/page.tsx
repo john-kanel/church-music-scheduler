@@ -410,6 +410,37 @@ export default function CalendarPage() {
     setShowEditScopeModal(true)
   }
 
+  const handleDeleteRootEvent = async (rootEvent: RootRecurringEvent) => {
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete the recurring event series "${rootEvent.name}"?\n\nThis will permanently delete:\n• The root event template\n• All generated events in this series\n• All assignments and hymns for this series\n\nThis action cannot be undone.`
+    )
+    
+    if (!confirmDelete) return
+    
+    try {
+      const response = await fetch(`/api/events/${rootEvent.id}/series`, {
+        method: 'DELETE'
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to delete recurring event series')
+      }
+      
+      // Refresh the data after successful deletion
+      if (session?.user?.id) {
+        invalidateCache.events(session.user.id)
+      }
+      loadDataInParallel()
+      
+      // Show success message
+      alert('Recurring event series deleted successfully!')
+    } catch (error) {
+      console.error('Error deleting recurring event series:', error)
+      alert(error instanceof Error ? error.message : 'Failed to delete recurring event series')
+    }
+  }
+
   const handleScopeSelected = (scope: 'future' | 'all') => {
     setEditScope(scope)
     setShowEditRecurringEvent(true)
@@ -822,16 +853,28 @@ export default function CalendarPage() {
                               />
                               <h3 className="font-medium text-gray-900 text-sm">{rootEvent.name}</h3>
                             </div>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleEditRootEvent(rootEvent)
-                              }}
-                              className="p-1 text-gray-400 hover:text-gray-600"
-                              title="Edit recurring event"
-                            >
-                              <Edit className="h-3 w-3" />
-                            </button>
+                            <div className="flex items-center space-x-1">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleEditRootEvent(rootEvent)
+                                }}
+                                className="p-1 text-gray-400 hover:text-gray-600"
+                                title="Edit recurring event"
+                              >
+                                <Edit className="h-3 w-3" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleDeleteRootEvent(rootEvent)
+                                }}
+                                className="p-1 text-gray-400 hover:text-red-600"
+                                title="Delete recurring event series"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            </div>
                           </div>
                           {rootEvent.description && (
                             <p className="text-xs text-gray-600 mb-2">{rootEvent.description}</p>

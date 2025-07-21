@@ -7,6 +7,115 @@ import { logActivity } from '@/lib/activity'
 import { checkSubscriptionStatus, createSubscriptionErrorResponse } from '@/lib/subscription-check'
 import { generateRecurringEvents, parseRecurrencePattern, extendRecurringEvents } from '@/lib/recurrence'
 
+// DELETE /api/events/[id]/series - Delete entire recurring series
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.churchId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Check subscription status
+    const subscriptionStatus = await checkSubscriptionStatus(session.user.churchId)
+    if (!subscriptionStatus.isActive) {
+      return createSubscriptionErrorResponse()
+    }
+
+    // Only directors and pastors can delete events
+    if (!['DIRECTOR', 'ASSOCIATE_DIRECTOR', 'PASTOR'].includes(session.user.role)) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
+    }
+
+    const { id: rootEventId } = await params
+
+    // Verify this is a root recurring event that belongs to the user's church
+    const rootEvent = await prisma.event.findFirst({
+      where: {
+        id: rootEventId,
+        churchId: session.user.churchId,
+        isRootEvent: true,
+        isRecurring: true
+      },
+      include: {
+        assignments: true,
+        hymns: true
+      }
+    })
+
+    if (!rootEvent) {
+      return NextResponse.json({ error: 'Root recurring event not found' }, { status: 404 })
+    }
+
+    // Delete the entire series (root event and all generated events)
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      // Find all generated events from this root
+      const generatedEvents = await tx.event.findMany({
+        where: {
+          generatedFrom: rootEventId,
+          churchId: session.user.churchId
+        }
+      })
+
+      // Delete assignments and hymns for all generated events
+      for (const event of generatedEvents) {
+        await tx.eventAssignment.deleteMany({ where: { eventId: event.id } })
+        await tx.eventHymn.deleteMany({ where: { eventId: event.id } })
+      }
+
+      // Delete all generated events
+      await tx.event.deleteMany({
+        where: {
+          generatedFrom: rootEventId,
+          churchId: session.user.churchId
+        }
+      })
+
+      // Delete assignments and hymns for root event
+      await tx.eventAssignment.deleteMany({ where: { eventId: rootEventId } })
+      await tx.eventHymn.deleteMany({ where: { eventId: rootEventId } })
+
+      // Delete the root event
+      await tx.event.delete({
+        where: { id: rootEventId }
+      })
+    }, {
+      timeout: 30000, // 30 second timeout
+      maxWait: 10000  // 10 second max wait
+    })
+
+    // Log activity
+    await logActivity({
+      type: 'EVENT_CREATED', // Using existing enum value for event modifications
+      description: `Deleted recurring event series: ${rootEvent.name}`,
+      churchId: session.user.churchId,
+      userId: session.user.id,
+      metadata: {
+        eventId: rootEvent.id,
+        eventName: rootEvent.name,
+        isRecurringSeries: true,
+        isDelete: true
+      }
+    })
+
+    return NextResponse.json({ 
+      message: 'Recurring event series deleted successfully'
+    }, { status: 200 })
+
+  } catch (error) {
+    console.error('Error deleting recurring event series:', error)
+    return NextResponse.json(
+      { 
+        error: 'Failed to delete recurring event series',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    )
+  }
+}
+
 
 
 export async function PATCH(
@@ -246,7 +355,24 @@ export async function PATCH(
       const originalPattern = rootEvent.recurrencePattern ? 
         parseRecurrencePattern(rootEvent.recurrencePattern) : null
       
-      const patternChanged = JSON.stringify(pattern) !== JSON.stringify(originalPattern)
+      // More reliable pattern comparison than JSON.stringify
+      const patternChanged = originalPattern ? (
+        pattern.type !== originalPattern.type ||
+        pattern.interval !== originalPattern.interval ||
+        JSON.stringify(pattern.weekdays?.sort()) !== JSON.stringify(originalPattern.weekdays?.sort()) ||
+        pattern.monthlyType !== originalPattern.monthlyType ||
+        pattern.weekOfMonth !== originalPattern.weekOfMonth ||
+        pattern.maxOccurrences !== originalPattern.maxOccurrences
+      ) : true
+
+      console.log('🔍 Recurring series edit analysis:', {
+        editScope,
+        patternChanged,
+        newPattern: pattern,
+        originalPattern,
+        eventsToUpdate: eventsToUpdate.length,
+        rootEventId
+      })
       
       if (patternChanged && editScope === 'future') {
         // Delete future events so they can be regenerated with new pattern
