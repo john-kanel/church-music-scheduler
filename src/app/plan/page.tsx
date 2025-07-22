@@ -2032,8 +2032,8 @@ export default function EventPlannerPage() {
                           </div>
                         </div>
                         
-                        {/* Status Tag */}
-                        <div className="mt-2 flex justify-end">
+                        {/* Status Tag - Above date/time and location */}
+                        <div className="mt-2 mb-1">
                           {(() => {
                             const statusStyles = getStatusTagStyles(event.status)
                             return (
@@ -2623,8 +2623,8 @@ export default function EventPlannerPage() {
                               </div>
                             </div>
                             
-                            {/* Status Tag - Mobile */}
-                            <div className="mt-2 flex justify-end">
+                            {/* Status Tag - Mobile - Above date/time and location */}
+                            <div className="mt-2 mb-1">
                               {(() => {
                                 const statusStyles = getStatusTagStyles(event.status)
                                 return (
