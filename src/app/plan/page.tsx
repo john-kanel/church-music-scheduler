@@ -834,19 +834,20 @@ export default function EventPlannerPage() {
 
       // Process suggestions and intelligently merge with existing hymns
       // PRESERVE ORIGINAL ORDER by mapping existing hymns with their original index
+      // Give ALL empty existing hymns placeholder titles so they won't be filtered out by the API
       const processedHymns = [...existingHymns.map((hymn, index) => ({
-        title: hymn.title,
+        title: hymn.title || 'New Song', // Ensure ALL empty slots get placeholder title
         notes: hymn.notes || '',
         servicePartId: hymn.servicePartId || null,
         orderIndex: index // Preserve original order
       }))]
 
-      // Track which service parts already have content
-      const servicePartsWithContent = new Set(
-        existingHymns
-          .filter(h => h.servicePartId && h.title?.trim())
-          .map(h => h.servicePartId)
-      )
+              // Track which service parts already have content (original titles, not placeholder)
+        const servicePartsWithContent = new Set(
+          existingHymns
+            .filter(h => h.servicePartId && h.title?.trim() && h.title !== 'New Song')
+            .map(h => h.servicePartId)
+        )
 
       for (const suggestion of suggestions) {
         // Find matching service part
@@ -892,11 +893,20 @@ export default function EventPlannerPage() {
 
         const servicePartId = matchingPart?.id || null
 
-        // Check if this service part already has content
+        // Check if this service part already has real content (not just placeholders)
         if (servicePartId && servicePartsWithContent.has(servicePartId)) {
-          // Find existing hymn with this service part and update it
+          // Service part already has real content, add as additional song
+          processedHymns.push({
+            title: suggestion.songTitle,
+            notes: suggestion.notes || '',
+            servicePartId: servicePartId,
+            orderIndex: processedHymns.length // Next available index
+          })
+          console.log(`🎵 AUTO-POPULATE: Added additional song to existing service part: ${suggestion.servicePartName}`)
+        } else {
+          // Service part doesn't have real content yet, try to find empty slot to update
           const existingIndex = processedHymns.findIndex(h => 
-            h.servicePartId === servicePartId && !h.title?.trim()
+            h.servicePartId === servicePartId && (!h.title?.trim() || h.title === 'New Song')
           )
           
           if (existingIndex !== -1) {
@@ -909,23 +919,15 @@ export default function EventPlannerPage() {
             }
             console.log(`🎵 AUTO-POPULATE: Updated existing empty service part: ${suggestion.servicePartName}`)
           } else {
-            // Add as additional song for this service part - assign next available orderIndex
+            // No empty slot found, add as new song
             processedHymns.push({
               title: suggestion.songTitle,
               notes: suggestion.notes || '',
               servicePartId: servicePartId,
               orderIndex: processedHymns.length // Next available index
             })
-            console.log(`🎵 AUTO-POPULATE: Added additional song to existing service part: ${suggestion.servicePartName}`)
+            console.log(`🎵 AUTO-POPULATE: Added new song to service part: ${suggestion.servicePartName}`)
           }
-        } else {
-          // Service part doesn't have content yet, or it's a new/individual song
-          processedHymns.push({
-            title: suggestion.songTitle,
-            notes: suggestion.notes || '',
-            servicePartId: servicePartId,
-            orderIndex: processedHymns.length // Next available index
-          })
           
           if (servicePartId) {
             servicePartsWithContent.add(servicePartId)
