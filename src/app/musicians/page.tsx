@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { ArrowLeft, Users, Plus, Search, UserPlus, Music, Phone, Calendar, Check, X, Edit2, Filter, Download } from 'lucide-react'
+import { ArrowLeft, Users, Plus, Search, UserPlus, Music, Phone, Calendar, Check, X, Edit2, Filter, Download, Eye, EyeOff } from 'lucide-react'
 import Link from 'next/link'
 import { InviteModal } from '../../components/musicians/invite-modal'
 import InvitationModal from '../../components/musicians/invitation-modal'
@@ -21,6 +21,7 @@ interface Musician {
     id: string
     name: string
   }>
+  pin?: string
 }
 
 interface EditingMusician {
@@ -43,6 +44,129 @@ interface Group {
   description?: string
 }
 
+interface PinCellProps {
+  musician: Musician & { pin?: string }
+  showPin: boolean
+  onPinUpdate: () => void
+}
+
+function PinCell({ musician, showPin, onPinUpdate }: PinCellProps) {
+  const [isEditing, setIsEditing] = useState(false)
+  const [pinValue, setPinValue] = useState(musician.pin || '')
+  const [isLoading, setIsLoading] = useState(false)
+
+  const handleSavePin = async () => {
+    if (pinValue.length !== 4 || !/^\d{4}$/.test(pinValue)) {
+      alert('PIN must be exactly 4 digits')
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const response = await fetch(`/api/musicians/${musician.id}/pin`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: pinValue })
+      })
+
+      if (response.ok) {
+        setIsEditing(false)
+        onPinUpdate()
+      } else {
+        const errorData = await response.json()
+        alert(errorData.error || 'Failed to update PIN')
+      }
+    } catch (error) {
+      console.error('Error updating PIN:', error)
+      alert('Failed to update PIN')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleGeneratePin = async () => {
+    setIsLoading(true)
+    try {
+      const response = await fetch(`/api/musicians/${musician.id}/pin`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}) // Empty body to generate random PIN
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setPinValue(data.pin)
+        setIsEditing(false)
+        onPinUpdate()
+      } else {
+        const errorData = await response.json()
+        alert(errorData.error || 'Failed to generate PIN')
+      }
+    } catch (error) {
+      console.error('Error generating PIN:', error)
+      alert('Failed to generate PIN')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  if (isEditing) {
+    return (
+      <div className="flex items-center space-x-2">
+        <input
+          type="text"
+          value={pinValue}
+          onChange={(e) => setPinValue(e.target.value.replace(/\D/g, '').slice(0, 4))}
+          placeholder="0000"
+          className="w-16 px-2 py-1 text-xs border border-gray-300 rounded text-center font-mono"
+          maxLength={4}
+        />
+        <button
+          onClick={handleSavePin}
+          disabled={isLoading || pinValue.length !== 4}
+          className="p-1 text-green-600 hover:text-green-700 disabled:opacity-50"
+          title="Save PIN"
+        >
+          <Check className="h-4 w-4" />
+        </button>
+        <button
+          onClick={() => {
+            setIsEditing(false)
+            setPinValue(musician.pin || '')
+          }}
+          className="p-1 text-gray-400 hover:text-gray-600"
+          title="Cancel"
+        >
+          <X className="h-4 w-4" />
+        </button>
+        <button
+          onClick={handleGeneratePin}
+          disabled={isLoading}
+          className="p-1 text-blue-600 hover:text-blue-700 disabled:opacity-50"
+          title="Generate random PIN"
+        >
+          <Plus className="h-4 w-4" />
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex items-center space-x-2">
+      <span className="text-sm font-mono text-gray-700">
+        {showPin ? (musician.pin || '----') : '••••'}
+      </span>
+      <button
+        onClick={() => setIsEditing(true)}
+        className="p-1 text-gray-400 hover:text-gray-600"
+        title="Edit PIN"
+      >
+        <Edit2 className="h-4 w-4" />
+      </button>
+    </div>
+  )
+}
+
 export default function MusiciansPage() {
   const { data: session } = useSession()
   const [showInviteModal, setShowInviteModal] = useState(false)
@@ -57,6 +181,7 @@ export default function MusiciansPage() {
   const [exporting, setExporting] = useState(false)
   const [availableGroups, setAvailableGroups] = useState<Group[]>([])
   const [loadingGroups, setLoadingGroups] = useState(false)
+  const [showPins, setShowPins] = useState(false)
 
   // Fetch musicians
   useEffect(() => {
@@ -569,6 +694,24 @@ export default function MusiciansPage() {
                         </div>
                       </div>
                     </th>
+                    {canEditMusicians && (
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <div className="flex items-center space-x-2">
+                          <span>PIN</span>
+                          <button
+                            onClick={() => setShowPins(!showPins)}
+                            className="p-1 hover:bg-gray-100 rounded"
+                            title={showPins ? "Hide PINs" : "Show PINs"}
+                          >
+                            {showPins ? (
+                              <Eye className="h-4 w-4" />
+                            ) : (
+                              <EyeOff className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div>
+                      </th>
+                    )}
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Groups
                     </th>
@@ -584,7 +727,7 @@ export default function MusiciansPage() {
                   {filteredMusicians.length === 0 ? (
                     /* No results message */
                     <tr>
-                      <td colSpan={7} className="px-6 py-12 text-center">
+                      <td colSpan={canEditMusicians ? 8 : 7} className="px-6 py-12 text-center">
                         <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
                         <h3 className="text-lg font-medium text-gray-900 mb-2">
                           No musicians match this filter
@@ -762,6 +905,15 @@ export default function MusiciansPage() {
                           </span>
                         )}
                       </td>
+                      {canEditMusicians && (
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <PinCell 
+                            musician={musician} 
+                            showPin={showPins}
+                            onPinUpdate={() => fetchMusicians()}
+                          />
+                        </td>
+                      )}
                       <td className="px-6 py-4 whitespace-nowrap">
                         {editingId === musician.id && editingData ? (
                           <div className="max-w-48">

@@ -52,6 +52,19 @@ interface PublicScheduleData {
   }
 }
 
+interface MusicianSelectionModalProps {
+  isOpen: boolean
+  onClose: () => void
+  onSelectMusician: (musicianId: string, musicianName: string) => void
+  musicians: Array<{
+    id: string
+    firstName: string
+    lastName: string
+  }>
+  roleName: string
+  eventName: string
+}
+
 interface PinVerificationModalProps {
   isOpen: boolean
   onClose: () => void
@@ -59,6 +72,93 @@ interface PinVerificationModalProps {
   musicianName: string
   roleName: string
   eventName: string
+}
+
+function MusicianSelectionModal({ isOpen, onClose, onSelectMusician, musicians, roleName, eventName }: MusicianSelectionModalProps) {
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedMusicianId, setSelectedMusicianId] = useState('')
+
+  const filteredMusicians = musicians.filter(musician => 
+    `${musician.firstName} ${musician.lastName}`.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  const handleSelectMusician = () => {
+    const selectedMusician = musicians.find(m => m.id === selectedMusicianId)
+    if (selectedMusician) {
+      onSelectMusician(selectedMusician.id, `${selectedMusician.firstName} ${selectedMusician.lastName}`)
+    }
+  }
+
+  if (!isOpen) return null
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md border">
+        <h3 className="text-xl font-bold text-gray-900 mb-6 text-center">Select Musician</h3>
+        
+        <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <p className="text-sm font-medium text-gray-800 mb-1">Signing up for:</p>
+          <p className="font-bold text-gray-900">{roleName}</p>
+          <p className="text-sm font-medium text-gray-700">in {eventName}</p>
+        </div>
+
+        {/* Search Input */}
+        <div className="mb-4">
+          <label className="block text-sm font-semibold text-gray-900 mb-2">
+            Search for your name:
+          </label>
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Type your name..."
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            autoFocus
+          />
+        </div>
+
+        {/* Musicians List */}
+        <div className="mb-6 max-h-48 overflow-y-auto border border-gray-200 rounded-lg">
+          {filteredMusicians.length > 0 ? (
+            filteredMusicians.map((musician) => (
+              <button
+                key={musician.id}
+                onClick={() => setSelectedMusicianId(musician.id)}
+                className={`w-full text-left p-3 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors ${
+                  selectedMusicianId === musician.id ? 'bg-blue-50 border-blue-200' : ''
+                }`}
+              >
+                <span className="font-medium text-gray-900">
+                  {musician.firstName} {musician.lastName}
+                </span>
+              </button>
+            ))
+          ) : (
+            <div className="p-4 text-center text-gray-500">
+              No musicians found matching "{searchTerm}"
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 px-6 py-3 border border-gray-300 text-gray-800 rounded-lg hover:bg-gray-50 font-medium transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSelectMusician}
+            disabled={!selectedMusicianId}
+            className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
+          >
+            Continue
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function PinVerificationModal({ isOpen, onClose, onVerify, musicianName, roleName, eventName }: PinVerificationModalProps) {
@@ -85,17 +185,17 @@ function PinVerificationModal({ isOpen, onClose, onVerify, musicianName, roleNam
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md">
-        <h3 className="text-lg font-semibold mb-4">Verify PIN</h3>
+      <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md border">
+        <h3 className="text-xl font-bold text-gray-900 mb-6 text-center">Verify PIN</h3>
         
-        <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-          <p className="text-sm text-gray-600 mb-2">Signing up as:</p>
-          <p className="font-medium">{musicianName}</p>
-          <p className="text-sm text-gray-600">for {roleName} in {eventName}</p>
+        <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <p className="text-sm font-medium text-gray-800 mb-2">Signing up as:</p>
+          <p className="font-bold text-gray-900 text-lg">{musicianName}</p>
+          <p className="text-sm font-medium text-gray-700">for {roleName} in {eventName}</p>
         </div>
 
         <form onSubmit={handleSubmit}>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-semibold text-gray-900 mb-3">
             Enter your 4-digit PIN:
           </label>
           <input
@@ -103,23 +203,23 @@ function PinVerificationModal({ isOpen, onClose, onVerify, musicianName, roleNam
             value={pin}
             onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
             placeholder="0000"
-            className="w-full p-3 border border-gray-300 rounded-lg text-center text-xl font-mono"
+            className="w-full p-4 border border-gray-300 rounded-lg text-center text-2xl font-mono tracking-widest focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             maxLength={4}
             autoFocus
           />
           
-          <div className="flex gap-3 mt-6">
+          <div className="flex gap-3 mt-8">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+              className="flex-1 px-6 py-3 border border-gray-300 text-gray-800 rounded-lg hover:bg-gray-50 font-medium transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={pin.length !== 4 || isLoading}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
             >
               {isLoading ? 'Verifying...' : 'Sign Up'}
             </button>
@@ -136,6 +236,13 @@ export default function PublicSchedulePage({ params }: { params: Promise<{ token
   const [error, setError] = useState<string | null>(null)
   const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set())
   const [token, setToken] = useState<string | null>(null)
+  const [musicianSelectionModal, setMusicianSelectionModal] = useState<{
+    isOpen: boolean
+    assignmentId: string
+    roleName: string
+    eventName: string
+  } | null>(null)
+  
   const [pinModal, setPinModal] = useState<{
     isOpen: boolean
     musicianId: string
@@ -190,18 +297,28 @@ export default function PublicSchedulePage({ params }: { params: Promise<{ token
   }
 
   const handleSignUp = (assignmentId: string, roleName: string, eventName: string) => {
-    // Show musician selection dropdown - for now just show first available musician
-    if (data?.musicians && data.musicians.length > 0) {
-      const firstMusician = data.musicians[0]
-      setPinModal({
-        isOpen: true,
-        musicianId: firstMusician.id,
-        musicianName: `${firstMusician.firstName} ${firstMusician.lastName}`,
-        assignmentId,
-        roleName,
-        eventName
-      })
-    }
+    // Show musician selection modal first
+    setMusicianSelectionModal({
+      isOpen: true,
+      assignmentId,
+      roleName,
+      eventName
+    })
+  }
+  
+  const handleMusicianSelected = (musicianId: string, musicianName: string) => {
+    if (!musicianSelectionModal) return
+    
+    // Close musician selection modal and open PIN verification modal
+    setMusicianSelectionModal(null)
+    setPinModal({
+      isOpen: true,
+      musicianId,
+      musicianName,
+      assignmentId: musicianSelectionModal.assignmentId,
+      roleName: musicianSelectionModal.roleName,
+      eventName: musicianSelectionModal.eventName
+    })
   }
 
   const handlePinVerification = async (pin: string) => {
@@ -353,7 +470,7 @@ export default function PublicSchedulePage({ params }: { params: Promise<{ token
                           {event.assignments.map((assignment) => (
                             <div key={assignment.id} className="flex items-center justify-between bg-white p-3 rounded-lg">
                               <div>
-                                <span className="font-medium">{assignment.roleName}</span>
+                                <span className="font-medium text-gray-900">{assignment.roleName}</span>
                                 {assignment.user && (
                                   <span className="ml-2 text-green-600 flex items-center gap-1">
                                     <Check className="w-4 h-4" />
@@ -389,10 +506,10 @@ export default function PublicSchedulePage({ params }: { params: Promise<{ token
                         <div className="bg-white p-3 rounded-lg">
                           {event.hymns.map((hymn, index) => (
                             <div key={hymn.id} className="mb-2 last:mb-0">
-                              <span className="text-sm text-gray-500">
+                              <span className="text-sm text-gray-700">
                                 {index + 1}. {hymn.servicePart?.name || 'Other'}:
                               </span>
-                              <span className="ml-2 font-medium">{hymn.title}</span>
+                              <span className="ml-2 font-medium text-gray-900">{hymn.title}</span>
                               {hymn.notes && (
                                 <span className="ml-2 text-gray-600 text-sm">({hymn.notes})</span>
                               )}
@@ -414,6 +531,18 @@ export default function PublicSchedulePage({ params }: { params: Promise<{ token
           </div>
         )}
       </div>
+
+      {/* Musician Selection Modal */}
+      {musicianSelectionModal && data?.musicians && (
+        <MusicianSelectionModal
+          isOpen={musicianSelectionModal.isOpen}
+          onClose={() => setMusicianSelectionModal(null)}
+          onSelectMusician={handleMusicianSelected}
+          musicians={data.musicians}
+          roleName={musicianSelectionModal.roleName}
+          eventName={musicianSelectionModal.eventName}
+        />
+      )}
 
       {/* PIN Verification Modal */}
       {pinModal && (
