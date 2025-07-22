@@ -5,7 +5,7 @@ import { prisma } from '@/lib/db'
 import Stripe from 'stripe'
 
 // Conditionally initialize Stripe for local development
-const stripe = process.env.STRIPE_SECRET_KEY 
+const stripe: Stripe | null = process.env.STRIPE_SECRET_KEY 
   ? new Stripe(process.env.STRIPE_SECRET_KEY, {
       apiVersion: '2025-06-30.basil',
     })

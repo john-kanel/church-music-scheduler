@@ -123,16 +123,24 @@ export async function processPendingCancellationNotifications(batchKey: string, 
     })
 
     // Send email to all recipients
-    const emailPromises = recipients.map(recipient => 
-      resend.emails.send({
-        from: 'Church Music Pro <notifications@churchmusicpro.com>',
-        to: recipient.email,
-        subject: isUrgent ? 
-          `🚨 URGENT: Position Available - ${event.name}` : 
-          `Position Available - ${event.name}`,
-        html: emailContent.replace('{{RECIPIENT_NAME}}', `${recipient.firstName} ${recipient.lastName}`)
-      })
-    )
+    const emailPromises = recipients.map(recipient => {
+      if (resend) {
+        return resend.emails.send({
+          from: 'Church Music Pro <notifications@churchmusicpro.com>',
+          to: recipient.email,
+          subject: isUrgent ? 
+            `🚨 URGENT: Position Available - ${event.name}` : 
+            `Position Available - ${event.name}`,
+          html: emailContent.replace('{{RECIPIENT_NAME}}', `${recipient.firstName} ${recipient.lastName}`)
+        })
+      } else {
+        console.log('Email simulation (no RESEND_API_KEY):', { 
+          to: recipient.email, 
+          subject: isUrgent ? `🚨 URGENT: Position Available - ${event.name}` : `Position Available - ${event.name}`
+        })
+        return Promise.resolve({ data: { id: `dev-${Date.now()}` } })
+      }
+    })
 
     await Promise.all(emailPromises)
 

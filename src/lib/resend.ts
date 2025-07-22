@@ -2,9 +2,22 @@ import { Resend } from 'resend'
 import { getEmailLogoHtml } from '../components/emails/email-logo'
 
 // Conditionally initialize Resend for local development
-export const resend = process.env.RESEND_API_KEY 
+export const resend: Resend | null = process.env.RESEND_API_KEY 
   ? new Resend(process.env.RESEND_API_KEY)
   : null
+
+// Safe email sending wrapper that handles null resend
+export async function sendEmail(emailData: any) {
+  if (resend) {
+    return await resend.emails.send(emailData)
+  } else {
+    console.log('Email simulation (no RESEND_API_KEY):', { 
+      to: emailData.to, 
+      subject: emailData.subject 
+    })
+    return { data: { id: `dev-email-${Date.now()}` } }
+  }
+}
 
 // Email-safe logo HTML (using text-based logo for guaranteed compatibility)
 const LOGO_HTML = `

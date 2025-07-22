@@ -154,7 +154,20 @@ ${hymnsList}
         <p style="margin: 5px 0;"><strong>Location:</strong> ${event.location}</p>
         ${event.description ? `<p style="margin: 5px 0;"><strong>Description:</strong> ${event.description}</p>` : ''}
         <p style="margin: 5px 0;"><strong>Duration:</strong> ${event.endTime ? 
-          `${Math.round((new Date(event.endTime).getTime() - new Date(event.startTime).getTime()) / (1000 * 60))} minutes` : 
+          (() => {
+            const durationMinutes = Math.round((new Date(event.endTime).getTime() - new Date(event.startTime).getTime()) / (1000 * 60))
+            // If duration is negative or unreasonably long (over 8 hours), show TBD
+            if (durationMinutes <= 0 || durationMinutes > 480) {
+              return 'TBD'
+            }
+            // Format nicely for durations over 60 minutes
+            if (durationMinutes >= 60) {
+              const hours = Math.floor(durationMinutes / 60)
+              const minutes = durationMinutes % 60
+              return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`
+            }
+            return `${durationMinutes} minutes`
+          })() : 
           'TBD'}</p>
       </div>
       
@@ -174,12 +187,16 @@ ${hymnsList}
     </div>
   `
 
-  await resend.emails.send({
-    from: 'Church Music Pro <notifications@churchmusicpro.com>',
-    to: email,
-    subject,
-    html: htmlContent
-  })
+  if (resend) {
+    await resend.emails.send({
+      from: 'Church Music Pro <notifications@churchmusicpro.com>',
+      to: email,
+      subject,
+      html: htmlContent
+    })
+  } else {
+    console.log('Email simulation (no RESEND_API_KEY):', { to: email, subject })
+  }
 }
 
 export async function sendPastorMonthlyReport(
@@ -309,7 +326,11 @@ export async function sendPastorMonthlyReport(
     emailData.attachments = [pdfAttachment]
   }
 
-  await resend.emails.send(emailData)
+  if (resend) {
+    await resend.emails.send(emailData)
+  } else {
+    console.log('Email simulation (no RESEND_API_KEY):', { to: email, subject })
+  }
 }
 
 export async function sendPastorDailyDigest(
@@ -355,12 +376,16 @@ export async function sendPastorDailyDigest(
     </div>
   `
 
-  await resend.emails.send({
-    from: 'Church Music Pro <notifications@churchmusicpro.com>',
-    to: email,
-    subject,
-    html: htmlContent
-  })
+  if (resend) {
+    await resend.emails.send({
+      from: 'Church Music Pro <notifications@churchmusicpro.com>',
+      to: email,
+      subject,
+      html: htmlContent
+    })
+  } else {
+    console.log('Email simulation (no RESEND_API_KEY):', { to: email, subject })
+  }
 }
 
 export async function sendPastorWeeklyReport(
@@ -493,5 +518,9 @@ export async function sendPastorWeeklyReport(
     emailData.attachments = [pdfAttachment]
   }
 
-  await resend.emails.send(emailData)
+  if (resend) {
+    await resend.emails.send(emailData)
+  } else {
+    console.log('Email simulation (no RESEND_API_KEY):', { to: email, subject })
+  }
 } 
