@@ -1883,7 +1883,11 @@ export default function EventPlannerPage() {
                           {/* Edit and Delete buttons */}
                           <div className="flex items-center gap-1">
                             <button
-                              onClick={() => handleEditEvent(event)}
+                              onClick={() => {
+                                console.log('🔘 EDIT BUTTON CLICKED! Event:', event?.id)
+                                console.log('🔘 Button click event fired, calling handleEditEvent...')
+                                handleEditEvent(event)
+                              }}
                               className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
                               title="Edit event"
                             >
