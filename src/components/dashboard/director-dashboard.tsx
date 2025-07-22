@@ -24,7 +24,8 @@ import {
   GiftIcon,
   LifeBuoy,
   HandHeart,
-  Lightbulb
+  Lightbulb,
+  ExternalLink
 } from 'lucide-react'
 import { Logo } from '@/components/ui/logo'
 import Link from 'next/link'
@@ -48,6 +49,11 @@ const InviteModal = dynamic(() => import('../musicians/invite-modal').then(mod =
 })
 
 const SendMessageModal = dynamic(() => import('../messages/send-message-modal').then(mod => ({ default: mod.SendMessageModal })), {
+  ssr: false,
+  loading: () => <div>Loading...</div>
+})
+
+const GeneratePublicLinkModal = dynamic(() => import('../events/generate-public-link-modal').then(mod => ({ default: mod.GeneratePublicLinkModal })), {
   ssr: false,
   loading: () => <div>Loading...</div>
 })
@@ -115,6 +121,7 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
   const [showCreateEventModal, setShowCreateEventModal] = useState(false)
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [showMessageModal, setShowMessageModal] = useState(false)
+  const [showPublicLinkModal, setShowPublicLinkModal] = useState(false)
 
   const [selectedEvent, setSelectedEvent] = useState<any>(null)
   const [showEventDetails, setShowEventDetails] = useState(false)
@@ -504,6 +511,16 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                         >
                           <Plus className="h-4 w-4 inline mr-2" />
                           Create Event
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowPublicLinkModal(true)
+                            setShowEventsDropdown(false)
+                          }}
+                          className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        >
+                          <ExternalLink className="h-4 w-4 inline mr-2" />
+                          Generate Public Link
                         </button>
                       </div>
                     )}
@@ -935,6 +952,11 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
           setShowEventDetails(false)
           setSelectedEvent(null)
         }}
+      />
+
+      <GeneratePublicLinkModal
+        isOpen={showPublicLinkModal}
+        onClose={() => setShowPublicLinkModal(false)}
       />
     </div>
   )

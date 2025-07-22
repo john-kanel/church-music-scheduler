@@ -13,6 +13,7 @@ import { ServicePartEditModal } from '@/components/events/service-part-edit-moda
 import { AutoAssignModal } from '@/components/events/auto-assign-modal'
 import { EventDetailsModal } from '@/components/events/event-details-modal'
 import { CreateGroupModal } from '@/components/groups/create-group-modal'
+import { GeneratePublicLinkModal } from '@/components/events/generate-public-link-modal'
 import dynamic from 'next/dynamic'
 
 // Dynamically import PdfProcessor to prevent SSR issues
@@ -145,6 +146,7 @@ export default function EventPlannerPage() {
   const [visibleServiceParts, setVisibleServiceParts] = useState<Set<string>>(new Set())
   const [visibleEventColors, setVisibleEventColors] = useState<Set<string>>(new Set())
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showPublicLinkModal, setShowPublicLinkModal] = useState(false)
   const [showPdfProcessor, setShowPdfProcessor] = useState(false)
   
   // Toast state
@@ -1882,6 +1884,15 @@ export default function EventPlannerPage() {
                 </button>
               )}
               
+              {/* Generate Public Link Button */}
+              <button
+                onClick={() => setShowPublicLinkModal(true)}
+                className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
+              >
+                <ExternalLink className="w-4 h-4" />
+                <span className="hidden sm:inline">Public Link</span>
+              </button>
+              
               {/* Create Event Button */}
               <button
                 onClick={() => setShowCreateModal(true)}
@@ -3204,6 +3215,12 @@ export default function EventPlannerPage() {
           setShowCreateModal(false)
           fetchPlannerData() // Refresh the data to show the new event
         }}
+      />
+
+      {/* Generate Public Link Modal */}
+      <GeneratePublicLinkModal
+        isOpen={showPublicLinkModal}
+        onClose={() => setShowPublicLinkModal(false)}
       />
 
       {/* PDF Processor Modal */}
