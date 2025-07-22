@@ -187,7 +187,7 @@ ${hymnsList}
     </div>
   `
 
-  if (resend) {
+  if (process.env.RESEND_API_KEY) {
     await resend.emails.send({
       from: 'Church Music Pro <notifications@churchmusicpro.com>',
       to: email,
@@ -326,7 +326,7 @@ export async function sendPastorMonthlyReport(
     emailData.attachments = [pdfAttachment]
   }
 
-  if (resend) {
+  if (process.env.RESEND_API_KEY) {
     await resend.emails.send(emailData)
   } else {
     console.log('Email simulation (no RESEND_API_KEY):', { to: email, subject })
@@ -376,7 +376,7 @@ export async function sendPastorDailyDigest(
     </div>
   `
 
-  if (resend) {
+  if (process.env.RESEND_API_KEY) {
     await resend.emails.send({
       from: 'Church Music Pro <notifications@churchmusicpro.com>',
       to: email,
@@ -518,7 +518,7 @@ export async function sendPastorWeeklyReport(
     emailData.attachments = [pdfAttachment]
   }
 
-  if (resend) {
+  if (process.env.RESEND_API_KEY) {
     await resend.emails.send(emailData)
   } else {
     console.log('Email simulation (no RESEND_API_KEY):', { to: email, subject })

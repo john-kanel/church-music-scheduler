@@ -179,12 +179,16 @@ async function sendAllTestEmails() {
       recipientName: 'John Kanel'
     }))
 
-    await resend.emails.send({
-      from: 'Church Music Pro <noreply@churchmusicpro.com>',
-      to: TEST_EMAIL,
-      subject: 'Join St. Mary\'s Catholic Church on Church Music Pro!',
-      html: referralHtml
-    })
+    if (resend) {
+      await resend.emails.send({
+        from: 'Church Music Pro <noreply@churchmusicpro.com>',
+        to: TEST_EMAIL,
+        subject: 'Join St. Mary\'s Catholic Church on Church Music Pro!',
+        html: referralHtml
+      })
+    } else {
+      console.log('⚠️ Skipping email (RESEND_API_KEY not configured)')
+    }
     console.log('✅ Referral invitation email sent')
 
     // 10. Referral Success Notification Email (React Component)
@@ -201,12 +205,16 @@ async function sendAllTestEmails() {
       totalMoneySaved: 89.97
     }))
 
-    await resend.emails.send({
-      from: 'Church Music Pro <noreply@churchmusicpro.com>',
-      to: TEST_EMAIL,
-      subject: 'Congratulations! Your Referral Was Successful',
-      html: successHtml
-    })
+    if (resend) {
+      await resend.emails.send({
+        from: 'Church Music Pro <noreply@churchmusicpro.com>',
+        to: TEST_EMAIL,
+        subject: 'Congratulations! Your Referral Was Successful',
+        html: successHtml
+      })
+    } else {
+      console.log('⚠️ Skipping email (RESEND_API_KEY not configured)')
+    }
     console.log('✅ Referral success notification sent')
 
     console.log('\n🎉 All email tests completed successfully!')

@@ -1,14 +1,19 @@
 import { Resend } from 'resend'
 import { getEmailLogoHtml } from '../components/emails/email-logo'
 
-// Conditionally initialize Resend for local development
-export const resend: Resend | null = process.env.RESEND_API_KEY 
+// Initialize Resend - in production (Railway) RESEND_API_KEY is always set
+// In development, we gracefully handle missing keys
+if (!process.env.RESEND_API_KEY) {
+  console.warn('⚠️ RESEND_API_KEY not found - email features will be simulated in development')
+}
+
+export const resend = process.env.RESEND_API_KEY 
   ? new Resend(process.env.RESEND_API_KEY)
-  : null
+  : null as any as Resend // Type assertion for production builds
 
 // Safe email sending wrapper that handles null resend
 export async function sendEmail(emailData: any) {
-  if (resend) {
+  if (process.env.RESEND_API_KEY && resend) {
     return await resend.emails.send(emailData)
   } else {
     console.log('Email simulation (no RESEND_API_KEY):', { 
@@ -192,7 +197,7 @@ Sent by Church Music Pro
     }
 
     // Check if Resend is available (for local development)
-    if (!resend) {
+    if (!process.env.RESEND_API_KEY) {
       return simulateEmailInDev(emailData, tempPassword)
     }
 
@@ -270,7 +275,7 @@ Sent by ${senderName} from ${churchName}
     }
 
     // Check if Resend is available (for local development)
-    if (!resend) {
+    if (!process.env.RESEND_API_KEY) {
       const simulatedResult = simulateEmailInDev(emailData, 'N/A')
       return simulatedResult.data
     }
@@ -430,7 +435,7 @@ Sent by Church Music Pro
     }
 
     // Check if Resend is available (for local development)
-    if (!resend) {
+    if (!process.env.RESEND_API_KEY) {
       const simulatedResult = simulateEmailInDev(emailData, 'N/A')
       return simulatedResult.data
     }
@@ -578,7 +583,7 @@ Sent by Church Music Pro
     }
 
     // Check if Resend is available (for local development)
-    if (!resend) {
+    if (!process.env.RESEND_API_KEY) {
       const simulatedResult = simulateEmailInDev(emailData, 'N/A')
       return simulatedResult.data
     }
@@ -733,7 +738,7 @@ Sent by Church Music Pro
     }
 
     // Check if Resend is available (for local development)
-    if (!resend) {
+    if (!process.env.RESEND_API_KEY) {
       const simulatedResult = simulateEmailInDev(emailData, 'N/A')
       return simulatedResult.data
     }

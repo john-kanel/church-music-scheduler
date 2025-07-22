@@ -124,7 +124,7 @@ export async function processPendingCancellationNotifications(batchKey: string, 
 
     // Send email to all recipients
     const emailPromises = recipients.map(recipient => {
-      if (resend) {
+      if (process.env.RESEND_API_KEY) {
         return resend.emails.send({
           from: 'Church Music Pro <notifications@churchmusicpro.com>',
           to: recipient.email,
