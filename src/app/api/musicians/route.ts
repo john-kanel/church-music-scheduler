@@ -59,6 +59,7 @@ export async function GET(request: NextRequest) {
           emailNotifications: true,
           smsNotifications: true,
           instruments: true,
+          pin: true,
           createdAt: true,
           groupMemberships: {
             select: {

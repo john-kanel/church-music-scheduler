@@ -26,11 +26,8 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid or expired link' }, { status: 404 })
     }
 
-    // Check if the link is still valid (not expired)
-    const now = new Date()
-    if (now > publicLink.endDate) {
-      return NextResponse.json({ error: 'Link has expired' }, { status: 410 })
-    }
+    // Links should stay active forever as per user requirements
+    // No expiration check needed
 
     // Fetch events within the date range, excluding tentative events
     const events = await prisma.event.findMany({
