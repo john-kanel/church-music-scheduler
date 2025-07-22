@@ -21,6 +21,7 @@ interface UserProfile {
   instruments: string[]
   skillLevel: string
   yearsExperience?: number
+  pin?: string
   createdAt: string
   church: {
     name: string
@@ -46,7 +47,8 @@ export default function ProfilePage() {
     timezone: 'America/Chicago',
     instruments: [] as string[],
     skillLevel: 'INTERMEDIATE',
-    yearsExperience: ''
+    yearsExperience: '',
+    pin: ''
   })
 
   useEffect(() => {
@@ -70,7 +72,8 @@ export default function ProfilePage() {
           timezone: data.user.timezone,
           instruments: data.user.instruments || [],
           skillLevel: data.user.skillLevel || 'INTERMEDIATE',
-          yearsExperience: data.user.yearsExperience ? data.user.yearsExperience.toString() : ''
+          yearsExperience: data.user.yearsExperience ? data.user.yearsExperience.toString() : '',
+          pin: data.user.pin || ''
         })
       } else {
         setError('Failed to load profile')
@@ -124,7 +127,8 @@ export default function ProfilePage() {
         timezone: profile.timezone,
         instruments: profile.instruments || [],
         skillLevel: profile.skillLevel || 'INTERMEDIATE',
-        yearsExperience: profile.yearsExperience ? profile.yearsExperience.toString() : ''
+        yearsExperience: profile.yearsExperience ? profile.yearsExperience.toString() : '',
+        pin: profile.pin || ''
       })
     }
     setEditing(false)
@@ -312,6 +316,29 @@ export default function ProfilePage() {
                       <p className="text-gray-900">{profile.phone || 'Not provided'}</p>
                     </div>
                   )}
+                </div>
+
+                {/* PIN */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    4-Digit PIN
+                  </label>
+                  {editing ? (
+                    <input
+                      type="text"
+                      value={formData.pin}
+                      onChange={(e) => setFormData({ ...formData, pin: e.target.value.replace(/\D/g, '').slice(0, 4) })}
+                      placeholder="0000"
+                      maxLength={4}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center font-mono tracking-widest"
+                    />
+                  ) : (
+                    <div className="flex items-center">
+                      <Settings className="h-4 w-4 text-gray-400 mr-2" />
+                      <p className="text-gray-900 font-mono tracking-wider">{profile.pin ? '••••' : 'Not set'}</p>
+                    </div>
+                  )}
+                  <p className="text-xs text-gray-500 mt-1">Used for public schedule sign-ups</p>
                 </div>
 
                 {/* Timezone */}

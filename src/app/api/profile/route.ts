@@ -27,6 +27,7 @@ export async function GET() {
         instruments: true,
         skillLevel: true,
         yearsExperience: true,
+        pin: true,
         calendarLink: true,
         hasCompletedOnboarding: true,
         createdAt: true,
@@ -73,6 +74,7 @@ export async function POST(request: NextRequest) {
       instruments,
       skillLevel,
       yearsExperience,
+      pin,
       churchName,
       parishPhone,
       calendarLink,
@@ -92,6 +94,7 @@ export async function POST(request: NextRequest) {
         ...(instruments && { instruments }),
         ...(skillLevel && { skillLevel }),
         ...(yearsExperience !== undefined && { yearsExperience: yearsExperience ? parseInt(yearsExperience) : null }),
+        ...(pin !== undefined && { pin: pin || null }),
         ...(calendarLink !== undefined && { calendarLink: calendarLink || null }),
         ...(hasCompletedOnboarding !== undefined && { hasCompletedOnboarding })
       },
@@ -167,6 +170,7 @@ export async function PUT(request: NextRequest) {
       instruments,
       skillLevel,
       yearsExperience,
+      pin,
       churchName,
       parishPhone,
       calendarLink,
@@ -177,6 +181,14 @@ export async function PUT(request: NextRequest) {
     if (!firstName || !lastName) {
       return NextResponse.json(
         { error: 'First name and last name are required' },
+        { status: 400 }
+      )
+    }
+
+    // Validate PIN format if provided
+    if (pin && (!/^\d{4}$/.test(pin))) {
+      return NextResponse.json(
+        { error: 'PIN must be exactly 4 digits' },
         { status: 400 }
       )
     }
@@ -194,6 +206,7 @@ export async function PUT(request: NextRequest) {
         instruments: instruments || [],
         skillLevel: skillLevel || 'INTERMEDIATE',
         yearsExperience: yearsExperience ? parseInt(yearsExperience) : null,
+        pin: pin || null,
         calendarLink: calendarLink || null,
         ...(hasCompletedOnboarding !== undefined && { hasCompletedOnboarding })
       },
@@ -210,6 +223,7 @@ export async function PUT(request: NextRequest) {
         instruments: true,
         skillLevel: true,
         yearsExperience: true,
+        pin: true,
         calendarLink: true,
         hasCompletedOnboarding: true,
         church: {
