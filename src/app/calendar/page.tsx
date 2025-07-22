@@ -148,6 +148,9 @@ export default function CalendarPage() {
   const [showViewAllOpenEvents, setShowViewAllOpenEvents] = useState(false)
   const [openEventsData, setOpenEventsData] = useState<any[]>([])
 
+  // Calendar subscription
+  const [isCreatingSubscription, setIsCreatingSubscription] = useState(false)
+
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
@@ -466,6 +469,70 @@ export default function CalendarPage() {
     setEditScope(null)
   }
 
+  const handleCalendarSubscription = async () => {
+    if (!session) return
+    
+    setIsCreatingSubscription(true)
+    try {
+      console.log('Creating calendar subscription with default settings (ALL events)...')
+
+      const response = await fetch('/api/calendar-subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          filterType: 'ALL',
+          groupIds: [],
+          eventTypeIds: [],
+        }),
+      })
+
+      if (response.ok) {
+        const subscription = await response.json()
+        
+        // Open the calendar feed URL with webcal:// protocol
+        if (subscription?.feedUrl) {
+          try {
+            console.log('Opening calendar subscription:', subscription.feedUrl)
+            
+            // Try to open the calendar app
+            const opened = window.open(subscription.feedUrl, '_blank')
+            
+            if (opened) {
+              alert('🎉 Calendar subscription opened! Your calendar app should prompt you to create a new "[Church Name] Music Ministry" calendar.')
+            } else {
+              // Fallback if popup was blocked
+              alert('Calendar subscription created! Please manually open this URL in your calendar app:\n\n' + subscription.feedUrl)
+            }
+          } catch (openError) {
+            console.error('Error opening calendar URL:', openError)
+            alert('Calendar subscription created! Please manually add this URL to your calendar app:\n\n' + subscription.feedUrl)
+          }
+        } else {
+          console.error('No feedUrl in response:', subscription)
+          alert('Calendar subscription created, but no feed URL was generated. Please try refreshing the page.')
+        }
+      } else {
+        const errorText = await response.text()
+        let errorMessage = 'Failed to create subscription'
+        try {
+          const errorData = JSON.parse(errorText)
+          errorMessage = errorData.error || errorMessage
+        } catch {
+          errorMessage = errorText || response.statusText || `Server error (${response.status})`
+        }
+        throw new Error(errorMessage)
+      }
+    } catch (error) {
+      console.error('Error creating subscription:', error)
+      const message = error instanceof Error ? error.message : 'Unknown error occurred'
+      alert(`Error creating subscription: ${message}\n\nPlease try again.`)
+    } finally {
+      setIsCreatingSubscription(false)
+    }
+  }
+
   const generatePDF = async () => {
     try {
       const pdf = new jsPDF()
@@ -778,13 +845,18 @@ export default function CalendarPage() {
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              <Link
-                href="/calendar-subscribe"
+              <button
+                onClick={handleCalendarSubscription}
                 className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                disabled={isCreatingSubscription}
               >
-                <Calendar className="h-4 w-4 mr-2" />
-                Subscribe to Calendar
-              </Link>
+                {isCreatingSubscription ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                ) : (
+                  <Calendar className="h-4 w-4 mr-2" />
+                )}
+                {isCreatingSubscription ? 'Subscribing...' : 'Subscribe to Calendar'}
+              </button>
               <button
                 onClick={() => generatePDF()}
                 className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"

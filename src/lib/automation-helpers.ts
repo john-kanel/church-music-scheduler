@@ -54,10 +54,20 @@ export async function scheduleEventNotifications(eventId: string, churchId: stri
       }
     }
 
+    const now = new Date()
+    const eventDateTime = new Date(event.startTime)
+    const hoursUntilEvent = (eventDateTime.getTime() - now.getTime()) / (1000 * 60 * 60)
+
     // For each notification setting, check if we should send immediately or later
     for (const notificationSetting of automationSettings.musicianNotifications) {
+      // Only send notifications that make sense given the actual time until the event
+      // Don't send a "7-day" reminder for an event that's only 1 day away
+      if (notificationSetting.hoursBeforeEvent > hoursUntilEvent) {
+        console.log(`Skipping ${notificationSetting.hoursBeforeEvent}-hour reminder for event "${event.name}" - only ${Math.round(hoursUntilEvent)} hours until event`)
+        continue
+      }
+
       const notificationTime = new Date(event.startTime.getTime() - notificationSetting.hoursBeforeEvent * 60 * 60 * 1000)
-      const now = new Date()
 
       // If notification time is in the past or very soon (within 30 minutes), send immediately
       if (notificationTime <= new Date(now.getTime() + 30 * 60 * 1000)) {

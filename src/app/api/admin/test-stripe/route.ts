@@ -4,6 +4,14 @@ import { prisma } from '@/lib/db'
 
 export async function GET() {
   try {
+    // Check if Stripe is available (for local development)
+    if (!stripe) {
+      return NextResponse.json({
+        error: 'Stripe not configured for local development',
+        message: 'Please use production environment for Stripe testing'
+      }, { status: 503 })
+    }
+
     // Test Stripe connection
     const account = await stripe.accounts.retrieve()
     
@@ -79,7 +87,7 @@ export async function POST(request: NextRequest) {
 
       if (church.stripeCustomerId) {
         // Test retrieving existing customer
-        const customer = await stripe.customers.retrieve(church.stripeCustomerId)
+        const customer = await stripe!.customers.retrieve(church.stripeCustomerId)
         
         return NextResponse.json({
           status: 'success',

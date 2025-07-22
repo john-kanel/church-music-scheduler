@@ -66,7 +66,7 @@ export async function PUT(
             await tx.eventAssignment.create({
               data: {
                 eventId: eventId,
-                userId: member.id,
+                userId: member.userId, // Use member.userId instead of member.id
                 groupId: group.id,
                 roleName: 'Group Member',
                 status: 'PENDING'

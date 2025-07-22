@@ -4,9 +4,12 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import Stripe from 'stripe'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-06-30.basil',
-})
+// Conditionally initialize Stripe for local development
+const stripe: Stripe | null = process.env.STRIPE_SECRET_KEY 
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: '2025-06-30.basil',
+    })
+  : null
 
 export async function GET(request: NextRequest) {
   try {
@@ -66,8 +69,8 @@ export async function GET(request: NextRequest) {
         discrepancy: false
       }
 
-      // Fetch Stripe data if customer ID exists
-      if (church.stripeCustomerId) {
+      // Fetch Stripe data if customer ID exists and Stripe is available
+      if (church.stripeCustomerId && stripe) {
         try {
           const subscriptions = await stripe.subscriptions.list({
             customer: church.stripeCustomerId,

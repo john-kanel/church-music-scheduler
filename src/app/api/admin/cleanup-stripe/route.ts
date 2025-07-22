@@ -7,6 +7,14 @@ const ADMIN_PASSWORD = process.env.ADMIN_DEBUG_PASSWORD || 'admin123'
 
 export async function GET(request: NextRequest) {
   try {
+    // Check if Stripe is available (for local development)
+    if (!stripe) {
+      return NextResponse.json({
+        error: 'Stripe not configured for local development',
+        message: 'Please use production environment for Stripe cleanup'
+      }, { status: 503 })
+    }
+
     const { searchParams } = new URL(request.url)
     const password = searchParams.get('password')
 
@@ -37,7 +45,7 @@ export async function GET(request: NextRequest) {
     })
 
     // Get all Stripe customers
-    const allCustomers = await stripe.customers.list({ limit: 100 })
+    const allCustomers = await stripe!.customers.list({ limit: 100 })
 
     // Analyze the situation
     const analysis = {
@@ -156,10 +164,10 @@ export async function POST(request: NextRequest) {
       }
 
       // Get customer details first
-      const customer = await stripe.customers.retrieve(customerId)
+      const customer = await stripe!.customers.retrieve(customerId)
       
       // Check if customer has active subscriptions
-      const subscriptions = await stripe.subscriptions.list({
+      const subscriptions = await stripe!.subscriptions.list({
         customer: customerId,
         status: 'active'
       })
@@ -171,7 +179,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Delete the customer
-      await stripe.customers.del(customerId)
+      await stripe!.customers.del(customerId)
 
       return NextResponse.json({
         success: true,

@@ -10,10 +10,19 @@ import { sendPaymentConfirmationEmail, sendReferralPromotionEmail } from '@/lib/
 import { Prisma } from '@prisma/client'
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
-const resend = new Resend(process.env.RESEND_API_KEY)
+// Conditionally initialize Resend for local development
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
 export async function POST(req: NextRequest) {
   try {
+    // Check if Stripe is available (for local development)
+    if (!stripe) {
+      return NextResponse.json({
+        error: 'Stripe not configured for local development',
+        message: 'Webhooks require production environment with Stripe configuration'
+      }, { status: 503 })
+    }
+
     const body = await req.text()
     const headersList = await headers()
     const signature = headersList.get('stripe-signature')!
@@ -186,7 +195,7 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
       
       try {
         // Get subscription details for payment confirmation email
-        const subscription = await stripe.subscriptions.retrieve((invoice as any).subscription as string)
+        const subscription = await stripe!.subscriptions.retrieve((invoice as any).subscription as string)
         const priceId = subscription.items.data[0]?.price.id
         
         let planName = 'Monthly Plan'
@@ -340,7 +349,7 @@ async function applyReferralCreditToStripe(stripeCustomerId: string | null, cred
 
   try {
     // Get the customer's active subscription
-    const subscriptions = await stripe.subscriptions.list({
+    const subscriptions = await stripe!.subscriptions.list({
       customer: stripeCustomerId,
       status: 'active',
       limit: 1
@@ -349,7 +358,7 @@ async function applyReferralCreditToStripe(stripeCustomerId: string | null, cred
     if (subscriptions.data.length === 0) {
       console.warn('No active subscription found for customer:', stripeCustomerId)
       // Fall back to credit balance if no active subscription
-      await stripe.customers.createBalanceTransaction(stripeCustomerId, {
+      await stripe!.customers.createBalanceTransaction(stripeCustomerId, {
         amount: Math.round(creditAmount * 100),
         currency: 'usd',
         description: 'Referral reward credit'
@@ -381,7 +390,7 @@ async function applyReferralCreditToStripe(stripeCustomerId: string | null, cred
       }
 
       // Update the subscription to extend the trial period to skip the next payment
-      await stripe.subscriptions.update(subscription.id, {
+      await stripe!.subscriptions.update(subscription.id, {
         trial_end: Math.floor(nextPeriodEnd.getTime() / 1000),
         proration_behavior: 'none'
       })
@@ -389,7 +398,7 @@ async function applyReferralCreditToStripe(stripeCustomerId: string | null, cred
       console.log(`Extended subscription trial to ${nextPeriodEnd.toISOString()} to skip next payment for customer ${stripeCustomerId}`)
     } else {
       // Early in billing period, apply credit balance
-      await stripe.customers.createBalanceTransaction(stripeCustomerId, {
+      await stripe!.customers.createBalanceTransaction(stripeCustomerId, {
         amount: Math.round(creditAmount * 100),
         currency: 'usd',
         description: 'Referral reward credit'
@@ -440,13 +449,20 @@ async function sendReferrerNotificationEmail(
       })
     )
 
-    // Send email
-    await resend.emails.send({
-      from: 'Church Music Pro <noreply@churchmusicpro.com>',
-      to: referringUser.email,
-      subject: `🎉 Your referral was successful! You earned a free month!`,
-      html: emailHtml
-    })
+    // Send email (if Resend is configured)
+    if (resend) {
+      await resend.emails.send({
+        from: 'Church Music Pro <noreply@churchmusicpro.com>',
+        to: referringUser.email,
+        subject: `🎉 Your referral was successful! You earned a free month!`,
+        html: emailHtml
+      })
+    } else {
+      console.log('Email simulation (no RESEND_API_KEY):', { 
+        to: referringUser.email, 
+        subject: '🎉 Your referral was successful! You earned a free month!' 
+      })
+    }
 
     console.log(`✅ Sent referrer notification email to ${referringUser.email}`)
   } catch (error) {

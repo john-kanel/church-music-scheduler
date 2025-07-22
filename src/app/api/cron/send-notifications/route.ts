@@ -122,8 +122,18 @@ async function processMusicianNotifications(church: any, now: Date) {
   const { automationSettings, events } = church
 
   for (const event of events) {
+    const eventDateTime = new Date(event.startTime)
+    const hoursUntilEvent = (eventDateTime.getTime() - now.getTime()) / (1000 * 60 * 60)
+
     for (const notificationSetting of automationSettings.musicianNotifications) {
       if (!notificationSetting.isEnabled) continue
+
+      // Only send notifications that make sense given the actual time until the event
+      // Don't send a "7-day" reminder for an event that's only 1 day away
+      if (notificationSetting.hoursBeforeEvent > hoursUntilEvent) {
+        console.log(`Skipping ${notificationSetting.hoursBeforeEvent}-hour reminder for event "${event.name}" - only ${Math.round(hoursUntilEvent)} hours until event`)
+        continue
+      }
 
       const notificationTime = new Date(event.startTime.getTime() - notificationSetting.hoursBeforeEvent * 60 * 60 * 1000)
       

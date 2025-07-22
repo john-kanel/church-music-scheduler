@@ -66,19 +66,29 @@ export async function PUT(
     // Filter out empty hymns and prepare data for bulk insert
     const validHymns = hymns
       .filter((hymn: any) => hymn.title?.trim())
-      .map((hymn: any) => ({
-        eventId,
-        title: hymn.title.trim(),
-        notes: hymn.notes?.trim() || null,
-        servicePartId: hymn.servicePartId === 'custom' || !hymn.servicePartId ? null : hymn.servicePartId
-      }))
+      .map((hymn: any, index: number) => {
+        // Calculate creation time with small offsets to preserve order
+        const baseTime = new Date()
+        const orderOffset = hymn.orderIndex !== undefined ? hymn.orderIndex : index
+        const createdAt = new Date(baseTime.getTime() + orderOffset * 1000) // 1 second intervals
+        
+        return {
+          eventId,
+          title: hymn.title.trim(),
+          notes: hymn.notes?.trim() || null,
+          servicePartId: hymn.servicePartId === 'custom' || !hymn.servicePartId ? null : hymn.servicePartId,
+          createdAt
+        }
+      })
 
-    // Bulk create hymns for better performance
+    // Create hymns individually to preserve custom timestamps and order
     let createdHymns: any[] = []
     if (validHymns.length > 0) {
-      await prisma.eventHymn.createMany({
-        data: validHymns
-      })
+      for (const hymnData of validHymns) {
+        await prisma.eventHymn.create({
+          data: hymnData
+        })
+      }
 
       // Mark event for calendar update (hymns are part of event details)
       await markEventForCalendarUpdate(eventId)
@@ -210,7 +220,7 @@ ${musicList}
         <div style="background-color: #ecfdf5; padding: 15px; border-radius: 8px; margin: 20px 0;">
           <p style="margin: 0; color: #065f46;"><strong>Event Details:</strong></p>
           <p style="margin: 5px 0; color: #065f46;">📍 Location: ${event.location || 'TBD'}</p>
-          <p style="margin: 5px 0; color: #065f46;">🎭 Event Type: ${event.eventType.name}</p>
+          <p style="margin: 5px 0; color: #065f46;">Event Type: ${event.eventType.name}</p>
         </div>
         
         <p>Please review this updated music list and prepare accordingly for the service.</p>

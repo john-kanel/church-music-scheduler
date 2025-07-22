@@ -9,6 +9,14 @@ import { z } from 'zod'
 
 export async function POST(request: NextRequest) {
   try {
+    // Check if Stripe is available (for local development)
+    if (!stripe) {
+      return NextResponse.json({
+        error: 'Stripe not configured for local development',
+        message: 'Please use production environment for signup completion'
+      }, { status: 503 })
+    }
+
     const { sessionId } = await request.json()
     
     if (!sessionId) {

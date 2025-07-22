@@ -81,7 +81,7 @@ const WEEKDAYS = [
 ]
 
 const EVENT_COLORS = [
-  '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', 
+  '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', 
   '#F97316', '#06B6D4', '#84CC16', '#EC4899', '#6B7280'
 ]
 
@@ -113,7 +113,7 @@ export function CreateRecurringEventModal({
     endTime: '',
     endDate: '', // When the recurring series ends (optional)
     signupType: 'open',
-    eventTypeColor: '#3B82F6' // Default color
+    eventTypeColor: '#10B981' // Default color (green)
   })
 
   const [recurrencePattern, setRecurrencePattern] = useState<RecurrencePattern>({
@@ -168,7 +168,7 @@ export function CreateRecurringEventModal({
         endTime: eventEndDate ? eventEndDate.toTimeString().slice(0, 5) : '',
         endDate: editingEvent.recurrenceEnd ? new Date(editingEvent.recurrenceEnd).toISOString().split('T')[0] : '',
         signupType: 'open', // Default, will be updated based on assignments
-        eventTypeColor: editingEvent.eventType?.color || '#3B82F6'
+        eventTypeColor: editingEvent.eventType?.color || '#10B981'
       })
 
       // Parse and set recurrence pattern
@@ -481,7 +481,7 @@ export function CreateRecurringEventModal({
       endTime: '',
       endDate: '',
       signupType: 'open',
-      eventTypeColor: '#3B82F6'
+              eventTypeColor: '#10B981'
     })
     setRecurrencePattern({ type: 'weekly' })
     setRoles([

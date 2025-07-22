@@ -5,6 +5,14 @@ import { stripe } from '@/lib/stripe'
 
 export async function POST(req: NextRequest) {
   try {
+    // Check if Stripe is available (for local development)
+    if (!stripe) {
+      return NextResponse.json({
+        error: 'Stripe not configured for local development',
+        message: 'Please use production environment for billing or configure Stripe keys'
+      }, { status: 503 })
+    }
+
     const session = await getServerSession(authOptions)
     
     if (!session?.user?.email) {

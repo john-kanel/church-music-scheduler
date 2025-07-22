@@ -4,6 +4,14 @@ import { stripe } from '@/lib/stripe'
 
 export async function POST(request: NextRequest) {
   try {
+    // Check if Stripe is available (for local development)
+    if (!stripe) {
+      return NextResponse.json({
+        error: 'Stripe not configured for local development',
+        message: 'Please use production environment for granting access'
+      }, { status: 503 })
+    }
+
     const { churchId, months } = await request.json()
 
     if (!churchId || !months || months <= 0) {
