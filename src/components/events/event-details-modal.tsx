@@ -1486,7 +1486,7 @@ export function EventDetailsModal({
       case 'confirmed':
         return 'text-success-600 bg-success-50 border-success-200'
       case 'tentative':
-        return 'text-yellow-600 bg-yellow-50 border-yellow-200'
+        return 'text-yellow-800 bg-yellow-100 border-yellow-200'
       case 'cancelled':
         return 'text-red-600 bg-red-50 border-red-200'
       default:

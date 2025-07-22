@@ -17,6 +17,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
+    // Check if Stripe is available (for local development)
+    if (!stripe) {
+      return NextResponse.json({ 
+        error: 'Stripe not configured for local development',
+        message: 'Please use production environment for signup or configure Stripe keys'
+      }, { status: 503 })
+    }
+
     // Determine trial period based on referral code
     const trialDays = referralCode && referralCode.trim() ? 60 : 30 // 60 days if referred, 30 days standard
     

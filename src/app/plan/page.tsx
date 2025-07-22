@@ -178,7 +178,7 @@ export default function EventPlannerPage() {
   const [selectedEvents, setSelectedEvents] = useState<Set<string>>(new Set())
   const [showAutoAssignModal, setShowAutoAssignModal] = useState(false)
   const [lastAutoAssignBatch, setLastAutoAssignBatch] = useState<string[]>([]) // Track last batch for undo
-  const [openFilterDropdown, setOpenFilterDropdown] = useState<string | null>(null)
+
   
   // Event details modal state
   const [showEventDetailsModal, setShowEventDetailsModal] = useState(false)
@@ -213,28 +213,7 @@ export default function EventPlannerPage() {
     }
   }, [session?.user?.id])
 
-  // Click outside handler for filter dropdown
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (openFilterDropdown) {
-        // Check if the click was outside the dropdown
-        const target = event.target as Element
-        const dropdown = target?.closest('[data-filter-dropdown]')
-        const chevronButton = target?.closest('[data-chevron-button]')
-        
-        // Only close if click was not on dropdown or chevron button
-        if (!dropdown && !chevronButton) {
-          console.log('🖱️ Click outside detected, closing dropdown')
-          setOpenFilterDropdown(null)
-        }
-      }
-    }
 
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [openFilterDropdown])
 
   // Recovery mechanism for backed-up changes
   const restoreBackedUpChanges = () => {
@@ -364,62 +343,21 @@ export default function EventPlannerPage() {
     setSelectedEvents(newSelected)
   }
 
-  const selectAllEventsForFilter = (eventNames: string[]) => {
-    const eventsToSelect = data?.events.filter(event => 
-      eventNames.includes(event.name) && visibleEventColors.has(event.eventType.color)
-    ).map(event => event.id) || []
-    
-    const newSelected = new Set(selectedEvents)
-    eventsToSelect.forEach(eventId => newSelected.add(eventId))
-    setSelectedEvents(newSelected)
-    setOpenFilterDropdown(null) // Close dropdown after selection
-  }
+
 
   const clearEventSelection = () => {
     setSelectedEvents(new Set())
   }
 
-  const toggleFilterDropdown = (filterKey: string) => {
-    console.log('🔽 Toggle filter dropdown:', { 
-      filterKey, 
-      currentOpen: openFilterDropdown, 
-      willOpen: openFilterDropdown === filterKey ? null : filterKey 
-    })
-    setOpenFilterDropdown(openFilterDropdown === filterKey ? null : filterKey)
-  }
 
-  const getEventsForFilterGroup = (eventName: string): Event[] => {
+
+  const getEventsForFilterGroup = (color: string): Event[] => {
     if (!data?.events) return []
     
-    console.log(`🔍 Getting events for filter group: "${eventName}"`)
-    
-    if (eventName === 'General') {
-      // Return all non-recurring events
-      const generalEvents = data.events.filter(event => 
-        !event.isRootEvent && !event.generatedFrom && 
-        visibleEventColors.has(event.eventType.color)
-      )
-      console.log(`📋 General events found: ${generalEvents.length}`, generalEvents.map(e => ({
-        name: e.name, 
-        id: e.id, 
-        isRootEvent: e.isRootEvent, 
-        generatedFrom: e.generatedFrom
-      })))
-      return generalEvents
-    } else {
-      // Return events with matching name (recurring events)
-      const matchingEvents = data.events.filter(event => 
-        event.name === eventName && 
-        visibleEventColors.has(event.eventType.color)
-      )
-      console.log(`📋 Events for "${eventName}": ${matchingEvents.length}`, matchingEvents.map(e => ({
-        name: e.name, 
-        id: e.id, 
-        isRootEvent: e.isRootEvent, 
-        generatedFrom: e.generatedFrom
-      })))
-      return matchingEvents
-    }
+    return data.events.filter(event => 
+      event.eventType.color === color && 
+      visibleEventColors.has(event.eventType.color)
+    )
   }
 
   const handleUndoAutoAssignment = async () => {
@@ -673,12 +611,8 @@ export default function EventPlannerPage() {
         return
       }
 
-      console.log('🔧 DEBUG: Available service parts:', data.serviceParts)
-      
       // Get all default service parts
       const defaultServiceParts = data.serviceParts.filter(sp => sp.isRequired)
-      
-      console.log('🔧 DEBUG: Default service parts (isRequired=true):', defaultServiceParts)
       
       if (defaultServiceParts.length === 0) {
         showToast('error', 'No default service parts are configured. Please mark some service parts as "Required" in your church settings.')
@@ -696,15 +630,13 @@ export default function EventPlannerPage() {
       const currentEvent = data.events.find(e => e.id === eventId)
       const existingHymns = currentEvent?.hymns || []
 
-      console.log('🔧 DEBUG: Current event hymns:', existingHymns)
-      console.log('🔧 DEBUG: New default hymns to add:', defaultHymns)
+
 
       // Combine existing hymns with new default parts (avoiding duplicates)
       const existingServicePartIds = existingHymns.map(h => h.servicePartId).filter(Boolean)
       const newHymns = defaultHymns.filter(h => !existingServicePartIds.includes(h.servicePartId))
 
-      console.log('🔧 DEBUG: Existing service part IDs:', existingServicePartIds)
-      console.log('🔧 DEBUG: New hymns after duplicate removal:', newHymns)
+
 
       if (newHymns.length === 0) {
         showToast('error', 'All default service parts are already added to this event')
@@ -713,24 +645,21 @@ export default function EventPlannerPage() {
 
       const allHymns = [
         ...existingHymns.map(hymn => ({
-          title: hymn.title,
+          title: hymn.title || 'New Song', // Ensure empty service parts have placeholder title
           notes: hymn.notes || '',
           servicePartId: hymn.servicePartId || null
         })),
         ...newHymns
       ]
 
-      console.log('🔧 DEBUG: Final hymns array to save:', allHymns)
-
       // Save to the event
-      console.log('🔧 DEBUG: Making API call to:', `/api/events/${eventId}/hymns`)
       const response = await fetch(`/api/events/${eventId}/hymns`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ hymns: allHymns })
       })
 
-      console.log('🔧 DEBUG: API response status:', response.status)
+
       
       if (!response.ok) {
         const errorText = await response.text()
@@ -739,12 +668,33 @@ export default function EventPlannerPage() {
       }
 
       const responseData = await response.json()
-      console.log('🔧 DEBUG: API response data:', responseData)
+
+      // Optimistic update - add the new service parts to local state immediately
+      setData(prev => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          events: prev.events.map(ev => 
+            ev.id === eventId 
+              ? {
+                  ...ev,
+                  hymns: [
+                    ...ev.hymns,
+                    ...newHymns.map(hymn => ({
+                      id: `temp-${Date.now()}-${hymn.servicePartId}`,
+                      title: hymn.title,
+                      notes: hymn.notes,
+                      servicePartId: hymn.servicePartId
+                    }))
+                  ]
+                }
+              : ev
+          )
+        }
+      })
 
       showToast('success', `Added ${newHymns.length} default service parts`)
-      console.log('🔧 DEBUG: Refreshing planner data...')
-      await fetchPlannerData()
-      console.log('🔧 DEBUG: Planner data refreshed')
+
     } catch (error) {
       console.error('Error adding default service parts:', error)
       showToast('error', 'Failed to add default service parts')
@@ -773,9 +723,10 @@ export default function EventPlannerPage() {
         servicePartId: null
       }
 
+      // Add the new individual song to existing hymns (preserving ALL existing hymns including empty ones)
       const allHymns = [
         ...existingHymns.map(hymn => ({
-          title: hymn.title,
+          title: hymn.title || 'New Song', // Ensure empty service parts have placeholder title
           notes: hymn.notes || '',
           servicePartId: hymn.servicePartId || null
         })),
@@ -803,10 +754,32 @@ export default function EventPlannerPage() {
       const responseData = await response.json()
       console.log('🎵 DEBUG: API response data:', responseData)
 
+      // Optimistic update - add the new song to local state immediately
+      setData(prev => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          events: prev.events.map(ev => 
+            ev.id === eventId 
+              ? {
+                  ...ev,
+                  hymns: [
+                    ...ev.hymns,
+                    {
+                      id: `temp-${Date.now()}`,
+                      title: 'New Song',
+                      notes: '',
+                      servicePartId: undefined
+                    }
+                  ]
+                }
+              : ev
+          )
+        }
+      })
+
       showToast('success', 'Added new song slot')
-      console.log('🎵 DEBUG: Refreshing planner data...')
-      await fetchPlannerData()
-      console.log('🎵 DEBUG: Planner data refreshed')
+      console.log('🎵 DEBUG: Song added with optimistic update')
     } catch (error) {
       console.error('Error adding song:', error)
       showToast('error', 'Failed to add song')
@@ -1059,72 +1032,110 @@ export default function EventPlannerPage() {
     return event.hymns.filter(h => !h.servicePartId)
   }
 
-  // Function to reorder individual hymns (without service parts)
-  const handleReorderIndividualHymn = async (hymnId: string, direction: 'up' | 'down', eventId: string) => {
-    try {
-      const event = data?.events.find(e => e.id === eventId)
-      if (!event) return
+  // Get all hymns (service parts + individual) in unified database order
+  const getAllHymnsInOrder = (eventId: string) => {
+    const event = data?.events.find(e => e.id === eventId)
+    if (!event) return []
 
-      const individualHymns = event.hymns.filter(h => !h.servicePartId)
-      const hymnIndex = individualHymns.findIndex(h => h.id === hymnId)
+    // Return all hymns in their actual database order (already ordered by createdAt from API)
+    // This preserves the unified order that we set during reordering
+    return event.hymns.map(hymn => {
+      const servicePart = data?.serviceParts.find(sp => sp.id === hymn.servicePartId)
+      return {
+        ...hymn,
+        type: hymn.servicePartId ? 'service-part' : 'individual',
+        servicePartName: servicePart?.name
+      }
+    })
+  }
+
+  // Unified function to reorder any hymn (service part or individual)
+  const handleReorderAnyHymn = async (hymnId: string, direction: 'up' | 'down', eventId: string) => {
+    try {
+      const allHymns = getAllHymnsInOrder(eventId)
+      const hymnIndex = allHymns.findIndex(h => h.id === hymnId)
       
       if (hymnIndex === -1) return
       
       const newIndex = direction === 'up' ? hymnIndex - 1 : hymnIndex + 1
-      if (newIndex < 0 || newIndex >= individualHymns.length) return
+      if (newIndex < 0 || newIndex >= allHymns.length) return
 
-      // Reorder the hymns array
-      const reorderedHymns = [...individualHymns]
+      // Reorder the unified hymns array
+      const reorderedHymns = [...allHymns]
       const [movedHymn] = reorderedHymns.splice(hymnIndex, 1)
       reorderedHymns.splice(newIndex, 0, movedHymn)
 
-      // Combine with service part hymns and save
-      const servicePartHymns = event.hymns.filter(h => h.servicePartId)
-      const allHymns = [
-        ...servicePartHymns.map(hymn => ({
-          title: hymn.title,
-          notes: hymn.notes || '',
-          servicePartId: hymn.servicePartId
-        })),
-        ...reorderedHymns.map(hymn => ({
-          title: hymn.title,
-          notes: hymn.notes || '',
-          servicePartId: null
-        }))
-      ]
-
-      const response = await fetch(`/api/events/${eventId}/hymns`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ hymns: allHymns })
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to reorder hymn')
-      }
-
-      // Optimistic update instead of full reload
+      // Optimistic update - show movement immediately
       setData(prev => {
         if (!prev) return prev
         return {
           ...prev,
           events: prev.events.map(ev => 
             ev.id === eventId 
-              ? { ...ev, hymns: allHymns.map((h, i) => ({ 
-                  id: reorderedHymns.find(rh => rh.title === h.title)?.id || servicePartHymns.find(sh => sh.title === h.title)?.id || `temp-${i}`, 
-                  title: h.title, 
-                  notes: h.notes || undefined, 
-                  servicePartId: h.servicePartId || undefined 
-                })) }
+              ? { 
+                  ...ev, 
+                  hymns: reorderedHymns.map(hymn => ({ 
+                    id: hymn.id, 
+                    title: hymn.title || 'New Song', // Ensure title exists
+                    notes: hymn.notes || undefined, 
+                    servicePartId: hymn.servicePartId || undefined 
+                  })) 
+                }
               : ev
           )
         }
       })
+
+      // Convert back to API format with proper ordering timestamps
+      const hymnsForAPI = reorderedHymns.map((hymn, index) => ({
+        title: hymn.title || 'New Song', // Ensure empty service parts have title
+        notes: hymn.notes || '',
+        servicePartId: hymn.servicePartId || null,
+        // Use index to preserve order - API will use this for creation timestamp offset
+        orderIndex: index
+      }))
+
+      // Send to API in background
+      const response = await fetch(`/api/events/${eventId}/hymns`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hymns: hymnsForAPI })
+      })
+
+      if (!response.ok) {
+        // Revert optimistic update on failure - restore original order
+        setData(prev => {
+          if (!prev) return prev
+          return {
+            ...prev,
+            events: prev.events.map(ev => 
+              ev.id === eventId 
+                ? { 
+                    ...ev, 
+                    hymns: allHymns.map(hymn => ({ 
+                      id: hymn.id, 
+                      title: hymn.title || 'New Song', 
+                      notes: hymn.notes || undefined, 
+                      servicePartId: hymn.servicePartId || undefined 
+                    })) 
+                  }
+                : ev
+            )
+          }
+        })
+        throw new Error('Failed to reorder hymn')
+      }
+
       showToast('success', 'Song reordered successfully')
     } catch (error) {
-      console.error('Error reordering individual hymn:', error)
+      console.error('Error reordering hymn:', error)
       showToast('error', 'Failed to reorder hymn')
     }
+  }
+
+  // Legacy function for individual hymns (now calls unified function)
+  const handleReorderIndividualHymn = (hymnId: string, direction: 'up' | 'down', eventId: string) => {
+    return handleReorderAnyHymn(hymnId, direction, eventId)
   }
 
   // Function to delete individual hymn
@@ -1177,33 +1188,15 @@ export default function EventPlannerPage() {
   }
 
   const handleReorderServicePart = async (servicePartId: string, direction: 'up' | 'down', eventId: string) => {
-    if (!data) return
+    const event = data?.events.find(e => e.id === eventId)
+    if (!event) return
     
-    // Get the current order for this specific event
-    const currentOrder = getOrderedServicePartsForEvent(eventId)
-    const currentIndex = currentOrder.findIndex(sp => sp.id === servicePartId)
-    if (currentIndex === -1) return
+    // Find the hymn associated with this service part
+    const hymn = event.hymns.find(h => h.servicePartId === servicePartId)
+    if (!hymn) return
     
-    const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1
-    if (newIndex < 0 || newIndex >= currentOrder.length) return
-    
-    try {
-      // Create new order for this event
-      const newOrder = [...currentOrder]
-      const [movedItem] = newOrder.splice(currentIndex, 1)
-      newOrder.splice(newIndex, 0, movedItem)
-      
-      // Update event-specific ordering
-      setEventServicePartOrder(prev => ({
-        ...prev,
-        [eventId]: newOrder.map(sp => sp.id)
-      }))
-      
-      // Here you would make an API call to persist the event-specific order
-      // For now, this just updates the UI for this specific event
-    } catch (error) {
-      console.error('Error reordering service part:', error)
-    }
+    // Use the unified reordering system
+    return handleReorderAnyHymn(hymn.id, direction, eventId)
   }
 
   const handleAddDocument = async (eventId: string) => {
@@ -1337,6 +1330,54 @@ export default function EventPlannerPage() {
   const handleSaveGroupAssignment = async (eventId: string) => {
     try {
       const groupIds = selectedGroups[eventId] || []
+      
+      // Optimistic update - update local state immediately
+      setData(prev => {
+        if (!prev) return prev
+        
+        // Get the selected groups with their details
+        const selectedGroupObjects = groups.filter(g => groupIds.includes(g.id))
+        
+        // Create new group assignments
+        const newGroupAssignments = selectedGroupObjects.flatMap(group => 
+          group.members?.map(member => ({
+            id: `temp-${Date.now()}-${Math.random()}`,
+            eventId: eventId,
+            userId: member.id,
+            groupId: group.id,
+            roleName: 'Group Member',
+            status: 'PENDING' as const,
+            user: {
+              id: member.id,
+              firstName: member.firstName || '',
+              lastName: member.lastName || '',
+              email: ''
+            },
+            group: {
+              id: group.id,
+              name: group.name
+            }
+          })) || []
+        )
+        
+        return {
+          ...prev,
+          events: prev.events.map(ev => 
+            ev.id === eventId 
+              ? {
+                  ...ev,
+                  assignments: [
+                    // Keep non-group assignments
+                    ...ev.assignments.filter(a => !a.group),
+                    // Add new group assignments
+                    ...newGroupAssignments
+                  ]
+                }
+              : ev
+          )
+        }
+      })
+
       const response = await fetch(`/api/events/${eventId}/groups`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -1347,15 +1388,18 @@ export default function EventPlannerPage() {
 
       if (response.ok) {
         showToast('success', 'Group assignments updated successfully!')
-        await fetchPlannerData()
         setOpenGroupDropdown(null)
         setSelectedGroups(prev => ({ ...prev, [eventId]: [] }))
       } else {
+        // Revert optimistic update on failure
+        await fetchPlannerData()
         const errorData = await response.json()
         showToast('error', errorData.error || 'Failed to update group assignments')
       }
     } catch (error) {
       console.error('Error updating group assignments:', error)
+      // Revert optimistic update on error
+      await fetchPlannerData()
       showToast('error', 'Error updating group assignments')
     }
   }
@@ -1391,30 +1435,36 @@ export default function EventPlannerPage() {
     visibleEventColors.has(event.eventType.color)
   ) || []
 
-  // Get unique event names for filter (grouped by event name instead of event type)
+  // Get unique colors for filter (blue = General, other colors = recurring series)
   const uniqueEvents = data ? 
-    [...new Map(data.events.map(event => {
-      // Show recurring events by their name, non-recurring as "General"
-      const displayName = event.isRootEvent || event.generatedFrom ? event.name : 'General'
+    (() => {
+      const colorMap = new Map()
       
-      // Debug logging for filter categorization
-      console.log('🏷️ Filter categorization:', {
-        eventName: event.name,
-        eventId: event.id,
-        isRootEvent: event.isRootEvent,
-        generatedFrom: event.generatedFrom,
-        displayName: displayName,
-        eventTypeColor: event.eventType.color,
-        eventTypeName: event.eventType.name
+      data.events.forEach(event => {
+        const color = event.eventType.color
+        const isBlue = color.toLowerCase() === '#3b82f6' || color.toLowerCase() === '#2563eb' || color.toLowerCase() === '#1d4ed8' // Various shades of blue (case-insensitive)
+        
+        if (!colorMap.has(color)) {
+          colorMap.set(color, {
+            name: isBlue ? 'General' : event.name, // Blue = General, others = recurring series name
+            color: color,
+            id: event.id,
+            isRecurring: !isBlue
+          })
+        } else {
+          const existing = colorMap.get(color)
+          if (isBlue) {
+            // For blue events, ALWAYS keep the name as "General" - never override
+            existing.name = 'General'
+          } else if (event.isRootEvent || event.generatedFrom) {
+            // For non-blue events, make sure we have the recurring series name (not just any event name)
+            existing.name = event.name
+          }
+        }
       })
       
-      return [displayName, { 
-        name: displayName, 
-        color: event.eventType.color,
-        id: event.id,
-        isRecurring: event.isRootEvent || !!event.generatedFrom
-      }]
-    })).values()] 
+      return [...colorMap.values()]
+    })()
     : []
 
   const handleDeleteEvent = async (eventId: string) => {
@@ -1588,20 +1638,12 @@ export default function EventPlannerPage() {
             <span className="text-sm font-medium text-gray-700 flex-shrink-0">Events:</span>
             <div className="flex gap-4 min-w-0">
               {uniqueEvents.map((eventGroup: any) => {
-                const eventsInThisGroup = getEventsForFilterGroup(eventGroup.name)
-                const allSelected = eventsInThisGroup.every((e: any) => selectedEvents.has(e.id))
-                const someSelected = eventsInThisGroup.some((e: any) => selectedEvents.has(e.id))
-                
                 return (
-                  <div key={eventGroup.id} className="relative flex-shrink-0">
+                  <div key={eventGroup.color} className="relative flex-shrink-0">
                     <label className="flex items-center gap-2">
                       <input
                         type="checkbox"
-                        checked={
-                          eventGroup.name === 'General' 
-                            ? eventsInThisGroup.some(e => visibleEventColors.has(e.eventType.color))
-                            : visibleEventColors.has(eventGroup.color)
-                        }
+                        checked={visibleEventColors.has(eventGroup.color)}
                         onChange={() => toggleEventColor(eventGroup.color)}
                         className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
@@ -1610,56 +1652,7 @@ export default function EventPlannerPage() {
                         style={{ backgroundColor: eventGroup.color }}
                       />
                       <span className="text-sm text-gray-700">{eventGroup.name}</span>
-                      
-                      {/* Dropdown arrow - only show if multiple events and any events in group are visible */}
-                      {eventsInThisGroup.length > 1 && eventsInThisGroup.some(e => visibleEventColors.has(e.eventType.color)) && (
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            toggleFilterDropdown(eventGroup.name)
-                          }}
-                          className="ml-1 p-1 text-gray-400 hover:text-gray-600"
-                          title="Show individual events"
-                          data-chevron-button
-                        >
-                          <ChevronDown 
-                            className={`w-3 h-3 transition-transform ${
-                              openFilterDropdown === eventGroup.name ? 'rotate-180' : ''
-                            }`} 
-                          />
-                        </button>
-                      )}
                     </label>
-                    
-                    {/* Dropdown for individual event selection */}
-                    {openFilterDropdown === eventGroup.name && eventsInThisGroup.length > 1 && (
-                      <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-10 min-w-[200px]" data-filter-dropdown>
-                        <div className="p-2 space-y-1">
-                          <button
-                            onClick={() => selectAllEventsForFilter([eventGroup.name])}
-                            className="w-full text-left px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded"
-                          >
-                            {allSelected ? 'Deselect All' : 'Select All'}
-                          </button>
-                          <div className="border-t border-gray-100 mt-1 pt-1">
-                            {eventsInThisGroup.map((individualEvent: any) => (
-                              <label key={individualEvent.id} className="flex items-center gap-2 px-2 py-1 text-xs hover:bg-gray-50 rounded cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={selectedEvents.has(individualEvent.id)}
-                                  onChange={() => toggleEventSelection(individualEvent.id)}
-                                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                />
-                                <span className="text-gray-700 truncate">
-                                  {new Date(individualEvent.startTime).toLocaleDateString()} - {individualEvent.location}
-                                </span>
-                              </label>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 )
               })}
@@ -1675,6 +1668,19 @@ export default function EventPlannerPage() {
                 Clear ({selectedEvents.size})
               </button>
             )}
+            
+            {/* Select All Visible Events Button */}
+            <button
+              onClick={() => {
+                const allVisibleEventIds = filteredEvents.map(event => event.id)
+                const newSelected = new Set(allVisibleEventIds)
+                setSelectedEvents(newSelected)
+              }}
+              className="flex items-center gap-1 px-3 py-1 text-xs bg-blue-600 text-white hover:bg-blue-700 rounded flex-shrink-0 ml-auto"
+            >
+              <Check className="w-3 h-3" />
+              Select All Visible
+            </button>
           </div>
         </div>
       )}
@@ -1720,7 +1726,7 @@ export default function EventPlannerPage() {
                 {/* Desktop View */}
                 <div className="hidden lg:flex h-full">
                   {filteredEvents.map(event => (
-                    <div key={event.id} className="flex-shrink-0 w-80 border-r border-gray-200 bg-white">
+                    <div key={event.id} className="flex-shrink-0 w-80 border-r border-gray-200 bg-white relative">
                       {/* Event Header */}
                       <div className="p-4 border-b border-gray-200 bg-gray-50">
                         <div className="flex items-center justify-between mb-2">
@@ -1824,116 +1830,66 @@ export default function EventPlannerPage() {
                         )}
                       </div>
 
-                      {/* Hymns Grid */}
+                      {/* Hymns Grid - Unified Order */}
                       <div className="flex-1 overflow-y-auto">
-                        {getOrderedServicePartsForEvent(event.id)
-                          .map(servicePart => {
-                            const hymn = event.hymns.find(h => h.servicePartId === servicePart.id)
-                            return (
-                              <div key={servicePart.id} className="border-b border-gray-100 p-3 min-h-[60px] bg-white group hover:bg-gray-50 transition-colors relative">
-                                <div className="flex items-center justify-between mb-1">
-                                  <div className="text-xs text-gray-500 font-normal">{servicePart.name}</div>
-                                  <div className="flex items-center opacity-0 group-hover:opacity-100 transition-all">
-                                    <button
-                                      onClick={() => handleReorderServicePart(servicePart.id, 'up', event.id)}
-                                      disabled={getOrderedServicePartsForEvent(event.id).findIndex(sp => sp.id === servicePart.id) === 0}
-                                      className="p-1 text-gray-400 hover:text-gray-600 transition-all disabled:opacity-30"
-                                      title="Move up"
-                                    >
-                                      <ChevronUp className="h-3 w-3" />
-                                    </button>
-                                    <button
-                                      onClick={() => handleReorderServicePart(servicePart.id, 'down', event.id)}
-                                      disabled={getOrderedServicePartsForEvent(event.id).findIndex(sp => sp.id === servicePart.id) === getOrderedServicePartsForEvent(event.id).length - 1}
-                                      className="p-1 text-gray-400 hover:text-gray-600 transition-all disabled:opacity-30"
-                                      title="Move down"
-                                    >
-                                      <ChevronDown className="h-3 w-3" />
-                                    </button>
-                                    <button
-                                      onClick={(e) => handleEditServicePart(servicePart, event.id, e)}
-                                      className="p-1 text-gray-400 hover:text-gray-600 transition-all"
-                                      title="Edit service part"
-                                    >
-                                      <Edit className="h-3 w-3" />
-                                    </button>
-                                  </div>
-                                </div>
-                                <input
-                                  type="text"
-                                  value={hymn?.title || ''}
-                                  onChange={(e) => {
-                                    const newTitle = e.target.value
-                                    // Update immediately in local state for responsive UI
-                                    setData(prev => {
-                                      if (!prev) return prev
-                                      return {
-                                        ...prev,
-                                        events: prev.events.map(ev => 
-                                          ev.id === event.id 
-                                            ? {
-                                                ...ev,
-                                                hymns: hymn 
-                                                  ? ev.hymns.map(h => h.id === hymn.id ? { ...h, title: newTitle } : h)
-                                                  : [...ev.hymns, { 
-                                                      id: `temp-${servicePart.id}`, 
-                                                      title: newTitle, 
-                                                      servicePartId: servicePart.id 
-                                                    }]
-                                              }
-                                            : ev
-                                        )
-                                      }
-                                    })
-                                    // Debounced save to server
-                                    debouncedUpdateHymn(event.id, newTitle, servicePart.id, hymn?.id)
-                                  }}
-                                  placeholder="Enter hymn title..."
-                                  className="w-full text-sm text-gray-900 border-none outline-none bg-transparent placeholder-gray-400 focus:bg-gray-50 rounded-sm px-2 py-1 font-normal"
-                                />
-                              </div>
-                            )
-                          })}
-                        
-                        {/* Individual Songs (without service parts) */}
-                        {getHymnsWithoutServiceParts(event.id).map((hymn, index) => {
-                          const individualHymns = getHymnsWithoutServiceParts(event.id)
+                        {getAllHymnsInOrder(event.id).map((hymn, index) => {
+                          const allHymns = getAllHymnsInOrder(event.id)
+                          const hymnIndex = index // Since we're already in the correct order
                           
                           return (
-                            <div key={`no-service-part-${hymn.id || index}`} className="border-b border-gray-100 p-3 min-h-[60px] bg-white group hover:bg-gray-50 transition-colors relative">
+                            <div key={`hymn-${hymn.id || index}`} className="border-b border-gray-100 p-3 min-h-[60px] bg-white group hover:bg-gray-50 transition-colors relative">
                               <div className="flex items-center justify-between mb-1">
-                                <div className="text-xs text-gray-500 font-normal">Individual Song</div>
+                                <div className="text-xs text-gray-500 font-normal">
+                                  {hymn.type === 'service-part' ? hymn.servicePartName : 'Individual Song'}
+                                </div>
                                 <div className="flex items-center opacity-0 group-hover:opacity-100 transition-all">
                                   <button
-                                    onClick={() => handleReorderIndividualHymn(hymn.id, 'up', event.id)}
-                                    disabled={index === 0}
+                                    onClick={() => handleReorderAnyHymn(hymn.id, 'up', event.id)}
+                                    disabled={hymnIndex <= 0}
                                     className="p-1 text-gray-400 hover:text-gray-600 transition-all disabled:opacity-30"
                                     title="Move up"
                                   >
                                     <ChevronUp className="h-3 w-3" />
                                   </button>
                                   <button
-                                    onClick={() => handleReorderIndividualHymn(hymn.id, 'down', event.id)}
-                                    disabled={index === individualHymns.length - 1}
+                                    onClick={() => handleReorderAnyHymn(hymn.id, 'down', event.id)}
+                                    disabled={hymnIndex >= allHymns.length - 1}
                                     className="p-1 text-gray-400 hover:text-gray-600 transition-all disabled:opacity-30"
                                     title="Move down"
                                   >
                                     <ChevronDown className="h-3 w-3" />
                                   </button>
-                                  <button
-                                    onClick={(e) => handleEditIndividualHymn(hymn, event.id, e)}
-                                    className="p-1 text-gray-400 hover:text-gray-600 transition-all"
-                                    title="Edit song notes"
-                                  >
-                                    <Edit className="h-3 w-3" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteIndividualHymn(hymn.id, event.id)}
-                                    className="p-1 text-gray-400 hover:text-red-600 transition-all"
-                                    title="Delete song"
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </button>
+                                  {hymn.type === 'service-part' ? (
+                                    <button
+                                      onClick={(e) => {
+                                        const servicePart = data?.serviceParts.find(sp => sp.id === hymn.servicePartId)
+                                        if (servicePart) {
+                                          handleEditServicePart(servicePart, event.id, e)
+                                        }
+                                      }}
+                                      className="p-1 text-gray-400 hover:text-gray-600 transition-all"
+                                      title="Edit service part"
+                                    >
+                                      <Edit className="h-3 w-3" />
+                                    </button>
+                                  ) : (
+                                    <>
+                                      <button
+                                        onClick={(e) => handleEditIndividualHymn(hymn, event.id, e)}
+                                        className="p-1 text-gray-400 hover:text-gray-600 transition-all"
+                                        title="Edit song notes"
+                                      >
+                                        <Edit className="h-3 w-3" />
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteIndividualHymn(hymn.id, event.id)}
+                                        className="p-1 text-gray-400 hover:text-red-600 transition-all"
+                                        title="Delete song"
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </button>
+                                    </>
+                                  )}
                                 </div>
                               </div>
                               <input
@@ -1959,9 +1915,9 @@ export default function EventPlannerPage() {
                                     }
                                   })
                                   // Debounced save to server
-                                  debouncedUpdateHymn(event.id, newTitle, null, hymn.id)
+                                  debouncedUpdateHymn(event.id, newTitle, hymn.servicePartId || null, hymn.id)
                                 }}
-                                placeholder="Enter song title..."
+                                placeholder="Enter hymn title..."
                                 className="w-full text-sm text-gray-900 border-none outline-none bg-transparent placeholder-gray-400 focus:bg-gray-50 rounded-sm px-2 py-1 font-normal"
                               />
                             </div>
@@ -1976,112 +1932,122 @@ export default function EventPlannerPage() {
                         </div>
                         
                         {event.assignments?.filter(assignment => assignment.group).length > 0 ? (
-                          event.assignments
-                            .filter(assignment => assignment.group)
-                            .map((assignment, index) => (
-                              <div 
-                                key={`group-${assignment.id}-${index}`} 
-                                className="border-b border-gray-100 p-3 min-h-[60px] bg-white group hover:bg-gray-50 transition-colors relative cursor-pointer"
-                                onClick={() => toggleGroupDropdown(event.id)}
-                              >
-                                <div className="text-xs text-gray-500 mb-1 font-normal">Group</div>
-                                <div className="text-sm text-gray-900 font-normal">
-                                  {assignment.group?.name}
-                                </div>
-                              </div>
-                            ))
+                          <div 
+                            className="border-b border-gray-100 p-3 min-h-[60px] bg-white hover:bg-gray-50 transition-colors cursor-pointer relative"
+                            onClick={() => toggleGroupDropdown(event.id)}
+                          >
+                            <div className="text-xs text-gray-500 mb-1 font-normal">
+                              Groups ({event.assignments.filter(assignment => assignment.group).length})
+                            </div>
+                            <div className="text-sm text-gray-900 font-normal">
+                              {Array.from(new Set(event.assignments
+                                .filter(assignment => assignment.group)
+                                .map(assignment => assignment.group?.name)
+                              )).join(', ')}
+                            </div>
+                          </div>
                         ) : (
                           <div 
                             className="border-b border-gray-100 p-3 min-h-[60px] bg-white hover:bg-gray-50 transition-colors cursor-pointer relative"
                             onClick={() => toggleGroupDropdown(event.id)}
                           >
                             <div className="text-xs text-blue-600 hover:text-blue-800">+ Assign groups</div>
+                          </div>
+                        )}
                             
-                            {/* Group Assignment Dropdown */}
-                            {openGroupDropdown === event.id && (
-                              <div className="absolute top-full left-0 mt-1 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                                <div className="p-4 border-b border-gray-200">
-                                  <h4 className="text-sm font-medium text-gray-900 mb-2">Assign Groups</h4>
-                                  <p className="text-xs text-gray-600">
-                                    Select groups to automatically assign all members to this event.
-                                  </p>
-                                </div>
-                                
-                                <div className="p-3 max-h-48 overflow-y-auto">
-                                  {groups.length > 0 ? (
-                                    <div className="space-y-2">
-                                      {groups.map((group) => {
-                                        const isSelected = (selectedGroups[event.id] || []).includes(group.id)
-                                        return (
-                                          <label
-                                            key={group.id}
-                                            className={`flex items-center p-2 rounded border cursor-pointer transition-colors ${
-                                              isSelected 
-                                                ? 'bg-green-50 border-green-200 text-green-900' 
-                                                : 'bg-white border-gray-200 hover:bg-gray-50'
-                                            }`}
-                                          >
-                                            <input
-                                              type="checkbox"
-                                              checked={isSelected}
-                                              onChange={() => handleToggleGroup(event.id, group.id)}
-                                              className="mr-3"
-                                            />
-                                            <div className="flex-1 min-w-0">
-                                              <div className="text-sm font-medium truncate">
-                                                {group.name}
-                                              </div>
-                                              <div className="text-xs text-gray-500 truncate">
-                                                {group.description && (
-                                                  <span className="mr-2">{group.description}</span>
-                                                )}
-                                                {group.members?.length || 0} member{(group.members?.length || 0) !== 1 ? 's' : ''}
-                                              </div>
-                                            </div>
-                                          </label>
-                                        )
-                                      })}
-                                    </div>
-                                  ) : (
-                                    <div className="text-center py-4">
-                                      <button
+                        {/* Group Assignment Dropdown */}
+                        {openGroupDropdown === event.id && (
+                          <div 
+                            className="absolute top-full left-0 mt-1 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-10"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div className="p-4 border-b border-gray-200">
+                              <h4 className="text-sm font-medium text-gray-900 mb-2">Assign Groups</h4>
+                              <p className="text-xs text-gray-600">
+                                Select groups to automatically assign all members to this event.
+                              </p>
+                            </div>
+                            
+                            <div className="p-3 max-h-48 overflow-y-auto">
+                              {groups.length > 0 ? (
+                                <div className="space-y-2">
+                                  {groups.map((group) => {
+                                    const isSelected = (selectedGroups[event.id] || []).includes(group.id)
+                                    return (
+                                      <label
+                                        key={group.id}
+                                        className={`flex items-center p-2 rounded border cursor-pointer transition-colors ${
+                                          isSelected 
+                                            ? 'bg-green-50 border-green-200 text-green-900' 
+                                            : 'bg-white border-gray-200 hover:bg-gray-50'
+                                        }`}
                                         onClick={(e) => {
                                           e.stopPropagation()
-                                          setShowCreateGroupModal(true)
+                                          handleToggleGroup(event.id, group.id)
                                         }}
-                                        className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-4 py-2 rounded transition-colors text-sm font-medium"
                                       >
-                                        + Create Group
-                                      </button>
-                                      <p className="text-xs text-gray-500 mt-1">
-                                        Create your first group to assign multiple musicians at once
-                                      </p>
-                                    </div>
-                                  )}
+                                        <input
+                                          type="checkbox"
+                                          checked={isSelected}
+                                          onChange={(e) => {
+                                            e.stopPropagation()
+                                            handleToggleGroup(event.id, group.id)
+                                          }}
+                                          className="mr-3"
+                                        />
+                                        <div className="flex-1 min-w-0">
+                                          <div className="text-sm font-medium truncate">
+                                            {group.name}
+                                          </div>
+                                          <div className="text-xs text-gray-500 truncate">
+                                            {group.description && (
+                                              <span className="mr-2">{group.description}</span>
+                                            )}
+                                            {group.members?.length || 0} member{(group.members?.length || 0) !== 1 ? 's' : ''}
+                                          </div>
+                                        </div>
+                                      </label>
+                                    )
+                                  })}
                                 </div>
-                                
-                                <div className="flex justify-end space-x-2 p-3 border-t">
+                              ) : (
+                                <div className="text-center py-4">
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation()
-                                      setOpenGroupDropdown(null)
+                                      setShowCreateGroupModal(true)
                                     }}
-                                    className="px-3 py-1 text-sm border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
+                                    className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-4 py-2 rounded transition-colors text-sm font-medium"
                                   >
-                                    Cancel
+                                    + Create Group
                                   </button>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handleSaveGroupAssignment(event.id)
-                                    }}
-                                    className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
-                                  >
-                                    Save
-                                  </button>
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    Create your first group to assign multiple musicians at once
+                                  </p>
                                 </div>
-                              </div>
-                            )}
+                              )}
+                            </div>
+                            
+                            <div className="flex justify-end space-x-2 p-3 border-t">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setOpenGroupDropdown(null)
+                                }}
+                                className="px-3 py-1 text-sm border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleSaveGroupAssignment(event.id)
+                                }}
+                                className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                              >
+                                Save
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -2199,7 +2165,7 @@ export default function EventPlannerPage() {
 
                 {/* Mobile View - Single Column */}
                 {filteredEvents[currentEventIndex] && (
-                  <div className="lg:hidden bg-white h-full">
+                  <div className="lg:hidden bg-white h-full relative">
                     {(() => {
                       const event = filteredEvents[currentEventIndex]
                       return (
@@ -2307,44 +2273,71 @@ export default function EventPlannerPage() {
                             )}
                           </div>
 
-                          {/* Hymns Grid */}
+                          {/* Hymns Grid - Mobile Unified Order */}
                           <div className="flex-1 overflow-y-auto">
-                            {getOrderedServicePartsForEvent(event.id)
-                              .map(servicePart => {
-                                const hymn = event.hymns.find(h => h.servicePartId === servicePart.id)
+                            {getAllHymnsInOrder(event.id).map((hymn, index) => {
+                                const allHymns = getAllHymnsInOrder(event.id)
+                                const hymnIndex = index // Since we're already in the correct order
+                                
                                 return (
-                                  <div key={servicePart.id} className="border-b border-gray-100 p-3 min-h-[60px] bg-white group hover:bg-gray-50 transition-colors relative">
+                                  <div key={`mobile-hymn-${hymn.id || index}`} className="border-b border-gray-100 p-3 min-h-[60px] bg-white group hover:bg-gray-50 transition-colors relative">
                                     <div className="flex items-center justify-between mb-1">
-                                      <div className="text-xs text-gray-500 font-normal">{servicePart.name}</div>
+                                      <div className="text-xs text-gray-500 font-normal">
+                                        {hymn.type === 'service-part' ? hymn.servicePartName : 'Individual Song'}
+                                      </div>
                                       <div className="flex items-center opacity-0 group-hover:opacity-100 transition-all">
                                         <button
-                                          onClick={() => handleReorderServicePart(servicePart.id, 'up', event.id)}
-                                          disabled={getOrderedServicePartsForEvent(event.id).findIndex(sp => sp.id === servicePart.id) === 0}
+                                          onClick={() => handleReorderAnyHymn(hymn.id, 'up', event.id)}
+                                          disabled={hymnIndex <= 0}
                                           className="p-1 text-gray-400 hover:text-gray-600 transition-all disabled:opacity-30"
                                           title="Move up"
                                         >
                                           <ChevronUp className="h-3 w-3" />
                                         </button>
                                         <button
-                                          onClick={() => handleReorderServicePart(servicePart.id, 'down', event.id)}
-                                          disabled={getOrderedServicePartsForEvent(event.id).findIndex(sp => sp.id === servicePart.id) === getOrderedServicePartsForEvent(event.id).length - 1}
+                                          onClick={() => handleReorderAnyHymn(hymn.id, 'down', event.id)}
+                                          disabled={hymnIndex >= allHymns.length - 1}
                                           className="p-1 text-gray-400 hover:text-gray-600 transition-all disabled:opacity-30"
                                           title="Move down"
                                         >
                                           <ChevronDown className="h-3 w-3" />
                                         </button>
-                                        <button
-                                          onClick={(e) => handleEditServicePart(servicePart, event.id, e)}
-                                          className="p-1 text-gray-400 hover:text-gray-600 transition-all"
-                                          title="Edit service part"
-                                        >
-                                          <Edit className="h-3 w-3" />
-                                        </button>
+                                        {hymn.type === 'service-part' ? (
+                                          <button
+                                            onClick={(e) => {
+                                              const servicePart = data?.serviceParts.find(sp => sp.id === hymn.servicePartId)
+                                              if (servicePart) {
+                                                handleEditServicePart(servicePart, event.id, e)
+                                              }
+                                            }}
+                                            className="p-1 text-gray-400 hover:text-gray-600 transition-all"
+                                            title="Edit service part"
+                                          >
+                                            <Edit className="h-3 w-3" />
+                                          </button>
+                                        ) : (
+                                          <>
+                                            <button
+                                              onClick={(e) => handleEditIndividualHymn(hymn, event.id, e)}
+                                              className="p-1 text-gray-400 hover:text-gray-600 transition-all"
+                                              title="Edit song notes"
+                                            >
+                                              <Edit className="h-3 w-3" />
+                                            </button>
+                                            <button
+                                              onClick={() => handleDeleteIndividualHymn(hymn.id, event.id)}
+                                              className="p-1 text-gray-400 hover:text-red-600 transition-all"
+                                              title="Delete song"
+                                            >
+                                              <Trash2 className="h-3 w-3" />
+                                            </button>
+                                          </>
+                                        )}
                                       </div>
                                     </div>
                                     <input
                                       type="text"
-                                      value={hymn?.title || ''}
+                                      value={hymn.title || ''}
                                       onChange={(e) => {
                                         const newTitle = e.target.value
                                         // Update immediately in local state for responsive UI
@@ -2356,20 +2349,16 @@ export default function EventPlannerPage() {
                                               ev.id === event.id 
                                                 ? {
                                                     ...ev,
-                                                    hymns: hymn 
-                                                      ? ev.hymns.map(h => h.id === hymn.id ? { ...h, title: newTitle } : h)
-                                                      : [...ev.hymns, { 
-                                                          id: `temp-${servicePart.id}`, 
-                                                          title: newTitle, 
-                                                          servicePartId: servicePart.id 
-                                                        }]
+                                                    hymns: ev.hymns.map(h => 
+                                                      h.id === hymn.id ? { ...h, title: newTitle } : h
+                                                    )
                                                   }
                                                 : ev
                                             )
                                           }
                                         })
                                         // Debounced save to server
-                                        debouncedUpdateHymn(event.id, newTitle, servicePart.id, hymn?.id)
+                                        debouncedUpdateHymn(event.id, newTitle, hymn.servicePartId || null, hymn.id)
                                       }}
                                       placeholder="Enter hymn title..."
                                       className="w-full text-sm text-gray-900 border-none outline-none bg-transparent placeholder-gray-400 focus:bg-gray-50 rounded-sm px-2 py-1 font-normal"
@@ -2386,20 +2375,20 @@ export default function EventPlannerPage() {
                             </div>
                             
                             {event.assignments?.filter(assignment => assignment.group).length > 0 ? (
-                              event.assignments
-                                .filter(assignment => assignment.group)
-                                .map((assignment, index) => (
-                                  <div 
-                                    key={`group-mobile-${assignment.id}-${index}`} 
-                                    className="border-b border-gray-100 p-3 min-h-[60px] bg-white group hover:bg-gray-50 transition-colors relative cursor-pointer"
-                                    onClick={() => toggleGroupDropdown(event.id)}
-                                  >
-                                    <div className="text-xs text-gray-500 mb-1 font-normal">Group</div>
-                                    <div className="text-sm text-gray-900 font-normal">
-                                      {assignment.group?.name}
-                                    </div>
-                                  </div>
-                                ))
+                              <div 
+                                className="border-b border-gray-100 p-3 min-h-[60px] bg-white hover:bg-gray-50 transition-colors cursor-pointer relative"
+                                onClick={() => toggleGroupDropdown(event.id)}
+                              >
+                                <div className="text-xs text-gray-500 mb-1 font-normal">
+                                  Groups ({event.assignments.filter(assignment => assignment.group).length})
+                                </div>
+                                <div className="text-sm text-gray-900 font-normal">
+                                  {Array.from(new Set(event.assignments
+                                    .filter(assignment => assignment.group)
+                                    .map(assignment => assignment.group?.name)
+                                  )).join(', ')}
+                                </div>
+                              </div>
                             ) : (
                               <div 
                                 className="border-b border-gray-100 p-3 min-h-[60px] bg-white hover:bg-gray-50 transition-colors cursor-pointer relative"
@@ -2409,7 +2398,10 @@ export default function EventPlannerPage() {
                                 
                                 {/* Group Assignment Dropdown - Mobile */}
                                 {openGroupDropdown === event.id && (
-                                  <div className="absolute top-full left-0 mt-1 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                                  <div 
+                                    className="absolute top-full left-0 mt-1 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-10"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
                                     <div className="p-4 border-b border-gray-200">
                                       <h4 className="text-sm font-medium text-gray-900 mb-2">Assign Groups</h4>
                                       <p className="text-xs text-gray-600">
@@ -2430,11 +2422,18 @@ export default function EventPlannerPage() {
                                                     ? 'bg-green-50 border-green-200 text-green-900' 
                                                     : 'bg-white border-gray-200 hover:bg-gray-50'
                                                 }`}
+                                                onClick={(e) => {
+                                                  e.stopPropagation()
+                                                  handleToggleGroup(event.id, group.id)
+                                                }}
                                               >
                                                 <input
                                                   type="checkbox"
                                                   checked={isSelected}
-                                                  onChange={() => handleToggleGroup(event.id, group.id)}
+                                                  onChange={(e) => {
+                                                    e.stopPropagation()
+                                                    handleToggleGroup(event.id, group.id)
+                                                  }}
                                                   className="mr-3"
                                                 />
                                                 <div className="flex-1 min-w-0">

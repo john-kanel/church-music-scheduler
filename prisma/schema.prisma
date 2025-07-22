@@ -143,6 +143,7 @@ model Event {
   hymns             EventHymn[]
   documents         EventDocument[]
   cancellationNotifications CancellationNotification[]
+  status            EventStatus       @default(CONFIRMED)
 
   @@index([churchId])
   @@index([startTime])
@@ -691,4 +692,10 @@ enum CalendarFilterType {
   ALL
   GROUPS
   EVENT_TYPES
+}
+
+enum EventStatus {
+  CONFIRMED
+  TENTATIVE
+  CANCELLED
 }

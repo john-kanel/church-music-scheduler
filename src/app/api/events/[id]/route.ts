@@ -194,6 +194,7 @@ export async function PUT(
       description,
       location,
       eventTypeId,
+      status,
       roles = [],
       isRecurring,
       recurrencePattern,
@@ -266,7 +267,8 @@ export async function PUT(
       isRecurring,
       recurrencePattern,
       recurrenceEnd: recurrenceEnd ? new Date(recurrenceEnd) : null,
-      ...(finalEventTypeId && { eventTypeId: finalEventTypeId })
+      ...(finalEventTypeId && { eventTypeId: finalEventTypeId }),
+      ...(status && { status: status.toUpperCase() })
     }
 
     console.log('💾 About to update event with data:', {

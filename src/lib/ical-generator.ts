@@ -21,6 +21,7 @@ interface ICalEvent {
   endDate: Date
   lastModified: Date
   created: Date
+  status: 'CONFIRMED' | 'CANCELLED'
 }
 
 /**
@@ -71,11 +72,10 @@ function convertEventToICal(event: EventWithDetails, timezone: string): ICalEven
   // Generate unique identifier
   const uid = `event-${event.id}@churchmusicpro.com`
   
-  // Format event title with TENTATIVE prefix if needed
+  // Format event title - prefix cancelled events with CANCELLED
   let summary = event.name
-  if (event.description?.toLowerCase().includes('tentative') || 
-      event.name.toLowerCase().includes('tentative')) {
-    summary = `TENTATIVE: ${event.name.replace(/^tentative:?\s*/i, '')}`
+  if ((event as any).status === 'CANCELLED') {
+    summary = `CANCELLED: ${event.name}`
   }
 
   // Build description with assignments and music
@@ -83,6 +83,9 @@ function convertEventToICal(event: EventWithDetails, timezone: string): ICalEven
 
   // Calculate end time - default to 1 hour if not specified
   const endDate = event.endTime || new Date(event.startTime.getTime() + 60 * 60 * 1000)
+
+  // Convert status to ICS format (only CONFIRMED or CANCELLED allowed in ICS)
+  const icalStatus = (event as any).status === 'CANCELLED' ? 'CANCELLED' : 'CONFIRMED'
 
   return {
     uid,
@@ -92,7 +95,8 @@ function convertEventToICal(event: EventWithDetails, timezone: string): ICalEven
     startDate: event.startTime,
     endDate,
     lastModified: event.updatedAt,
-    created: event.createdAt
+    created: event.createdAt,
+    status: icalStatus
   }
 }
 
@@ -104,7 +108,7 @@ function buildEventDescription(event: EventWithDetails): string {
 
   // Add location prominently at the top  
   if (event.location) {
-    lines.push(`📍 Location: ${event.location}`)
+    lines.push(`Location: ${event.location}`)
     lines.push('')
   }
 
@@ -119,46 +123,48 @@ function buildEventDescription(event: EventWithDetails): string {
   const pendingAssignments = event.assignments.filter(a => !a.user && a.status === 'PENDING')
   
   if (acceptedAssignments.length > 0 || pendingAssignments.length > 0) {
-    lines.push('👥 MUSICIANS:')
+    lines.push('MUSICIANS:')
     
     // Show assigned musicians
     acceptedAssignments.forEach(assignment => {
       if (assignment.user) {
         const role = assignment.roleName || 'Musician'
         const name = `${assignment.user.firstName} ${assignment.user.lastName}`
-        lines.push(`✅ ${role}: ${name}`)
+        lines.push(`${role}: ${name}`)
       }
     })
     
     // Show open positions (simplified format)
     pendingAssignments.forEach(assignment => {
       const role = assignment.roleName || 'Musician'
-      lines.push(`🔍 ${role}: `)
+      lines.push(`${role}: (Open)`)
     })
     
     lines.push('')
   }
 
-  // Add group information if event has groups assigned
+  // Add group information - always show Group line
   const eventGroups = event.assignments.filter(a => a.group).map(a => a.group)
-  if (eventGroups.length > 0) {
-    const uniqueGroups = Array.from(new Set(eventGroups.map(g => g?.id))).map(id => 
-      eventGroups.find(g => g?.id === id)
-    ).filter(Boolean)
-    
-    lines.push('👥 GROUP:')
+  const uniqueGroups = Array.from(new Set(eventGroups.map(g => g?.id))).map(id => 
+    eventGroups.find(g => g?.id === id)
+  ).filter(Boolean)
+  
+  lines.push('Group:')
+  if (uniqueGroups.length > 0) {
     uniqueGroups.forEach(group => {
       if (group) {
-        lines.push(`🎭 ${group.name}`)
+        lines.push(`${group.name}`)
       }
     })
-    lines.push('')
+  } else {
+    lines.push('(None assigned)')
   }
+  lines.push('')
 
   // Add service parts and music with simplified formatting
   const hymns = event.hymns.filter(h => h.title)
   if (hymns.length > 0) {
-    lines.push('🎵 MUSIC:')
+    lines.push('MUSIC:')
     
     // Group by service part
     const hymnsByPart = new Map<string, typeof hymns>()
@@ -193,7 +199,7 @@ function buildEventDescription(event: EventWithDetails): string {
   }
 
   // Add event type
-  lines.push(`📅 Event Type: ${event.eventType.name}`)
+  lines.push(`Event Type: ${event.eventType.name}`)
   
   return lines.join('\n')
 }
@@ -213,7 +219,7 @@ function formatICalEvent(event: ICalEvent, timezone: string = 'America/Chicago')
     `DTSTAMP:${formatICalDate(new Date(), timezone)}`,
     `LAST-MODIFIED:${formatICalDate(event.lastModified, timezone)}`,
     `CREATED:${formatICalDate(event.created, timezone)}`,
-    'STATUS:CONFIRMED',
+    `STATUS:${event.status}`,
     'TRANSP:OPAQUE',
     'END:VEVENT',
     ''

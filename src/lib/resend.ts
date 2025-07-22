@@ -1,11 +1,10 @@
 import { Resend } from 'resend'
 import { getEmailLogoHtml } from '../components/emails/email-logo'
 
-if (!process.env.RESEND_API_KEY) {
-  throw new Error('RESEND_API_KEY is not defined in environment variables')
-}
-
-export const resend = new Resend(process.env.RESEND_API_KEY)
+// Conditionally initialize Resend for local development
+export const resend = process.env.RESEND_API_KEY 
+  ? new Resend(process.env.RESEND_API_KEY)
+  : null
 
 // Email-safe logo HTML (using text-based logo for guaranteed compatibility)
 const LOGO_HTML = `
@@ -179,6 +178,11 @@ Sent by Church Music Pro
       `
     }
 
+    // Check if Resend is available (for local development)
+    if (!resend) {
+      return simulateEmailInDev(emailData, tempPassword)
+    }
+
     // Send the email using verified domain
     const { data, error } = await resend.emails.send(emailData)
 
@@ -250,6 +254,12 @@ ${message}
 ---
 Sent by ${senderName} from ${churchName}
       `
+    }
+
+    // Check if Resend is available (for local development)
+    if (!resend) {
+      const simulatedResult = simulateEmailInDev(emailData, 'N/A')
+      return simulatedResult.data
     }
 
     // Send the email using verified domain
@@ -406,6 +416,12 @@ Sent by Church Music Pro
       `
     }
 
+    // Check if Resend is available (for local development)
+    if (!resend) {
+      const simulatedResult = simulateEmailInDev(emailData, 'N/A')
+      return simulatedResult.data
+    }
+
     const { data, error } = await resend.emails.send(emailData)
 
     if (error) {
@@ -546,6 +562,12 @@ Thank you for being part of the Church Music Pro family! 🎵
 ---
 Sent by Church Music Pro
       `
+    }
+
+    // Check if Resend is available (for local development)
+    if (!resend) {
+      const simulatedResult = simulateEmailInDev(emailData, 'N/A')
+      return simulatedResult.data
     }
 
     const { data, error } = await resend.emails.send(emailData)
@@ -695,6 +717,12 @@ Thank you for helping us serve more churches! 🎵
 ---
 Sent by Church Music Pro
       `
+    }
+
+    // Check if Resend is available (for local development)
+    if (!resend) {
+      const simulatedResult = simulateEmailInDev(emailData, 'N/A')
+      return simulatedResult.data
     }
 
     const { data, error } = await resend.emails.send(emailData)

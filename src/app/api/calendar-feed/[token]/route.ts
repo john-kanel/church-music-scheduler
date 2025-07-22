@@ -41,6 +41,10 @@ export async function GET(
       churchId: user.churchId,
       startTime: {
         gte: new Date(), // Only future events
+      },
+      // Only include confirmed and cancelled events, exclude tentative
+      status: {
+        in: ['CONFIRMED', 'CANCELLED']
       }
     }
 

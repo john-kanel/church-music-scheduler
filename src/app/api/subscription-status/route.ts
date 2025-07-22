@@ -4,9 +4,12 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import Stripe from 'stripe'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-06-30.basil',
-})
+// Conditionally initialize Stripe for local development
+const stripe = process.env.STRIPE_SECRET_KEY 
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: '2025-06-30.basil',
+    })
+  : null
 
 // Enhanced caching - 15 minutes for subscription status
 const subscriptionCache = new Map<string, {
@@ -133,8 +136,8 @@ async function fetchSubscriptionData(churchId: string) {
     stripeStatus: null as string | null
   }
 
-  // Only fetch Stripe data if customer ID exists (optimization)
-  if (church.stripeCustomerId) {
+  // Only fetch Stripe data if customer ID exists and Stripe is available (optimization)
+  if (church.stripeCustomerId && stripe) {
     try {
       const subscriptions = await stripe.subscriptions.list({
         customer: church.stripeCustomerId,
