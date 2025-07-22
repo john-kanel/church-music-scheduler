@@ -33,6 +33,13 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  console.log('🚨 ROUTE HIT: Document upload route was called!')
+  console.log('🚨 REQUEST INFO:', {
+    method: request.method,
+    url: request.url,
+    headers: Object.fromEntries(request.headers.entries())
+  })
+  
   try {
     console.log('🔧 DOCUMENT UPLOAD: Starting upload process')
     
