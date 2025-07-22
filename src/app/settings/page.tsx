@@ -1312,7 +1312,7 @@ export default function SettingsPage() {
                               disabled={!isEditing}
                               className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                             />
-                            Required
+                            Default
                           </label>
                           {isEditing && (
                             <button

@@ -187,6 +187,14 @@ export default function EventPlannerPage() {
   // Create group modal state
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false)
 
+  // Role creation state
+  const [openRoleCreation, setOpenRoleCreation] = useState<string | null>(null)
+  const [newRoleName, setNewRoleName] = useState('')
+  const [addingRole, setAddingRole] = useState(false)
+
+  // Service parts dropdown state
+  const [openServicePartsDropdown, setOpenServicePartsDropdown] = useState<string | null>(null)
+
   // Toast functions
   const showToast = (type: 'success' | 'error', message: string) => {
     const id = Date.now().toString()
@@ -288,6 +296,12 @@ export default function EventPlannerPage() {
         // Get unique event colors and show all initially
         const uniqueColors = plannerData.events.map((event: Event) => event.eventType.color)
         setVisibleEventColors(new Set<string>(uniqueColors))
+        
+        // Close any open interfaces when data refreshes
+        setOpenGroupDropdown(null)
+        setOpenRoleCreation(null)
+        setNewRoleName('')
+        setOpenServicePartsDropdown(null)
       } else {
         console.error('Failed to fetch planner data')
       }
@@ -1302,6 +1316,10 @@ export default function EventPlannerPage() {
     if (openGroupDropdown === eventId) {
       setOpenGroupDropdown(null)
     } else {
+      // Close other interfaces when opening group dropdown
+      setOpenRoleCreation(null)
+      setNewRoleName('')
+      setOpenServicePartsDropdown(null)
       setOpenGroupDropdown(eventId)
       
       // Get current groups assigned to this event
@@ -1401,6 +1419,93 @@ export default function EventPlannerPage() {
       // Revert optimistic update on error
       await fetchPlannerData()
       showToast('error', 'Error updating group assignments')
+    }
+  }
+
+  const toggleRoleCreation = (eventId: string) => {
+    if (openRoleCreation === eventId) {
+      setOpenRoleCreation(null)
+      setNewRoleName('')
+    } else {
+      // Close other interfaces when opening role creation
+      setOpenGroupDropdown(null)
+      setOpenServicePartsDropdown(null)
+      setOpenRoleCreation(eventId)
+      setNewRoleName('')
+    }
+  }
+
+  const toggleServicePartsDropdown = (eventId: string) => {
+    if (openServicePartsDropdown === eventId) {
+      setOpenServicePartsDropdown(null)
+    } else {
+      // Close other interfaces when opening service parts dropdown
+      setOpenGroupDropdown(null)
+      setOpenRoleCreation(null)
+      setNewRoleName('')
+      setOpenServicePartsDropdown(eventId)
+    }
+  }
+
+  const handleAddRole = async (eventId: string) => {
+    if (!newRoleName.trim()) return
+    
+    try {
+      setAddingRole(true)
+      
+      // Create a new assignment for this role
+      const response = await fetch('/api/assignments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventId: eventId,
+          roleName: newRoleName.trim(),
+          maxMusicians: 1,
+          status: 'PENDING'
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to add role')
+      }
+
+      const result = await response.json()
+      
+      // Optimistic update - add the new role to local state immediately
+      setData(prev => {
+        if (!prev) return prev
+        
+        const newAssignment = {
+          id: result.assignment.id,
+          roleName: newRoleName.trim(),
+          status: 'PENDING' as const,
+          isAutoAssigned: false,
+          user: undefined,
+          group: undefined
+        }
+        
+        return {
+          ...prev,
+          events: prev.events.map(ev => 
+            ev.id === eventId 
+              ? {
+                  ...ev,
+                  assignments: [...ev.assignments, newAssignment]
+                }
+              : ev
+          )
+        }
+      })
+
+      showToast('success', 'Role added successfully!')
+      setNewRoleName('')
+      setOpenRoleCreation(null)
+    } catch (error) {
+      console.error('Error adding role:', error)
+      showToast('error', error instanceof Error ? error.message : 'Failed to add role')
+    } finally {
+      setAddingRole(false)
     }
   }
 
@@ -1769,34 +1874,13 @@ export default function EventPlannerPage() {
                         <p className="text-xs text-gray-500">{event.location}</p>
                         
                         {/* Action Buttons */}
-                        <div className="grid grid-cols-2 gap-2 mt-3">
-                          <button 
-                            onClick={() => handleAutoPopulate(event.id)}
-                            className="bg-[#660033] text-white px-3 py-1.5 rounded text-xs hover:bg-[#800041] transition-colors flex items-center justify-center gap-1"
-                          >
-                            <Zap className="w-3 h-3" />
-                            Auto-populate
-                          </button>
+                        <div className="mt-3">
                           <button 
                             onClick={() => handleAddDocument(event.id)}
-                            className="bg-gray-50 text-gray-600 px-3 py-1.5 rounded text-xs hover:bg-gray-100 transition-colors flex items-center justify-center gap-1"
+                            className="w-full bg-gray-50 text-gray-600 px-3 py-1.5 rounded text-xs hover:bg-gray-100 transition-colors flex items-center justify-center gap-1"
                           >
                             <FileText className="w-3 h-3" />
                             Add Document
-                          </button>
-                          <button 
-                            onClick={() => handleAddDefaultServiceParts(event.id)}
-                            className="bg-blue-50 text-blue-600 px-3 py-1.5 rounded text-xs hover:bg-blue-100 transition-colors flex items-center justify-center gap-1"
-                          >
-                            <Plus className="w-3 h-3" />
-                            Add Default Parts
-                          </button>
-                          <button 
-                            onClick={() => handleAddSingleSong(event.id)}
-                            className="bg-green-50 text-green-600 px-3 py-1.5 rounded text-xs hover:bg-green-100 transition-colors flex items-center justify-center gap-1"
-                          >
-                            <Plus className="w-3 h-3" />
-                            Add Song
                           </button>
                         </div>
                         
@@ -1826,6 +1910,105 @@ export default function EventPlannerPage() {
                                 </button>
                               </div>
                             ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Service Parts Header */}
+                      <div className="border-t border-gray-200">
+                        <div className="border-b border-gray-100 p-3 min-h-[30px] bg-gray-50">
+                          <div className="flex items-center justify-between">
+                            <div className="text-xs text-black font-bold">Service Parts</div>
+                            <button
+                              onClick={() => toggleServicePartsDropdown(event.id)}
+                              className="text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
+                              title="Add service parts or songs"
+                            >
+                              + Add
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Service Parts Dropdown - appears as its own cell */}
+                        {openServicePartsDropdown === event.id && (
+                          <div className="border-b border-gray-100 bg-orange-50">
+                            <div className="p-3 border-b border-orange-200 bg-orange-100">
+                              <h4 className="text-sm font-medium text-gray-900 mb-1">Add Music</h4>
+                              <p className="text-xs text-gray-600">
+                                Choose how you'd like to add music to this event.
+                              </p>
+                            </div>
+
+                            <div className="p-3 space-y-2">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleAutoPopulate(event.id)
+                                  setOpenServicePartsDropdown(null)
+                                }}
+                                className="w-full flex items-center p-3 rounded border border-purple-200 bg-purple-50 hover:bg-purple-100 transition-colors text-left"
+                              >
+                                <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                                  <Zap className="h-4 w-4 text-purple-600" />
+                                </div>
+                                <div className="flex-1">
+                                  <div className="text-sm font-medium text-purple-900">Auto-populate</div>
+                                  <div className="text-xs text-purple-700">
+                                    Extract songs from uploaded documents
+                                  </div>
+                                </div>
+                              </button>
+
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleAddDefaultServiceParts(event.id)
+                                  setOpenServicePartsDropdown(null)
+                                }}
+                                className="w-full flex items-center p-3 rounded border border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors text-left"
+                              >
+                                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                                  <Plus className="h-4 w-4 text-blue-600" />
+                                </div>
+                                <div className="flex-1">
+                                  <div className="text-sm font-medium text-blue-900">Add Default Parts</div>
+                                  <div className="text-xs text-blue-700">
+                                    Add all required service parts at once
+                                  </div>
+                                </div>
+                              </button>
+
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleAddSingleSong(event.id)
+                                  setOpenServicePartsDropdown(null)
+                                }}
+                                className="w-full flex items-center p-3 rounded border border-green-200 bg-green-50 hover:bg-green-100 transition-colors text-left"
+                              >
+                                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                                  <Plus className="h-4 w-4 text-green-600" />
+                                </div>
+                                <div className="flex-1">
+                                  <div className="text-sm font-medium text-green-900">Add Single Song</div>
+                                  <div className="text-xs text-green-700">
+                                    Add one individual song or piece
+                                  </div>
+                                </div>
+                              </button>
+                            </div>
+
+                            <div className="flex justify-end space-x-2 p-3 border-t border-orange-200 bg-orange-50">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setOpenServicePartsDropdown(null)
+                                }}
+                                className="px-3 py-1 text-sm border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
+                              >
+                                Cancel
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -1928,7 +2111,16 @@ export default function EventPlannerPage() {
                       {/* Groups Section */}
                       <div className="border-t border-gray-200">
                         <div className="border-b border-gray-100 p-3 min-h-[30px] bg-gray-50">
-                          <div className="text-xs text-black font-bold">Groups</div>
+                          <div className="flex items-center justify-between">
+                            <div className="text-xs text-black font-bold">Groups</div>
+                            <button
+                              onClick={() => toggleGroupDropdown(event.id)}
+                              className="text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
+                              title="Add or manage groups"
+                            >
+                              + Add
+                            </button>
+                          </div>
                         </div>
                         
                         {event.assignments?.filter(assignment => assignment.group).length > 0 ? (
@@ -1947,22 +2139,16 @@ export default function EventPlannerPage() {
                             </div>
                           </div>
                         ) : (
-                          <div 
-                            className="border-b border-gray-100 p-3 min-h-[60px] bg-white hover:bg-gray-50 transition-colors cursor-pointer relative"
-                            onClick={() => toggleGroupDropdown(event.id)}
-                          >
-                            <div className="text-xs text-blue-600 hover:text-blue-800">+ Assign groups</div>
+                          <div className="border-b border-gray-100 p-3 min-h-[60px] bg-white flex items-center justify-center">
+                            <div className="text-xs text-gray-400">No groups assigned</div>
                           </div>
                         )}
                             
-                        {/* Group Assignment Dropdown */}
+                        {/* Group Assignment Interface - appears as its own cell */}
                         {openGroupDropdown === event.id && (
-                          <div 
-                            className="absolute top-full left-0 mt-1 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-10"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <div className="p-4 border-b border-gray-200">
-                              <h4 className="text-sm font-medium text-gray-900 mb-2">Assign Groups</h4>
+                          <div className="border-b border-gray-100 bg-blue-50">
+                            <div className="p-3 border-b border-blue-200 bg-blue-100">
+                              <h4 className="text-sm font-medium text-gray-900 mb-1">Assign Groups</h4>
                               <p className="text-xs text-gray-600">
                                 Select groups to automatically assign all members to this event.
                               </p>
@@ -2028,7 +2214,7 @@ export default function EventPlannerPage() {
                               )}
                             </div>
                             
-                            <div className="flex justify-end space-x-2 p-3 border-t">
+                            <div className="flex justify-end space-x-2 p-3 border-t border-blue-200 bg-blue-50">
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation()
@@ -2055,8 +2241,63 @@ export default function EventPlannerPage() {
                       {/* Musicians and Roles Section */}
                       <div>
                         <div className="border-b border-gray-100 p-3 min-h-[30px] bg-gray-50">
-                          <div className="text-xs text-black font-bold">Musicians and Roles</div>
+                          <div className="flex items-center justify-between">
+                            <div className="text-xs text-black font-bold">Musicians and Roles</div>
+                            <button
+                              onClick={() => toggleRoleCreation(event.id)}
+                              className="text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
+                              title="Add role"
+                            >
+                              + Add
+                            </button>
+                          </div>
                         </div>
+                        
+                        {/* Role Creation Interface - appears as its own cell */}
+                        {openRoleCreation === event.id && (
+                          <div className="border-b border-gray-100 bg-green-50">
+                            <div className="p-3 border-b border-green-200 bg-green-100">
+                              <h4 className="text-sm font-medium text-gray-900 mb-1">Add New Role</h4>
+                              <p className="text-xs text-gray-600">
+                                Enter a role name to add a new assignment position for this event.
+                              </p>
+                            </div>
+                            
+                            <div className="p-3">
+                              <input
+                                type="text"
+                                value={newRoleName}
+                                onChange={(e) => setNewRoleName(e.target.value)}
+                                placeholder="Enter role name (e.g., Accompanist, Vocalist, Guitarist)"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                                onKeyPress={(e) => e.key === 'Enter' && handleAddRole(event.id)}
+                                autoFocus
+                              />
+                            </div>
+                            
+                            <div className="flex justify-end space-x-2 p-3 border-t border-green-200 bg-green-50">
+                              <button
+                                onClick={() => toggleRoleCreation(event.id)}
+                                disabled={addingRole}
+                                className="px-3 py-1 text-sm border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors disabled:opacity-50"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={() => handleAddRole(event.id)}
+                                disabled={addingRole || !newRoleName.trim()}
+                                className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center"
+                              >
+                                {addingRole ? (
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                ) : (
+                                  <Plus className="h-4 w-4 mr-2" />
+                                )}
+                                Add Role
+                              </button>
+                            </div>
+                          </div>
+                        )}
                         
                         {event.assignments?.map((assignment) => (
                           <div key={assignment.id} className="border-b border-gray-100 p-3 min-h-[60px] bg-white group hover:bg-gray-50 transition-colors relative">
@@ -2212,34 +2453,13 @@ export default function EventPlannerPage() {
                             <p className="text-xs text-gray-500">{event.location}</p>
                             
                             {/* Action Buttons */}
-                            <div className="grid grid-cols-2 gap-2 mt-3">
-                              <button 
-                                onClick={() => handleAutoPopulate(event.id)}
-                                className="bg-[#660033] text-white px-3 py-1.5 rounded text-xs hover:bg-[#800041] transition-colors flex items-center justify-center gap-1"
-                              >
-                                <Zap className="w-3 h-3" />
-                                Auto-populate
-                              </button>
+                            <div className="mt-3">
                               <button 
                                 onClick={() => handleAddDocument(event.id)}
-                                className="bg-gray-50 text-gray-600 px-3 py-1.5 rounded text-xs hover:bg-gray-100 transition-colors flex items-center justify-center gap-1"
+                                className="w-full bg-gray-50 text-gray-600 px-3 py-1.5 rounded text-xs hover:bg-gray-100 transition-colors flex items-center justify-center gap-1"
                               >
                                 <FileText className="w-3 h-3" />
                                 Add Document
-                              </button>
-                              <button 
-                                onClick={() => handleAddDefaultServiceParts(event.id)}
-                                className="bg-blue-50 text-blue-600 px-3 py-1.5 rounded text-xs hover:bg-blue-100 transition-colors flex items-center justify-center gap-1"
-                              >
-                                <Plus className="w-3 h-3" />
-                                Add Default Parts
-                              </button>
-                              <button 
-                                onClick={() => handleAddSingleSong(event.id)}
-                                className="bg-green-50 text-green-600 px-3 py-1.5 rounded text-xs hover:bg-green-100 transition-colors flex items-center justify-center gap-1"
-                              >
-                                <Plus className="w-3 h-3" />
-                                Add Song
                               </button>
                             </div>
                             
@@ -2269,6 +2489,105 @@ export default function EventPlannerPage() {
                                     </button>
                                   </div>
                                 ))}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Service Parts Header - Mobile */}
+                          <div className="border-t border-gray-200">
+                            <div className="border-b border-gray-100 p-3 min-h-[30px] bg-gray-50">
+                              <div className="flex items-center justify-between">
+                                <div className="text-xs text-black font-bold">Service Parts</div>
+                                <button
+                                  onClick={() => toggleServicePartsDropdown(event.id)}
+                                  className="text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
+                                  title="Add service parts or songs"
+                                >
+                                  + Add
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Service Parts Dropdown - Mobile */}
+                            {openServicePartsDropdown === event.id && (
+                              <div className="border-b border-gray-100 bg-orange-50">
+                                <div className="p-3 border-b border-orange-200 bg-orange-100">
+                                  <h4 className="text-sm font-medium text-gray-900 mb-1">Add Music</h4>
+                                  <p className="text-xs text-gray-600">
+                                    Choose how you'd like to add music to this event.
+                                  </p>
+                                </div>
+
+                                <div className="p-3 space-y-2">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleAutoPopulate(event.id)
+                                      setOpenServicePartsDropdown(null)
+                                    }}
+                                    className="w-full flex items-center p-3 rounded border border-purple-200 bg-purple-50 hover:bg-purple-100 transition-colors text-left"
+                                  >
+                                    <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                                      <Zap className="h-4 w-4 text-purple-600" />
+                                    </div>
+                                    <div className="flex-1">
+                                      <div className="text-sm font-medium text-purple-900">Auto-populate</div>
+                                      <div className="text-xs text-purple-700">
+                                        Extract songs from uploaded documents
+                                      </div>
+                                    </div>
+                                  </button>
+
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleAddDefaultServiceParts(event.id)
+                                      setOpenServicePartsDropdown(null)
+                                    }}
+                                    className="w-full flex items-center p-3 rounded border border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors text-left"
+                                  >
+                                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                                      <Plus className="h-4 w-4 text-blue-600" />
+                                    </div>
+                                    <div className="flex-1">
+                                      <div className="text-sm font-medium text-blue-900">Add Default Parts</div>
+                                      <div className="text-xs text-blue-700">
+                                        Add all required service parts at once
+                                      </div>
+                                    </div>
+                                  </button>
+
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleAddSingleSong(event.id)
+                                      setOpenServicePartsDropdown(null)
+                                    }}
+                                    className="w-full flex items-center p-3 rounded border border-green-200 bg-green-50 hover:bg-green-100 transition-colors text-left"
+                                  >
+                                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                                      <Plus className="h-4 w-4 text-green-600" />
+                                    </div>
+                                    <div className="flex-1">
+                                      <div className="text-sm font-medium text-green-900">Add Single Song</div>
+                                      <div className="text-xs text-green-700">
+                                        Add one individual song or piece
+                                      </div>
+                                    </div>
+                                  </button>
+                                </div>
+
+                                <div className="flex justify-end space-x-2 p-3 border-t border-orange-200 bg-orange-50">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setOpenServicePartsDropdown(null)
+                                    }}
+                                    className="px-3 py-1 text-sm border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
                               </div>
                             )}
                           </div>
@@ -2371,7 +2690,16 @@ export default function EventPlannerPage() {
                           {/* Groups Section - Mobile */}
                           <div className="border-t border-gray-200">
                             <div className="border-b border-gray-100 p-3 min-h-[30px] bg-gray-50">
-                              <div className="text-xs text-black font-bold">Groups</div>
+                              <div className="flex items-center justify-between">
+                                <div className="text-xs text-black font-bold">Groups</div>
+                                <button
+                                  onClick={() => toggleGroupDropdown(event.id)}
+                                  className="text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
+                                  title="Add or manage groups"
+                                >
+                                  + Add
+                                </button>
+                              </div>
                             </div>
                             
                             {event.assignments?.filter(assignment => assignment.group).length > 0 ? (
@@ -2390,107 +2718,101 @@ export default function EventPlannerPage() {
                                 </div>
                               </div>
                             ) : (
-                              <div 
-                                className="border-b border-gray-100 p-3 min-h-[60px] bg-white hover:bg-gray-50 transition-colors cursor-pointer relative"
-                                onClick={() => toggleGroupDropdown(event.id)}
-                              >
-                                <div className="text-xs text-blue-600 hover:text-blue-800">+ Assign groups</div>
+                              <div className="border-b border-gray-100 p-3 min-h-[60px] bg-white flex items-center justify-center">
+                                <div className="text-xs text-gray-400">No groups assigned</div>
+                              </div>
+                            )}
+                            
+                            {/* Group Assignment Interface - Mobile */}
+                            {openGroupDropdown === event.id && (
+                              <div className="border-b border-gray-100 bg-blue-50">
+                                <div className="p-3 border-b border-blue-200 bg-blue-100">
+                                  <h4 className="text-sm font-medium text-gray-900 mb-1">Assign Groups</h4>
+                                  <p className="text-xs text-gray-600">
+                                    Select groups to automatically assign all members to this event.
+                                  </p>
+                                </div>
                                 
-                                {/* Group Assignment Dropdown - Mobile */}
-                                {openGroupDropdown === event.id && (
-                                  <div 
-                                    className="absolute top-full left-0 mt-1 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-10"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    <div className="p-4 border-b border-gray-200">
-                                      <h4 className="text-sm font-medium text-gray-900 mb-2">Assign Groups</h4>
-                                      <p className="text-xs text-gray-600">
-                                        Select groups to automatically assign all members to this event.
-                                      </p>
-                                    </div>
-                                    
-                                    <div className="p-3 max-h-48 overflow-y-auto">
-                                      {groups.length > 0 ? (
-                                        <div className="space-y-2">
-                                          {groups.map((group) => {
-                                            const isSelected = (selectedGroups[event.id] || []).includes(group.id)
-                                            return (
-                                              <label
-                                                key={group.id}
-                                                className={`flex items-center p-2 rounded border cursor-pointer transition-colors ${
-                                                  isSelected 
-                                                    ? 'bg-green-50 border-green-200 text-green-900' 
-                                                    : 'bg-white border-gray-200 hover:bg-gray-50'
-                                                }`}
-                                                onClick={(e) => {
-                                                  e.stopPropagation()
-                                                  handleToggleGroup(event.id, group.id)
-                                                }}
-                                              >
-                                                <input
-                                                  type="checkbox"
-                                                  checked={isSelected}
-                                                  onChange={(e) => {
-                                                    e.stopPropagation()
-                                                    handleToggleGroup(event.id, group.id)
-                                                  }}
-                                                  className="mr-3"
-                                                />
-                                                <div className="flex-1 min-w-0">
-                                                  <div className="text-sm font-medium truncate">
-                                                    {group.name}
-                                                  </div>
-                                                  <div className="text-xs text-gray-500 truncate">
-                                                    {group.description && (
-                                                      <span className="mr-2">{group.description}</span>
-                                                    )}
-                                                    {group.members?.length || 0} member{(group.members?.length || 0) !== 1 ? 's' : ''}
-                                                  </div>
-                                                </div>
-                                              </label>
-                                            )
-                                          })}
-                                        </div>
-                                      ) : (
-                                        <div className="text-center py-4">
-                                          <button
+                                <div className="p-3 max-h-48 overflow-y-auto">
+                                  {groups.length > 0 ? (
+                                    <div className="space-y-2">
+                                      {groups.map((group) => {
+                                        const isSelected = (selectedGroups[event.id] || []).includes(group.id)
+                                        return (
+                                          <label
+                                            key={group.id}
+                                            className={`flex items-center p-2 rounded border cursor-pointer transition-colors ${
+                                              isSelected 
+                                                ? 'bg-green-50 border-green-200 text-green-900' 
+                                                : 'bg-white border-gray-200 hover:bg-gray-50'
+                                            }`}
                                             onClick={(e) => {
                                               e.stopPropagation()
-                                              setShowCreateGroupModal(true)
+                                              handleToggleGroup(event.id, group.id)
                                             }}
-                                            className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-4 py-2 rounded transition-colors text-sm font-medium"
                                           >
-                                            + Create Group
-                                          </button>
-                                          <p className="text-xs text-gray-500 mt-1">
-                                            Create your first group to assign multiple musicians at once
-                                          </p>
-                                        </div>
-                                      )}
+                                            <input
+                                              type="checkbox"
+                                              checked={isSelected}
+                                              onChange={(e) => {
+                                                e.stopPropagation()
+                                                handleToggleGroup(event.id, group.id)
+                                              }}
+                                              className="mr-3"
+                                            />
+                                            <div className="flex-1 min-w-0">
+                                              <div className="text-sm font-medium truncate">
+                                                {group.name}
+                                              </div>
+                                              <div className="text-xs text-gray-500 truncate">
+                                                {group.description && (
+                                                  <span className="mr-2">{group.description}</span>
+                                                )}
+                                                {group.members?.length || 0} member{(group.members?.length || 0) !== 1 ? 's' : ''}
+                                              </div>
+                                            </div>
+                                          </label>
+                                        )
+                                      })}
                                     </div>
-                                    
-                                    <div className="flex justify-end space-x-2 p-3 border-t">
+                                  ) : (
+                                    <div className="text-center py-4">
                                       <button
                                         onClick={(e) => {
                                           e.stopPropagation()
-                                          setOpenGroupDropdown(null)
+                                          setShowCreateGroupModal(true)
                                         }}
-                                        className="px-3 py-1 text-sm border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
+                                        className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-4 py-2 rounded transition-colors text-sm font-medium"
                                       >
-                                        Cancel
+                                        + Create Group
                                       </button>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation()
-                                          handleSaveGroupAssignment(event.id)
-                                        }}
-                                        className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
-                                      >
-                                        Save
-                                      </button>
+                                      <p className="text-xs text-gray-500 mt-1">
+                                        Create your first group to assign multiple musicians at once
+                                      </p>
                                     </div>
-                                  </div>
-                                )}
+                                  )}
+                                </div>
+                                
+                                <div className="flex justify-end space-x-2 p-3 border-t border-blue-200 bg-blue-50">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setOpenGroupDropdown(null)
+                                    }}
+                                    className="px-3 py-1 text-sm border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleSaveGroupAssignment(event.id)
+                                    }}
+                                    className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                                  >
+                                    Save
+                                  </button>
+                                </div>
                               </div>
                             )}
                           </div>
@@ -2498,8 +2820,63 @@ export default function EventPlannerPage() {
                           {/* Musicians and Roles Section - Mobile */}
                           <div>
                             <div className="border-b border-gray-100 p-3 min-h-[30px] bg-gray-50">
-                              <div className="text-xs text-black font-bold">Musicians and Roles</div>
+                              <div className="flex items-center justify-between">
+                                <div className="text-xs text-black font-bold">Musicians and Roles</div>
+                                <button
+                                  onClick={() => toggleRoleCreation(event.id)}
+                                  className="text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
+                                  title="Add role"
+                                >
+                                  + Add
+                                </button>
+                              </div>
                             </div>
+                            
+                            {/* Role Creation Interface - Mobile */}
+                            {openRoleCreation === event.id && (
+                              <div className="border-b border-gray-100 bg-green-50">
+                                <div className="p-3 border-b border-green-200 bg-green-100">
+                                  <h4 className="text-sm font-medium text-gray-900 mb-1">Add New Role</h4>
+                                  <p className="text-xs text-gray-600">
+                                    Enter a role name to add a new assignment position for this event.
+                                  </p>
+                                </div>
+                                
+                                <div className="p-3">
+                                  <input
+                                    type="text"
+                                    value={newRoleName}
+                                    onChange={(e) => setNewRoleName(e.target.value)}
+                                    placeholder="Enter role name (e.g., Accompanist, Vocalist, Guitarist)"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                                    onKeyPress={(e) => e.key === 'Enter' && handleAddRole(event.id)}
+                                    autoFocus
+                                  />
+                                </div>
+                                
+                                <div className="flex justify-end space-x-2 p-3 border-t border-green-200 bg-green-50">
+                                  <button
+                                    onClick={() => toggleRoleCreation(event.id)}
+                                    disabled={addingRole}
+                                    className="px-3 py-1 text-sm border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors disabled:opacity-50"
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    onClick={() => handleAddRole(event.id)}
+                                    disabled={addingRole || !newRoleName.trim()}
+                                    className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center"
+                                  >
+                                    {addingRole ? (
+                                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                    ) : (
+                                      <Plus className="h-4 w-4 mr-2" />
+                                    )}
+                                    Add Role
+                                  </button>
+                                </div>
+                              </div>
+                            )}
                             
                             {event.assignments?.map((assignment) => (
                               <div key={assignment.id} className="border-b border-gray-100 p-3 min-h-[60px] bg-white group hover:bg-gray-50 transition-colors relative">

@@ -205,6 +205,9 @@ export function EventDetailsModal({
   // Current event data that can be updated independently from props
   const [currentEvent, setCurrentEvent] = useState<CalendarEvent | null>(null)
   
+  // Force re-render key
+  const [renderKey, setRenderKey] = useState(0)
+  
   // Toast notifications
   const [toasts, setToasts] = useState<ToastMessage[]>([])
   
@@ -310,9 +313,9 @@ export function EventDetailsModal({
     if (isEditing && currentEvent?.assignments && groups.length > 0) {
       const existingGroupIds: string[] = []
       
-      // Find group assignments (assignments that have a group but no user)
+      // Find group assignments (any assignment that has a group)
       currentEvent.assignments.forEach(assignment => {
-        if (assignment.group && !assignment.user) {
+        if (assignment.group) {
           if (!existingGroupIds.includes(assignment.group.id)) {
             existingGroupIds.push(assignment.group.id)
           }
@@ -611,14 +614,25 @@ export function EventDetailsModal({
       console.log('✅ Update successful:', responseData)
 
       // Save group assignments if any changes were made
-      const existingGroupIds = currentEvent.assignments
-        ?.filter(assignment => assignment.group && !assignment.user)
-        .map(assignment => assignment.group!.id) || []
+      const existingGroupIds: string[] = []
+      currentEvent.assignments?.forEach(assignment => {
+        if (assignment.group && !existingGroupIds.includes(assignment.group.id)) {
+          existingGroupIds.push(assignment.group.id)
+        }
+      })
       
       const groupsChanged = JSON.stringify(selectedGroups.sort()) !== JSON.stringify(existingGroupIds.sort())
       
+      console.log('🔍 Group change detection:', {
+        existingGroupIds,
+        selectedGroups,
+        groupsChanged,
+        existingSorted: existingGroupIds.sort(),
+        selectedSorted: selectedGroups.sort()
+      })
+      
       if (groupsChanged) {
-        console.log('🎯 Saving group assignments...')
+        console.log('🎯 Saving group assignments...', { selectedGroups })
         try {
           const groupResponse = await fetch(`/api/events/${currentEvent.id}/groups`, {
             method: 'PUT',
@@ -645,15 +659,16 @@ export function EventDetailsModal({
       console.log('🎵 Saving hymns...')
       await saveHymns()
       
-      setIsEditing(false)
-      setShowColorPicker(false)
-      setSelectedGroups([]) // Clear selected groups after saving
-      
-      // Refresh the event data and parent calendar
+      // Refresh the event data and parent calendar FIRST
       console.log('🔄 Refreshing event data...')
       // Add a small delay to ensure database operations are complete
       await new Promise(resolve => setTimeout(resolve, 500))
       await fetchEventData()
+      
+      // Then clear editing state
+      setIsEditing(false)
+      setShowColorPicker(false)
+      setSelectedGroups([]) // Clear selected groups after data is refreshed
       onEventUpdated?.()
       
       console.log('🎉 Event update process completed successfully!')
@@ -739,7 +754,16 @@ export function EventDetailsModal({
         oldLocation: currentEvent.location,
         newLocation: updatedEvent.location,
         oldStartTime: currentEvent.startTime,
-        newStartTime: updatedEvent.startTime
+        newStartTime: updatedEvent.startTime,
+        oldAssignments: currentEvent.assignments?.length || 0,
+        newAssignments: updatedEvent.assignments?.length || 0,
+        assignmentsWithGroups: updatedEvent.assignments?.filter((a: any) => a.group)?.map((a: any) => ({
+          id: a.id,
+          roleName: a.roleName,
+          groupId: a.group?.id,
+          groupName: a.group?.name,
+          userId: a.user?.id
+        })) || []
       })
       
       // Preserve assignment order by mapping based on original order
@@ -766,11 +790,18 @@ export function EventDetailsModal({
         updatedEvent.assignments = updatedAssignments
       }
       
+      console.log('🔄 About to update currentEvent state...')
       setCurrentEvent(updatedEvent)
+      setRenderKey(prev => prev + 1) // Force re-render
       console.log('✅ Event state updated successfully')
-      
-      onEventUpdated?.()
-      console.log('✅ Parent calendar notified of update')
+      console.log('🔍 Updated event assignments:', updatedEvent.assignments?.map((a: any) => ({
+        id: a.id,
+        roleName: a.roleName,
+        hasGroup: !!a.group,
+        groupName: a.group?.name,
+        hasUser: !!a.user,
+        userName: a.user ? `${a.user.firstName} ${a.user.lastName}` : null
+      })))
     } catch (err) {
       console.error('❌ Error fetching event data:', err)
       showToast('error', 'Failed to refresh event data')
@@ -1425,26 +1456,9 @@ export function EventDetailsModal({
   const getExistingGroupMemberIds = (): string[] => {
     const memberIds: string[] = []
     if (currentEvent?.assignments) {
-      // First, find all group assignments (assignments that have a group but no user)
-      const groupAssignments = currentEvent.assignments.filter(assignment => 
-        assignment.group && !assignment.user
-      )
-      
-      // For each group assignment, get all members of that group
-      groupAssignments.forEach(groupAssignment => {
-        const group = groups.find(g => g.id === groupAssignment.group?.id)
-        if (group) {
-          group.members.forEach(member => {
-            if (!memberIds.includes(member.id)) {
-              memberIds.push(member.id)
-            }
-          })
-        }
-      })
-      
-      // Also check for assignments where the roleName indicates group membership
+      // Find all assignments that have a group (group members)
       currentEvent.assignments.forEach(assignment => {
-        if (assignment.user && assignment.roleName.includes(' Member')) {
+        if (assignment.group && assignment.user) {
           if (!memberIds.includes(assignment.user.id)) {
             memberIds.push(assignment.user.id)
           }
@@ -1549,7 +1563,7 @@ export function EventDetailsModal({
   })
 
   return (
-    <div className="fixed inset-0 bg-gray-500 bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-gray-500 bg-opacity-50 z-50 flex items-center justify-center p-4" key={renderKey}>
       <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b">
@@ -2216,6 +2230,43 @@ export function EventDetailsModal({
               </div>
             )}
           </div>
+
+          {/* Assigned Groups - View Mode Only */}
+          {!isEditing && currentEvent.assignments && (() => {
+            // Get unique groups assigned to this event
+            const assignedGroups = currentEvent.assignments
+              .filter(assignment => assignment.group)
+              .reduce((acc, assignment) => {
+                if (assignment.group && !acc.find(g => g.id === assignment.group?.id)) {
+                  acc.push(assignment.group)
+                }
+                return acc
+              }, [] as Array<{ id: string; name: string }>)
+            
+            return assignedGroups.length > 0 ? (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                  <Users className="h-5 w-5 mr-2 text-success-600" />
+                  Assigned Groups ({assignedGroups.length})
+                </h3>
+                <div className="space-y-2">
+                  {assignedGroups.map((group) => (
+                    <div key={group.id} className="flex items-center p-3 bg-success-50 rounded-lg border border-success-200">
+                      <div className="w-8 h-8 bg-success-100 rounded-full flex items-center justify-center mr-3">
+                        <Users className="h-4 w-4 text-success-600" />
+                      </div>
+                      <div>
+                        <div className="font-medium text-success-900">{group.name}</div>
+                        <div className="text-sm text-success-700">
+                          All group members automatically assigned
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null
+          })()}
 
           {/* Assigned Musicians */}
           <div className="space-y-4">
