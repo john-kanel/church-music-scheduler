@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react'
 import { 
   ArrowLeft, Calendar, Plus, Search, Filter, Users, Clock, MapPin, 
   ChevronLeft, ChevronRight, Settings, Trash2, Edit, Eye, EyeOff,
-  Palette, Save, X, FileText
+  Palette, Save, X, FileText, ExternalLink
 } from 'lucide-react'
 import Link from 'next/link'
 import jsPDF from 'jspdf'
@@ -15,6 +15,7 @@ import { CreateEventModal } from '@/components/events/create-event-modal'
 import { EditScopeModal } from '@/components/events/edit-scope-modal'
 import { OpenEventsCard } from '@/components/events/open-events-card'
 import { ViewAllOpenEventsModal } from '@/components/events/view-all-open-events-modal'
+import { GeneratePublicLinkModal } from '@/components/events/generate-public-link-modal'
 import { fetchWithCache, invalidateCache } from '@/lib/performance-cache'
 
 interface RootRecurringEvent {
@@ -150,6 +151,9 @@ export default function CalendarPage() {
 
   // Calendar subscription
   const [isCreatingSubscription, setIsCreatingSubscription] = useState(false)
+  
+  // Public link modal
+  const [showPublicLinkModal, setShowPublicLinkModal] = useState(false)
 
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -845,9 +849,18 @@ export default function CalendarPage() {
               </div>
             </div>
             <div className="flex items-center space-x-3">
+              {session?.user?.role !== 'MUSICIAN' && (
+                <button
+                  onClick={() => setShowPublicLinkModal(true)}
+                  className="flex items-center px-4 py-2 bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors"
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Public Link
+                </button>
+              )}
               <button
                 onClick={handleCalendarSubscription}
-                className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                className="flex items-center px-4 py-2 bg-success-600 text-white rounded-lg hover:bg-success-700 transition-colors"
                 disabled={isCreatingSubscription}
               >
                 {isCreatingSubscription ? (
@@ -855,7 +868,7 @@ export default function CalendarPage() {
                 ) : (
                   <Calendar className="h-4 w-4 mr-2" />
                 )}
-                {isCreatingSubscription ? 'Subscribing...' : 'Subscribe to Calendar'}
+                {isCreatingSubscription ? 'Subscribing...' : 'Subscribe'}
               </button>
               <button
                 onClick={() => generatePDF()}
@@ -1535,6 +1548,12 @@ export default function CalendarPage() {
         }}
         events={openEventsData}
         onEventClick={handleEventClick}
+      />
+
+      {/* Generate Public Link Modal */}
+      <GeneratePublicLinkModal
+        isOpen={showPublicLinkModal}
+        onClose={() => setShowPublicLinkModal(false)}
       />
     </div>
   )

@@ -26,9 +26,9 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid or expired link' }, { status: 404 })
     }
 
-    // Check if the link is still valid (within date range)
+    // Check if the link is still valid (not expired)
     const now = new Date()
-    if (now < publicLink.startDate || now > publicLink.endDate) {
+    if (now > publicLink.endDate) {
       return NextResponse.json({ error: 'Link has expired' }, { status: 410 })
     }
 
