@@ -20,8 +20,29 @@ export async function uploadFileToS3(
   folder: string = 'uploads'
 ): Promise<{ success: boolean; key: string; url?: string; error?: string }> {
   try {
-    const key = `${folder}/${Date.now()}-${fileName}`
+    // Sanitize filename for S3 key (more permissive than headers)
+    const sanitizedKeyName = fileName.replace(/[<>:"/\\|?*]/g, '_')
+    const key = `${folder}/${Date.now()}-${sanitizedKeyName}`
     
+    console.log('🔧 S3 Upload: Key generation:', {
+      folder,
+      originalFileName: fileName,
+      sanitizedFileName: sanitizedKeyName,
+      finalKey: key
+    })
+    
+    // Sanitize filename for S3 metadata (HTTP headers only support ASCII)
+    const sanitizedFileName = fileName
+      .replace(/[^\x00-\x7F]/g, '') // Remove non-ASCII characters
+      .replace(/\s+/g, '_') // Replace spaces with underscores
+      .trim()
+    
+    console.log('🔧 S3 Upload: Filename sanitization:', {
+      original: fileName,
+      sanitized: sanitizedFileName,
+      hadSpecialChars: fileName !== sanitizedFileName
+    })
+
     const command = new PutObjectCommand({
       Bucket: BUCKET_NAME,
       Key: key,
@@ -30,7 +51,7 @@ export async function uploadFileToS3(
       // Add metadata for better organization
       Metadata: {
         uploadedAt: new Date().toISOString(),
-        originalName: fileName,
+        originalName: sanitizedFileName,
       },
     })
 
