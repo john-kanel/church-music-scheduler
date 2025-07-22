@@ -268,7 +268,7 @@ export function EventDetailsModal({
                    String(startDate.getMinutes()).padStart(2, '0'),
         endTime: endDate ? String(endDate.getHours()).padStart(2, '0') + ':' + 
                           String(endDate.getMinutes()).padStart(2, '0') : '',
-        status: (currentEvent.status && ['confirmed', 'tentative', 'cancelled', 'pending', 'error'].includes(currentEvent.status)) ? currentEvent.status : 'confirmed',
+        status: (currentEvent.status && ['confirmed', 'tentative', 'cancelled', 'pending', 'error'].includes(currentEvent.status.toLowerCase())) ? currentEvent.status.toLowerCase() as 'confirmed' | 'tentative' | 'cancelled' | 'pending' | 'error' : 'confirmed',
         signupType: 'open' as 'open' | 'assigned', // Default to open for existing events
         eventTypeId: currentEvent.eventType?.id || '',
         eventTypeName: currentEvent.eventType?.name || '',
@@ -572,9 +572,11 @@ export function EventDetailsModal({
           startTime: editData.startTime,
           endTime: editData.endTime,
           description: requestData.description,
+          status: requestData.status, // Added this
           eventTypeId: requestData.eventTypeId,
           isRecurring: requestData.isRecurring
         },
+        fullRequestData: requestData, // Added this to see everything
         url: `/api/events/${currentEvent.id}`,
         editDataDetails: {
           name: editData.name,
@@ -582,7 +584,8 @@ export function EventDetailsModal({
           startDate: editData.startDate,
           startTime: editData.startTime,
           endTime: editData.endTime,
-          description: editData.description
+          description: editData.description,
+          status: editData.status // Added this
         }
       })
 
@@ -607,9 +610,34 @@ export function EventDetailsModal({
       const responseData = await response.json()
       console.log('✅ Update successful:', responseData)
 
-      // Note: Group assignments are handled separately and don't need to be updated here
-      // The selectedGroups state is just for UI purposes in the edit modal
-      // Actual group assignment changes would need to be handled through individual assignment management
+      // Save group assignments if any changes were made
+      const existingGroupIds = currentEvent.assignments
+        ?.filter(assignment => assignment.group && !assignment.user)
+        .map(assignment => assignment.group!.id) || []
+      
+      const groupsChanged = JSON.stringify(selectedGroups.sort()) !== JSON.stringify(existingGroupIds.sort())
+      
+      if (groupsChanged) {
+        console.log('🎯 Saving group assignments...')
+        try {
+          const groupResponse = await fetch(`/api/events/${currentEvent.id}/groups`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ selectedGroups })
+          })
+          
+          if (!groupResponse.ok) {
+            const errorData = await groupResponse.json()
+            console.error('❌ Failed to save group assignments:', errorData)
+            throw new Error(errorData.error || 'Failed to save group assignments')
+          }
+          
+          console.log('✅ Group assignments saved successfully')
+        } catch (groupError) {
+          console.error('❌ Error saving group assignments:', groupError)
+          showToast('error', 'Event saved but failed to update group assignments')
+        }
+      }
 
       showToast('success', `Event updated successfully!${isPastEvent ? ' (No notifications sent for past event)' : ''}`)
       
@@ -1469,7 +1497,7 @@ export function EventDetailsModal({
   }
 
   const getStatusIcon = (status?: string) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case 'confirmed':
         return <Check className="h-4 w-4 text-success-600" />
       case 'tentative':
@@ -1482,7 +1510,8 @@ export function EventDetailsModal({
   }
 
   const getStatusColor = (status?: string) => {
-    switch (status) {
+    console.log('🎨 getStatusColor called with status:', status, 'type:', typeof status)
+    switch (status?.toLowerCase()) {
       case 'confirmed':
         return 'text-success-600 bg-success-50 border-success-200'
       case 'tentative':
@@ -1490,6 +1519,7 @@ export function EventDetailsModal({
       case 'cancelled':
         return 'text-red-600 bg-red-50 border-red-200'
       default:
+        console.log('🎨 Using default green color for status:', status)
         return 'text-success-600 bg-success-50 border-success-200'
     }
   }

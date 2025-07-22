@@ -210,7 +210,9 @@ export async function PUT(
       startTime,
       endTime,
       eventTypeId,
+      status, // Added this
       isPastEvent,
+      fullBody: body, // Added this to see everything
       originalEvent: {
         name: existingEvent.name,
         location: existingEvent.location,
@@ -278,8 +280,10 @@ export async function PUT(
         location: updateData.location,
         startTime: updateData.startTime.toISOString(),
         endTime: updateData.endTime?.toISOString(),
-        description: updateData.description
-      }
+        description: updateData.description,
+        status: updateData.status // Added this
+      },
+      fullUpdateData: updateData // Added this to see everything
     })
 
     const updatedEvent = await prisma.event.update({
