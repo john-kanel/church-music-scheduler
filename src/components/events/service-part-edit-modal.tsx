@@ -11,8 +11,10 @@ interface ServicePartEditPopupProps {
     name: string
     notes?: string
     order: number
+    isIndividualSong?: boolean  // New prop to identify individual songs
+    songTitle?: string          // For individual songs, separate the song title from section title
   } | null
-  onSave: (servicePartId: string, name: string, notes: string) => void
+  onSave: (servicePartId: string, name: string, notes: string, songTitle?: string) => void
   clickPosition?: { x: number, y: number }
 }
 
@@ -24,6 +26,7 @@ export function ServicePartEditPopup({
   clickPosition
 }: ServicePartEditPopupProps) {
   const [name, setName] = useState('')
+  const [songTitle, setSongTitle] = useState('')
   const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(false)
   const [position, setPosition] = useState({ top: 0, left: 0 })
@@ -31,7 +34,15 @@ export function ServicePartEditPopup({
 
   useEffect(() => {
     if (servicePart) {
-      setName(servicePart.name)
+      if (servicePart.isIndividualSong) {
+        // For individual songs, name is the section title, songTitle is the actual song
+        setName(servicePart.name === servicePart.songTitle ? 'Individual Song' : servicePart.name)
+        setSongTitle(servicePart.songTitle || servicePart.name)
+      } else {
+        // For service parts, name is the service part name
+        setName(servicePart.name)
+        setSongTitle('')
+      }
       setNotes(servicePart.notes || '')
     }
   }, [servicePart])
@@ -63,11 +74,19 @@ export function ServicePartEditPopup({
   }, [isOpen, onClose])
 
   const handleSave = async () => {
-    if (!servicePart || !name.trim()) return
+    if (!servicePart) return
+    
+    // For individual songs, require songTitle; for service parts, require name
+    if (servicePart.isIndividualSong && !songTitle.trim()) return
+    if (!servicePart.isIndividualSong && !name.trim()) return
     
     setLoading(true)
     try {
-      await onSave(servicePart.id, name.trim(), notes.trim())
+      if (servicePart.isIndividualSong) {
+        await onSave(servicePart.id, name.trim(), notes.trim(), songTitle.trim())
+      } else {
+        await onSave(servicePart.id, name.trim(), notes.trim())
+      }
       onClose()
     } catch (error) {
       console.error('Error saving service part:', error)
@@ -89,7 +108,9 @@ export function ServicePartEditPopup({
     >
       {/* Header */}
       <div className="flex items-center justify-between p-3 border-b border-gray-100">
-        <h3 className="text-sm font-medium text-gray-900">Edit Service Part</h3>
+        <h3 className="text-sm font-medium text-gray-900">
+          {servicePart?.isIndividualSong ? 'Edit Individual Song' : 'Edit Service Part'}
+        </h3>
         <button
           onClick={onClose}
           className="p-1 hover:bg-gray-100 rounded transition-colors text-gray-400 hover:text-gray-600"
@@ -99,19 +120,56 @@ export function ServicePartEditPopup({
       </div>
 
       <div className="p-3 space-y-3">
-        {/* Service Part Name */}
-        <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">
-            Name
-          </label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent text-gray-900"
-            placeholder="Service part name..."
-          />
-        </div>
+        {servicePart?.isIndividualSong ? (
+          <>
+            {/* Section Title for Individual Songs */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Section Title
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                placeholder="e.g., 'Communion Songs', 'Special Music'..."
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                This appears as the section header (instead of "Individual Song")
+              </p>
+            </div>
+
+            {/* Song Title for Individual Songs */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Song Title
+              </label>
+              <input
+                type="text"
+                value={songTitle}
+                onChange={(e) => setSongTitle(e.target.value)}
+                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                placeholder="Enter song title..."
+              />
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Service Part Name */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Name
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                placeholder="Service part name..."
+              />
+            </div>
+          </>
+        )}
 
         {/* Notes */}
         <div>
@@ -139,7 +197,7 @@ export function ServicePartEditPopup({
         </button>
         <button
           onClick={handleSave}
-          disabled={loading || !name.trim()}
+          disabled={loading || (servicePart?.isIndividualSong ? !songTitle.trim() : !name.trim())}
           className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center"
         >
           {loading ? (

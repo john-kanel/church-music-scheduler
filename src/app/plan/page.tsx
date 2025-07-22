@@ -829,8 +829,24 @@ export default function EventPlannerPage() {
       const currentEvent = data?.events.find(e => e.id === currentEventIdForUpload)
       const existingHymns = currentEvent?.hymns || []
 
-      // Convert suggestions to hymns format, creating service parts as needed
-      const newHymns = await Promise.all(suggestions.map(async (suggestion) => {
+      console.log('🎵 AUTO-POPULATE: Processing suggestions:', suggestions.length)
+      console.log('🎵 AUTO-POPULATE: Existing hymns:', existingHymns.length)
+
+      // Process suggestions and intelligently merge with existing hymns
+      const processedHymns = [...existingHymns.map(hymn => ({
+        title: hymn.title,
+        notes: hymn.notes || '',
+        servicePartId: hymn.servicePartId || null
+      }))]
+
+      // Track which service parts already have content
+      const servicePartsWithContent = new Set(
+        existingHymns
+          .filter(h => h.servicePartId && h.title?.trim())
+          .map(h => h.servicePartId)
+      )
+
+      for (const suggestion of suggestions) {
         // Find matching service part
         let matchingPart = data?.serviceParts.find(part => 
           part.name.toLowerCase().includes(suggestion.servicePartName.toLowerCase()) ||
@@ -857,44 +873,72 @@ export default function EventPlannerPage() {
               const result = await response.json()
               if (result.serviceParts && result.serviceParts.length > 0) {
                 matchingPart = result.serviceParts[0]
-                                 // Update local data to include the new service part
-                 setData(prev => {
-                   if (!prev || !matchingPart) return prev
-                   return {
-                     ...prev,
-                     serviceParts: [...prev.serviceParts, matchingPart].sort((a, b) => (a?.order || 0) - (b?.order || 0))
-                   }
-                 })
+                // Update local data to include the new service part
+                setData(prev => {
+                  if (!prev || !matchingPart) return prev
+                  return {
+                    ...prev,
+                    serviceParts: [...prev.serviceParts, matchingPart].sort((a, b) => (a?.order || 0) - (b?.order || 0))
+                  }
+                })
               }
             }
           } catch (error) {
             console.error('Error creating service part:', error)
           }
         }
-        
-        return {
-          title: suggestion.songTitle,
-          notes: suggestion.notes || '',
-          servicePartId: matchingPart?.id || null
-        }
-      }))
 
-      // Combine existing hymns with new ones (keeping existing hymns)
-      const allHymns = [
-        ...existingHymns.map(hymn => ({
-          title: hymn.title,
-          notes: hymn.notes || '',
-          servicePartId: hymn.servicePartId || null
-        })),
-        ...newHymns
-      ]
+        const servicePartId = matchingPart?.id || null
+
+        // Check if this service part already has content
+        if (servicePartId && servicePartsWithContent.has(servicePartId)) {
+          // Find existing hymn with this service part and update it
+          const existingIndex = processedHymns.findIndex(h => 
+            h.servicePartId === servicePartId && !h.title?.trim()
+          )
+          
+          if (existingIndex !== -1) {
+            // Update empty existing service part
+            processedHymns[existingIndex] = {
+              title: suggestion.songTitle,
+              notes: suggestion.notes || '',
+              servicePartId: servicePartId
+            }
+            console.log(`🎵 AUTO-POPULATE: Updated existing empty service part: ${suggestion.servicePartName}`)
+          } else {
+            // Add as additional song for this service part
+            processedHymns.push({
+              title: suggestion.songTitle,
+              notes: suggestion.notes || '',
+              servicePartId: servicePartId
+            })
+            console.log(`🎵 AUTO-POPULATE: Added additional song to existing service part: ${suggestion.servicePartName}`)
+          }
+        } else {
+          // Service part doesn't have content yet, or it's a new/individual song
+          processedHymns.push({
+            title: suggestion.songTitle,
+            notes: suggestion.notes || '',
+            servicePartId: servicePartId
+          })
+          
+          if (servicePartId) {
+            servicePartsWithContent.add(servicePartId)
+            console.log(`🎵 AUTO-POPULATE: Added song to service part: ${suggestion.servicePartName}`)
+          } else {
+            console.log(`🎵 AUTO-POPULATE: Added individual song: ${suggestion.songTitle}`)
+          }
+        }
+      }
+
+      console.log('🎵 AUTO-POPULATE: Final hymns count:', processedHymns.length)
 
       // Save all hymns to the event using the correct API format
       const response = await fetch(`/api/events/${currentEventIdForUpload}/hymns`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          hymns: allHymns,
+          hymns: processedHymns,
           isAutoPopulate: true  // Skip email notifications for auto-populate
         })
       })
@@ -904,7 +948,7 @@ export default function EventPlannerPage() {
         throw new Error(errorData.error || 'Failed to save hymns')
       }
 
-      showToast('success', `Added ${suggestions.length} songs from document`)
+      showToast('success', `Added ${suggestions.length} songs from document (merged with existing content)`)
       
       // Refresh the data to show updated hymns
       await fetchPlannerData()
@@ -955,10 +999,18 @@ export default function EventPlannerPage() {
     }
   }
 
-  const handleSaveIndividualHymn = async (songId: string, title: string, notes: string) => {
+  const handleSaveIndividualHymn = async (songId: string, title: string, notes: string, sectionTitle?: string) => {
     if (!editingEventId || !editingIndividualHymn) return
     
     try {
+      console.log('🎵 INDIVIDUAL SONG: Saving with custom section title:', { songId, title, notes, sectionTitle })
+      
+      // For now, we'll store the custom section title in the notes with a special prefix
+      // This allows us to maintain backward compatibility while adding the feature
+      const notesWithSectionTitle = sectionTitle && sectionTitle !== 'Individual Song' 
+        ? `[SECTION:${sectionTitle}]${notes ? '\n' + notes : ''}`
+        : notes
+
       // Optimistic update first
       setData(prev => {
         if (!prev) return prev
@@ -969,7 +1021,7 @@ export default function EventPlannerPage() {
               ? {
                   ...ev,
                   hymns: ev.hymns.map(h => 
-                    h.id === editingIndividualHymn.id ? { ...h, title, notes } : h
+                    h.id === editingIndividualHymn.id ? { ...h, title, notes: notesWithSectionTitle } : h
                   )
                 }
               : ev
@@ -981,7 +1033,7 @@ export default function EventPlannerPage() {
       const currentEvent = data?.events.find(e => e.id === editingEventId)
       const updatedHymns = currentEvent?.hymns.map(h => 
         h.id === editingIndividualHymn.id 
-          ? { title, notes, servicePartId: h.servicePartId }
+          ? { title, notes: notesWithSectionTitle, servicePartId: h.servicePartId }
           : { title: h.title, notes: h.notes || '', servicePartId: h.servicePartId }
       ) || []
 
@@ -1064,6 +1116,25 @@ export default function EventPlannerPage() {
     return event.hymns.filter(h => !h.servicePartId)
   }
 
+  // Helper function to extract custom section title from individual song notes
+  const extractSectionTitle = (notes: string | undefined): { sectionTitle: string; cleanNotes: string } => {
+    if (!notes) return { sectionTitle: 'Individual Song', cleanNotes: '' }
+    
+    if (notes.startsWith('[SECTION:')) {
+      const endIndex = notes.indexOf(']')
+      if (endIndex !== -1) {
+        const sectionTitle = notes.substring(9, endIndex) // Extract between '[SECTION:' and ']'
+        const cleanNotes = notes.substring(endIndex + 1).replace(/^\n/, '') // Remove leading newline if present
+        return {
+          sectionTitle,
+          cleanNotes
+        }
+      }
+    }
+    
+    return { sectionTitle: 'Individual Song', cleanNotes: notes }
+  }
+
   // Get all hymns (service parts + individual) in unified database order
   const getAllHymnsInOrder = (eventId: string) => {
     const event = data?.events.find(e => e.id === eventId)
@@ -1073,9 +1144,21 @@ export default function EventPlannerPage() {
     // This preserves the unified order that we set during reordering
     return event.hymns.map(hymn => {
       const servicePart = data?.serviceParts.find(sp => sp.id === hymn.servicePartId)
+      const isIndividual = !hymn.servicePartId
+      
+      if (isIndividual) {
+        const { sectionTitle, cleanNotes } = extractSectionTitle(hymn.notes)
+        return {
+          ...hymn,
+          type: 'individual' as const,
+          servicePartName: sectionTitle,
+          notes: cleanNotes // Use clean notes without the section title prefix
+        }
+      }
+      
       return {
         ...hymn,
-        type: hymn.servicePartId ? 'service-part' : 'individual',
+        type: 'service-part' as const,
         servicePartName: servicePart?.name
       }
     })
@@ -3084,14 +3167,19 @@ export default function EventPlannerPage() {
           setEditingEventId('')
           setClickPosition(undefined)
         }}
-        servicePart={editingIndividualHymn ? {
-          id: editingIndividualHymn.id,
-          name: editingIndividualHymn.title,
-          notes: editingIndividualHymn.notes || '',
-          order: 0
-        } : null}
-        onSave={(hymnId: string, title: string, notes: string) => {
-          handleSaveIndividualHymn(hymnId, title, notes)
+        servicePart={editingIndividualHymn ? (() => {
+          const { sectionTitle, cleanNotes } = extractSectionTitle(editingIndividualHymn.notes)
+          return {
+            id: editingIndividualHymn.id,
+            name: sectionTitle,
+            songTitle: editingIndividualHymn.title,
+            notes: cleanNotes,
+            order: 0,
+            isIndividualSong: true // Mark as individual song
+          }
+        })() : null}
+        onSave={(hymnId: string, sectionTitle: string, notes: string, songTitle?: string) => {
+          handleSaveIndividualHymn(hymnId, songTitle || '', notes, sectionTitle)
         }}
         clickPosition={clickPosition}
       />
