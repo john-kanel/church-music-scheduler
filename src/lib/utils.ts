@@ -73,3 +73,10 @@ export function getMonthlyPrice(subscriptionStatus: string): number {
       return getPricingMonthlyPrice()
   }
 } 
+
+/**
+ * Generate a random 4-digit PIN for musicians
+ */
+export function generateMusicianPin(): string {
+  return Math.floor(1000 + Math.random() * 9000).toString()
+} 

@@ -76,7 +76,8 @@ export async function sendInvitationEmail(
   churchName: string,
   inviteLink: string,
   inviterName: string,
-  temporaryPassword?: string
+  temporaryPassword?: string,
+  pin?: string
 ) {
   try {
     const tempPassword = temporaryPassword || generateTemporaryPassword()
@@ -110,10 +111,11 @@ export async function sendInvitationEmail(
               <div style="background: white; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
                 <p style="margin: 5px 0; color: #374151;"><strong>Username/Email:</strong> ${to}</p>
                 <p style="margin: 5px 0; color: #374151;"><strong>Temporary Password:</strong> <code style="background: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-family: monospace; font-size: 16px;">${tempPassword}</code></p>
+                ${pin ? `<p style="margin: 5px 0; color: #374151;"><strong>Your PIN:</strong> <code style="background: #ddd6fe; padding: 2px 6px; border-radius: 3px; font-family: monospace; font-size: 16px; color: #5b21b6;">${pin}</code></p>` : ''}
               </div>
               <div style="background: #fef3c7; padding: 12px; border-radius: 6px; border-left: 3px solid #f59e0b;">
                 <p style="margin: 0; color: #92400e; font-size: 14px;">
-                  ⚠️ <strong>Important:</strong> Please change your password after your first login for security.
+                  ⚠️ <strong>Important:</strong> Please change your password after your first login for security.${pin ? ' Your PIN can be used for quick event signups.' : ''}
                 </p>
               </div>
             </div>
@@ -169,9 +171,9 @@ ${inviterName} has invited you to join ${churchName}'s Music Ministry.
 
 LOGIN CREDENTIALS:
 Username: ${to}
-Temporary Password: ${tempPassword}
+Temporary Password: ${tempPassword}${pin ? `\nYour PIN: ${pin}` : ''}
 
-IMPORTANT: Please change your password after your first login for security.
+IMPORTANT: Please change your password after your first login for security.${pin ? ' Your PIN can be used for quick event signups.' : ''}
 
 What you'll get access to:
 • Event scheduling and calendar

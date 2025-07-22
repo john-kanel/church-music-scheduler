@@ -44,6 +44,7 @@ model Church {
   musicianInviteLink    MusicianInviteLink?
   churchDocuments       ChurchDocument[]
   churchLinks           ChurchLink[]
+  publicScheduleLinks   PublicScheduleLink[]
 
   @@map("parishes")
 }
@@ -66,6 +67,7 @@ model User {
   skillLevel         SkillLevel        @default(INTERMEDIATE)
   yearsExperience    Int?
   invitedVia         String?           // Tracks how user joined: 'invitation_link', 'email_invite', 'direct_signup'
+  pin                String?           // 4-digit PIN for public signup verification
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
   churchId           String
@@ -611,6 +613,22 @@ model CalendarSubscription {
   @@index([needsUpdate])
   @@index([subscriptionToken])
   @@map("calendar_subscriptions")
+}
+
+model PublicScheduleLink {
+  id        String   @id @default(cuid())
+  churchId  String
+  token     String   @unique @default(cuid())
+  startDate DateTime
+  endDate   DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  church    Church   @relation(fields: [churchId], references: [id], onDelete: Cascade)
+  
+  @@index([token])
+  @@index([churchId])
+  @@map("public_schedule_links")
 }
 
 enum UserRole {

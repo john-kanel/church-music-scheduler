@@ -3,6 +3,7 @@ import { hash } from 'bcrypt'
 import { prisma } from '@/lib/db'
 import { Resend } from 'resend'
 import { getEmailLogoHtml } from '@/components/emails/email-logo'
+import { generateMusicianPin } from '@/lib/utils'
 import crypto from 'crypto'
 
 // Conditionally initialize Resend for local development
@@ -154,6 +155,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     // Hash password
     const hashedPassword = await hash(password, 12)
+    const musicianPin = generateMusicianPin()
 
     // Create user
     const user = await prisma.user.create({
@@ -169,7 +171,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         skillLevel,
         yearsExperience,
         invitedVia: 'invitation_link',
-        isVerified: true // Auto-verify users who sign up via invitation link
+        isVerified: true, // Auto-verify users who sign up via invitation link
+        pin: musicianPin
       }
     })
 

@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { sendInvitationEmail } from '@/lib/resend'
 import { logActivity } from '@/lib/activity'
+import { generateMusicianPin } from '@/lib/utils'
 import bcrypt from 'bcryptjs'
 
 // GET /api/invitations - List invitations for the church
@@ -74,6 +75,9 @@ export async function POST(request: NextRequest) {
         )
       }
 
+      // Generate PIN for the musician
+      const musicianPin = generateMusicianPin()
+
       // Check if user already exists
       const existingUser = await prisma.user.findUnique({
         where: { email }
@@ -136,7 +140,9 @@ export async function POST(request: NextRequest) {
           `${firstName} ${lastName}`,
           church.name,
           inviteLink,
-          `${inviter.firstName} ${inviter.lastName}`
+          `${inviter.firstName} ${inviter.lastName}`,
+          undefined,
+          musicianPin
         )
       } catch (emailError: any) {
         console.error('Failed to send invitation email:', emailError)
@@ -178,7 +184,8 @@ export async function POST(request: NextRequest) {
           churchId: session.user.churchId,
           isVerified: false, // User needs to change password on first login
           emailNotifications: true,
-          smsNotifications: phone ? true : false
+          smsNotifications: phone ? true : false,
+          pin: musicianPin
         }
       })
 
@@ -327,6 +334,7 @@ export async function POST(request: NextRequest) {
 
           // Send email invitation
           let emailResult: any = null
+          const bulkMusicianPin = generateMusicianPin()
           try {
             const inviteLink = `${process.env.NEXTAUTH_URL}/auth/signin?email=${encodeURIComponent(email)}`
             emailResult = await sendInvitationEmail(
@@ -334,7 +342,9 @@ export async function POST(request: NextRequest) {
               `${firstName} ${lastName}`,
               church.name,
               inviteLink,
-              `${inviter.firstName} ${inviter.lastName}`
+              `${inviter.firstName} ${inviter.lastName}`,
+              undefined,
+              bulkMusicianPin
             )
           } catch (emailError: any) {
             console.error('Failed to send invitation email:', emailError)
@@ -359,7 +369,8 @@ export async function POST(request: NextRequest) {
               churchId: session.user.churchId,
               isVerified: false,
               emailNotifications: true,
-              smsNotifications: phone ? true : false
+              smsNotifications: phone ? true : false,
+              pin: bulkMusicianPin
             }
           })
 
