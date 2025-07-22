@@ -40,6 +40,7 @@ interface Event {
   startTime: string
   endTime: string
   location: string
+  status?: 'error' | 'confirmed' | 'tentative' | 'cancelled' | 'pending'
   eventType: {
     id: string
     name: string
@@ -1755,6 +1756,44 @@ export default function EventPlannerPage() {
     }
   }
 
+  // Helper function to get status tag styling
+  const getStatusTagStyles = (status?: string) => {
+    const normalizedStatus = status?.toUpperCase() || 'CONFIRMED'
+    
+    switch (normalizedStatus) {
+      case 'CONFIRMED':
+        return {
+          bg: 'bg-green-100',
+          text: 'text-green-800',
+          label: 'Confirmed'
+        }
+      case 'TENTATIVE':
+        return {
+          bg: 'bg-yellow-100',
+          text: 'text-yellow-800',
+          label: 'Tentative'
+        }
+      case 'CANCELLED':
+        return {
+          bg: 'bg-red-100',
+          text: 'text-red-800',
+          label: 'Cancelled'
+        }
+      case 'PENDING':
+        return {
+          bg: 'bg-gray-100',
+          text: 'text-gray-800',
+          label: 'Pending'
+        }
+      default:
+        return {
+          bg: 'bg-green-100',
+          text: 'text-green-800',
+          label: 'Confirmed'
+        }
+    }
+  }
+
   const handleEditEvent = (event: Event) => {
     console.log('🚀 handleEditEvent called with:', {
       eventId: event?.id,
@@ -1991,6 +2030,18 @@ export default function EventPlannerPage() {
                               <Trash2 className="w-3 h-3" />
                             </button>
                           </div>
+                        </div>
+                        
+                        {/* Status Tag */}
+                        <div className="mt-2 flex justify-end">
+                          {(() => {
+                            const statusStyles = getStatusTagStyles(event.status)
+                            return (
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${statusStyles.bg} ${statusStyles.text}`}>
+                                {statusStyles.label}
+                              </span>
+                            )
+                          })()}
                         </div>
                         <p className="text-xs text-gray-500 mb-1">
                           {new Date(event.startTime).toLocaleDateString()} at{' '}
@@ -2570,6 +2621,18 @@ export default function EventPlannerPage() {
                                    <Trash2 className="w-3 h-3" />
                                 </button>
                               </div>
+                            </div>
+                            
+                            {/* Status Tag - Mobile */}
+                            <div className="mt-2 flex justify-end">
+                              {(() => {
+                                const statusStyles = getStatusTagStyles(event.status)
+                                return (
+                                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${statusStyles.bg} ${statusStyles.text}`}>
+                                    {statusStyles.label}
+                                  </span>
+                                )
+                              })()}
                             </div>
                             <p className="text-xs text-gray-500 mb-1">
                               {new Date(event.startTime).toLocaleDateString()} at{' '}
