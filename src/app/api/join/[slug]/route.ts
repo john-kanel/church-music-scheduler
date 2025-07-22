@@ -5,7 +5,8 @@ import { Resend } from 'resend'
 import { getEmailLogoHtml } from '@/components/emails/email-logo'
 import crypto from 'crypto'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+// Conditionally initialize Resend for local development
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
 // Create unique visitor ID from IP and User Agent
 function createVisitorId(ip: string, userAgent: string): string {
@@ -199,10 +200,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     // Send welcome email to the new musician
     try {
-      await resend.emails.send({
-        from: 'Church Music Pro <no-reply@churchmusicpro.com>',
-        to: [email],
-        subject: `Welcome to ${inviteLink.church.name}!`,
+      if (resend) {
+        await resend.emails.send({
+          from: 'Church Music Pro <no-reply@churchmusicpro.com>',
+          to: [email],
+          subject: `Welcome to ${inviteLink.church.name}!`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
             ${getEmailLogoHtml()}
@@ -228,7 +230,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             <p>Blessings,<br>The Church Music Pro Team</p>
           </div>
         `
-      })
+        })
+      } else {
+        console.log('Email simulation (no RESEND_API_KEY):', { 
+          to: [email], 
+          subject: `Welcome to ${inviteLink.church.name}!` 
+        })
+      }
     } catch (emailError) {
       console.error('Error sending welcome email:', emailError)
     }
@@ -236,7 +244,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // Send notification email to directors/pastors
     try {
       const directors = inviteLink.church.users
-      if (directors.length > 0) {
+      if (directors.length > 0 && resend) {
         await resend.emails.send({
           from: 'Church Music Pro <no-reply@churchmusicpro.com>',
           to: directors.map((d: any) => d.email),
@@ -271,6 +279,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
               <p>Blessings,<br>The Church Music Pro Team</p>
             </div>
           `
+        })
+      } else if (directors.length > 0 && !resend) {
+        console.log('Email simulation (no RESEND_API_KEY):', { 
+          to: directors.map((d: any) => d.email), 
+          subject: `New Musician Joined: ${firstName} ${lastName}` 
         })
       }
     } catch (emailError) {

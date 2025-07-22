@@ -5,7 +5,8 @@ import { PrismaClient } from '@prisma/client'
 import { Resend } from 'resend'
 
 const prisma = new PrismaClient()
-const resend = new Resend(process.env.RESEND_API_KEY)
+// Conditionally initialize Resend for local development
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
 export async function GET(request: NextRequest) {
   try {
@@ -131,11 +132,13 @@ export async function POST(request: NextRequest) {
     const inviterName = `${user.firstName} ${user.lastName}`
 
     try {
-      await resend.emails.send({
-        from: 'Church Music Pro <noreply@churchmusicpro.com>',
-        to: email,
-        subject: `Invitation to join ${churchName} as ${role.toLowerCase().replace('_', ' ')}`,
-        html: `
+      // Send email (if Resend is configured)
+      if (resend) {
+        await resend.emails.send({
+          from: 'Church Music Pro <noreply@churchmusicpro.com>',
+          to: email,
+          subject: `Invitation to join ${churchName} as ${role.toLowerCase().replace('_', ' ')}`,
+          html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #660033;">You've been invited to join ${churchName}</h2>
             
@@ -176,7 +179,13 @@ export async function POST(request: NextRequest) {
             </p>
           </div>
         `
-      })
+        })
+      } else {
+        console.log('Email simulation (no RESEND_API_KEY):', { 
+          to: email, 
+          subject: `Invitation to join ${churchName} as ${role.toLowerCase().replace('_', ' ')}` 
+        })
+      }
     } catch (emailError) {
       console.error('Error sending invitation email:', emailError)
       // Don't fail the request if email fails, just log it

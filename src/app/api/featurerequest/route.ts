@@ -58,14 +58,21 @@ export async function POST(request: NextRequest) {
       </div>
     `
 
-    // Send email to support/development team
-    await resend.emails.send({
-      from: 'Church Music Pro <noreply@churchmusicpro.com>',
-      to: 'john.kanel@hey.com',
-      subject: `💡 Feature Request: ${subject}`,
-      html: emailHtml,
-      replyTo: userEmail || undefined
-    })
+    // Send email to support/development team (if Resend is configured)
+    if (resend) {
+      await resend.emails.send({
+        from: 'Church Music Pro <noreply@churchmusicpro.com>',
+        to: 'john.kanel@hey.com',
+        subject: `💡 Feature Request: ${subject}`,
+        html: emailHtml,
+        replyTo: userEmail || undefined
+      })
+    } else {
+      console.log('Email simulation (no RESEND_API_KEY):', { 
+        to: 'john.kanel@hey.com', 
+        subject: `💡 Feature Request: ${subject}` 
+      })
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {

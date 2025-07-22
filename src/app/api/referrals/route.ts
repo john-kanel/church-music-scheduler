@@ -6,7 +6,8 @@ import { Resend } from 'resend'
 import { ReferralInvitationEmail } from '@/components/emails/referral-invitation'
 import { render } from '@react-email/render'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+// Conditionally initialize Resend for local development
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
 // GET - Get referral information for current church
 export async function GET() {
@@ -150,13 +151,20 @@ async function handleSingleReferral(session: any, body: any) {
     })
   )
 
-  // Send email
-  await resend.emails.send({
-    from: 'Church Music Pro <noreply@churchmusicpro.com>',
-    to: recipientEmail,
-    subject: `${referrerName} invited you to join Church Music Pro! Get 60 days FREE!`,
-    html: emailHtml
-  })
+  // Send email (if Resend is configured)
+  if (resend) {
+    await resend.emails.send({
+      from: 'Church Music Pro <noreply@churchmusicpro.com>',
+      to: recipientEmail,
+      subject: `${referrerName} invited you to join Church Music Pro! Get 60 days FREE!`,
+      html: emailHtml
+    })
+  } else {
+    console.log('Email simulation (no RESEND_API_KEY):', { 
+      to: recipientEmail, 
+      subject: `${referrerName} invited you to join Church Music Pro! Get 60 days FREE!` 
+    })
+  }
 
   return NextResponse.json({ 
     message: 'Referral email sent successfully',
@@ -269,13 +277,20 @@ async function handleBulkReferrals(session: any, body: any) {
         })
       )
 
-      // Send email
-      await resend.emails.send({
-        from: 'Church Music Pro <noreply@churchmusicpro.com>',
-        to: cleanEmail,
-        subject: `${referrerName} invited you to join Church Music Pro! Get 60 days FREE!`,
-        html: emailHtml
-      })
+      // Send email (if Resend is configured)
+      if (resend) {
+        await resend.emails.send({
+          from: 'Church Music Pro <noreply@churchmusicpro.com>',
+          to: cleanEmail,
+          subject: `${referrerName} invited you to join Church Music Pro! Get 60 days FREE!`,
+          html: emailHtml
+        })
+      } else {
+        console.log('Email simulation (no RESEND_API_KEY):', { 
+          to: cleanEmail, 
+          subject: `${referrerName} invited you to join Church Music Pro! Get 60 days FREE!` 
+        })
+      }
 
       results.successful.push({
         email: cleanEmail,

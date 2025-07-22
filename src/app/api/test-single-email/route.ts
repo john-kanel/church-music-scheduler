@@ -16,7 +16,14 @@ export async function POST() {
 
     console.log('📧 Sending test email...')
     
-    // Send a simple test email
+    // Send a simple test email (if Resend is configured)
+    if (!resend) {
+      return NextResponse.json({
+        success: false,
+        error: 'Resend service not initialized'
+      }, { status: 500 })
+    }
+
     const result = await resend.emails.send({
       from: 'Church Music Pro <noreply@churchmusicpro.com>',
       to: 'john.kanel@hey.com',

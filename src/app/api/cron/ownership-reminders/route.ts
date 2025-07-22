@@ -3,7 +3,8 @@ import { PrismaClient } from '@prisma/client'
 import { Resend } from 'resend'
 
 const prisma = new PrismaClient()
-const resend = new Resend(process.env.RESEND_API_KEY)
+// Conditionally initialize Resend for local development
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,6 +12,12 @@ export async function POST(request: NextRequest) {
     const authHeader = request.headers.get('authorization')
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Skip email operations if Resend is not configured
+    if (!resend) {
+      console.log('Skipping ownership reminders - RESEND_API_KEY not configured')
+      return NextResponse.json({ message: 'Skipped - email service not configured' })
     }
 
     const now = new Date()
@@ -45,7 +52,7 @@ export async function POST(request: NextRequest) {
         if (inviter) {
           const daysRemaining = Math.ceil((transfer.expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
           
-          await resend.emails.send({
+          await resend!.emails.send({
             from: 'Church Music Pro <noreply@churchmusicpro.com>',
             to: inviter.email,
             subject: `Reminder: Ownership invitation still pending`,
@@ -123,7 +130,7 @@ export async function POST(request: NextRequest) {
         if (retiringOwner && transfer.currentOwnerRetireAt) {
           const daysUntilDeactivation = Math.ceil((transfer.currentOwnerRetireAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
           
-          await resend.emails.send({
+          await resend!.emails.send({
             from: 'Church Music Pro <noreply@churchmusicpro.com>',
             to: retiringOwner.email,
             subject: `Important: Your account will be deactivated in ${daysUntilDeactivation} days`,
@@ -199,7 +206,7 @@ export async function POST(request: NextRequest) {
           })
 
           // Send final deactivation email
-          await resend.emails.send({
+          await resend!.emails.send({
             from: 'Church Music Pro <noreply@churchmusicpro.com>',
             to: retiringOwner.email,
             subject: 'Your Church Music Pro account has been deactivated',
