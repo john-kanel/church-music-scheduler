@@ -183,6 +183,24 @@ export default function EventPlannerPage() {
   // Event details modal state
   const [showEventDetailsModal, setShowEventDetailsModal] = useState(false)
   const [selectedEventForEdit, setSelectedEventForEdit] = useState<Event | null>(null)
+
+  // Debug selectedEventForEdit changes
+  useEffect(() => {
+    console.log('🔄 selectedEventForEdit state changed:', {
+      hasEvent: !!selectedEventForEdit,
+      eventId: selectedEventForEdit?.id,
+      eventName: selectedEventForEdit?.name
+    })
+  }, [selectedEventForEdit])
+
+  // Debug modal open state changes
+  useEffect(() => {
+    console.log('🔄 showEventDetailsModal state changed:', {
+      isOpen: showEventDetailsModal,
+      hasSelectedEvent: !!selectedEventForEdit,
+      selectedEventId: selectedEventForEdit?.id
+    })
+  }, [showEventDetailsModal, selectedEventForEdit])
   
   // Create group modal state
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false)
@@ -1648,8 +1666,21 @@ export default function EventPlannerPage() {
   }
 
   const handleEditEvent = (event: Event) => {
+    console.log('🚀 handleEditEvent called with:', {
+      eventId: event?.id,
+      eventName: event?.name,
+      eventData: event
+    })
+    
+    if (!event) {
+      console.error('🚨 ERROR: handleEditEvent received null/undefined event!')
+      return
+    }
+    
+    console.log('🚀 Setting selectedEventForEdit and opening modal')
     setSelectedEventForEdit(event)
     setShowEventDetailsModal(true)
+    console.log('🚀 Modal should be opening now with event:', event.id)
   }
 
   if (loading) {
@@ -3084,14 +3115,17 @@ export default function EventPlannerPage() {
       <EventDetailsModal
         isOpen={showEventDetailsModal}
         onClose={() => {
+          console.log('🔄 Modal closing, clearing selectedEventForEdit')
           setShowEventDetailsModal(false)
           setSelectedEventForEdit(null)
         }}
         event={selectedEventForEdit}
         onEventUpdated={() => {
+          console.log('🔄 Event updated, refreshing data')
           fetchPlannerData() // Refresh data after event update
         }}
         onEventDeleted={() => {
+          console.log('🔄 Event deleted, closing modal and refreshing')
           setShowEventDetailsModal(false)
           setSelectedEventForEdit(null)
           fetchPlannerData() // Refresh data after event deletion
