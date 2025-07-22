@@ -246,9 +246,17 @@ export function EventDetailsModal({
 
   // Initialize current event when modal opens or event prop changes
   useEffect(() => {
+    console.log('🔧 EventDetailsModal: event prop changed:', event)
     if (event) {
+      console.log('🔧 Setting currentEvent with:', {
+        id: event.id,
+        name: event.name,
+        location: event.location,
+        startTime: event.startTime
+      })
       setCurrentEvent(event)
     } else {
+      console.log('🔧 Event is null, resetting modal state')
       // Reset selectedGroups when modal closes
       setSelectedGroups([])
     }
@@ -256,7 +264,15 @@ export function EventDetailsModal({
 
   // Set edit data when event changes or editing mode starts
   useEffect(() => {
+    console.log('🔧 EditData initialization useEffect triggered:', {
+      hasCurrentEvent: !!currentEvent,
+      isEditing,
+      currentEventId: currentEvent?.id,
+      currentEventName: currentEvent?.name
+    })
+    
     if (currentEvent && isEditing) {
+      console.log('🔧 Initializing editData from currentEvent:', currentEvent)
       const startDate = new Date(currentEvent.startTime)
       const endDate = currentEvent.endTime ? new Date(currentEvent.endTime) : null
       
