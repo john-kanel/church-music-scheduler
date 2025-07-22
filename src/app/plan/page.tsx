@@ -833,10 +833,12 @@ export default function EventPlannerPage() {
       console.log('🎵 AUTO-POPULATE: Existing hymns:', existingHymns.length)
 
       // Process suggestions and intelligently merge with existing hymns
-      const processedHymns = [...existingHymns.map(hymn => ({
+      // PRESERVE ORIGINAL ORDER by mapping existing hymns with their original index
+      const processedHymns = [...existingHymns.map((hymn, index) => ({
         title: hymn.title,
         notes: hymn.notes || '',
-        servicePartId: hymn.servicePartId || null
+        servicePartId: hymn.servicePartId || null,
+        orderIndex: index // Preserve original order
       }))]
 
       // Track which service parts already have content
@@ -898,19 +900,21 @@ export default function EventPlannerPage() {
           )
           
           if (existingIndex !== -1) {
-            // Update empty existing service part
+            // Update empty existing service part - preserve its original orderIndex
             processedHymns[existingIndex] = {
               title: suggestion.songTitle,
               notes: suggestion.notes || '',
-              servicePartId: servicePartId
+              servicePartId: servicePartId,
+              orderIndex: processedHymns[existingIndex].orderIndex // Keep original order
             }
             console.log(`🎵 AUTO-POPULATE: Updated existing empty service part: ${suggestion.servicePartName}`)
           } else {
-            // Add as additional song for this service part
+            // Add as additional song for this service part - assign next available orderIndex
             processedHymns.push({
               title: suggestion.songTitle,
               notes: suggestion.notes || '',
-              servicePartId: servicePartId
+              servicePartId: servicePartId,
+              orderIndex: processedHymns.length // Next available index
             })
             console.log(`🎵 AUTO-POPULATE: Added additional song to existing service part: ${suggestion.servicePartName}`)
           }
@@ -919,7 +923,8 @@ export default function EventPlannerPage() {
           processedHymns.push({
             title: suggestion.songTitle,
             notes: suggestion.notes || '',
-            servicePartId: servicePartId
+            servicePartId: servicePartId,
+            orderIndex: processedHymns.length // Next available index
           })
           
           if (servicePartId) {
