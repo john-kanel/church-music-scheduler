@@ -1092,6 +1092,20 @@ export default function CalendarPage() {
                       <span className="ml-2 text-blue-600">• {events.length} events loaded</span>
                     )}
                   </p>
+                  {/* Event Visibility Information for Directors */}
+                  {(session?.user?.role === 'DIRECTOR' || session?.user?.role === 'ASSOCIATE_DIRECTOR' || session?.user?.role === 'PASTOR') && (
+                    <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="flex items-start space-x-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-2"></div>
+                        <div className="text-sm text-blue-800">
+                          <span className="font-medium">Event Visibility:</span> Musicians can see events marked as{' '}
+                          <span className="font-semibold text-green-700">Confirmed</span> and{' '}
+                          <span className="font-semibold text-red-700">Cancelled</span>, but{' '}
+                          <span className="font-semibold text-orange-700">Tentative</span> events remain private to the planning team until confirmed.
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Days of Week Header */}
