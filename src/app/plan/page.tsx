@@ -3228,6 +3228,7 @@ export default function EventPlannerPage() {
         <PdfProcessor
           onSuggestionsAccepted={handlePdfSuggestions}
           onClose={() => setShowPdfProcessor(false)}
+          eventId={currentEventIdForUpload}
         />
       )}
 

@@ -12,9 +12,10 @@ interface PdfSuggestion {
 interface PdfProcessorProps {
   onSuggestionsAccepted: (suggestions: PdfSuggestion[]) => void;
   onClose: () => void;
+  eventId?: string; // Optional eventId for saving document to event
 }
 
-export default function PdfProcessor({ onSuggestionsAccepted, onClose }: PdfProcessorProps) {
+export default function PdfProcessor({ onSuggestionsAccepted, onClose, eventId }: PdfProcessorProps) {
   const [file, setFile] = useState<File | null>(null);
   const [processing, setProcessing] = useState(false);
   const [suggestions, setSuggestions] = useState<PdfSuggestion[]>([]);
@@ -26,6 +27,7 @@ export default function PdfProcessor({ onSuggestionsAccepted, onClose }: PdfProc
     notes: ''
   });
   const [error, setError] = useState<string>('');
+  const [savingDocument, setSavingDocument] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -113,6 +115,41 @@ export default function PdfProcessor({ onSuggestionsAccepted, onClose }: PdfProc
   const acceptSuggestions = () => {
     onSuggestionsAccepted(suggestions);
     onClose();
+  };
+
+  const acceptSuggestionsAndAddDocument = async () => {
+    if (!eventId || !file) {
+      setError('Missing event ID or document file');
+      return;
+    }
+
+    setSavingDocument(true);
+    setError('');
+
+    try {
+      // First accept the suggestions
+      onSuggestionsAccepted(suggestions);
+
+      // Then save the document to the event
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch(`/api/events/${eventId}/documents`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save document');
+      }
+
+      // Success - close the modal
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save document to event');
+      setSavingDocument(false);
+    }
   };
 
   if (showSuggestions) {
@@ -235,17 +272,34 @@ export default function PdfProcessor({ onSuggestionsAccepted, onClose }: PdfProc
           <div className="flex justify-end gap-3">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#660033]"
+              disabled={savingDocument}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#660033] disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               onClick={acceptSuggestions}
-              disabled={suggestions.length === 0}
+              disabled={suggestions.length === 0 || savingDocument}
               className="px-4 py-2 text-sm font-medium text-white bg-[#660033] border border-transparent rounded-md hover:bg-[#800041] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#660033] disabled:opacity-50"
             >
-              Accept Suggestions
+              Accept
             </button>
+            {eventId && (
+              <button
+                onClick={acceptSuggestionsAndAddDocument}
+                disabled={suggestions.length === 0 || savingDocument}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+              >
+                {savingDocument ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 inline-block" />
+                    Saving...
+                  </>
+                ) : (
+                  'Accept and Add Document to Event'
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>

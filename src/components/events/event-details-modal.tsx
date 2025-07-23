@@ -2756,6 +2756,7 @@ export function EventDetailsModal({
         <PdfProcessor
           onSuggestionsAccepted={handlePdfSuggestions}
           onClose={() => setShowPdfProcessor(false)}
+          eventId={currentEvent?.id}
         />
       )}
 
