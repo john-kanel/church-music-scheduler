@@ -155,15 +155,15 @@ export async function PUT(
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
-    // Verify event belongs to church
+    // Verify event belongs to church and get current status
     const existingEvent = await prisma.event.findFirst({
       where: {
         id: params.id,
         churchId: session.user.churchId
       },
-              include: {
-          eventType: true
-        }
+      include: {
+        eventType: true
+      }
     })
 
     if (!existingEvent) {
@@ -426,6 +426,14 @@ export async function PUT(
       startTime: completeEvent?.startTime.toISOString(),
       endTime: completeEvent?.endTime?.toISOString()
     })
+
+    // Check for event cancellation and send emails if needed
+    if (status) {
+      console.log('📧 Checking for event cancellation...')
+      const { checkForEventCancellation } = await import('@/lib/event-cancellation')
+      await checkForEventCancellation(params.id, existingEvent.status, status.toUpperCase())
+      console.log('✅ Cancellation check completed')
+    }
 
     // Schedule automated notifications for updated event (skip for past events)
     if (!isPastEvent) {

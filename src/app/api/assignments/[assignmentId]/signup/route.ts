@@ -30,9 +30,11 @@ export async function POST(
         id: assignmentId,
         event: {
           churchId: session.user.churchId,
-          // EXCLUDE TENTATIVE EVENTS - Musicians cannot sign up for tentative events
+          // EXCLUDE TENTATIVE AND CANCELLED EVENTS - Musicians cannot sign up for tentative or cancelled events
           NOT: {
-            status: 'TENTATIVE'
+            status: {
+              in: ['TENTATIVE', 'CANCELLED']
+            }
           }
         },
         userId: null, // Must be unassigned

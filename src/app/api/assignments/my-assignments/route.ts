@@ -23,9 +23,11 @@ export async function GET(request: NextRequest) {
         userId: session.user.id,
         event: {
           churchId: session.user.churchId,
-          // EXCLUDE TENTATIVE EVENTS FOR MUSICIANS
+          // EXCLUDE TENTATIVE AND CANCELLED EVENTS FOR MUSICIANS
           NOT: {
-            status: 'TENTATIVE'
+            status: {
+              in: ['TENTATIVE', 'CANCELLED']
+            }
           }
         }
       },

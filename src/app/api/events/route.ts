@@ -85,11 +85,13 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // EXCLUDE TENTATIVE EVENTS FOR MUSICIANS
-    // Musicians should not see tentative events in calendar or available events
+    // EXCLUDE TENTATIVE AND CANCELLED EVENTS FOR MUSICIANS
+    // Musicians should not see tentative or cancelled events in calendar or available events
     if (session.user.role === 'MUSICIAN') {
       whereClause.NOT = {
-        status: 'TENTATIVE'
+        status: {
+          in: ['TENTATIVE', 'CANCELLED']
+        }
       }
     }
 

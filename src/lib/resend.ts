@@ -929,3 +929,159 @@ Sent by Church Music Pro
     throw error
   }
 } 
+
+// Send event cancellation email to musicians
+export async function sendEventCancellationEmail(
+  to: string,
+  musicianName: string,
+  churchName: string,
+  eventName: string,
+  eventDate: Date,
+  eventLocation: string,
+  roleName: string
+) {
+  try {
+    // Use verified domain for all environments
+    const fromAddress = 'Church Music Pro <noreply@churchmusicpro.com>'
+    
+    // Format the event date nicely
+    const formattedDate = eventDate.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+    
+    const formattedTime = eventDate.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    })
+
+    const emailData = {
+      from: fromAddress,
+      to: [to],
+      subject: `Event Cancelled: ${eventName}`,
+      html: `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 40px 30px; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 600;">Event Cancelled</h1>
+            <p style="color: rgba(255, 255, 255, 0.9); margin: 10px 0 0 0; font-size: 16px;">Important Update for Your Schedule</p>
+          </div>
+
+          <!-- Content -->
+          <div style="padding: 40px 30px;">
+            <div style="background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 20px; margin-bottom: 30px; border-radius: 0 8px 8px 0;">
+              <h2 style="color: #dc2626; margin: 0 0 10px 0; font-size: 18px;">Event Cancellation Notice</h2>
+              <p style="color: #7f1d1d; margin: 0; line-height: 1.5;">
+                We regret to inform you that the following event has been cancelled.
+              </p>
+            </div>
+
+            <p style="color: #374151; line-height: 1.6; margin-bottom: 30px;">
+              Hello ${musicianName},
+            </p>
+
+            <p style="color: #374151; line-height: 1.6; margin-bottom: 30px;">
+              Unfortunately, the event you were scheduled to participate in has been cancelled. Here are the details:
+            </p>
+
+            <!-- Event Details Card -->
+            <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; margin-bottom: 30px;">
+              <h3 style="color: #111827; margin: 0 0 20px 0; font-size: 20px; font-weight: 600;">${eventName}</h3>
+              
+              <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                <div style="width: 20px; height: 20px; margin-right: 12px;">📅</div>
+                <div style="color: #4b5563; font-size: 14px;">
+                  <strong>Date:</strong> ${formattedDate}
+                </div>
+              </div>
+              
+              <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                <div style="width: 20px; height: 20px; margin-right: 12px;">🕐</div>
+                <div style="color: #4b5563; font-size: 14px;">
+                  <strong>Time:</strong> ${formattedTime}
+                </div>
+              </div>
+              
+              <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                <div style="width: 20px; height: 20px; margin-right: 12px;">📍</div>
+                <div style="color: #4b5563; font-size: 14px;">
+                  <strong>Location:</strong> ${eventLocation}
+                </div>
+              </div>
+              
+              <div style="display: flex; align-items: center;">
+                <div style="width: 20px; height: 20px; margin-right: 12px;">🎵</div>
+                <div style="color: #4b5563; font-size: 14px;">
+                  <strong>Your Role:</strong> ${roleName}
+                </div>
+              </div>
+            </div>
+
+            <p style="color: #374151; line-height: 1.6; margin-bottom: 20px;">
+              Please update your personal calendar accordingly. We apologize for any inconvenience this may cause.
+            </p>
+
+            <p style="color: #374151; line-height: 1.6; margin-bottom: 30px;">
+              If you have any questions about this cancellation, please don't hesitate to reach out to your music director.
+            </p>
+
+            <p style="color: #374151; line-height: 1.6; margin-bottom: 30px;">
+              Thank you for your understanding.
+            </p>
+
+            <!-- Footer -->
+            <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 40px;">
+              <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin-bottom: 10px;">
+                Best regards,<br>
+                <strong>${churchName}</strong><br>
+                Church Music Pro
+              </p>
+              
+              <p style="color: #9ca3af; font-size: 12px; line-height: 1.4; margin: 0;">
+                This is an automated message from Church Music Pro. You received this because you were scheduled for the cancelled event.
+              </p>
+            </div>
+          </div>
+        </div>
+      `,
+      text: `
+EVENT CANCELLED: ${eventName}
+
+Hello ${musicianName},
+
+We regret to inform you that the following event has been cancelled:
+
+Event: ${eventName}
+Date: ${formattedDate}
+Time: ${formattedTime}
+Location: ${eventLocation}
+Your Role: ${roleName}
+
+Please update your personal calendar accordingly. We apologize for any inconvenience this may cause.
+
+If you have any questions about this cancellation, please don't hesitate to reach out to your music director.
+
+Thank you for your understanding.
+
+Best regards,
+${churchName}
+Church Music Pro
+
+---
+This is an automated message from Church Music Pro.
+      `
+    }
+
+    console.log('📧 Sending cancellation email to:', to)
+    const data = await resend.emails.send(emailData)
+    console.log('✅ Cancellation email sent successfully:', data)
+    return data
+
+  } catch (error) {
+    console.error('❌ Error sending cancellation email:', error)
+    throw error
+  }
+} 
