@@ -123,6 +123,7 @@ export async function GET(request: NextRequest) {
         name: `${musician.firstName} ${musician.lastName}`.trim(),
         email: musician.email,
         phone: musician.phone,
+        pin: musician.pin,
         isVerified: musician.isVerified,
         status: status,
         emailNotifications: musician.emailNotifications,

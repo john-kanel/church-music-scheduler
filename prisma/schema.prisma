@@ -8,82 +8,82 @@ datasource db {
 }
 
 model Church {
-  id                    String          @id @default(cuid())
+  id                    String               @id @default(cuid())
   name                  String
   address               String?
   phone                 String?
   email                 String?
   logo                  String?
-  stripeCustomerId      String?         @unique
-  subscriptionStatus    String          @default("trial")
+  stripeCustomerId      String?              @unique
+  subscriptionStatus    String               @default("trial")
   subscriptionEnds      DateTime?
-  referralCode          String          @unique @default(cuid())
+  referralCode          String               @unique @default(cuid())
   referredBy            String?
-  createdAt             DateTime        @default(now())
-  updatedAt             DateTime        @updatedAt
-  referralRewardsEarned Int             @default(0)
-  referralRewardsSaved  Decimal         @default(0.00)
-  welcomeEmailSentAt    DateTime?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  referralRewardsEarned Int                  @default(0)
+  referralRewardsSaved  Decimal              @default(0.00)
   paymentEmailSentAt    DateTime?
   referralEmailSentAt   DateTime?
+  welcomeEmailSentAt    DateTime?
   activities            Activity[]
+  automationSettings    AutomationSettings?
+  churchDocuments       ChurchDocument[]
+  churchLinks           ChurchLink[]
   communications        Communication[]
   customRoles           CustomRole[]
+  emailSchedules        EmailSchedule[]
   eventTypes            EventType[]
   events                Event[]
   groups                Group[]
   invitations           Invitation[]
+  musicianInviteLink    MusicianInviteLink?
+  notificationLogs      NotificationLog[]
+  ownershipTransfers    OwnershipTransfer[]
+  publicScheduleLinks   PublicScheduleLink[]
   referredChurches      Referral[]           @relation("ReferredChurch")
   referrals             Referral[]           @relation("ReferringChurch")
-  users                 User[]
-  ownershipTransfers    OwnershipTransfer[]
-  automationSettings    AutomationSettings?
-  notificationLogs      NotificationLog[]
-  emailSchedules        EmailSchedule[]
   serviceParts          ServicePart[]
-  musicianInviteLink    MusicianInviteLink?
-  churchDocuments       ChurchDocument[]
-  churchLinks           ChurchLink[]
-  publicScheduleLinks   PublicScheduleLink[]
+  users                 User[]
 
   @@map("parishes")
 }
 
 model User {
-  id                 String            @id @default(cuid())
-  email              String            @unique
-  phone              String?
-  calendarLink       String?
-  firstName          String
-  lastName           String
-  password           String
-  role               UserRole          @default(MUSICIAN)
-  isVerified         Boolean           @default(false)
-  hasCompletedOnboarding Boolean       @default(false)
-  emailNotifications Boolean           @default(true)
-  smsNotifications   Boolean           @default(false)
-  timezone           String            @default("America/Chicago")
-  instruments        String[]          @default([])
-  skillLevel         SkillLevel        @default(INTERMEDIATE)
-  yearsExperience    Int?
-  invitedVia         String?           // Tracks how user joined: 'invitation_link', 'email_invite', 'direct_signup'
-  pin                String?           // 4-digit PIN for public signup verification
-  createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
-  churchId           String
-  sentCommunications Communication[]
-  eventAssignments   EventAssignment[]
-  groupMemberships   GroupMember[]
-  uploadedFiles      MusicFile[]
-  church             Church            @relation(fields: [churchId], references: [id], onDelete: Cascade)
-  pastorSettings       PastorSettings?
-  emailSchedules       EmailSchedule[]
-  uploadedDocuments    EventDocument[]
-  uploadedChurchDocs   ChurchDocument[]
-  createdChurchLinks   ChurchLink[]
-  unavailabilities     MusicianUnavailability[]
+  id                        String                     @id @default(cuid())
+  email                     String                     @unique
+  phone                     String?
+  firstName                 String
+  lastName                  String
+  password                  String
+  role                      UserRole                   @default(MUSICIAN)
+  isVerified                Boolean                    @default(false)
+  emailNotifications        Boolean                    @default(true)
+  smsNotifications          Boolean                    @default(false)
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @updatedAt
+  churchId                  String
+  timezone                  String                     @default("America/Chicago")
+  instruments               String[]                   @default([])
+  skillLevel                SkillLevel                 @default(INTERMEDIATE)
+  yearsExperience           Int?
+  invitedVia                String?
+  calendarLink              String?
+  hasCompletedOnboarding    Boolean                    @default(false)
+  pin                       String?
+  calendarSubscriptions     CalendarSubscription?
   cancellationNotifications CancellationNotification[]
-  calendarSubscriptions CalendarSubscription[]
+  uploadedChurchDocs        ChurchDocument[]
+  createdChurchLinks        ChurchLink[]
+  sentCommunications        Communication[]
+  emailSchedules            EmailSchedule[]
+  eventAssignments          EventAssignment[]
+  uploadedDocuments         EventDocument[]
+  groupMemberships          GroupMember[]
+  uploadedFiles             MusicFile[]
+  unavailabilities          MusicianUnavailability[]
+  pastorSettings            PastorSettings?
+  church                    Church                     @relation(fields: [churchId], references: [id], onDelete: Cascade)
 
   @@index([churchId])
   @@index([role])
@@ -117,35 +117,35 @@ model EventType {
 }
 
 model Event {
-  id                String            @id @default(cuid())
-  name              String
-  description       String?
-  location          String
-  startTime         DateTime
-  endTime           DateTime?
-  isRecurring       Boolean           @default(false)
-  recurrencePattern String?           // JSON string with pattern details
-  recurrenceEnd     DateTime?
-  parentEventId     String?           // Points to the root event if this is a generated event
-  isRootEvent       Boolean           @default(false)  // True for the root recurring event
-  generatedFrom     String?           // For generated events, stores the root event ID
-  assignedGroups    String[]          @default([])     // Group IDs that auto-assign to this series
-  isModified        Boolean           @default(false)  // True if individual event was edited separately from series
-  calendarNeedsUpdate Boolean         @default(true)   // True when event changes require calendar feed updates
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-  churchId          String
-  eventTypeId       String
-  communications    Communication[]
-  assignments       EventAssignment[]
-  church            Church            @relation(fields: [churchId], references: [id], onDelete: Cascade)
-  eventType         EventType         @relation(fields: [eventTypeId], references: [id])
-  musicFiles        MusicFile[]
-  notificationLogs  NotificationLog[]
-  hymns             EventHymn[]
-  documents         EventDocument[]
+  id                        String                     @id @default(cuid())
+  name                      String
+  description               String?
+  location                  String
+  startTime                 DateTime
+  endTime                   DateTime?
+  isRecurring               Boolean                    @default(false)
+  recurrencePattern         String?
+  recurrenceEnd             DateTime?
+  parentEventId             String?
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @updatedAt
+  churchId                  String
+  eventTypeId               String
+  assignedGroups            String[]                   @default([])
+  generatedFrom             String?
+  isRootEvent               Boolean                    @default(false)
+  isModified                Boolean                    @default(false)
+  calendarNeedsUpdate       Boolean                    @default(true)
+  status                    EventStatus                @default(CONFIRMED)
   cancellationNotifications CancellationNotification[]
-  status            EventStatus       @default(CONFIRMED)
+  communications            Communication[]
+  assignments               EventAssignment[]
+  documents                 EventDocument[]
+  hymns                     EventHymn[]
+  church                    Church                     @relation(fields: [churchId], references: [id], onDelete: Cascade)
+  eventType                 EventType                  @relation(fields: [eventTypeId], references: [id])
+  musicFiles                MusicFile[]
+  notificationLogs          NotificationLog[]
 
   @@index([churchId])
   @@index([startTime])
@@ -247,21 +247,21 @@ model Invitation {
 }
 
 model Communication {
-  id             String            @id @default(cuid())
-  subject        String
-  message        String
-  type           CommunicationType
-  churchId       String
-  eventId        String?
-  sentBy         String
-  recipients     String[]
-  sentAt         DateTime?
-  scheduledFor   DateTime?
-  isScheduled    Boolean           @default(false)
-  createdAt      DateTime          @default(now())
-  church         Church            @relation(fields: [churchId], references: [id], onDelete: Cascade)
-  event          Event?            @relation(fields: [eventId], references: [id])
-  sender         User              @relation(fields: [sentBy], references: [id])
+  id           String            @id @default(cuid())
+  subject      String
+  message      String
+  type         CommunicationType
+  churchId     String
+  eventId      String?
+  sentBy       String
+  recipients   String[]
+  sentAt       DateTime?
+  createdAt    DateTime          @default(now())
+  isScheduled  Boolean           @default(false)
+  scheduledFor DateTime?
+  church       Church            @relation(fields: [churchId], references: [id], onDelete: Cascade)
+  event        Event?            @relation(fields: [eventId], references: [id])
+  sender       User              @relation(fields: [sentBy], references: [id])
 
   @@map("communications")
 }
@@ -318,38 +318,36 @@ model Activity {
   @@map("activities")
 }
 
-
-
 model ServicePart {
-  id            String         @id @default(cuid())
-  name          String
-  isRequired    Boolean        @default(false)
-  order         Int            @default(0)
-  churchId      String
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  church        Church         @relation(fields: [churchId], references: [id], onDelete: Cascade)
-  eventHymns    EventHymn[]
+  id         String      @id @default(cuid())
+  name       String
+  isRequired Boolean     @default(false)
+  order      Int         @default(0)
+  churchId   String
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  eventHymns EventHymn[]
+  church     Church      @relation(fields: [churchId], references: [id], onDelete: Cascade)
 
   @@unique([name, churchId])
   @@map("service_parts")
 }
 
 model EventHymn {
-  id            String      @id @default(cuid())
+  id            String       @id @default(cuid())
   title         String
   notes         String?
   eventId       String
   servicePartId String?
-  createdAt     DateTime    @default(now())
-  event         Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdAt     DateTime     @default(now())
+  event         Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
   servicePart   ServicePart? @relation(fields: [servicePartId], references: [id])
 
   @@map("event_hymns")
 }
 
 model EventDocument {
-  id               String   @id @default(cuid())
+  id               String    @id @default(cuid())
   filename         String
   originalFilename String
   filePath         String
@@ -357,122 +355,115 @@ model EventDocument {
   mimeType         String
   eventId          String
   uploadedBy       String
-  uploadedAt       DateTime @default(now())
-  aiProcessed      Boolean  @default(false)
+  uploadedAt       DateTime  @default(now())
+  aiProcessed      Boolean   @default(false)
   aiProcessedAt    DateTime?
   aiResults        Json?
-  event            Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  uploader         User     @relation(fields: [uploadedBy], references: [id])
+  event            Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  uploader         User      @relation(fields: [uploadedBy], references: [id])
 
   @@map("event_documents")
 }
 
 model OwnershipTransfer {
-  id                    String                     @id @default(cuid())
-  inviteeEmail          String
-  inviteeFirstName      String?
-  inviteeLastName       String?
-  inviteeRole           UserRole                   // The role they'll have (DIRECTOR, PASTOR, etc.)
-  status                OwnershipTransferStatus    @default(PENDING)
-  token                 String                     @unique @default(cuid())
-  expiresAt             DateTime                   // 30 days from creation
-  retireCurrentOwner    Boolean                    @default(false)
-  currentOwnerRetireAt  DateTime?                  // Set if retireCurrentOwner is true
-  acceptedAt            DateTime?
-  completedAt           DateTime?
-  createdAt             DateTime                   @default(now())
-  updatedAt             DateTime                   @updatedAt
-  churchId              String
-  invitedBy             String                     // User ID of who sent the invite
-  reminderSentAt        DateTime?                  // Track when 20-day reminder was sent
-  church                Church                     @relation(fields: [churchId], references: [id], onDelete: Cascade)
+  id                   String                  @id @default(cuid())
+  inviteeEmail         String
+  inviteeFirstName     String?
+  inviteeLastName      String?
+  inviteeRole          UserRole
+  status               OwnershipTransferStatus @default(PENDING)
+  token                String                  @unique @default(cuid())
+  expiresAt            DateTime
+  retireCurrentOwner   Boolean                 @default(false)
+  currentOwnerRetireAt DateTime?
+  acceptedAt           DateTime?
+  completedAt          DateTime?
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  churchId             String
+  invitedBy            String
+  reminderSentAt       DateTime?
+  church               Church                  @relation(fields: [churchId], references: [id], onDelete: Cascade)
 
   @@unique([inviteeEmail, churchId])
   @@map("ownership_transfers")
 }
 
 model AutomationSettings {
-  id                        String                  @id @default(cuid())
-  churchId                  String                  @unique
-  
-  // Musician Notification Settings
-  musicianNotifications     MusicianNotification[]
-  
-  // Musician Permission Settings
-  allowMusiciansToSendMessages Boolean              @default(false) // Allow musicians to send messages to other musicians
-  
-  // Pastor Notification Settings  
-  pastorEmailEnabled        Boolean                 @default(true)
-  pastorMonthlyReportDay    Int                     @default(27) // Day of month to send monthly report
-  pastorWeeklyReportEnabled Boolean                 @default(false)
-  pastorWeeklyReportDay     Int                     @default(0) // Day of week to send weekly report (0=Sunday, 6=Saturday) - Sunday=current week, Mon-Sat=next week
-  pastorDailyDigestEnabled  Boolean                 @default(true)
-  pastorDailyDigestTime     String                  @default("08:00") // Time to send daily digest (24hr format)
-  
-  createdAt                 DateTime                @default(now())
-  updatedAt                 DateTime                @updatedAt
-  church                    Church                  @relation(fields: [churchId], references: [id], onDelete: Cascade)
+  id                           String                 @id @default(cuid())
+  churchId                     String                 @unique
+  pastorEmailEnabled           Boolean                @default(true)
+  pastorMonthlyReportDay       Int                    @default(27)
+  pastorDailyDigestEnabled     Boolean                @default(true)
+  pastorDailyDigestTime        String                 @default("08:00")
+  createdAt                    DateTime               @default(now())
+  updatedAt                    DateTime               @updatedAt
+  pastorWeeklyReportDay        Int                    @default(0)
+  pastorWeeklyReportEnabled    Boolean                @default(false)
+  allowMusiciansToSendMessages Boolean                @default(false)
+  church                       Church                 @relation(fields: [churchId], references: [id], onDelete: Cascade)
+  musicianNotifications        MusicianNotification[]
 
   @@map("automation_settings")
 }
 
 model MusicianNotification {
-  id                   String              @id @default(cuid())
+  id                   String             @id @default(cuid())
   automationSettingsId String
-  hoursBeforeEvent     Int                 // Hours before event to send notification
-  isEnabled            Boolean             @default(true)
-  createdAt            DateTime            @default(now())
-  automationSettings   AutomationSettings  @relation(fields: [automationSettingsId], references: [id], onDelete: Cascade)
+  hoursBeforeEvent     Int
+  isEnabled            Boolean            @default(true)
+  createdAt            DateTime           @default(now())
+  automationSettings   AutomationSettings @relation(fields: [automationSettingsId], references: [id], onDelete: Cascade)
 
   @@map("musician_notifications")
 }
 
 model PastorSettings {
-  id                    String   @id @default(cuid())
-  userId                String   @unique
-  dailyDigestEnabled    Boolean  @default(true)
-  monthlyReportEnabled  Boolean  @default(true)
-  timezone              String   @default("America/Chicago")
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  dailyDigestEnabled   Boolean  @default(true)
+  monthlyReportEnabled Boolean  @default(true)
+  timezone             String   @default("America/Chicago")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("pastor_settings")
 }
 
 model NotificationLog {
-  id              String           @id @default(cuid())
-  type            NotificationType
-  churchId        String
-  eventId         String?
-  recipientEmail  String
-  recipientName   String
-  subject         String
-  content         String?
-  sentAt          DateTime         @default(now())
-  status          String           @default("sent")
-  metadata        Json?            // Store additional data like hours_before_event, etc.
-  church          Church           @relation(fields: [churchId], references: [id], onDelete: Cascade)
-  event           Event?           @relation(fields: [eventId], references: [id])
+  id             String           @id @default(cuid())
+  type           NotificationType
+  churchId       String
+  eventId        String?
+  recipientEmail String
+  recipientName  String
+  subject        String
+  content        String?
+  sentAt         DateTime         @default(now())
+  status         String           @default("sent")
+  metadata       Json?
+  church         Church           @relation(fields: [churchId], references: [id], onDelete: Cascade)
+  event          Event?           @relation(fields: [eventId], references: [id])
 
   @@map("notification_logs")
 }
 
 model EmailSchedule {
-  id                String    @id @default(cuid())
-  churchId          String
-  userId            String
-  emailType         EmailType
-  scheduledFor      DateTime
-  sentAt            DateTime?
-  attempts          Int       @default(0)
-  maxAttempts       Int       @default(3)
-  lastAttemptAt     DateTime?
-  errorReason       String?
-  metadata          Json?
-  createdAt         DateTime  @default(now())
-  church            Church    @relation(fields: [churchId], references: [id], onDelete: Cascade)
-  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String    @id @default(cuid())
+  churchId      String
+  userId        String
+  emailType     EmailType
+  scheduledFor  DateTime
+  sentAt        DateTime?
+  attempts      Int       @default(0)
+  maxAttempts   Int       @default(3)
+  lastAttemptAt DateTime?
+  errorReason   String?
+  metadata      Json?
+  createdAt     DateTime  @default(now())
+  church        Church    @relation(fields: [churchId], references: [id], onDelete: Cascade)
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("email_schedules")
 }
@@ -489,29 +480,29 @@ model PasswordResetToken {
 }
 
 model MusicianInviteLink {
-  id           String            @id @default(cuid())
-  churchId     String            @unique
-  slug         String            @unique  // URL-friendly church name slug
-  isActive     Boolean           @default(true)
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
-  createdBy    String            // User ID who created the link
-  pageViews    InvitePageView[]
-  church       Church            @relation(fields: [churchId], references: [id], onDelete: Cascade)
+  id        String           @id @default(cuid())
+  churchId  String           @unique
+  slug      String           @unique
+  isActive  Boolean          @default(true)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  createdBy String
+  pageViews InvitePageView[]
+  church    Church           @relation(fields: [churchId], references: [id], onDelete: Cascade)
 
   @@map("musician_invite_links")
 }
 
 model InvitePageView {
-  id             String             @id @default(cuid())
-  inviteLinkId   String
-  visitorId      String             // Hash of IP + User Agent for unique visitor tracking
-  viewedAt       DateTime           @default(now())
-  ipAddress      String?            // Optional: store for analytics
-  userAgent      String?            // Optional: store for analytics
-  inviteLink     MusicianInviteLink @relation(fields: [inviteLinkId], references: [id], onDelete: Cascade)
+  id           String             @id @default(cuid())
+  inviteLinkId String
+  visitorId    String
+  viewedAt     DateTime           @default(now())
+  ipAddress    String?
+  userAgent    String?
+  inviteLink   MusicianInviteLink @relation(fields: [inviteLinkId], references: [id], onDelete: Cascade)
 
-  @@unique([inviteLinkId, visitorId])  // Prevent duplicate views from same visitor
+  @@unique([inviteLinkId, visitorId])
   @@map("invite_page_views")
 }
 
@@ -519,9 +510,9 @@ model ChurchDocument {
   id               String   @id @default(cuid())
   title            String
   description      String?
-  filename         String   // S3 key
+  filename         String
   originalFilename String
-  filePath         String   // S3 URL
+  filePath         String
   fileSize         Int
   mimeType         String
   order            Int      @default(0)
@@ -554,22 +545,14 @@ model ChurchLink {
 model MusicianUnavailability {
   id        String    @id @default(cuid())
   userId    String
-  
-  // For specific dates or date ranges
   startDate DateTime?
-  endDate   DateTime? // null for single dates, same as startDate for ranges
-  
-  // For recurring weekly unavailability (0 = Sunday, 6 = Saturday)
-  dayOfWeek Int?      // null for date-based, 0-6 for day-based
-  
-  // Metadata
-  reason    String?   // optional reason/note
+  endDate   DateTime?
+  dayOfWeek Int?
+  reason    String?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  
-  // Relations
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   @@index([userId])
   @@index([startDate, endDate])
   @@index([dayOfWeek])
@@ -577,39 +560,36 @@ model MusicianUnavailability {
 }
 
 model CancellationNotification {
-  id              String                      @id @default(cuid())
+  id              String    @id @default(cuid())
   eventId         String
-  roleName        String?                     // The role that became available (e.g., "Accompanist")
-  cancelledBy     String                      // User ID of who cancelled (for tracking, not displayed)
-  batchKey        String                      // For grouping notifications within 1 hour: eventId + date hour
-  sentAt          DateTime?                   // When notification was sent (null if still batching)
-  createdAt       DateTime                    @default(now())
-  updatedAt       DateTime                    @updatedAt
-  
-  event           Event                       @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  cancelledByUser User                        @relation(fields: [cancelledBy], references: [id])
-  
+  roleName        String?
+  cancelledBy     String
+  batchKey        String
+  sentAt          DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  cancelledByUser User      @relation(fields: [cancelledBy], references: [id])
+  event           Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
   @@index([batchKey, sentAt])
   @@map("cancellation_notifications")
 }
 
 model CalendarSubscription {
-  id                String                    @id @default(cuid())
-  userId            String
-  subscriptionToken String                    @unique @default(cuid())
-  filterType        CalendarFilterType        @default(ALL)
-  groupIds          String[]                  @default([])  // Group IDs when filterType is GROUPS
-  eventTypeIds      String[]                  @default([])  // Event type IDs when filterType is EVENT_TYPES
-  isActive          Boolean                   @default(true)
-  lastUpdated       DateTime                  @default(now())
-  feedUrl           String?                   // Generated feed URL for user reference
-  needsUpdate       Boolean                   @default(true) // Flag to track if feed needs regeneration
-  createdAt         DateTime                  @default(now())
-  updatedAt         DateTime                  @updatedAt
-  
-  user              User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@unique([userId]) // One subscription per user
+  id                String             @id @default(cuid())
+  userId            String             @unique
+  subscriptionToken String             @unique @default(cuid())
+  filterType        CalendarFilterType @default(ALL)
+  groupIds          String[]           @default([])
+  eventTypeIds      String[]           @default([])
+  isActive          Boolean            @default(true)
+  lastUpdated       DateTime           @default(now())
+  feedUrl           String?
+  needsUpdate       Boolean            @default(true)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([needsUpdate])
   @@index([subscriptionToken])
   @@map("calendar_subscriptions")
@@ -623,9 +603,8 @@ model PublicScheduleLink {
   endDate   DateTime
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
   church    Church   @relation(fields: [churchId], references: [id], onDelete: Cascade)
-  
+
   @@index([token])
   @@index([churchId])
   @@map("public_schedule_links")
@@ -633,10 +612,10 @@ model PublicScheduleLink {
 
 enum UserRole {
   DIRECTOR
-  ASSOCIATE_DIRECTOR
   PASTOR
   ASSOCIATE_PASTOR
   MUSICIAN
+  ASSOCIATE_DIRECTOR
 }
 
 enum AssignmentStatus {
@@ -669,10 +648,10 @@ enum ActivityType {
   EVENT_CREATED
   MUSICIAN_INVITED
   MUSICIAN_SIGNED_UP
-  MUSICIAN_JOINED_VIA_LINK
   MESSAGE_SENT
   AUTOMATED_NOTIFICATION_SENT
   AUTOMATION_SETTINGS_UPDATED
+  MUSICIAN_JOINED_VIA_LINK
 }
 
 enum OwnershipTransferStatus {
@@ -687,9 +666,9 @@ enum NotificationType {
   MUSICIAN_EVENT_REMINDER
   PASTOR_DAILY_DIGEST
   PASTOR_MONTHLY_REPORT
-  PASTOR_WEEKLY_REPORT
   EVENT_CANCELLED
   EVENT_UPDATED
+  PASTOR_WEEKLY_REPORT
   MUSICIAN_CANCELLATION
 }
 
