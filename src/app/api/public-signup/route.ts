@@ -31,11 +31,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid or expired link' }, { status: 404 })
     }
 
-    // Check if the link is still valid (within date range)
+    // Links should stay active forever as per user requirements
+    // No expiration check needed
     const now = new Date()
-    if (now < publicLink.startDate || now > publicLink.endDate) {
-      return NextResponse.json({ error: 'Link has expired' }, { status: 410 })
-    }
 
     // Verify the musician exists and belongs to the church
     const musician = await prisma.user.findFirst({
