@@ -341,6 +341,10 @@ export default function HomePage() {
                     <div className="w-2 h-2 bg-green-600 rounded-full mr-3"></div>
                     <span className="text-gray-700">Assign musicians manually or automatically</span>
                   </div>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-green-600 rounded-full mr-3"></div>
+                    <span className="text-gray-700">No need for musicians to create an account to sign up for events</span>
+                  </div>
                 </div>
               </div>
               <div className="relative order-1 lg:order-2">
@@ -402,6 +406,10 @@ export default function HomePage() {
                   <div className="flex items-center">
                     <div className="w-2 h-2 bg-blue-600 rounded-full mr-3"></div>
                     <span className="text-gray-700">Visual calendar shows conflicts instantly</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-blue-600 rounded-full mr-3"></div>
+                    <span className="text-gray-700">Seamless integration with your Apple, Google, or Microsoft calendar!</span>
                   </div>
                 </div>
               </div>
