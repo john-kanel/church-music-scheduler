@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { sendSignupConfirmationEmail } from '@/lib/resend'
+import { generateSingleEventICalFile } from '@/lib/ical-generator'
 
 // POST /api/public-signup - Handle public musician signup with PIN verification
 export async function POST(request: NextRequest) {
@@ -41,13 +43,15 @@ export async function POST(request: NextRequest) {
         id: musicianId,
         churchId: publicLink.churchId,
         role: 'MUSICIAN',
-        isVerified: true
+        // Remove isVerified check - we want to allow unverified users to sign up
       },
       select: {
         id: true,
         firstName: true,
         lastName: true,
-        pin: true
+        email: true,
+        pin: true,
+        isVerified: true
       }
     })
 
@@ -60,7 +64,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid PIN' }, { status: 401 })
     }
 
-    // Verify the assignment exists and is available
+    // FEATURE 2: Mark account as verified on first PIN use
+    if (!musician.isVerified) {
+      await prisma.user.update({
+        where: { id: musicianId },
+        data: { isVerified: true }
+      })
+      console.log(`✅ Activated account for ${musician.firstName} ${musician.lastName} on first PIN use`)
+    }
+
+    // Verify the assignment exists and is available - with full event details for email
     const assignment = await prisma.eventAssignment.findFirst({
       where: {
         id: assignmentId,
@@ -75,10 +88,23 @@ export async function POST(request: NextRequest) {
       },
       include: {
         event: {
-          select: {
-            id: true,
-            name: true,
-            startTime: true
+          include: {
+            eventType: true,
+            assignments: {
+              include: {
+                user: true,
+                group: true
+              }
+            },
+            hymns: {
+              include: {
+                servicePart: true
+              },
+              orderBy: [
+                { servicePart: { order: 'asc' } },
+                { createdAt: 'asc' }
+              ]
+            }
           }
         }
       }
@@ -122,6 +148,33 @@ export async function POST(request: NextRequest) {
         }
       }
     })
+
+    // FEATURE 1: Send confirmation email with ICS attachment
+    try {
+      // Generate ICS file for the single event
+      const icsContent = generateSingleEventICalFile(
+        assignment.event, 
+        publicLink.church.name, 
+        'America/Chicago' // Default timezone - could be made configurable
+      )
+
+      // Send confirmation email
+      await sendSignupConfirmationEmail(
+        musician.email,
+        `${musician.firstName} ${musician.lastName}`,
+        publicLink.church.name,
+        assignment.event.name,
+        assignment.event.startTime,
+        assignment.event.location || '',
+        assignment.roleName || 'Musician',
+        icsContent
+      )
+
+      console.log(`📧 Sent confirmation email to ${musician.email} for ${assignment.event.name}`)
+    } catch (emailError) {
+      console.error('Error sending confirmation email:', emailError)
+      // Don't fail the signup if email fails - the assignment is still successful
+    }
 
     // TODO: Send notification emails to directors/pastors about the new assignment
     // This would use the existing notification system

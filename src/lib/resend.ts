@@ -765,3 +765,167 @@ export const getLogoHTML = () => {
 };
 
 export default resend; 
+
+// Send signup confirmation email with ICS attachment
+export async function sendSignupConfirmationEmail(
+  to: string,
+  musicianName: string,
+  churchName: string,
+  eventName: string,
+  eventDate: Date,
+  eventLocation: string,
+  roleName: string,
+  icsContent: string
+) {
+  try {
+    // Use verified domain for all environments
+    const fromAddress = 'Church Music Pro <noreply@churchmusicpro.com>'
+    
+    // Format the event date nicely
+    const formattedDate = eventDate.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+    
+    const formattedTime = eventDate.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    })
+
+    const emailData = {
+      from: fromAddress,
+      to,
+      subject: `🎵 Confirmed: You're signed up for ${eventName}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <!-- Logo Section -->
+          <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; border-bottom: 3px solid #660033;">
+            ${getEmailLogoHtml()}
+            <h1 style="color: #333; margin: 0; font-size: 28px;">🎵 Sign-up Confirmed!</h1>
+          </div>
+          
+          <div style="background: white; padding: 40px 20px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+            <h2 style="color: #333; margin-bottom: 20px;">Hello ${musicianName}!</h2>
+            
+            <p style="color: #666; line-height: 1.6; font-size: 16px;">
+              Thank you for signing up to serve in ${churchName}'s music ministry! Your participation is confirmed.
+            </p>
+            
+            <!-- Event Details Card -->
+            <div style="background: #f8f9fa; border-left: 4px solid #660033; padding: 20px; margin: 25px 0; border-radius: 0 8px 8px 0;">
+              <h3 style="color: #660033; margin: 0 0 15px 0; font-size: 20px;">📅 Event Details</h3>
+              
+              <div style="margin-bottom: 12px;">
+                <strong style="color: #333;">Event:</strong> 
+                <span style="color: #666;">${eventName}</span>
+              </div>
+              
+              <div style="margin-bottom: 12px;">
+                <strong style="color: #333;">Your Role:</strong> 
+                <span style="color: #666; background: #660033; color: white; padding: 2px 8px; border-radius: 12px; font-size: 14px;">${roleName}</span>
+              </div>
+              
+              <div style="margin-bottom: 12px;">
+                <strong style="color: #333;">Date:</strong> 
+                <span style="color: #666;">${formattedDate}</span>
+              </div>
+              
+              <div style="margin-bottom: 12px;">
+                <strong style="color: #333;">Time:</strong> 
+                <span style="color: #666;">${formattedTime}</span>
+              </div>
+              
+              ${eventLocation ? `
+              <div style="margin-bottom: 12px;">
+                <strong style="color: #333;">Location:</strong> 
+                <span style="color: #666;">${eventLocation}</span>
+              </div>
+              ` : ''}
+            </div>
+            
+            <div style="background: #e7f3ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h4 style="color: #1e40af; margin: 0 0 10px 0;">📎 Calendar Event Attached</h4>
+              <p style="color: #1e40af; margin: 0; font-size: 14px;">
+                We've attached a calendar file (.ics) to this email. You can open it to add this event directly to your calendar app.
+              </p>
+            </div>
+            
+            <p style="color: #666; line-height: 1.6; font-size: 16px;">
+              If you need to make any changes or have questions, please contact your music director.
+            </p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.NEXTAUTH_URL || 'https://churchmusicpro.com'}/auth/signin" 
+                 style="background-color: #660033; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+                View Full Schedule
+              </a>
+            </div>
+            
+            <div style="border-top: 1px solid #eee; margin-top: 30px; padding-top: 20px;">
+              <p style="color: #999; font-size: 14px; margin: 0;">
+                Thank you for serving in ${churchName}'s music ministry!
+              </p>
+            </div>
+          </div>
+        </div>
+      `,
+      text: `
+Hello ${musicianName}!
+
+Thank you for signing up to serve in ${churchName}'s music ministry! Your participation is confirmed.
+
+EVENT DETAILS:
+Event: ${eventName}
+Your Role: ${roleName}
+Date: ${formattedDate}
+Time: ${formattedTime}${eventLocation ? `\nLocation: ${eventLocation}` : ''}
+
+A calendar file (.ics) is attached to this email that you can open to add this event to your calendar.
+
+If you need to make any changes or have questions, please contact your music director.
+
+View your full schedule: ${process.env.NEXTAUTH_URL || 'https://churchmusicpro.com'}/auth/signin
+
+Thank you for serving in ${churchName}'s music ministry!
+
+---
+Sent by Church Music Pro
+      `,
+      attachments: [
+        {
+          filename: `${eventName.replace(/[^a-zA-Z0-9]/g, '_')}.ics`,
+          content: Buffer.from(icsContent).toString('base64'),
+          contentType: 'text/calendar',
+          encoding: 'base64'
+        }
+      ]
+    }
+
+    // Check if Resend is available (for local development)
+    if (!process.env.RESEND_API_KEY) {
+      return simulateEmailInDev(emailData, 'N/A')
+    }
+
+    // Send the email using verified domain
+    const { data, error } = await resend.emails.send(emailData)
+
+    if (error) {
+      console.error('Error sending signup confirmation email:', error)
+      
+      // Provide more helpful error messages
+      if (error.message?.includes('You can only send testing emails')) {
+        throw new Error('Email sending failed: Domain verification issue. Please check your Resend domain configuration.')
+      }
+      
+      throw error
+    }
+
+    return data
+  } catch (error) {
+    console.error('Failed to send signup confirmation email:', error)
+    throw error
+  }
+} 

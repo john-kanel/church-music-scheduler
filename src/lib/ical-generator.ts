@@ -66,6 +66,33 @@ export function generateICalFeed(events: EventWithDetails[], churchName: string,
 }
 
 /**
+ * Generates an iCal file for a single event (for email attachments)
+ */
+export function generateSingleEventICalFile(event: EventWithDetails, churchName: string, timezone: string = 'America/Chicago'): string {
+  const icalEvent = convertEventToICal(event, timezone)
+  
+  const calendarHeader = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Church Music Pro//Single Event 1.0//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    `X-WR-CALNAME:${event.name} - ${churchName}`,
+    `X-WR-CALDESC:Event: ${event.name}`,
+    `X-WR-TIMEZONE:${timezone}`,
+    'X-APPLE-CALENDAR-COLOR:#8B5CF6',
+    'X-OUTLOOK-COLOR:#8B5CF6',
+    ''
+  ].join('\r\n')
+
+  const calendarFooter = 'END:VCALENDAR'
+
+  const icalContent = formatICalEvent(icalEvent, timezone)
+
+  return calendarHeader + icalContent + '\r\n' + calendarFooter
+}
+
+/**
  * Converts a database event to iCal format
  */
 function convertEventToICal(event: EventWithDetails, timezone: string): ICalEvent {
