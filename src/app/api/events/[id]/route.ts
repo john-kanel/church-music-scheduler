@@ -255,16 +255,26 @@ export async function PUT(
       }
     }
 
-    // Get user's timezone and create proper datetime
-    const { getUserTimezone, createEventDateTime } = await import('@/lib/timezone-utils')
-    const userTimezone = await getUserTimezone(session.user.id)
-
     // Create dates using proper timezone handling
-    const startDateTime = createEventDateTime(startDate, startTime, userTimezone)
+    let startDateTime, endDateTime = null
     
-    let endDateTime = null
-    if (endTime) {
-      endDateTime = createEventDateTime(startDate, endTime, userTimezone)
+    if (isDragAndDrop) {
+      // For drag and drop, we receive correct UTC timestamps - use them directly
+      console.log('🕐 Drag and drop: using UTC timestamps directly')
+      startDateTime = new Date(body.startTime)
+      if (body.endTime) {
+        endDateTime = new Date(body.endTime)
+      }
+    } else {
+      // For form updates, apply timezone conversion
+      console.log('🕐 Form update: applying timezone conversion')
+      const { getUserTimezone, createEventDateTime } = await import('@/lib/timezone-utils')
+      const userTimezone = await getUserTimezone(session.user.id)
+      
+      startDateTime = createEventDateTime(startDate, startTime, userTimezone)
+      if (endTime) {
+        endDateTime = createEventDateTime(startDate, endTime, userTimezone)
+      }
     }
 
 

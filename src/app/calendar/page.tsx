@@ -317,10 +317,11 @@ export default function CalendarPage() {
     const year = currentDate.getFullYear()
     const month = currentDate.getMonth()
     
-    // Preserve the original time from the event instead of hardcoding to 10 AM
+    // Preserve the original LOCAL time from the event instead of hardcoding to 10 AM
+    // Convert UTC time back to local time to get the correct hour/minute
     const originalEventDate = new Date(event.startTime)
-    const originalHour = originalEventDate.getHours()
-    const originalMinute = originalEventDate.getMinutes()
+    const originalHour = originalEventDate.getHours() // This gives us local hours
+    const originalMinute = originalEventDate.getMinutes() // This gives us local minutes
     const dropDate = new Date(year, month, day, originalHour, originalMinute)
 
     // Create optimistic update
