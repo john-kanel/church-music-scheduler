@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/db'
 import { authOptions } from '@/lib/auth'
+import { isMusicianAvailable, checkMultipleMusicianAvailability } from '@/lib/availability-utils'
 
 export async function GET(request: NextRequest) {
   try {
@@ -202,10 +203,9 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Function to check if musician is available for event
-    const isMusicianAvailable = (musician: any, eventStart: Date, eventEnd: Date | null) => {
-      // First check existing assignment conflicts
-      const hasAssignmentConflict = musician.eventAssignments.some((assignment: any) => {
+    // Function to check if musician is available for event (checking existing assignments)
+    const hasExistingAssignmentConflict = (musician: any, eventStart: Date, eventEnd: Date | null) => {
+      return musician.eventAssignments.some((assignment: any) => {
         const assignmentStart = new Date(assignment.event.startTime)
         const assignmentEnd = assignment.event.endTime ? new Date(assignment.event.endTime) : null
         
@@ -217,37 +217,6 @@ export async function POST(request: NextRequest) {
           return eventStart.toDateString() === assignmentStart.toDateString()
         }
       })
-
-      if (hasAssignmentConflict) {
-        return false
-      }
-
-      // Check unavailability records
-      const hasUnavailabilityConflict = musician.unavailabilities.some((unavailability: any) => {
-        // Check day-of-week unavailability
-        if (unavailability.dayOfWeek !== null) {
-          return eventStart.getDay() === unavailability.dayOfWeek
-        }
-        
-        // Check date-based unavailability
-        if (unavailability.startDate) {
-          const unavailStart = new Date(unavailability.startDate)
-          const unavailEnd = unavailability.endDate ? new Date(unavailability.endDate) : unavailStart
-          
-          // Set times to beginning/end of day for date comparison
-          unavailStart.setHours(0, 0, 0, 0)
-          unavailEnd.setHours(23, 59, 59, 999)
-          
-          const eventStartDate = new Date(eventStart)
-          eventStartDate.setHours(0, 0, 0, 0)
-          
-          return eventStartDate >= unavailStart && eventStartDate <= unavailEnd
-        }
-        
-        return false
-      })
-
-      return !hasUnavailabilityConflict
     }
 
     // Function to check if musician is qualified for role
@@ -297,19 +266,30 @@ export async function POST(request: NextRequest) {
       const eventStart = new Date(assignment.event.startTime)
       const eventEnd = assignment.event.endTime ? new Date(assignment.event.endTime as any) : null
       
+      // Pre-check availability for all musicians for this event using our utility
+      const musicianIds = musicians.map(m => m.id)
+      const availabilityChecks = await checkMultipleMusicianAvailability(musicianIds, eventStart)
+      
       // Find qualified and available musicians
       const qualifiedMusicians = musicians.filter(musician => {
         if (usedMusicians.has(musician.id)) return false
         
         const isQualified = isMusicianQualified(musician, assignment.roleName || '')
-        const isAvailable = isMusicianAvailable(musician, eventStart, eventEnd)
+        const hasExistingConflict = hasExistingAssignmentConflict(musician, eventStart, eventEnd)
+        const isAvailablePerSchedule = availabilityChecks[musician.id]?.isAvailable === true
         
         // Debug logging for troubleshooting
         if (!isQualified) {
           console.log(`Musician ${musician.firstName} ${musician.lastName} not qualified for ${assignment.roleName}. Instruments: [${musician.instruments?.join(', ') || 'none'}]`)
         }
+        if (hasExistingConflict) {
+          console.log(`Musician ${musician.firstName} ${musician.lastName} has existing assignment conflict for ${assignment.event.name}`)
+        }
+        if (!isAvailablePerSchedule) {
+          console.log(`Musician ${musician.firstName} ${musician.lastName} is not available per schedule: ${availabilityChecks[musician.id]?.reason || 'No reason specified'}`)
+        }
         
-        return isQualified && isAvailable
+        return isQualified && !hasExistingConflict && isAvailablePerSchedule
       })
 
       if (qualifiedMusicians.length > 0) {
@@ -329,7 +309,22 @@ export async function POST(request: NextRequest) {
         
         usedMusicians.add(selectedMusician.id)
       } else {
-        // No qualified musicians available
+        // No qualified musicians available - let's determine why
+        const qualifiedCount = musicians.filter(m => isMusicianQualified(m, assignment.roleName || '')).length
+        const availableCount = musicians.filter(m => availabilityChecks[m.id]?.isAvailable === true).length
+        const conflictFreeCount = musicians.filter(m => !hasExistingAssignmentConflict(m, eventStart, eventEnd)).length
+        
+        let reason = 'No qualified musicians available'
+        if (qualifiedCount === 0) {
+          reason = 'No musicians qualified for this role'
+        } else if (availableCount === 0) {
+          reason = 'All qualified musicians are unavailable per their schedule settings'
+        } else if (conflictFreeCount === 0) {
+          reason = 'All qualified musicians have existing assignment conflicts'
+        } else {
+          reason = 'No musicians meet all criteria (qualified, available, and conflict-free)'
+        }
+        
         proposals.push({
           assignmentId: assignment.id,
           eventId: assignment.event.id,
@@ -339,7 +334,7 @@ export async function POST(request: NextRequest) {
           musicianId: null,
           musicianName: null,
           musicianEmail: null,
-          reason: 'No qualified musicians available'
+          reason
         })
       }
     }

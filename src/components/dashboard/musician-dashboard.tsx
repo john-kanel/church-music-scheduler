@@ -84,6 +84,10 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
   const [selectedEvent, setSelectedEvent] = useState<any>(null)
   const [showEventDetails, setShowEventDetails] = useState(false)
   const [showSignupModal, setShowSignupModal] = useState(false)
+  
+  // Separate state for available events (independent of calendar month)
+  const [availableEvents, setAvailableEvents] = useState<any[]>([])
+  const [availableEventsLoading, setAvailableEventsLoading] = useState(true)
 
   // Fetch dashboard data
   useEffect(() => {
@@ -108,6 +112,37 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
     fetchDashboardData()
   }, [currentDate])
 
+  // Fetch available events independently (not tied to calendar month)
+  useEffect(() => {
+    const fetchAvailableEvents = async () => {
+      try {
+        // Fetch events for the next 3 months regardless of calendar view
+        const startDate = new Date().toISOString()
+        const endDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString()
+        
+        const response = await fetch(`/api/events?startDate=${startDate}&endDate=${endDate}`)
+        if (response.ok) {
+          const data = await response.json()
+          // Filter for events with open positions
+          const eventsWithOpenings = (data.events || []).filter((event: any) => {
+            return event.assignments?.some((assignment: any) => !assignment.user)
+          })
+          setAvailableEvents(eventsWithOpenings)
+        } else {
+          console.error('Failed to fetch available events')
+        }
+      } catch (error) {
+        console.error('Error fetching available events:', error)
+      } finally {
+        setAvailableEventsLoading(false)
+      }
+    }
+
+    if (session?.user?.churchId) {
+      fetchAvailableEvents()
+    }
+  }, [session])
+
   const handleSignOut = () => {
     signOut({ callbackUrl: '/' })
   }
@@ -123,14 +158,11 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
       })
 
       if (response.ok) {
-        // Refresh dashboard data
-        const month = currentDate.getMonth() + 1
-        const year = currentDate.getFullYear()
-        const dashboardResponse = await fetch(`/api/dashboard?month=${month}&year=${year}`)
-        if (dashboardResponse.ok) {
-          const data = await dashboardResponse.json()
-          setDashboardData(data)
-        }
+        // Refresh both dashboard data and available events
+        await Promise.all([
+          refreshDashboardData(),
+          refreshAvailableEvents()
+        ])
       } else {
         console.error('Failed to update assignment')
       }
@@ -236,6 +268,24 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
       }
     } catch (error) {
       console.error('Error refreshing dashboard data:', error)
+    }
+  }
+
+  const refreshAvailableEvents = async () => {
+    try {
+      const startDate = new Date().toISOString()
+      const endDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString()
+      
+      const response = await fetch(`/api/events?startDate=${startDate}&endDate=${endDate}`)
+      if (response.ok) {
+        const data = await response.json()
+        const eventsWithOpenings = (data.events || []).filter((event: any) => {
+          return event.assignments?.some((assignment: any) => !assignment.user)
+        })
+        setAvailableEvents(eventsWithOpenings)
+      }
+    } catch (error) {
+      console.error('Error refreshing available events:', error)
     }
   }
 
@@ -645,37 +695,47 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Available Events</h2>
               <p className="text-sm text-gray-600 mb-4">Events looking for musicians</p>
               
-              <div className="space-y-3">
-                {dashboardData?.events?.filter((event: any) => {
-                  // Filter for events that have vacancies (assignments without users)
-                  return event.assignments?.some((assignment: any) => !assignment.user)
-                }).slice(0, 3).map((event: any) => {
-                  const vacancies = event.assignments?.filter((assignment: any) => !assignment.user) || []
-                  return (
-                    <div key={event.id} className="p-3 bg-orange-50 rounded-lg border border-orange-200">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-medium text-gray-900 text-sm truncate">{event.name}</h3>
-                          <p className="text-xs text-gray-600">
-                            {new Date(event.startTime).toLocaleDateString()} at {' '}
-                            {new Date(event.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </p>
-                          <p className="text-xs text-orange-600 font-medium">
-                            Need: {vacancies.map((v: any) => v.roleName).join(', ')}
-                          </p>
+              {availableEventsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {availableEvents.slice(0, 3).map((event: any) => {
+                    const vacancies = event.assignments?.filter((assignment: any) => !assignment.user) || []
+                    return (
+                      <div key={event.id} className="p-3 bg-orange-50 rounded-lg border border-orange-200">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-medium text-gray-900 text-sm truncate">{event.name}</h3>
+                            <p className="text-xs text-gray-600">
+                              {new Date(event.startTime).toLocaleDateString()} at {' '}
+                              {new Date(event.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                            <p className="text-xs text-orange-600 font-medium">
+                              Need: {vacancies.map((v: any) => v.roleName).join(', ')}
+                            </p>
+                          </div>
+                          <AlertCircle className="h-4 w-4 text-orange-600 mt-1" />
                         </div>
-                        <AlertCircle className="h-4 w-4 text-orange-600 mt-1" />
+                        <button 
+                          onClick={() => handleSignupClick(event)}
+                          className="w-full mt-2 bg-secondary-600 text-white py-1 px-3 rounded text-xs hover:bg-secondary-700"
+                        >
+                          Sign Up
+                        </button>
                       </div>
-                      <button 
-                        onClick={() => handleSignupClick(event)}
-                        className="w-full mt-2 bg-secondary-600 text-white py-1 px-3 rounded text-xs hover:bg-secondary-700"
-                      >
-                        Sign Up
-                      </button>
+                    )
+                  })}
+                  
+                  {availableEvents.length === 0 && (
+                    <div className="text-center py-6">
+                      <AlertCircle className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+                      <p className="text-sm text-gray-600">No available events at this time</p>
                     </div>
-                  )
-                })}
-              </div>
+                  )}
+                </div>
+              )}
 
               <div className="mt-4">
                 <Link href="/available-events" className="text-blue-600 hover:text-blue-700 text-sm font-medium">
@@ -732,9 +792,11 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
         event={selectedEvent}
         onEventUpdated={() => {
           refreshDashboardData()
+          refreshAvailableEvents()
         }}
         onEventDeleted={() => {
           refreshDashboardData()
+          refreshAvailableEvents()
           setShowEventDetails(false)
           setSelectedEvent(null)
         }}
@@ -750,6 +812,7 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
         event={selectedEvent}
         onSignupSuccess={() => {
           refreshDashboardData()
+          refreshAvailableEvents()
         }}
       />
     </div>

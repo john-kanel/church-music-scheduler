@@ -7,6 +7,7 @@ import {
   Clock, Church, Check, X, Music, Award, Calendar 
 } from 'lucide-react'
 import Link from 'next/link'
+import { AvailabilityCard } from '@/components/profile/availability-card'
 
 interface UserProfile {
   id: string
@@ -533,6 +534,11 @@ export default function ProfilePage() {
                 </div>
               </div>
             </div>
+
+            {/* Availability Settings - Only show for musicians */}
+            {profile.role === 'MUSICIAN' && !editing && (
+              <AvailabilityCard isEditable={true} />
+            )}
 
             {/* Action Buttons for Editing */}
             {editing && (
