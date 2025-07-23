@@ -60,45 +60,36 @@ export async function GET(request: NextRequest) {
       churchId: session.user.churchId
     }
 
+    // Add date filtering if provided
     if (month && year) {
-      const monthNum = parseInt(month)
-      const yearNum = parseInt(year)
-      const startDate = new Date(yearNum, monthNum - 1, 1)
-      const endDate = new Date(yearNum, monthNum, 0, 23, 59, 59)
+      const startOfMonth = new Date(parseInt(year), parseInt(month) - 1, 1)
+      const endOfMonth = new Date(parseInt(year), parseInt(month), 0)
+      endOfMonth.setHours(23, 59, 59, 999)
 
       whereClause.startTime = {
-        gte: startDate,
-        lte: endDate
+        gte: startOfMonth,
+        lte: endOfMonth
       }
+    }
 
-      // Auto-extend recurring events for future months
-      const currentDate = new Date()
-      if (startDate > currentDate) {
-        try {
-          // We're viewing a future month, check if we need to extend recurring events
-          const rootEvents = await prisma.event.findMany({
-            where: {
-              churchId: session.user.churchId,
-              isRootEvent: true,
-              isRecurring: true
-            }
-          })
+    // Handle date range filtering (for available events page)
+    const startDate = searchParams.get('startDate')
+    const endDate = searchParams.get('endDate')
+    if (startDate || endDate) {
+      whereClause.startTime = {}
+      if (startDate) {
+        whereClause.startTime.gte = new Date(startDate)
+      }
+      if (endDate) {
+        whereClause.startTime.lte = new Date(endDate)
+      }
+    }
 
-          // Extend each recurring series if needed (run in parallel for performance)
-          await Promise.all(
-            rootEvents.map(async (rootEvent) => {
-              try {
-                await extendRecurringEvents(rootEvent.id, endDate, prisma)
-              } catch (error) {
-                console.error(`Failed to extend recurring events for ${rootEvent.id}:`, error)
-                // Continue with other series even if one fails
-              }
-            })
-          )
-        } catch (error) {
-          console.error('Error extending recurring events:', error)
-          // Continue with regular event fetching even if extension fails
-        }
+    // EXCLUDE TENTATIVE EVENTS FOR MUSICIANS
+    // Musicians should not see tentative events in calendar or available events
+    if (session.user.role === 'MUSICIAN') {
+      whereClause.NOT = {
+        status: 'TENTATIVE'
       }
     }
 

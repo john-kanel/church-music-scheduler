@@ -29,7 +29,11 @@ export async function POST(
       where: {
         id: assignmentId,
         event: {
-          churchId: session.user.churchId
+          churchId: session.user.churchId,
+          // EXCLUDE TENTATIVE EVENTS - Musicians cannot sign up for tentative events
+          NOT: {
+            status: 'TENTATIVE'
+          }
         },
         userId: null, // Must be unassigned
         status: 'PENDING' // Must be available

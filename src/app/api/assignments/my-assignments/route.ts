@@ -22,7 +22,11 @@ export async function GET(request: NextRequest) {
       where: {
         userId: session.user.id,
         event: {
-          churchId: session.user.churchId
+          churchId: session.user.churchId,
+          // EXCLUDE TENTATIVE EVENTS FOR MUSICIANS
+          NOT: {
+            status: 'TENTATIVE'
+          }
         }
       },
       include: {

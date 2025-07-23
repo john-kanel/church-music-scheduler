@@ -147,6 +147,10 @@ export async function GET(request: NextRequest) {
             event: {
               startTime: {
                 gte: now
+              },
+              // EXCLUDE TENTATIVE EVENTS FOR MUSICIANS
+              NOT: {
+                status: 'TENTATIVE'
               }
             }
           },
@@ -179,18 +183,26 @@ export async function GET(request: NextRequest) {
               startTime: {
                 gte: startOfMonth,
                 lte: endOfMonth
+              },
+              // EXCLUDE TENTATIVE EVENTS FOR MUSICIANS
+              NOT: {
+                status: 'TENTATIVE'
               }
             }
           }
         }),
         
-        // Month events for calendar
+        // Month events for calendar - EXCLUDE TENTATIVE EVENTS FOR MUSICIANS
         prisma.event.findMany({
           where: {
             churchId,
             startTime: {
               gte: startOfMonth,
               lte: endOfMonth
+            },
+            // EXCLUDE TENTATIVE EVENTS FOR MUSICIANS
+            NOT: {
+              status: 'TENTATIVE'
             }
           },
           include: {
