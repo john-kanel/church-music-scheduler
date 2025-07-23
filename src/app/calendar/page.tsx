@@ -347,14 +347,22 @@ export default function CalendarPage() {
     setEvents(updatedEvents)
 
     try {
+      const requestBody = {
+        startTime: dropDate.toISOString(),
+        endTime: endDate.toISOString()
+      }
+      
+      console.log('🚀 Making PATCH request to:', `/api/events/${event.id}`)
+      console.log('📋 Request body:', requestBody)
+      
       const response = await fetch(`/api/events/${event.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          startTime: dropDate.toISOString(),
-          endTime: endDate.toISOString()
-        })
+        body: JSON.stringify(requestBody)
       })
+      
+      console.log('📤 Response status:', response.status)
+      console.log('📤 Response headers:', Object.fromEntries(response.headers.entries()))
 
       if (response.ok) {
         // Remove pending state
@@ -370,7 +378,18 @@ export default function CalendarPage() {
         )
         setEvents(finalEvents)
       } else {
-        throw new Error('Failed to update event')
+        const errorText = await response.text()
+        console.error('❌ Response not OK. Status:', response.status, 'Text:', errorText)
+        
+        let errorData
+        try {
+          errorData = JSON.parse(errorText)
+          console.error('❌ Parsed error data:', errorData)
+        } catch (e) {
+          console.error('❌ Could not parse error response as JSON')
+        }
+        
+        throw new Error(`Failed to update event (${response.status}): ${errorData?.error || errorText}`)
       }
     } catch (error) {
       console.error('❌ Error moving event:', error)

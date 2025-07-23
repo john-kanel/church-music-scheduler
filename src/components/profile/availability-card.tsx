@@ -59,16 +59,6 @@ export function AvailabilityCard({ userId, isEditable = true }: AvailabilityCard
       if (response.ok) {
         const data = await response.json()
         
-        // Debug logging
-        console.log('📥 Frontend received unavailabilities:', data.unavailabilities)
-        data.unavailabilities?.forEach((u: any, index: number) => {
-          console.log(`Frontend unavailability ${index}:`, {
-            startDate: u.startDate,
-            endDate: u.endDate,
-            reason: u.reason
-          })
-        })
-        
         setUnavailabilities(data.unavailabilities || [])
       } else {
         setError('Failed to load availability settings')
@@ -201,16 +191,10 @@ export function AvailabilityCard({ userId, isEditable = true }: AvailabilityCard
   const formatDateRange = (startDate: string | null, endDate: string | null) => {
     if (!startDate) return ''
     
-    // Debug logging
-    console.log('🎨 formatDateRange received:', { startDate, endDate })
-    
     // Create date in local timezone to avoid timezone offset issues
     const createLocalDate = (dateString: string) => {
       const [year, month, day] = dateString.split('T')[0].split('-').map(Number)
-      console.log('Creating local date from:', dateString, 'parsed as:', { year, month: month - 1, day })
-      const date = new Date(year, month - 1, day) // month is 0-indexed
-      console.log('Created date object:', date, 'ISO:', date.toISOString())
-      return date
+      return new Date(year, month - 1, day) // month is 0-indexed
     }
     
     const start = createLocalDate(startDate).toLocaleDateString('en-US', {

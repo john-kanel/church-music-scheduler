@@ -55,17 +55,6 @@ export async function GET(request: NextRequest) {
       ]
     })
 
-    // Debug logging for retrieval
-    console.log('📤 Retrieved unavailabilities count:', unavailabilities.length)
-    unavailabilities.forEach((u, index) => {
-      console.log(`Unavailability ${index}:`, {
-        startDate: u.startDate,
-        endDate: u.endDate,
-        startDateISO: u.startDate?.toISOString(),
-        endDateISO: u.endDate?.toISOString()
-      })
-    })
-
     return NextResponse.json({ unavailabilities })
   } catch (error) {
     console.error('Error fetching unavailabilities:', error)
@@ -131,32 +120,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Debug logging
-    console.log('🔍 Date processing debug:')
-    console.log('Received startDate:', startDate)
-    console.log('Received endDate:', endDate)
-    
-    const processedStartDate = startDate ? createLocalDate(startDate) : null
-    const processedEndDate = endDate ? createLocalDate(endDate) : null
-    
-    console.log('Processed startDate:', processedStartDate)
-    console.log('Processed endDate:', processedEndDate)
-    console.log('Processed startDate ISO:', processedStartDate?.toISOString())
-    console.log('Processed endDate ISO:', processedEndDate?.toISOString())
-
     const unavailability = await prisma.musicianUnavailability.create({
       data: {
         userId: session.user.id,
-        startDate: processedStartDate,
-        endDate: processedEndDate,
+        startDate: startDate ? createLocalDate(startDate) : null,
+        endDate: endDate ? createLocalDate(endDate) : null,
         dayOfWeek: dayOfWeek,
         reason: reason || null
       }
     })
-    
-    console.log('Stored unavailability:', unavailability)
-    console.log('Stored startDate ISO:', unavailability.startDate?.toISOString())
-    console.log('Stored endDate ISO:', unavailability.endDate?.toISOString())
 
     return NextResponse.json({ 
       message: 'Unavailability created successfully',

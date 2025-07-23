@@ -143,6 +143,7 @@ export async function PUT(
   context: { params: Promise<{ id: string }> }
 ) {
   const params = await context.params
+  console.log('🔍 PUT request received for event:', params.id)
   try {
     const session = await getServerSession(authOptions)
     
@@ -475,8 +476,26 @@ export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-  // PATCH calls the same logic as PUT for simplicity
-  return PUT(request, context)
+  try {
+    const params = await context.params
+    console.log('🔍 PATCH request received for event:', params.id)
+    console.log('📥 Request URL:', request.url)
+    
+    const body = await request.clone().json()
+    console.log('📋 PATCH request body:', body)
+    
+    // PATCH calls the same logic as PUT for simplicity
+    const result = await PUT(request, context)
+    console.log('✅ PATCH result status:', result.status)
+    
+    return result
+  } catch (error) {
+    console.error('❌ PATCH error:', error)
+    return NextResponse.json(
+      { error: 'Failed to process PATCH request', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    )
+  }
 }
 
 // DELETE /api/events/[id] - Delete event
