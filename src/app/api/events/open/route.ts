@@ -189,7 +189,6 @@ export async function POST(request: NextRequest) {
             }
           }
         },
-        unavailabilities: true,
         groupMemberships: {
           include: {
             group: {
@@ -202,6 +201,8 @@ export async function POST(request: NextRequest) {
         }
       }
     })
+
+    console.log(`🎯 Auto-assignment starting with ${musicians.length} musicians for ${openAssignments.length} assignments`)
 
     // Function to check if musician is available for event (checking existing assignments)
     const hasExistingAssignmentConflict = (musician: any, eventStart: Date, eventEnd: Date | null) => {
@@ -270,9 +271,15 @@ export async function POST(request: NextRequest) {
       const musicianIds = musicians.map(m => m.id)
       const availabilityChecks = await checkMultipleMusicianAvailability(musicianIds, eventStart)
       
+      console.log(`📅 Checking availability for event "${assignment.event.name}" on ${eventStart.toLocaleDateString()}`)
+      console.log(`🔍 Availability results: ${Object.entries(availabilityChecks).filter(([_, check]) => !check.isAvailable).length} musicians unavailable`)
+      
       // Find qualified and available musicians
       const qualifiedMusicians = musicians.filter(musician => {
-        if (usedMusicians.has(musician.id)) return false
+        if (usedMusicians.has(musician.id)) {
+          console.log(`⏭️ Musician ${musician.firstName} ${musician.lastName} already used in this batch`)
+          return false
+        }
         
         const isQualified = isMusicianQualified(musician, assignment.roleName || '')
         const hasExistingConflict = hasExistingAssignmentConflict(musician, eventStart, eventEnd)
@@ -280,21 +287,30 @@ export async function POST(request: NextRequest) {
         
         // Debug logging for troubleshooting
         if (!isQualified) {
-          console.log(`Musician ${musician.firstName} ${musician.lastName} not qualified for ${assignment.roleName}. Instruments: [${musician.instruments?.join(', ') || 'none'}]`)
+          console.log(`❌ Musician ${musician.firstName} ${musician.lastName} not qualified for ${assignment.roleName}. Instruments: [${musician.instruments?.join(', ') || 'none'}]`)
         }
         if (hasExistingConflict) {
-          console.log(`Musician ${musician.firstName} ${musician.lastName} has existing assignment conflict for ${assignment.event.name}`)
+          console.log(`⏰ Musician ${musician.firstName} ${musician.lastName} has existing assignment conflict for ${assignment.event.name}`)
         }
         if (!isAvailablePerSchedule) {
-          console.log(`Musician ${musician.firstName} ${musician.lastName} is not available per schedule: ${availabilityChecks[musician.id]?.reason || 'No reason specified'}`)
+          console.log(`🚫 Musician ${musician.firstName} ${musician.lastName} is not available per schedule: ${availabilityChecks[musician.id]?.reason || 'No reason specified'}`)
         }
         
-        return isQualified && !hasExistingConflict && isAvailablePerSchedule
+        const isEligible = isQualified && !hasExistingConflict && isAvailablePerSchedule
+        if (isEligible) {
+          console.log(`✅ Musician ${musician.firstName} ${musician.lastName} is eligible for ${assignment.roleName}`)
+        }
+        
+        return isEligible
       })
+      
+      console.log(`🎯 Found ${qualifiedMusicians.length} qualified and available musicians for ${assignment.roleName} in "${assignment.event.name}"`)
 
       if (qualifiedMusicians.length > 0) {
         // Randomly select from qualified musicians
         const selectedMusician = qualifiedMusicians[Math.floor(Math.random() * qualifiedMusicians.length)]
+        
+        console.log(`🎉 Successfully matched ${selectedMusician.firstName} ${selectedMusician.lastName} to ${assignment.roleName} for "${assignment.event.name}"`)
         
         proposals.push({
           assignmentId: assignment.id,
@@ -339,22 +355,39 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Log summary of assignment results
+    const successfulCount = proposals.filter(p => p.musicianId).length
+    const failedCount = proposals.length - successfulCount
+    console.log(`📊 Auto-assignment summary: ${successfulCount} successful, ${failedCount} failed out of ${proposals.length} total assignments`)
+    
+    if (failedCount > 0) {
+      console.log(`❌ Failed assignments breakdown:`)
+      proposals.filter(p => !p.musicianId).forEach(p => {
+        console.log(`   - ${p.roleName} for "${p.eventName}": ${p.reason}`)
+      })
+    }
+
     // If this is just a preview, return the proposals
     if (preview) {
+      console.log(`👀 Returning preview results to user`)
       return NextResponse.json({
         proposals,
         totalAssignments: proposals.length,
-        successfulAssignments: proposals.filter(p => p.musicianId).length
+        successfulAssignments: successfulCount,
+        availabilitySystemActive: true // Confirm availability system is working
       })
     }
 
     // If not preview, execute the assignments
+    console.log(`🚀 Executing auto-assignments (not preview mode)`)
     const successfulAssignments = []
     const failedAssignments = []
 
     for (const proposal of proposals) {
       if (proposal.musicianId) {
         try {
+          console.log(`💾 Saving assignment: ${proposal.musicianName} -> ${proposal.roleName} for "${proposal.eventName}"`)
+          
           await prisma.eventAssignment.update({
             where: { id: proposal.assignmentId },
             data: {
@@ -373,9 +406,11 @@ export async function POST(request: NextRequest) {
               WHERE id = ${proposal.assignmentId}
             `
           }
+          
+          console.log(`✅ Successfully saved assignment for ${proposal.musicianName}`)
           successfulAssignments.push(proposal)
         } catch (error) {
-          console.error(`Failed to assign ${proposal.musicianName} to ${proposal.roleName}:`, error)
+          console.error(`❌ Failed to assign ${proposal.musicianName} to ${proposal.roleName}:`, error)
           failedAssignments.push({
             ...proposal,
             error: 'Database error during assignment'
@@ -385,6 +420,8 @@ export async function POST(request: NextRequest) {
         failedAssignments.push(proposal)
       }
     }
+    
+    console.log(`🎯 Final execution results: ${successfulAssignments.length} successful, ${failedAssignments.length} failed`)
 
     return NextResponse.json({
       success: true,

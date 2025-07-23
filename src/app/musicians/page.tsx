@@ -718,16 +718,18 @@ export default function MusiciansPage() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Joined
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
+                    {canEditMusicians && (
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredMusicians.length === 0 ? (
                     /* No results message */
                     <tr>
-                      <td colSpan={canEditMusicians ? 8 : 7} className="px-6 py-12 text-center">
+                      <td colSpan={canEditMusicians ? 8 : 6} className="px-6 py-12 text-center">
                         <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
                         <h3 className="text-lg font-medium text-gray-900 mb-2">
                           No musicians match this filter
@@ -969,40 +971,38 @@ export default function MusiciansPage() {
                           {new Date(musician.createdAt).toLocaleDateString()}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        {editingId === musician.id ? (
-                          <div className="flex items-center justify-end space-x-2">
-                            <button 
-                              onClick={saveEdit}
-                              disabled={saving}
-                              className="text-success-600 hover:text-success-900 disabled:opacity-50"
-                              title="Save changes"
+                      {canEditMusicians && (
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          {editingId === musician.id ? (
+                            <div className="flex items-center justify-end space-x-2">
+                              <button 
+                                onClick={saveEdit}
+                                disabled={saving}
+                                className="text-success-600 hover:text-success-900 disabled:opacity-50"
+                                title="Save changes"
+                              >
+                                <Check className="h-4 w-4" />
+                              </button>
+                              <button 
+                                onClick={cancelEditing}
+                                disabled={saving}
+                                className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                                title="Cancel editing"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => startEditing(musician)}
+                              className="inline-flex items-center px-2 py-1 text-sm font-medium text-blue-600 hover:text-blue-800"
+                              title="Edit musician"
                             >
-                              <Check className="h-4 w-4" />
+                              <Edit2 className="h-4 w-4" />
                             </button>
-                            <button 
-                              onClick={cancelEditing}
-                              disabled={saving}
-                              className="text-red-600 hover:text-red-900 disabled:opacity-50"
-                              title="Cancel editing"
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                          </div>
-                        ) : canEditMusicians ? (
-                          <button
-                            onClick={() => startEditing(musician)}
-                            className="inline-flex items-center px-2 py-1 text-sm font-medium text-blue-600 hover:text-blue-800"
-                            title="Edit musician"
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </button>
-                        ) : (
-                          <span className="text-xs text-gray-400" title="Insufficient permissions to edit">
-                            View only
-                          </span>
-                        )}
-                      </td>
+                          )}
+                        </td>
+                      )}
                     </tr>
                     ))
                   )}

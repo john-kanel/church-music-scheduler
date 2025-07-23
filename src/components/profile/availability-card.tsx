@@ -224,10 +224,10 @@ export function AvailabilityCard({ userId, isEditable = true }: AvailabilityCard
         {isEditable && !isFormExpanded && (
           <button
             onClick={handleAdd}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            title="Add Unavailable Period"
           >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Unavailable Period
+            <Plus className="h-4 w-4" />
           </button>
         )}
       </div>
