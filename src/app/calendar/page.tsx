@@ -1100,8 +1100,8 @@ export default function CalendarPage() {
                         <div className="text-sm text-blue-800">
                           <span className="font-medium">Event Visibility:</span> Musicians can see events marked as{' '}
                           <span className="font-semibold text-green-700">Confirmed</span> and{' '}
-                          <span className="font-semibold text-red-700">Cancelled</span>, but{' '}
-                          <span className="font-semibold text-orange-700">Tentative</span> events remain private to the planning team until confirmed.
+                          <span className="font-semibold text-red-700">Cancelled</span> both in their Church Music Pro account and if they choose to subscribe to your calendar, but{' '}
+                          <span className="font-semibold text-orange-700">Tentative</span> events remain private until you set them as confirmed.
                         </div>
                       </div>
                     </div>
