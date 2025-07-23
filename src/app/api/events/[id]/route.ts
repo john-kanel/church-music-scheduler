@@ -173,37 +173,55 @@ export async function PUT(
 
     const body = await request.json()
     
+    // Detect if this is a drag-and-drop request (only has startTime/endTime ISO strings)
+    const isDragAndDrop = body.startTime && body.startTime.includes('T') && 
+                         Object.keys(body).length <= 3 && // startTime, endTime, maybe one more field
+                         !body.name && !body.location
+    
     // Handle drag-and-drop format (ISO strings) vs form format (separate date/time)
-    let startDate, startTime, endTime
-    if (body.startTime && body.startTime.includes('T')) {
-      // Drag-and-drop format: ISO strings
+    let startDate, startTime, endTime, name, description, location, eventTypeId, status, roles, isRecurring, recurrencePattern, recurrenceEnd, isPastEvent
+    
+    if (isDragAndDrop) {
+      console.log('🎯 Detected drag-and-drop request')
+      // Drag-and-drop format: ISO strings - preserve existing event data
       const startDateTime = new Date(body.startTime)
       const endDateTime = body.endTime ? new Date(body.endTime) : null
       
       startDate = startDateTime.toISOString().split('T')[0] // "2025-07-24"
       startTime = startDateTime.toTimeString().slice(0, 5) // "10:00"
       endTime = endDateTime ? endDateTime.toTimeString().slice(0, 5) : body.endTime
+      
+      // Keep existing event data for other fields
+      name = existingEvent.name
+      description = existingEvent.description
+      location = existingEvent.location
+      eventTypeId = existingEvent.eventTypeId
+      status = existingEvent.status
+      roles = []
+      isRecurring = existingEvent.isRecurring
+      recurrencePattern = existingEvent.recurrencePattern
+      recurrenceEnd = existingEvent.recurrenceEnd
+      isPastEvent = false
     } else {
+      console.log('📝 Detected form update request')
       // Form format: separate fields
       startDate = body.startDate
       startTime = body.startTime
       endTime = body.endTime
+      name = body.name
+      description = body.description
+      location = body.location
+      eventTypeId = body.eventTypeId
+      status = body.status
+      roles = body.roles || []
+      isRecurring = body.isRecurring
+      recurrencePattern = body.recurrencePattern
+      recurrenceEnd = body.recurrenceEnd
+      isPastEvent = body.isPastEvent
     }
-    
-    const {
-      name,
-      description,
-      location,
-      eventTypeId,
-      status,
-      roles = [],
-      isRecurring,
-      recurrencePattern,
-      recurrenceEnd,
-      isPastEvent
-    } = body
 
-    console.log('📨 API received request body:', {
+    console.log('📨 API processed request:', {
+      isDragAndDrop,
       name,
       description,
       location,
@@ -211,25 +229,30 @@ export async function PUT(
       startTime,
       endTime,
       eventTypeId,
-      status, // Added this
-      isPastEvent,
-      fullBody: body, // Added this to see everything
-      originalEvent: {
-        name: existingEvent.name,
-        location: existingEvent.location,
-        startTime: existingEvent.startTime.toISOString()
-      }
+      status,
+      isPastEvent
     })
 
     // Ensure roles is always an array
     const validRoles = Array.isArray(roles) ? roles : []
 
-    // Validation
-    if (!name || !location || !startDate || !startTime) {
-      return NextResponse.json(
-        { error: 'Name, location, start date, and start time are required' },
-        { status: 400 }
-      )
+    // Validation - more lenient for drag and drop
+    if (isDragAndDrop) {
+      // For drag and drop, only validate time fields
+      if (!startDate || !startTime) {
+        return NextResponse.json(
+          { error: 'Valid start date and time are required' },
+          { status: 400 }
+        )
+      }
+    } else {
+      // For form updates, validate all required fields
+      if (!name || !location || !startDate || !startTime) {
+        return NextResponse.json(
+          { error: 'Name, location, start date, and start time are required' },
+          { status: 400 }
+        )
+      }
     }
 
     // Get user's timezone and create proper datetime
