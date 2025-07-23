@@ -190,7 +190,13 @@ export function AvailabilityCard({ userId, isEditable = true }: AvailabilityCard
   const formatDateRange = (startDate: string | null, endDate: string | null) => {
     if (!startDate) return ''
     
-    const start = new Date(startDate).toLocaleDateString('en-US', {
+    // Create date in local timezone to avoid timezone offset issues
+    const createLocalDate = (dateString: string) => {
+      const [year, month, day] = dateString.split('T')[0].split('-').map(Number)
+      return new Date(year, month - 1, day) // month is 0-indexed
+    }
+    
+    const start = createLocalDate(startDate).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric'
@@ -200,7 +206,7 @@ export function AvailabilityCard({ userId, isEditable = true }: AvailabilityCard
       return start
     }
     
-    const end = new Date(endDate).toLocaleDateString('en-US', {
+    const end = createLocalDate(endDate).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric'

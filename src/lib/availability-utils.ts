@@ -5,6 +5,11 @@ interface UnavailabilityCheck {
   reason?: string
 }
 
+// Helper function to create dates in local timezone for consistent date handling
+function createLocalDate(year: number, month: number, day: number): Date {
+  return new Date(year, month - 1, day) // month is 0-indexed in JavaScript
+}
+
 /**
  * Check if a musician is available for a specific event date and time
  */

@@ -3,6 +3,12 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 
+// Helper function to create dates in local timezone to avoid UTC conversion issues
+function createLocalDate(dateString: string): Date {
+  const [year, month, day] = dateString.split('-').map(Number)
+  return new Date(year, month - 1, day) // month is 0-indexed in JavaScript
+}
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -117,8 +123,8 @@ export async function POST(request: NextRequest) {
     const unavailability = await prisma.musicianUnavailability.create({
       data: {
         userId: session.user.id,
-        startDate: startDate ? new Date(startDate) : null,
-        endDate: endDate ? new Date(endDate) : null,
+        startDate: startDate ? createLocalDate(startDate) : null,
+        endDate: endDate ? createLocalDate(endDate) : null,
         dayOfWeek: dayOfWeek,
         reason: reason || null
       }
@@ -181,8 +187,8 @@ export async function PUT(request: NextRequest) {
     const unavailability = await prisma.musicianUnavailability.update({
       where: { id },
       data: {
-        startDate: startDate ? new Date(startDate) : null,
-        endDate: endDate ? new Date(endDate) : null,
+        startDate: startDate ? createLocalDate(startDate) : null,
+        endDate: endDate ? createLocalDate(endDate) : null,
         dayOfWeek: dayOfWeek,
         reason: reason || null
       }
