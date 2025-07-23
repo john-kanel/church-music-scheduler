@@ -316,7 +316,12 @@ export default function CalendarPage() {
 
     const year = currentDate.getFullYear()
     const month = currentDate.getMonth()
-    const dropDate = new Date(year, month, day, 10, 0) // Default to 10 AM
+    
+    // Preserve the original time from the event instead of hardcoding to 10 AM
+    const originalEventDate = new Date(event.startTime)
+    const originalHour = originalEventDate.getHours()
+    const originalMinute = originalEventDate.getMinutes()
+    const dropDate = new Date(year, month, day, originalHour, originalMinute)
 
     // Create optimistic update
     const eventDate = new Date(event.startTime)
