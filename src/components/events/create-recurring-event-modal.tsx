@@ -2,7 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { X, Plus, Calendar, Users, Clock, ChevronDown, Trash2, Music2, GripVertical } from 'lucide-react'
+import { 
+  Calendar, Clock, MapPin, User, Users, X, Plus, Trash2, 
+  Music2, Repeat, ArrowLeft, ArrowRight, RotateCcw, Palette,
+  GripVertical  // Add this import for drag handle
+} from 'lucide-react'
 
 interface CreateRecurringEventModalProps {
   isOpen: boolean
@@ -126,6 +130,7 @@ export function CreateRecurringEventModal({
   ])
 
   const [hymns, setHymns] = useState<Hymn[]>([])
+  const [draggedHymn, setDraggedHymn] = useState<Hymn | null>(null)  // Add drag state
 
   // Fetch data when modal opens
   useEffect(() => {
@@ -153,8 +158,16 @@ export function CreateRecurringEventModal({
     }
   }, [showColorPicker])
 
-  // Populate form when editing
+  // Initialize form data when editing
   useEffect(() => {
+    console.log('🔧 useEffect triggered:', { 
+      isEditing, 
+      editingEventExists: !!editingEvent,
+      editingEventId: editingEvent?.id,
+      editingEventName: editingEvent?.name,
+      modalPropsReceived: { editingEvent: editingEvent !== null, editScope }
+    })
+    
     if (isEditing && editingEvent) {
       const eventDate = new Date(editingEvent.startTime)
       const eventEndDate = editingEvent.endTime ? new Date(editingEvent.endTime) : null
@@ -358,11 +371,69 @@ export function CreateRecurringEventModal({
     setHymns(hymns.filter(hymn => hymn.id !== id))
   }
 
+  // Drag and drop handlers for hymns
+  const handleHymnDragStart = (e: React.DragEvent, hymn: Hymn) => {
+    setDraggedHymn(hymn)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  const handleHymnDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+  }
+
+  const handleHymnDrop = (e: React.DragEvent, targetHymn: Hymn) => {
+    e.preventDefault()
+    if (!draggedHymn || draggedHymn.id === targetHymn.id) return
+
+    const newHymns = [...hymns]
+    const draggedIndex = newHymns.findIndex(hymn => hymn.id === draggedHymn.id)
+    const targetIndex = newHymns.findIndex(hymn => hymn.id === targetHymn.id)
+
+    if (draggedIndex !== -1 && targetIndex !== -1) {
+      // Remove dragged item and insert at target position
+      const [draggedItem] = newHymns.splice(draggedIndex, 1)
+      newHymns.splice(targetIndex, 0, draggedItem)
+      setHymns(newHymns)
+    }
+    
+    setDraggedHymn(null)
+  }
+
+  const handleHymnDragEnd = () => {
+    setDraggedHymn(null)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
     setSuccess('')
+
+    // Comprehensive debug logging
+    console.log('🔍 COMPREHENSIVE SUBMIT DEBUG:', {
+      // Props received
+      propsEditingEvent: editingEvent ? { id: editingEvent.id, name: editingEvent.name } : null,
+      propsEditScope: editScope,
+      
+      // Computed state
+      isEditing: isEditing,
+      isEditingDefined: !!editingEvent,
+      
+      // The exact condition being evaluated
+      editConditionMet: isEditing && editingEvent,
+      editConditionParts: {
+        isEditing: isEditing,
+        hasEditingEvent: !!editingEvent,
+        bothTrue: isEditing && !!editingEvent
+      },
+      
+      // Current form data
+      formDataName: formData.name,
+      
+      // Modal state
+      modalIsOpen: isOpen
+    })
 
     // Debug logging
     console.log('🔍 Recurring event modal submit:', {
@@ -851,14 +922,41 @@ export function CreateRecurringEventModal({
             
             <div className="space-y-4">
               {hymns.map((hymn, index) => (
-                <div key={hymn.id} className="border border-gray-200 rounded-lg p-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div
+                  key={hymn.id}
+                  className={`border border-gray-200 rounded-lg p-4 transition-all cursor-move hover:border-blue-300 hover:shadow-sm ${
+                    draggedHymn?.id === hymn.id ? 'opacity-50 scale-95 border-blue-300 bg-blue-50' : ''
+                  }`}
+                  draggable={true}
+                  onDragStart={(e) => handleHymnDragStart(e, hymn)}
+                  onDragOver={handleHymnDragOver}
+                  onDrop={(e) => handleHymnDrop(e, hymn)}
+                  onDragEnd={handleHymnDragEnd}
+                >
+                  {/* Drag handle and song number */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center text-gray-400">
+                      <GripVertical className="h-5 w-5 mr-2 hover:text-gray-600 transition-colors" />
+                      <span className="text-sm font-medium">Song {index + 1}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeHymn(hymn.id)}
+                      className="p-1 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      onMouseDown={(e) => e.stopPropagation()} // Prevent drag when clicking delete
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Service Part</label>
                       <select
                         value={hymn.servicePartId || 'custom'}
                         onChange={(e) => updateHymn(hymn.id, 'servicePartId', e.target.value === 'custom' ? '' : e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                        onMouseDown={(e) => e.stopPropagation()} // Prevent drag when interacting with select
                       >
                         <option value="custom">Custom</option>
                         {serviceParts.map(part => (
@@ -876,16 +974,8 @@ export function CreateRecurringEventModal({
                         value={hymn.title}
                         onChange={(e) => updateHymn(hymn.id, 'title', e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                        onMouseDown={(e) => e.stopPropagation()} // Prevent drag when typing
                       />
-                    </div>
-                    <div className="flex items-end">
-                      <button
-                        type="button"
-                        onClick={() => removeHymn(hymn.id)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
                     </div>
                   </div>
                   
@@ -897,6 +987,7 @@ export function CreateRecurringEventModal({
                       onChange={(e) => updateHymn(hymn.id, 'notes', e.target.value)}
                       rows={2}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                      onMouseDown={(e) => e.stopPropagation()} // Prevent drag when typing
                     />
                   </div>
                 </div>

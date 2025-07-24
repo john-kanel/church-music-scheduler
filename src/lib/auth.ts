@@ -83,6 +83,7 @@ export const authOptions: NextAuthOptions = {
         token.churchId = user.churchId
         token.churchName = user.churchName
         token.hasCompletedOnboarding = user.hasCompletedOnboarding
+        console.log('🔑 JWT callback - setting token hasCompletedOnboarding:', user.hasCompletedOnboarding)
       }
       return token
     },
@@ -93,6 +94,7 @@ export const authOptions: NextAuthOptions = {
         session.user.churchId = token.churchId as string
         session.user.churchName = token.churchName as string
         session.user.hasCompletedOnboarding = token.hasCompletedOnboarding as boolean
+        console.log('📱 Session callback - user hasCompletedOnboarding:', session.user.hasCompletedOnboarding)
       }
       return session
     }

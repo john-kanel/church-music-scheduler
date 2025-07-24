@@ -534,6 +534,8 @@ export default function SettingsPage() {
         setServiceParts(data.serviceParts)
         setEditingServiceParts(false)
         setSuccess('Service parts saved successfully!')
+        // Clear localStorage after successful save
+        localStorage.removeItem('unsaved-service-parts')
       }
     } catch (error) {
       console.error('Error saving service parts:', error)
@@ -541,6 +543,19 @@ export default function SettingsPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const cancelServicePartsEdit = () => {
+    const hasUnsavedChanges = localStorage.getItem('unsaved-service-parts')
+    if (hasUnsavedChanges) {
+      const confirmCancel = confirm('You have unsaved changes. Are you sure you want to cancel?')
+      if (!confirmCancel) return
+    }
+    
+    // Restore original service parts from the server
+    fetchServiceParts()
+    setEditingServiceParts(false)
+    localStorage.removeItem('unsaved-service-parts')
   }
 
   const addServicePart = () => {
@@ -680,6 +695,37 @@ export default function SettingsPage() {
     }
   }
 
+  // Service Parts localStorage persistence
+  useEffect(() => {
+    if (editingServiceParts && serviceParts.length > 0) {
+      // Save current service parts to localStorage when editing
+      localStorage.setItem('unsaved-service-parts', JSON.stringify(serviceParts))
+    }
+  }, [serviceParts, editingServiceParts])
+
+  // Check for unsaved service parts on component mount
+  useEffect(() => {
+    const unsavedServiceParts = localStorage.getItem('unsaved-service-parts')
+    if (unsavedServiceParts && serviceParts.length === 0) {
+      try {
+        const parsed = JSON.parse(unsavedServiceParts)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Ask user if they want to restore unsaved changes
+          const restore = confirm('You have unsaved service parts changes. Would you like to restore them?')
+          if (restore) {
+            setServiceParts(parsed)
+            setEditingServiceParts(true)
+          } else {
+            localStorage.removeItem('unsaved-service-parts')
+          }
+        }
+      } catch (error) {
+        console.error('Error parsing unsaved service parts:', error)
+        localStorage.removeItem('unsaved-service-parts')
+      }
+    }
+  }, [serviceParts])
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -714,7 +760,13 @@ export default function SettingsPage() {
               ) : activeTab !== 'billing' ? (
                 <>
                   <button 
-                    onClick={() => setIsEditing(false)}
+                    onClick={() => {
+                      if (activeTab === 'service-parts') {
+                        cancelServicePartsEdit()
+                      } else {
+                        setIsEditing(false)
+                      }
+                    }}
                     className="flex items-center px-3 py-1.5 border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 transition-colors"
                   >
                     Cancel
