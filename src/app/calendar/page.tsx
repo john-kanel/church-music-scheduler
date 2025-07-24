@@ -485,6 +485,7 @@ export default function CalendarPage() {
     })
     
     setEditScope(scope)
+    setShowEditScopeModal(false) // Close scope modal first
     
     // Use setTimeout to ensure state updates are batched properly before opening modal
     setTimeout(() => {
@@ -1568,8 +1569,9 @@ export default function CalendarPage() {
         isOpen={showEditScopeModal}
         onClose={() => {
           setShowEditScopeModal(false)
-          setEditingRootEvent(null)
-          setEditScope(null)
+          // Don't reset editingRootEvent here - let the edit modal handle that
+          // setEditingRootEvent(null)  // <-- This was causing the bug!
+          // setEditScope(null)         // <-- This too!
         }}
         rootEvent={editingRootEvent}
         onScopeSelected={handleScopeSelected}
