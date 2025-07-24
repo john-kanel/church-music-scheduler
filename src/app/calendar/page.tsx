@@ -483,8 +483,18 @@ export default function CalendarPage() {
       scope, 
       editingRootEvent: editingRootEvent ? { id: editingRootEvent.id, name: editingRootEvent.name } : null 
     })
+    
     setEditScope(scope)
-    setShowEditRecurringEvent(true)
+    
+    // Use setTimeout to ensure state updates are batched properly before opening modal
+    setTimeout(() => {
+      console.log('🎯 About to open edit modal with state:', {
+        editingRootEvent: editingRootEvent ? { id: editingRootEvent.id, name: editingRootEvent.name } : null,
+        editScope: scope,
+        showEditRecurringEvent: false // about to be true
+      })
+      setShowEditRecurringEvent(true)
+    }, 10) // Small delay to ensure state batching
   }
 
   const handleEditComplete = () => {
@@ -1574,8 +1584,14 @@ export default function CalendarPage() {
           setEditScope(null)
         }}
         onEventCreated={handleEditComplete}
-        editingEvent={editingRootEvent}
-        editScope={editScope}
+        editingEvent={(() => {
+          console.log('🎯 Passing editingEvent to modal:', editingRootEvent ? { id: editingRootEvent.id, name: editingRootEvent.name } : null)
+          return editingRootEvent
+        })()}
+        editScope={(() => {
+          console.log('🎯 Passing editScope to modal:', editScope)
+          return editScope
+        })()}
       />
 
       {/* View All Open Events Modal */}
