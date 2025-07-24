@@ -108,6 +108,15 @@ export function CreateRecurringEventModal({
 
   const isEditing = !!editingEvent
 
+  // Debug logging for props and state
+  console.log('🔧 Modal render:', {
+    isOpen,
+    editingEvent: editingEvent ? { id: editingEvent.id, name: editingEvent.name } : null,
+    editScope,
+    isEditing,
+    propsReceived: { editingEvent: editingEvent !== null, editScope }
+  })
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -1025,10 +1034,18 @@ export function CreateRecurringEventModal({
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  {isEditing ? 'Updating...' : 'Creating...'}
+                  {(() => {
+                    const text = isEditing ? 'Updating...' : 'Creating...'
+                    console.log('🔘 Button loading text:', text, { isEditing, editingEvent: !!editingEvent })
+                    return text
+                  })()}
                 </>
               ) : (
-                isEditing ? 'Update Recurring Event Series' : 'Create Recurring Event Series'
+                (() => {
+                  const text = isEditing ? 'Update Recurring Event Series' : 'Create Recurring Event Series'
+                  console.log('🔘 Button text:', text, { isEditing, editingEvent: !!editingEvent })
+                  return text
+                })()
               )}
             </button>
           </div>

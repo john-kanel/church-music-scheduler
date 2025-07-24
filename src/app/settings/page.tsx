@@ -697,34 +697,37 @@ export default function SettingsPage() {
 
   // Service Parts localStorage persistence
   useEffect(() => {
-    if (editingServiceParts && serviceParts.length > 0) {
-      // Save current service parts to localStorage when editing
+    // Save to localStorage whenever service parts change (and we're on the service-parts tab)
+    if (activeTab === 'service-parts' && serviceParts.length > 0) {
+      // Save current service parts to localStorage 
       localStorage.setItem('unsaved-service-parts', JSON.stringify(serviceParts))
     }
-  }, [serviceParts, editingServiceParts])
+  }, [serviceParts, activeTab])
 
-  // Check for unsaved service parts on component mount
+  // Check for unsaved service parts when switching to service-parts tab
   useEffect(() => {
-    const unsavedServiceParts = localStorage.getItem('unsaved-service-parts')
-    if (unsavedServiceParts && serviceParts.length === 0) {
-      try {
-        const parsed = JSON.parse(unsavedServiceParts)
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          // Ask user if they want to restore unsaved changes
-          const restore = confirm('You have unsaved service parts changes. Would you like to restore them?')
-          if (restore) {
-            setServiceParts(parsed)
-            setEditingServiceParts(true)
-          } else {
-            localStorage.removeItem('unsaved-service-parts')
+    if (activeTab === 'service-parts') {
+      const unsavedServiceParts = localStorage.getItem('unsaved-service-parts')
+      if (unsavedServiceParts && serviceParts.length === 0) {
+        try {
+          const parsed = JSON.parse(unsavedServiceParts)
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            // Ask user if they want to restore unsaved changes
+            const restore = confirm('You have unsaved service parts changes. Would you like to restore them?')
+            if (restore) {
+              setServiceParts(parsed)
+              setEditingServiceParts(true)
+            } else {
+              localStorage.removeItem('unsaved-service-parts')
+            }
           }
+        } catch (error) {
+          console.error('Error parsing unsaved service parts:', error)
+          localStorage.removeItem('unsaved-service-parts')
         }
-      } catch (error) {
-        console.error('Error parsing unsaved service parts:', error)
-        localStorage.removeItem('unsaved-service-parts')
       }
     }
-  }, [serviceParts])
+  }, [activeTab, serviceParts])
 
   return (
     <div className="min-h-screen bg-gray-50">
