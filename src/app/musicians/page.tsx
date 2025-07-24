@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { ArrowLeft, Users, Plus, Search, UserPlus, Music, Phone, Calendar, Check, X, Edit2, Filter, Download, Eye, EyeOff } from 'lucide-react'
+import { ArrowLeft, Users, Plus, Search, UserPlus, Music, Phone, Calendar, Check, X, Edit2, Filter, Download, Eye, EyeOff, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { InviteModal } from '../../components/musicians/invite-modal'
 import InvitationModal from '../../components/musicians/invitation-modal'
@@ -182,6 +182,9 @@ export default function MusiciansPage() {
   const [availableGroups, setAvailableGroups] = useState<Group[]>([])
   const [loadingGroups, setLoadingGroups] = useState(false)
   const [showPins, setShowPins] = useState(false)
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [musicianToDelete, setMusicianToDelete] = useState<Musician | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   // Fetch musicians
   useEffect(() => {
@@ -455,6 +458,46 @@ export default function MusiciansPage() {
     } finally {
       setExporting(false)
     }
+  }
+
+  const handleDeleteClick = (musician: Musician) => {
+    setMusicianToDelete(musician)
+    setDeleteModalOpen(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!musicianToDelete) return
+
+    setDeleting(true)
+    try {
+      const response = await fetch(`/api/musicians/${musicianToDelete.id}`, {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        // Remove musician from local state
+        setMusicians(prev => prev.filter(m => m.id !== musicianToDelete.id))
+        setDeleteModalOpen(false)
+        setMusicianToDelete(null)
+        // If we were editing this musician, cancel the edit
+        if (editingId === musicianToDelete.id) {
+          cancelEditing()
+        }
+      } else {
+        const errorData = await response.json()
+        alert(`Failed to delete musician: ${errorData.error || 'Please try again.'}`)
+      }
+    } catch (error) {
+      console.error('Error deleting musician:', error)
+      alert('Error deleting musician. Please try again.')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const handleDeleteCancel = () => {
+    setDeleteModalOpen(false)
+    setMusicianToDelete(null)
   }
 
   // Check if user can edit musicians
@@ -991,6 +1034,14 @@ export default function MusiciansPage() {
                               >
                                 <X className="h-4 w-4" />
                               </button>
+                              <button 
+                                onClick={() => handleDeleteClick(musician)}
+                                disabled={saving}
+                                className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                                title="Delete musician"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
                             </div>
                           ) : (
                             <button
@@ -1064,6 +1115,49 @@ export default function MusiciansPage() {
         isOpen={showInvitationLinkModal}
         onClose={() => setShowInvitationLinkModal(false)}
       />
+
+      {/* Delete Confirmation Modal */}
+      {deleteModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center mb-4">
+              <div className="flex-shrink-0">
+                <Trash2 className="h-6 w-6 text-red-600" />
+              </div>
+              <div className="ml-3">
+                <h3 className="text-lg font-medium text-gray-900">
+                  Delete Musician
+                </h3>
+              </div>
+            </div>
+            <div className="mb-4">
+              <p className="text-sm text-gray-500">
+                Are you sure you want to delete{' '}
+                <span className="font-medium">
+                  {musicianToDelete?.firstName} {musicianToDelete?.lastName}
+                </span>
+                ? This action cannot be undone and will remove all their event assignments and group memberships.
+              </p>
+            </div>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={handleDeleteCancel}
+                disabled={deleting}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                disabled={deleting}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 } 

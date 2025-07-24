@@ -64,7 +64,7 @@ export async function POST() {
       'John Kanel',
       'St. Mary\'s Catholic Church',
       'Professional Plan',
-      29.99,
+      35.00,
       'month',
       'January 28, 2025'
     )

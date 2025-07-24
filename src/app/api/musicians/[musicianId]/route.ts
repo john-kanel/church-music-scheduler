@@ -242,4 +242,81 @@ export async function GET(
       { status: 500 }
     )
   }
+}
+
+// DELETE /api/musicians/[musicianId] - Delete a specific musician
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ musicianId: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user?.churchId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Only directors, pastors, and associate pastors can delete musicians
+    if (!['DIRECTOR', 'ASSOCIATE_DIRECTOR', 'PASTOR', 'ASSOCIATE_PASTOR'].includes(session.user.role)) {
+      return NextResponse.json({ 
+        error: `Insufficient permissions. Only directors, pastors, and associate pastors can delete musicians. Your role: ${session.user.role}` 
+      }, { status: 403 })
+    }
+
+    const { musicianId } = await params
+
+    // Verify musician belongs to church
+    const existingMusician = await prisma.user.findFirst({
+      where: {
+        id: musicianId,
+        churchId: session.user.churchId
+      }
+    })
+
+    if (!existingMusician) {
+      return NextResponse.json({ error: 'Musician not found' }, { status: 404 })
+    }
+
+    // Use a transaction to ensure all related data is cleaned up
+    await prisma.$transaction(async (tx) => {
+      // Delete event assignments
+      await tx.eventAssignment.deleteMany({
+        where: { userId: musicianId }
+      })
+
+      // Delete group memberships
+      await tx.groupMember.deleteMany({
+        where: { userId: musicianId }
+      })
+
+      // Delete musician unavailability records
+      await tx.musicianUnavailability.deleteMany({
+        where: { userId: musicianId }
+      })
+
+      // Delete invitations (if any)
+      await tx.invitation.deleteMany({
+        where: { 
+          email: existingMusician.email,
+          churchId: session.user.churchId
+        }
+      })
+
+      // Finally, delete the user
+      await tx.user.delete({
+        where: { id: musicianId }
+      })
+    })
+
+    return NextResponse.json({
+      message: 'Musician deleted successfully'
+    })
+
+  } catch (error) {
+    console.error('Error deleting musician:', error)
+    return NextResponse.json(
+      { error: 'Failed to delete musician' },
+      { status: 500 }
+    )
+  }
 } 

@@ -34,7 +34,7 @@ const emailTests = [
       recipientName: 'John Kanel',
       churchName: 'St. Mary\'s Catholic Church',
       planName: 'Professional Plan',
-      planPrice: 29.99,
+      planPrice: 35.00,
       planInterval: 'month'
     }
   },
@@ -106,7 +106,7 @@ const emailTests = [
       referrerName: 'John Kanel',
       referredPerson: 'Father Michael',
       referredChurch: 'Holy Trinity Parish',
-      rewardAmount: 29.99,
+      rewardAmount: 35.00,
       totalRewards: 3
     }
   }
