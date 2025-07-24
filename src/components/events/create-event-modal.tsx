@@ -453,10 +453,15 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
           })
 
           if (!documentResponse.ok) {
-            console.error('Failed to upload PDF document')
+            const errorData = await documentResponse.json().catch(() => ({}))
+            console.error('Failed to upload PDF document:', documentResponse.status, errorData)
             // Don't throw error here as the event was created successfully
           } else {
-            console.log('PDF document uploaded successfully to event')
+            const uploadResult = await documentResponse.json()
+            console.log('✅ PDF document uploaded successfully to event:', result.event.id)
+            console.log('📄 Document details:', uploadResult.document)
+            // Add a small delay to ensure database consistency
+            await new Promise(resolve => setTimeout(resolve, 500))
           }
         } catch (documentError) {
           console.error('Error uploading PDF document:', documentError)

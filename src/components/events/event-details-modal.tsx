@@ -348,8 +348,25 @@ export function EventDetailsModal({
       fetchEventHymns()
       fetchEventDocuments()
       fetchServiceParts()
+      // Also fetch fresh event data when modal opens to ensure we have latest info
+      fetchCompleteEventData()
     }
   }, [isOpen, currentEvent?.id])
+
+  const fetchCompleteEventData = async () => {
+    if (!currentEvent?.id) return
+    
+    try {
+      const response = await fetch(`/api/events/${currentEvent.id}?_t=${Date.now()}`)
+      if (response.ok) {
+        const data = await response.json()
+        // Update currentEvent with fresh data (including any new documents)
+        setCurrentEvent(data.event)
+      }
+    } catch (error) {
+      console.error('Error fetching complete event data:', error)
+    }
+  }
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -438,12 +455,17 @@ export function EventDetailsModal({
   const fetchEventDocuments = async () => {
     if (!currentEvent?.id) return
     
+    console.log('📄 Fetching documents for event:', currentEvent.id)
     setLoadingDocuments(true)
     try {
-      const response = await fetch(`/api/events/${currentEvent.id}/documents`)
+      // Add cache busting timestamp to ensure fresh data
+      const response = await fetch(`/api/events/${currentEvent.id}/documents?_t=${Date.now()}`)
       if (response.ok) {
         const data = await response.json()
+        console.log('📄 Documents fetched:', data.documents?.length || 0, 'documents')
         setEventDocuments(data.documents || [])
+      } else {
+        console.error('❌ Failed to fetch documents:', response.status)
       }
     } catch (error) {
       console.error('Error fetching event documents:', error)
