@@ -13,9 +13,10 @@ interface PdfProcessorProps {
   onSuggestionsAccepted: (suggestions: PdfSuggestion[]) => void;
   onClose: () => void;
   eventId?: string; // Optional eventId for saving document to event
+  onSuggestionsAcceptedAndSaveDocument?: (suggestions: PdfSuggestion[], file: File) => void; // For new events
 }
 
-export default function PdfProcessor({ onSuggestionsAccepted, onClose, eventId }: PdfProcessorProps) {
+export default function PdfProcessor({ onSuggestionsAccepted, onClose, eventId, onSuggestionsAcceptedAndSaveDocument }: PdfProcessorProps) {
   const [file, setFile] = useState<File | null>(null);
   const [processing, setProcessing] = useState(false);
   const [suggestions, setSuggestions] = useState<PdfSuggestion[]>([]);
@@ -118,8 +119,8 @@ export default function PdfProcessor({ onSuggestionsAccepted, onClose, eventId }
   };
 
   const acceptSuggestionsAndAddDocument = async () => {
-    if (!eventId || !file) {
-      setError('Missing event ID or document file');
+    if (!file) {
+      setError('Missing document file');
       return;
     }
 
@@ -127,21 +128,28 @@ export default function PdfProcessor({ onSuggestionsAccepted, onClose, eventId }
     setError('');
 
     try {
-      // First accept the suggestions
-      onSuggestionsAccepted(suggestions);
+      if (eventId) {
+        // Existing event - add suggestions and save document
+        onSuggestionsAccepted(suggestions);
 
-      // Then save the document to the event
-      const formData = new FormData();
-      formData.append('file', file);
+        // Then save the document to the event
+        const formData = new FormData();
+        formData.append('file', file);
 
-      const response = await fetch(`/api/events/${eventId}/documents`, {
-        method: 'POST',
-        body: formData,
-      });
+        const response = await fetch(`/api/events/${eventId}/documents`, {
+          method: 'POST',
+          body: formData,
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save document');
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to save document');
+        }
+      } else if (onSuggestionsAcceptedAndSaveDocument) {
+        // New event - trigger creation with document
+        onSuggestionsAcceptedAndSaveDocument(suggestions, file);
+      } else {
+        throw new Error('Cannot save document: no event ID or creation callback provided');
       }
 
       // Success - close the modal
@@ -284,7 +292,7 @@ export default function PdfProcessor({ onSuggestionsAccepted, onClose, eventId }
             >
               Accept
             </button>
-            {eventId && (
+            {(eventId || onSuggestionsAcceptedAndSaveDocument) && (
               <button
                 onClick={acceptSuggestionsAndAddDocument}
                 disabled={suggestions.length === 0 || savingDocument}
@@ -293,7 +301,7 @@ export default function PdfProcessor({ onSuggestionsAccepted, onClose, eventId }
                 {savingDocument ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 inline-block" />
-                    Saving...
+                    {eventId ? 'Saving...' : 'Creating Event...'}
                   </>
                 ) : (
                   'Accept and Add Document to Event'

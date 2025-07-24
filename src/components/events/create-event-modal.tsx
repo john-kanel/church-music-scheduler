@@ -105,6 +105,7 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
   const [loadingServiceParts, setLoadingServiceParts] = useState(false)
   const [showPdfProcessor, setShowPdfProcessor] = useState(false)
   const [draggedHymn, setDraggedHymn] = useState<Hymn | null>(null)
+  const [pendingDocumentFile, setPendingDocumentFile] = useState<File | null>(null)
 
   // Fetch verified musicians when modal opens and assignment type is 'assigned'
   useEffect(() => {
@@ -335,6 +336,28 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
     setHymns(newHymns)
   }
 
+  const handlePdfSuggestionsAndSaveDocument = async (suggestions: Array<{servicePartName: string, songTitle: string, notes: string}>, file: File) => {
+    // Convert suggestions to hymns format
+    const newHymns = suggestions.map((suggestion, index) => {
+      // Find matching service part
+      const servicePart = serviceParts.find(part => 
+        part.name.toLowerCase() === suggestion.servicePartName.toLowerCase()
+      )
+      
+      return {
+        id: `hymn-${Date.now()}-${index}`,
+        title: suggestion.songTitle,
+        servicePartId: servicePart?.id || 'custom',
+        servicePartName: servicePart?.name || suggestion.servicePartName,
+        notes: suggestion.notes
+      }
+    })
+    
+    // Set hymns and store the file for upload after event creation
+    setHymns(newHymns)
+    setPendingDocumentFile(file)
+  }
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       setMusicFiles([...musicFiles, ...Array.from(e.target.files)])
@@ -418,6 +441,29 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
         }
       }
 
+      // If there's a pending document file from auto-populate, upload it
+      if (pendingDocumentFile && result.event?.id) {
+        try {
+          const documentFormData = new FormData()
+          documentFormData.append('file', pendingDocumentFile)
+
+          const documentResponse = await fetch(`/api/events/${result.event.id}/documents`, {
+            method: 'POST',
+            body: documentFormData,
+          })
+
+          if (!documentResponse.ok) {
+            console.error('Failed to upload PDF document')
+            // Don't throw error here as the event was created successfully
+          } else {
+            console.log('PDF document uploaded successfully to event')
+          }
+        } catch (documentError) {
+          console.error('Error uploading PDF document:', documentError)
+          // Don't throw error here as the event was created successfully
+        }
+      }
+
       setSuccess('Event created successfully!')
       
       // Reset form after short delay
@@ -443,6 +489,7 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
         setHymns([])
         setMusicFiles([])
         setSelectedGroups([])
+        setPendingDocumentFile(null)
         
         if (onEventCreated) {
           onEventCreated()
@@ -1078,6 +1125,7 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
         <PdfProcessor
           onSuggestionsAccepted={handlePdfSuggestions}
           onClose={() => setShowPdfProcessor(false)}
+          onSuggestionsAcceptedAndSaveDocument={handlePdfSuggestionsAndSaveDocument}
         />
       )}
     </div>
