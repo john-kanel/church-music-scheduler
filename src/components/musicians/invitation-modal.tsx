@@ -272,7 +272,7 @@ export default function InvitationModal({ isOpen, onClose }: InvitationModalProp
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-gray-500 bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-green-500 bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b">
           <h2 className="text-2xl font-bold text-gray-900">Musician Invitation Link</h2>
@@ -411,7 +411,7 @@ export default function InvitationModal({ isOpen, onClose }: InvitationModalProp
                       <button
                         onClick={downloadQRCode}
                         disabled={!qrCode}
-                        className="flex items-center justify-center px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                        className="flex items-center justify-center px-4 py-3 bg-success-600 text-white rounded-lg hover:bg-success-700 disabled:opacity-50 transition-colors"
                       >
                         <Download className="h-4 w-4 mr-2" />
                         Download QR

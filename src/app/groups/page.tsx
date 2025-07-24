@@ -107,7 +107,7 @@ export default function GroupsPage() {
             {canCreateGroups && (
               <button 
                 onClick={() => setShowCreateModal(true)}
-                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="flex items-center px-4 py-2 bg-success-600 text-white rounded-lg hover:bg-success-700 transition-colors"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Create Group
@@ -134,7 +134,7 @@ export default function GroupsPage() {
                 {canCreateGroups && (
                   <button 
                     onClick={() => setShowCreateModal(true)}
-                    className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+                    className="bg-success-600 text-white px-6 py-3 rounded-lg hover:bg-success-700 transition-colors"
                   >
                     Create Your First Group
                   </button>
@@ -585,7 +585,7 @@ function EditGroupModal({ isOpen, onClose, group, onGroupUpdated, onMessageGroup
               <button
                 type="submit"
                 disabled={loading || !!success}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center"
+                className="px-6 py-2 bg-success-600 text-white rounded-lg hover:bg-success-700 transition-colors disabled:opacity-50 flex items-center"
               >
                 {loading ? (
                   <>
