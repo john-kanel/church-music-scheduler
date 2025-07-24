@@ -307,8 +307,9 @@ export function OnboardingFlow({ isVisible, onComplete }: OnboardingFlowProps) {
   const currentStepData = ONBOARDING_STEPS[currentStep]
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl p-8 max-w-md mx-4 shadow-2xl border">
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+      <div className="min-h-full flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl border my-8">
         {/* Step Indicator */}
         <div className="flex justify-center mb-6">
           <div className="flex space-x-2">
@@ -361,6 +362,7 @@ export function OnboardingFlow({ isVisible, onComplete }: OnboardingFlowProps) {
           >
             {isLoading ? 'Saving...' : currentStep === 5 ? 'Get Started' : 'Next'}
           </button>
+        </div>
         </div>
       </div>
     </div>
