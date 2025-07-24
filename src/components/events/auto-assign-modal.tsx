@@ -130,7 +130,7 @@ export function AutoAssignModal({
   }, 0)
 
   return (
-    <div className="fixed inset-0 bg-green-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{backgroundColor: '#E9EFE9'}}>
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">

@@ -272,7 +272,7 @@ export default function InvitationModal({ isOpen, onClose }: InvitationModalProp
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-green-500 bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 flex items-center justify-center p-4 z-50" style={{backgroundColor: '#E9EFE9'}}>
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b">
           <h2 className="text-2xl font-bold text-gray-900">Musician Invitation Link</h2>
