@@ -49,6 +49,28 @@ export async function PUT(
     const eventId = resolvedParams.id
     const { hymns, isAutoPopulate = false } = await request.json()
 
+    console.log('🎵 HYMNS API: Processing hymns for event:', eventId)
+    console.log('🎵 HYMNS API: isAutoPopulate:', isAutoPopulate)
+    console.log('🎵 HYMNS API: Number of hymns to save:', hymns.length)
+
+    // Get event details to check if it's part of a recurring series
+    const eventDetails = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: { 
+        id: true, 
+        name: true, 
+        generatedFrom: true, 
+        parentEventId: true 
+      }
+    })
+
+    console.log('🎵 HYMNS API: Event details:', {
+      id: eventDetails?.id,
+      name: eventDetails?.name,
+      generatedFrom: eventDetails?.generatedFrom,
+      parentEventId: eventDetails?.parentEventId
+    })
+
     // Get original hymns to compare for changes (only if not auto-populate)
     let originalHymns: any[] = []
     if (!isAutoPopulate) {
@@ -58,10 +80,12 @@ export async function PUT(
       })
     }
 
-    // Delete all existing hymns for this event
-    await prisma.eventHymn.deleteMany({
-      where: { eventId }
+    // Delete all existing hymns for THIS SPECIFIC EVENT ONLY
+    console.log('🎵 HYMNS API: Deleting existing hymns for event:', eventId)
+    const deleteResult = await prisma.eventHymn.deleteMany({
+      where: { eventId: eventId } // Explicit eventId to ensure we only affect this event
     })
+    console.log('🎵 HYMNS API: Deleted', deleteResult.count, 'existing hymns')
 
     // Prepare data for bulk insert (keep empty titles to preserve service part placeholders)
     const validHymns = hymns
@@ -72,7 +96,7 @@ export async function PUT(
         const createdAt = new Date(baseTime.getTime() + orderOffset * 1000) // 1 second intervals
         
         return {
-          eventId,
+          eventId: eventId, // Ensure we're using the correct event ID
           title: hymn.title?.trim() || '', // Allow empty titles
           notes: hymn.notes?.trim() || null,
           servicePartId: hymn.servicePartId === 'custom' || !hymn.servicePartId ? null : hymn.servicePartId,
@@ -83,11 +107,14 @@ export async function PUT(
     // Create hymns individually to preserve custom timestamps and order
     let createdHymns: any[] = []
     if (validHymns.length > 0) {
+      console.log('🎵 HYMNS API: Creating', validHymns.length, 'new hymns for event:', eventId)
       for (const hymnData of validHymns) {
+        console.log('🎵 HYMNS API: Creating hymn:', hymnData.title, 'for event:', hymnData.eventId)
         await prisma.eventHymn.create({
           data: hymnData
         })
       }
+      console.log('🎵 HYMNS API: Successfully created all hymns for event:', eventId)
 
       // Mark event for calendar update (hymns are part of event details)
       await markEventForCalendarUpdate(eventId)
