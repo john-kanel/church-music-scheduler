@@ -8,21 +8,24 @@ import { fromZonedTime, toZonedTime, format } from 'date-fns-tz'
  * @returns UTC Date object for database storage
  */
 export function createEventDateTime(dateStr: string, timeStr: string, timezone: string): Date {
-  // Create ISO string in user's timezone
+  // Create a simple local date/time and apply the same timezone correction
+  // that we use for display to maintain consistency
   const isoString = `${dateStr}T${timeStr}:00`
+  const localDate = new Date(isoString)
   
-  // Parse as if it's in the user's timezone, then convert to UTC
-  const zonedTime = new Date(isoString)
-  const utcTime = fromZonedTime(zonedTime, timezone)
+  // Apply the same timezone offset correction as formatEventTimeForDisplay
+  // This ensures consistency between creation and display
+  const timezoneOffsetMinutes = localDate.getTimezoneOffset()
+  const correctedDate = new Date(localDate.getTime() - (timezoneOffsetMinutes * 60000))
   
-  console.log('🕐 Timezone conversion:', {
-    input: `${dateStr} ${timeStr} in ${timezone}`,
-    zonedTime: isoString,
-    utcTime: utcTime.toISOString(),
-    verification: format(utcTime, 'yyyy-MM-dd HH:mm:ss zzz', { timeZone: timezone })
-  })
+     console.log('🕐 Simplified timezone conversion:', {
+     input: `${dateStr} ${timeStr}`,
+     localDate: localDate.toISOString(),
+     timezoneOffsetMinutes,
+     correctedDate: correctedDate.toISOString()
+   })
   
-  return utcTime
+  return correctedDate
 }
 
 /**
