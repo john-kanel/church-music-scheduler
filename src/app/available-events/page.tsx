@@ -3,11 +3,12 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { 
-  ArrowLeft, Calendar, Clock, MapPin, Users, AlertCircle, 
-  Search, Filter, ChevronDown 
+  ArrowLeft, Calendar, Clock, MapPin, Users, Music, UserPlus,
+  Search, Filter, ChevronDown, Eye, Loader2
 } from 'lucide-react'
 import Link from 'next/link'
-import { MusicianSignupModal } from '../../components/events/musician-signup-modal'
+import { MusicianSignupModal } from '@/components/events/musician-signup-modal'
+import { formatEventTimeForDisplay } from '@/lib/timezone-utils'
 
 interface Event {
   id: string
@@ -127,7 +128,11 @@ export default function AvailableEventsPage() {
 
   const formatEventTime = (dateString: string) => {
     const date = new Date(dateString)
-    return date.toLocaleTimeString('en-US', {
+    // Apply timezone fix to show correct local time
+    const timezoneOffsetMinutes = date.getTimezoneOffset()
+    const localDate = new Date(date.getTime() + (timezoneOffsetMinutes * 60000))
+    
+    return localDate.toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
       hour12: true
@@ -166,7 +171,7 @@ export default function AvailableEventsPage() {
                 Back to Dashboard
               </Link>
               <div className="flex items-center">
-                <AlertCircle className="h-8 w-8 text-orange-600 mr-3" />
+                <Music className="h-8 w-8 text-orange-600 mr-3" />
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900">Available Opportunities</h1>
                   <p className="text-gray-600">Events looking for musicians</p>
@@ -213,11 +218,11 @@ export default function AvailableEventsPage() {
         {/* Events Grid */}
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600"></div>
+            <Loader2 className="h-8 w-8 text-brand-600 animate-spin" />
           </div>
         ) : filteredEvents.length === 0 ? (
           <div className="text-center py-12">
-            <AlertCircle className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+            <Eye className="h-12 w-12 mx-auto text-gray-400 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No Available Events</h3>
             <p className="text-gray-600">
               {events.length === 0 
@@ -257,8 +262,8 @@ export default function AvailableEventsPage() {
                     <div className="flex items-center text-gray-600">
                       <Clock className="h-4 w-4 mr-2" />
                       <span className="text-sm">
-                        {formatEventTime(event.startTime)}
-                        {event.endTime && ` - ${formatEventTime(event.endTime)}`}
+                        {formatEventTimeForDisplay(event.startTime)}
+                        {event.endTime && ` - ${formatEventTimeForDisplay(event.endTime)}`}
                       </span>
                     </div>
                     {event.location && (

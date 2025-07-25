@@ -3,10 +3,12 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { 
-  ArrowLeft, Calendar, Clock, MapPin, User, CheckCircle, AlertCircle, 
-  Search, Filter, ChevronDown, X 
+  ArrowLeft, Calendar, Clock, MapPin, Users, Music, 
+  CheckCircle, XCircle, AlertCircle, Search, Filter, 
+  ChevronDown, Eye, Download, FileText, Mail
 } from 'lucide-react'
 import Link from 'next/link'
+import { formatEventTimeForDisplay } from '@/lib/timezone-utils'
 
 interface Assignment {
   id: string
@@ -140,7 +142,11 @@ export default function MyAssignmentsPage() {
 
   const formatEventTime = (dateString: string) => {
     const date = new Date(dateString)
-    return date.toLocaleTimeString('en-US', {
+    // Apply timezone fix to show correct local time
+    const timezoneOffsetMinutes = date.getTimezoneOffset()
+    const localDate = new Date(date.getTime() + (timezoneOffsetMinutes * 60000))
+    
+    return localDate.toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
       hour12: true
@@ -165,7 +171,7 @@ export default function MyAssignmentsPage() {
       case 'ACCEPTED':
         return <CheckCircle className="h-4 w-4" />
       case 'DECLINED':
-        return <X className="h-4 w-4" />
+        return <XCircle className="h-4 w-4" />
       case 'PENDING':
         return <AlertCircle className="h-4 w-4" />
       default:
@@ -205,7 +211,7 @@ export default function MyAssignmentsPage() {
                 Back to Dashboard
               </Link>
               <div className="flex items-center">
-                <User className="h-8 w-8 text-blue-600 mr-3" />
+                <Users className="h-8 w-8 text-blue-600 mr-3" />
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900">My Assignments</h1>
                   <p className="text-gray-600">All your event assignments</p>
@@ -270,7 +276,7 @@ export default function MyAssignmentsPage() {
           </div>
         ) : filteredAssignments.length === 0 ? (
           <div className="text-center py-12">
-            <User className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+            <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No Assignments Found</h3>
             <p className="text-gray-600">
               {assignments.length === 0 

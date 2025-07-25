@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, Clock, MapPin, Users, Music, Check, ChevronUp, ChevronDown } from 'lucide-react'
+import { Calendar, Clock, MapPin, Users, Music, Download, FileText } from 'lucide-react'
+import { formatEventTimeForDisplay, formatEventTimeCompact } from '@/lib/timezone-utils'
 
 interface PublicScheduleData {
   church: {
@@ -236,10 +237,7 @@ export default function PublicSchedulePage({ params }: { params: Promise<{ token
                         </div>
                         <div className="flex items-center gap-1">
                           <Clock className="w-4 h-4" />
-                          {new Date(event.startTime).toLocaleTimeString([], { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                          })}
+                          {formatEventTimeCompact(event.startTime)}
                         </div>
                         <div className="flex items-center gap-1">
                           <MapPin className="w-4 h-4" />
@@ -250,9 +248,9 @@ export default function PublicSchedulePage({ params }: { params: Promise<{ token
                     
                     <div className="ml-4">
                       {isExpanded ? (
-                        <ChevronUp className="w-5 h-5 text-gray-400" />
+                        ChevronUp className="w-5 h-5 text-gray-400"
                       ) : (
-                        <ChevronDown className="w-5 h-5 text-gray-400" />
+                        ChevronDown className="w-5 h-5 text-gray-400"
                       )}
                     </div>
                   </div>

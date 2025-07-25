@@ -40,13 +40,18 @@ export function MusicianSignupModal({
   const eventDate = new Date(event.startTime)
   const eventEndDate = event.endTime ? new Date(event.endTime) : null
   
-  const timeString = eventDate.toLocaleTimeString('en-US', {
+    // Apply timezone fix to show correct local time
+  const timezoneOffsetMinutes = eventDate.getTimezoneOffset()
+  const localEventDate = new Date(eventDate.getTime() + (timezoneOffsetMinutes * 60000))
+  const localEventEndDate = eventEndDate ? new Date(eventEndDate.getTime() + (timezoneOffsetMinutes * 60000)) : null
+
+  const timeString = localEventDate.toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true
   })
-  
-  const endTimeString = eventEndDate ? eventEndDate.toLocaleTimeString('en-US', {
+
+  const endTimeString = localEventEndDate ? localEventEndDate.toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true
