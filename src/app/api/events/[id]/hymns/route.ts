@@ -63,9 +63,8 @@ export async function PUT(
       where: { eventId }
     })
 
-    // Filter out empty hymns and prepare data for bulk insert
+    // Prepare data for bulk insert (keep empty titles to preserve service part placeholders)
     const validHymns = hymns
-      .filter((hymn: any) => hymn.title?.trim())
       .map((hymn: any, index: number) => {
         // Calculate creation time with small offsets to preserve order
         const baseTime = new Date()
@@ -74,7 +73,7 @@ export async function PUT(
         
         return {
           eventId,
-          title: hymn.title.trim(),
+          title: hymn.title?.trim() || '', // Allow empty titles
           notes: hymn.notes?.trim() || null,
           servicePartId: hymn.servicePartId === 'custom' || !hymn.servicePartId ? null : hymn.servicePartId,
           createdAt
