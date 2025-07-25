@@ -198,10 +198,19 @@ export function CreateRecurringEventModal({
       // The stored time is in UTC, but we need to show it in the user's timezone
       const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
       
-      // Simple approach: Use the Date object's local timezone methods
-      // This will automatically convert from UTC to local time
-      const localStartDate = new Date(eventDate.getTime())
-      const localEndDate = eventEndDate ? new Date(eventEndDate.getTime()) : null
+      // Proper timezone conversion: adjust for the timezone offset
+      const timezoneOffsetMinutes = eventDate.getTimezoneOffset()
+      console.log('🕐 Timezone offset details:', {
+        timezoneOffsetMinutes,
+        offsetHours: timezoneOffsetMinutes / 60,
+        eventDateUTC: eventDate.getUTCHours(),
+        eventDateLocal: eventDate.getHours()
+      })
+      
+      // Create local dates by adjusting for timezone
+      // If UTC time is 10:00 and user is in UTC-5, we want to show 10:00 local (not 5:00)
+      const localStartDate = new Date(eventDate.getTime() + (timezoneOffsetMinutes * 60000))
+      const localEndDate = eventEndDate ? new Date(eventEndDate.getTime() + (timezoneOffsetMinutes * 60000)) : null
       
       // Format time properly for input field (HH:MM format)
       const formatTimeForInput = (date: Date) => {
