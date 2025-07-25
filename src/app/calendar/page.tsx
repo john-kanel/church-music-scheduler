@@ -117,6 +117,20 @@ export default function CalendarPage() {
   const [listFilter, setListFilter] = useState<'upcoming' | 'past'>('upcoming')
   const [searchTerm, setSearchTerm] = useState('')
   
+  // Helper function to fix timezone display issues
+  const formatEventTime = (utcTimeString: string) => {
+    const utcDate = new Date(utcTimeString)
+    // Apply same timezone fix as in modal
+    const timezoneOffsetMinutes = utcDate.getTimezoneOffset()
+    const localDate = new Date(utcDate.getTime() + (timezoneOffsetMinutes * 60000))
+    
+    return localDate.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    })
+  }
+  
   // Root recurring events management
   const [rootEvents, setRootEvents] = useState<RootRecurringEvent[]>([])
   const [showCreateRecurringEvent, setShowCreateRecurringEvent] = useState(false)
@@ -1199,11 +1213,7 @@ export default function CalendarPage() {
                                 <>
                                   {dayEvents.slice(0, 3).map((event) => {
                                     const eventDate = new Date(event.startTime)
-                                    const timeString = eventDate.toLocaleTimeString('en-US', {
-                                      hour: 'numeric',
-                                      minute: '2-digit',
-                                      hour12: true
-                                    })
+                                    const timeString = formatEventTime(event.startTime)
                                     const hasRoles = event.assignments && event.assignments.length > 0
                                     const assignedCount = event.assignments?.filter(a => a.user).length || 0
                                     const totalRoles = event.assignments?.length || 0
@@ -1426,19 +1436,11 @@ export default function CalendarPage() {
                                   <div className="flex items-center text-sm text-gray-600 mb-2">
                                     <Clock className="h-4 w-4 mr-2" />
                                     <span>
-                                      {eventDate.toLocaleTimeString('en-US', {
-                                        hour: 'numeric',
-                                        minute: '2-digit',
-                                        hour12: true
-                                      })}
+                                      {formatEventTime(event.startTime)}
                                       {eventEndDate && (
                                         <span>
                                           {' - '}
-                                          {eventEndDate.toLocaleTimeString('en-US', {
-                                            hour: 'numeric',
-                                            minute: '2-digit',
-                                            hour12: true
-                                          })}
+                                          {formatEventTime(event.endTime!)}
                                         </span>
                                       )}
                                     </span>
