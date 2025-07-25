@@ -6,7 +6,9 @@ import Link from 'next/link'
 import { 
   Calendar, Clock, Users, Plus, Bell, Settings, ChevronDown, ChevronUp,
   MapPin, User, Music, MessageCircle, ExternalLink, BookOpen, Eye,
-  Trash2, Edit, ArrowUpRight, UserPlus, Send, Share2
+  Trash2, Edit, ArrowUpRight, UserPlus, Send, Share2, ChevronLeft, ChevronRight,
+  HandHeart, CreditCard, UserCheck, Mail, Activity, TrendingUp, LifeBuoy,
+  Lightbulb, GiftIcon, X, RefreshCw, Award, Heart
 } from 'lucide-react'
 import { OnboardingFlow } from './onboarding-flow'
 import { CreateEventModal } from '@/components/events/create-event-modal'
