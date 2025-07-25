@@ -1544,11 +1544,7 @@ export default function EventPlannerPage() {
         return
       }
       
-      // Check if any groups were selected
-      if (groupIds.length === 0) {
-        showToast('error', 'Please select at least one group to assign.')
-        return
-      }
+
       
       // Optimistic update - update local state immediately
       setData(prev => {
