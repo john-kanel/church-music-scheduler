@@ -164,16 +164,16 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
       const year = targetDate.getFullYear()
       
       // Invalidate cache first, then fetch fresh data
-      invalidateCache(`/api/dashboard?month=${month}&year=${year}`)
-      invalidateCache('/api/activities')
+      invalidateCache.dashboard(`/api/dashboard?month=${month}&year=${year}`)
+      invalidateCache.activities('/api/activities')
       
       const [dashboardData, activitiesData] = await Promise.all([
         fetchWithCache(`/api/dashboard?month=${month}&year=${year}`),
         fetchWithCache('/api/activities')
       ])
       
-      setDashboardData(dashboardData)
-      setActivities(activitiesData)
+              setDashboardData(dashboardData as DashboardData)
+        setActivities(activitiesData as Activity[])
     } catch (error) {
       console.error('Error refreshing dashboard data:', error)
     }
