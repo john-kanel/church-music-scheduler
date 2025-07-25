@@ -101,8 +101,8 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
           fetchWithCache('/api/activities')
         ])
         
-        setDashboardData(dashboardData)
-        setActivities(activitiesData)
+        setDashboardData(dashboardData as DashboardData)
+        setActivities(activitiesData as Activity[])
       } catch (error) {
         console.error('Error loading dashboard data:', error)
       } finally {
