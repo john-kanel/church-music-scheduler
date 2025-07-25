@@ -518,12 +518,10 @@ export default function EventPlannerPage() {
     const handleVisibilityChange = () => {
       if (document.hidden) {
         console.log('Page hidden, saving pending updates:', pendingUpdatesRef.current)
-        // Page is hidden, save all pending updates immediately
+        // Page is hidden, save all pending updates immediately (including empty titles for deletion)
         Object.entries(pendingUpdatesRef.current).forEach(([key, update]) => {
-          if (update.title.trim()) {
-            console.log('Saving update for', key, update.title)
-            updateHymnTitle(update.eventId, update.title, update.servicePartId, update.hymnId)
-          }
+          console.log('Saving update for', key, update.title)
+          updateHymnTitle(update.eventId, update.title, update.servicePartId, update.hymnId)
         })
         pendingUpdatesRef.current = {}
         // Clear all timeouts
@@ -544,15 +542,14 @@ export default function EventPlannerPage() {
       if (pendingCount > 0) {
         console.log('Page unloading, saving', pendingCount, 'pending updates')
         
-        // Group updates by eventId to send as batches
+        // Group updates by eventId to send as batches (including empty titles for deletion)
         const updatesByEvent: Record<string, any[]> = {}
         Object.entries(pendingUpdatesRef.current).forEach(([key, update]) => {
-          if (update.title.trim()) {
-            if (!updatesByEvent[update.eventId]) {
-              updatesByEvent[update.eventId] = []
-            }
-            updatesByEvent[update.eventId].push(update)
+          // Always process updates, including empty titles (for deletion)
+          if (!updatesByEvent[update.eventId]) {
+            updatesByEvent[update.eventId] = []
           }
+          updatesByEvent[update.eventId].push(update)
         })
 
         // Send each event's updates as a batch
@@ -625,10 +622,9 @@ export default function EventPlannerPage() {
     
     // More aggressive auto-save: reduce delay from 500ms to 200ms
     const timeoutId = setTimeout(() => {
-      if (newTitle.trim()) {
-        console.log('Auto-saving after delay:', key, newTitle)
-        updateHymnTitle(eventId, newTitle, servicePartId, hymnId)
-      }
+      // Always save, including empty titles (for deletion)
+      console.log('Auto-saving after delay:', key, newTitle)
+      updateHymnTitle(eventId, newTitle, servicePartId, hymnId)
       
       // Clean up after successful save
       delete pendingUpdatesRef.current[key]
@@ -2312,19 +2308,15 @@ export default function EventPlannerPage() {
                                 onBlur={(e) => {
                                   const newTitle = e.target.value
                                   console.log('🎵 Input blur - saving immediately:', { eventId: event.id, newTitle, hymnId: hymn.id })
-                                  // Save immediately when user clicks away
-                                  if (newTitle.trim()) {
-                                    updateHymnTitle(event.id, newTitle, hymn.servicePartId || null, hymn.id)
-                                  }
+                                  // Save immediately when user clicks away (including empty titles for deletion)
+                                  updateHymnTitle(event.id, newTitle, hymn.servicePartId || null, hymn.id)
                                 }}
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter') {
                                     const newTitle = e.currentTarget.value
                                     console.log('🎵 Enter key - saving immediately:', { eventId: event.id, newTitle, hymnId: hymn.id })
-                                    // Save immediately on Enter key
-                                    if (newTitle.trim()) {
-                                      updateHymnTitle(event.id, newTitle, hymn.servicePartId || null, hymn.id)
-                                    }
+                                    // Save immediately on Enter key (including empty titles for deletion)
+                                    updateHymnTitle(event.id, newTitle, hymn.servicePartId || null, hymn.id)
                                     e.currentTarget.blur() // Remove focus
                                   }
                                 }}
@@ -2928,25 +2920,21 @@ export default function EventPlannerPage() {
                                         // Debounced save to server
                                         debouncedUpdateHymn(event.id, newTitle, hymn.servicePartId || null, hymn.id)
                                       }}
-                                      onBlur={(e) => {
-                                        const newTitle = e.target.value
-                                        console.log('🎵 Mobile input blur - saving immediately:', { eventId: event.id, newTitle, hymnId: hymn.id })
-                                        // Save immediately when user clicks away
-                                        if (newTitle.trim()) {
-                                          updateHymnTitle(event.id, newTitle, hymn.servicePartId || null, hymn.id)
-                                        }
-                                      }}
-                                      onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                          const newTitle = e.currentTarget.value
-                                          console.log('🎵 Mobile Enter key - saving immediately:', { eventId: event.id, newTitle, hymnId: hymn.id })
-                                          // Save immediately on Enter key
-                                          if (newTitle.trim()) {
-                                            updateHymnTitle(event.id, newTitle, hymn.servicePartId || null, hymn.id)
-                                          }
-                                          e.currentTarget.blur() // Remove focus
-                                        }
-                                      }}
+                                                                             onBlur={(e) => {
+                                         const newTitle = e.target.value
+                                         console.log('🎵 Mobile input blur - saving immediately:', { eventId: event.id, newTitle, hymnId: hymn.id })
+                                         // Save immediately when user clicks away (including empty titles for deletion)
+                                         updateHymnTitle(event.id, newTitle, hymn.servicePartId || null, hymn.id)
+                                       }}
+                                                                             onKeyDown={(e) => {
+                                         if (e.key === 'Enter') {
+                                           const newTitle = e.currentTarget.value
+                                           console.log('🎵 Mobile Enter key - saving immediately:', { eventId: event.id, newTitle, hymnId: hymn.id })
+                                           // Save immediately on Enter key (including empty titles for deletion)
+                                           updateHymnTitle(event.id, newTitle, hymn.servicePartId || null, hymn.id)
+                                           e.currentTarget.blur() // Remove focus
+                                         }
+                                       }}
                                       placeholder="Enter hymn title..."
                                       className="w-full text-sm text-gray-900 border-none outline-none bg-transparent placeholder-gray-400 focus:bg-gray-50 rounded-sm px-2 py-1 font-normal"
                                     />
