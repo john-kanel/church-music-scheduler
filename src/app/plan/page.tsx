@@ -188,6 +188,7 @@ export default function EventPlannerPage() {
   // Event details modal state
   const [showEventDetailsModal, setShowEventDetailsModal] = useState(false)
   const [selectedEventForEdit, setSelectedEventForEdit] = useState<Event | null>(null)
+  const [statusDropdownOpen, setStatusDropdownOpen] = useState<string | null>(null)
 
   // Debug selectedEventForEdit changes
   useEffect(() => {
@@ -244,7 +245,17 @@ export default function EventPlannerPage() {
     }
   }, [session?.user?.id])
 
-
+  // Close status dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      setStatusDropdownOpen(null)
+    }
+    
+    if (statusDropdownOpen) {
+      document.addEventListener('click', handleClickOutside)
+      return () => document.removeEventListener('click', handleClickOutside)
+    }
+  }, [statusDropdownOpen])
 
   // Recovery mechanism for backed-up changes
   const restoreBackedUpChanges = () => {
@@ -1842,6 +1853,92 @@ export default function EventPlannerPage() {
     }
   }
 
+  // Handle quick status change
+  const handleStatusChange = async (eventId: string, newStatus: string) => {
+    try {
+      console.log('🎯 Changing event status:', { eventId, newStatus })
+      
+      const response = await fetch(`/api/events/${eventId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: newStatus.toUpperCase()
+        }),
+      })
+
+      if (response.ok) {
+        console.log('✅ Status updated successfully')
+        showToast('success', `Event status changed to ${newStatus.toLowerCase()}`)
+        
+        // Refresh the planner data to reflect the change
+        await fetchPlannerData()
+      } else {
+        const errorData = await response.json()
+        console.error('❌ Failed to update status:', errorData)
+        throw new Error(errorData.error || 'Failed to update event status')
+      }
+    } catch (error) {
+      console.error('❌ Error updating event status:', error)
+      showToast('error', 'Failed to update event status')
+    }
+  }
+
+  // Clickable status component
+  const StatusDropdown = ({ event }: { event: Event }) => {
+    const statusStyles = getStatusTagStyles(event.status)
+    const isOpen = statusDropdownOpen === event.id
+    
+    const statusOptions = [
+      { value: 'CONFIRMED', label: 'Confirmed', styles: getStatusTagStyles('CONFIRMED') },
+      { value: 'TENTATIVE', label: 'Tentative', styles: getStatusTagStyles('TENTATIVE') },
+      { value: 'CANCELLED', label: 'Cancelled', styles: getStatusTagStyles('CANCELLED') }
+    ]
+
+    return (
+      <div className="relative">
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            setStatusDropdownOpen(isOpen ? null : event.id)
+          }}
+          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity ${statusStyles.bg} ${statusStyles.text}`}
+          title="Click to change status"
+        >
+          {statusStyles.label}
+          {isOpen ? (
+            <ChevronUp className="h-3 w-3 ml-1" />
+          ) : (
+            <ChevronDown className="h-3 w-3 ml-1" />
+          )}
+        </button>
+        
+        {isOpen && (
+          <div className="absolute z-50 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg min-w-32">
+            {statusOptions.map((option) => (
+              <button
+                key={option.value}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleStatusChange(event.id, option.value)
+                  setStatusDropdownOpen(null)
+                }}
+                className={`w-full text-left px-3 py-2 text-xs font-medium hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg ${
+                  option.value === (event.status?.toUpperCase() || 'CONFIRMED') 
+                    ? `${option.styles.bg} ${option.styles.text}` 
+                    : 'text-gray-700'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   const handleEditEvent = (event: Event) => {
     console.log('🚀 handleEditEvent called with:', {
       eventId: event?.id,
@@ -2091,14 +2188,7 @@ export default function EventPlannerPage() {
                         
                         {/* Status Tag - Above date/time and location */}
                         <div className="mt-2 mb-1">
-                          {(() => {
-                            const statusStyles = getStatusTagStyles(event.status)
-                            return (
-                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${statusStyles.bg} ${statusStyles.text}`}>
-                                {statusStyles.label}
-                              </span>
-                            )
-                          })()}
+                          <StatusDropdown event={event} />
                         </div>
                         <p className="text-xs text-gray-500 mb-1">
                           {new Date(event.startTime).toLocaleDateString()} at{' '}
@@ -2706,14 +2796,7 @@ export default function EventPlannerPage() {
                             
                             {/* Status Tag - Mobile - Above date/time and location */}
                             <div className="mt-2 mb-1">
-                              {(() => {
-                                const statusStyles = getStatusTagStyles(event.status)
-                                return (
-                                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${statusStyles.bg} ${statusStyles.text}`}>
-                                    {statusStyles.label}
-                                  </span>
-                                )
-                              })()}
+                              <StatusDropdown event={event} />
                             </div>
                             <p className="text-xs text-gray-500 mb-1">
                               {new Date(event.startTime).toLocaleDateString()} at{' '}
