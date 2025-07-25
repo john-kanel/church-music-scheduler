@@ -1,72 +1,23 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { signOut, useSession } from 'next-auth/react'
-import { 
-  Plus, 
-  Users, 
-  Calendar, 
-  Settings, 
-  ChevronDown,
-  TrendingUp,
-  Clock,
-  MapPin,
-  UserCheck,
-  MessageSquare,
-  CreditCard,
-  BarChart3,
-  Mail,
-  ChevronLeft,
-  ChevronRight,
-  CheckCircle,
-  UserPlus,
-  Activity,
-  GiftIcon,
-  LifeBuoy,
-  HandHeart,
-  Lightbulb,
-  ExternalLink
-} from 'lucide-react'
-import { Logo } from '@/components/ui/logo'
+import { useState, useEffect, useCallback } from 'react'
+import { useSession } from 'next-auth/react'
 import Link from 'next/link'
-import dynamic from 'next/dynamic'
 import { 
-  fetchDashboardData, 
-  fetchActivities, 
-  invalidateDashboardCache, 
-  invalidateActivitiesCache 
-} from '@/lib/request-cache'
-
-// Dynamic imports for modal components to reduce bundle size
-const CreateEventModal = dynamic(() => import('../events/create-event-modal').then(mod => ({ default: mod.CreateEventModal })), {
-  ssr: false,
-  loading: () => <div>Loading...</div>
-})
-
-const InviteModal = dynamic(() => import('../musicians/invite-modal').then(mod => ({ default: mod.InviteModal })), {
-  ssr: false,
-  loading: () => <div>Loading...</div>
-})
-
-const SendMessageModal = dynamic(() => import('../messages/send-message-modal').then(mod => ({ default: mod.SendMessageModal })), {
-  ssr: false,
-  loading: () => <div>Loading...</div>
-})
-
-const GeneratePublicLinkModal = dynamic(() => import('../events/generate-public-link-modal').then(mod => ({ default: mod.GeneratePublicLinkModal })), {
-  ssr: false,
-  loading: () => <div>Loading...</div>
-})
-
-const OnboardingFlow = dynamic(() => import('./onboarding-flow').then(mod => ({ default: mod.OnboardingFlow })), {
-  ssr: false,
-  loading: () => <div>Loading...</div>
-})
-
-const EventDetailsModal = dynamic(() => import('../events/event-details-modal').then(mod => ({ default: mod.EventDetailsModal })), {
-  ssr: false,
-  loading: () => <div>Loading...</div>
-})
+  Calendar, Clock, Users, Plus, Bell, Settings, ChevronDown, ChevronUp,
+  MapPin, User, Music, MessageCircle, ExternalLink, BookOpen, Eye,
+  Trash2, Edit, ArrowUpRight, UserPlus, Send, Share2
+} from 'lucide-react'
+import { OnboardingFlow } from './onboarding-flow'
+import { CreateEventModal } from '@/components/events/create-event-modal'
+import { EventDetailsModal } from '@/components/events/event-details-modal'
+import { InvitationModal } from '@/components/musicians/invitation-modal'
+import { SendMessageModal } from '@/components/messages/send-message-modal'
+import { GeneratePublicLinkModal } from '@/components/events/generate-public-link-modal'
+import { OpenEventsCard } from '@/components/events/open-events-card'
+import { ImportantDocsCard } from './important-docs-card'
+import { fetchWithCache, invalidateCache } from '@/lib/performance-cache'
+import { formatEventTimeForDisplay } from '@/lib/timezone-utils'
 
 interface User {
   id: string
@@ -146,8 +97,8 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
         
         // Use Promise.all to fetch both data sets simultaneously with caching
         const [dashboardData, activitiesData] = await Promise.all([
-          fetchDashboardData(month, year),
-          fetchActivities()
+          fetchWithCache(`/api/dashboard?month=${month}&year=${year}`),
+          fetchWithCache('/api/activities')
         ])
         
         setDashboardData(dashboardData)
@@ -213,12 +164,12 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
       const year = targetDate.getFullYear()
       
       // Invalidate cache first, then fetch fresh data
-      invalidateDashboardCache(month, year)
-      invalidateActivitiesCache()
+      invalidateCache(`/api/dashboard?month=${month}&year=${year}`)
+      invalidateCache('/api/activities')
       
       const [dashboardData, activitiesData] = await Promise.all([
-        fetchDashboardData(month, year),
-        fetchActivities()
+        fetchWithCache(`/api/dashboard?month=${month}&year=${year}`),
+        fetchWithCache('/api/activities')
       ])
       
       setDashboardData(dashboardData)
@@ -815,11 +766,7 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
                                 {dayEvents.length > 0 ? (
                                   dayEvents.slice(0, 2).map((event, eventIndex) => {
                                     const eventTime = new Date(event.startTime)
-                                    const timeString = eventTime.toLocaleTimeString('en-US', {
-                                      hour: 'numeric',
-                                      minute: '2-digit',
-                                      hour12: true
-                                    })
+                                                        const timeString = formatEventTimeForDisplay(event.startTime)
                                     return (
                                       <div
                                         key={event.id}

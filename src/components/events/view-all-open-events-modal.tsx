@@ -1,10 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { 
-  X, Calendar, Clock, Users, Check, AlertCircle, 
-  Zap, CheckCircle, XCircle, ExternalLink, Loader2
-} from 'lucide-react'
+import { X, Calendar, Clock, MapPin, Users, Music, UserPlus, Search, Filter, ChevronDown } from 'lucide-react'
+import { formatEventTimeForDisplay } from '@/lib/timezone-utils'
 
 interface OpenEvent {
   id: string
@@ -87,15 +85,6 @@ export function ViewAllOpenEventsModal({
       month: 'short', 
       day: 'numeric',
       year: diffDays > 365 ? 'numeric' : undefined
-    })
-  }
-
-  const formatEventTime = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
     })
   }
 
@@ -334,7 +323,7 @@ export function ViewAllOpenEventsModal({
                           
                           <div className="flex items-center text-sm text-gray-600 mb-2">
                             <Clock className="h-4 w-4 mr-1" />
-                            <span>{formatEventDate(event.startTime)} at {formatEventTime(event.startTime)}</span>
+                            <span>{formatEventDate(event.startTime)} at {formatEventTimeForDisplay(event.startTime)}</span>
                             {event.location && (
                               <>
                                 <span className="mx-2">•</span>
@@ -416,7 +405,7 @@ export function ViewAllOpenEventsModal({
                         />
                         <h3 className="font-medium text-gray-900">{event.name}</h3>
                         <span className="ml-2 text-sm text-gray-500">
-                          {formatEventDate(event.startTime)} at {formatEventTime(event.startTime)}
+                          {formatEventDate(event.startTime)} at {formatEventTimeForDisplay(event.startTime)}
                         </span>
                       </div>
                       

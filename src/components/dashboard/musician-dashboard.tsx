@@ -31,6 +31,7 @@ import Link from 'next/link'
 import { EventDetailsModal } from '../events/event-details-modal'
 import { MusicianSignupModal } from '../events/musician-signup-modal'
 import ImportantDocsCard from './important-docs-card'
+import { formatEventTimeForDisplay, formatEventTimeCompact } from '@/lib/timezone-utils'
 
 interface User {
   id: string
@@ -491,11 +492,7 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
                             {dayEvents.length > 0 ? (
                               dayEvents.slice(0, 2).map((event, eventIndex) => {
                                 const eventTime = new Date(event.startTime)
-                                const timeString = eventTime.toLocaleTimeString('en-US', {
-                                  hour: 'numeric',
-                                  minute: '2-digit',
-                                  hour12: true
-                                })
+                                                    const timeString = formatEventTimeForDisplay(event.startTime)
                                 return (
                                   <div
                                     key={event.id}
@@ -569,7 +566,7 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
                           </h3>
                           <p className="text-sm text-gray-600">
                             {new Date(assignment.event.startTime).toLocaleDateString()} at {' '}
-                            {new Date(assignment.event.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {formatEventTimeCompact(assignment.event.startTime)}
                           </p>
                           <div className="flex items-center mt-1">
                             <MapPin className="h-3 w-3 text-gray-400 mr-1" />
@@ -710,7 +707,7 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
                             <h3 className="font-medium text-gray-900 text-sm truncate">{event.name}</h3>
                             <p className="text-xs text-gray-600">
                               {new Date(event.startTime).toLocaleDateString()} at {' '}
-                              {new Date(event.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {formatEventTimeCompact(event.startTime)}
                             </p>
                             <p className="text-xs text-orange-600 font-medium">
                               Need: {vacancies.map((v: any) => v.roleName).join(', ')}
