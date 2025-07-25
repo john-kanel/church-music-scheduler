@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react'
 import { 
   ArrowLeft, Calendar, Plus, Search, Filter, Users, Clock, MapPin, 
   ChevronLeft, ChevronRight, Settings, Trash2, Edit, Eye, EyeOff,
-  Palette, Save, X, FileText, ExternalLink
+  Palette, Save, X, FileText, Zap, ChevronDown, Check, ExternalLink, ChevronUp
 } from 'lucide-react'
 import Link from 'next/link'
 import jsPDF from 'jspdf'
@@ -17,6 +17,7 @@ import { OpenEventsCard } from '@/components/events/open-events-card'
 import { ViewAllOpenEventsModal } from '@/components/events/view-all-open-events-modal'
 import { GeneratePublicLinkModal } from '@/components/events/generate-public-link-modal'
 import { fetchWithCache, invalidateCache } from '@/lib/performance-cache'
+import { formatEventTimeForDisplay } from '@/lib/timezone-utils'
 
 interface RootRecurringEvent {
   id: string
@@ -117,19 +118,8 @@ export default function CalendarPage() {
   const [listFilter, setListFilter] = useState<'upcoming' | 'past'>('upcoming')
   const [searchTerm, setSearchTerm] = useState('')
   
-  // Helper function to fix timezone display issues
-  const formatEventTime = (utcTimeString: string) => {
-    const utcDate = new Date(utcTimeString)
-    // Apply same timezone fix as in modal
-    const timezoneOffsetMinutes = utcDate.getTimezoneOffset()
-    const localDate = new Date(utcDate.getTime() + (timezoneOffsetMinutes * 60000))
-    
-    return localDate.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    })
-  }
+  // Use shared timezone utility function
+  const formatEventTime = formatEventTimeForDisplay
   
   // Root recurring events management
   const [rootEvents, setRootEvents] = useState<RootRecurringEvent[]>([])
@@ -1213,7 +1203,7 @@ export default function CalendarPage() {
                                 <>
                                   {dayEvents.slice(0, 3).map((event) => {
                                     const eventDate = new Date(event.startTime)
-                                    const timeString = formatEventTime(event.startTime)
+                                    const timeString = formatEventTimeForDisplay(event.startTime)
                                     const hasRoles = event.assignments && event.assignments.length > 0
                                     const assignedCount = event.assignments?.filter(a => a.user).length || 0
                                     const totalRoles = event.assignments?.length || 0
@@ -1436,11 +1426,11 @@ export default function CalendarPage() {
                                   <div className="flex items-center text-sm text-gray-600 mb-2">
                                     <Clock className="h-4 w-4 mr-2" />
                                     <span>
-                                      {formatEventTime(event.startTime)}
+                                      {formatEventTimeForDisplay(event.startTime)}
                                       {eventEndDate && (
                                         <span>
                                           {' - '}
-                                          {formatEventTime(event.endTime!)}
+                                          {formatEventTimeForDisplay(event.endTime!)}
                                         </span>
                                       )}
                                     </span>

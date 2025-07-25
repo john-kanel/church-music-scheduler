@@ -74,3 +74,39 @@ export async function getUserTimezone(userId: string): Promise<string> {
     return 'America/Chicago'
   }
 } 
+
+/**
+ * Formats event time for display, fixing timezone issues
+ * Use this instead of toLocaleTimeString() for event times
+ * @param utcTimeString - UTC time string from database (e.g., "2025-08-24T10:00:00.000Z")
+ * @returns Properly formatted local time string (e.g., "10:00 AM")
+ */
+export function formatEventTimeForDisplay(utcTimeString: string): string {
+  const utcDate = new Date(utcTimeString)
+  // Apply timezone fix: adjust for timezone offset to show intended local time
+  const timezoneOffsetMinutes = utcDate.getTimezoneOffset()
+  const localDate = new Date(utcDate.getTime() + (timezoneOffsetMinutes * 60000))
+  
+  return localDate.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  })
+}
+
+/**
+ * Formats event time for compact display (24-hour format)
+ * @param utcTimeString - UTC time string from database
+ * @returns Compact time string (e.g., "10:00")
+ */
+export function formatEventTimeCompact(utcTimeString: string): string {
+  const utcDate = new Date(utcTimeString)
+  const timezoneOffsetMinutes = utcDate.getTimezoneOffset()
+  const localDate = new Date(utcDate.getTime() + (timezoneOffsetMinutes * 60000))
+  
+  return localDate.toLocaleTimeString([], { 
+    hour: '2-digit', 
+    minute: '2-digit',
+    hour12: false
+  })
+} 
