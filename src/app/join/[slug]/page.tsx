@@ -39,7 +39,7 @@ const SKILL_LEVELS = [
 const COMMON_INSTRUMENTS = [
   'Piano', 'Guitar', 'Violin', 'Cello', 'Flute', 'Clarinet', 'Saxophone', 'Trumpet', 
   'Trombone', 'Drums', 'Bass', 'Organ', 'Harp', 'Vocals', 'Oboe', 'French Horn',
-  'Tuba', 'Percussion', 'Other'
+  'Tuba', 'Percussion', 'Director', 'Cantor', 'Other'
 ]
 
 export default function JoinPage() {
