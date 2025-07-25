@@ -433,6 +433,8 @@ export default function EventPlannerPage() {
 
   const updateHymnTitle = async (eventId: string, newTitle: string, servicePartId: string | null, hymnId?: string) => {
     try {
+      console.log('🎵 Saving hymn title:', { eventId, newTitle, servicePartId, hymnId })
+      
       // First update local state immediately for responsiveness
       let currentHymns: any[] = []
       setData(prev => {
@@ -488,12 +490,19 @@ export default function EventPlannerPage() {
       })
 
       if (!response.ok) {
-        console.error('Failed to save hymn:', response.statusText)
+        const errorData = await response.json()
+        console.error('❌ Failed to save hymn:', errorData)
+        showToast('error', errorData.error || 'Failed to save hymn title')
         // Revert local state if server update failed
         await fetchPlannerData()
+      } else {
+        const result = await response.json()
+        console.log('✅ Hymn title saved successfully:', result)
+        showToast('success', 'Hymn title saved!')
       }
     } catch (error) {
-      console.error('Error updating hymn:', error)
+      console.error('❌ Error updating hymn:', error)
+      showToast('error', 'Failed to save hymn title. Please try again.')
       // Revert local state if there was an error
       await fetchPlannerData()
     }
@@ -2300,6 +2309,25 @@ export default function EventPlannerPage() {
                                   // Debounced save to server
                                   debouncedUpdateHymn(event.id, newTitle, hymn.servicePartId || null, hymn.id)
                                 }}
+                                onBlur={(e) => {
+                                  const newTitle = e.target.value
+                                  console.log('🎵 Input blur - saving immediately:', { eventId: event.id, newTitle, hymnId: hymn.id })
+                                  // Save immediately when user clicks away
+                                  if (newTitle.trim()) {
+                                    updateHymnTitle(event.id, newTitle, hymn.servicePartId || null, hymn.id)
+                                  }
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    const newTitle = e.currentTarget.value
+                                    console.log('🎵 Enter key - saving immediately:', { eventId: event.id, newTitle, hymnId: hymn.id })
+                                    // Save immediately on Enter key
+                                    if (newTitle.trim()) {
+                                      updateHymnTitle(event.id, newTitle, hymn.servicePartId || null, hymn.id)
+                                    }
+                                    e.currentTarget.blur() // Remove focus
+                                  }
+                                }}
                                 placeholder="Enter hymn title..."
                                 className="w-full text-sm text-gray-900 border-none outline-none bg-transparent placeholder-gray-400 focus:bg-gray-50 rounded-sm px-2 py-1 font-normal"
                               />
@@ -2899,6 +2927,25 @@ export default function EventPlannerPage() {
                                         })
                                         // Debounced save to server
                                         debouncedUpdateHymn(event.id, newTitle, hymn.servicePartId || null, hymn.id)
+                                      }}
+                                      onBlur={(e) => {
+                                        const newTitle = e.target.value
+                                        console.log('🎵 Mobile input blur - saving immediately:', { eventId: event.id, newTitle, hymnId: hymn.id })
+                                        // Save immediately when user clicks away
+                                        if (newTitle.trim()) {
+                                          updateHymnTitle(event.id, newTitle, hymn.servicePartId || null, hymn.id)
+                                        }
+                                      }}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                          const newTitle = e.currentTarget.value
+                                          console.log('🎵 Mobile Enter key - saving immediately:', { eventId: event.id, newTitle, hymnId: hymn.id })
+                                          // Save immediately on Enter key
+                                          if (newTitle.trim()) {
+                                            updateHymnTitle(event.id, newTitle, hymn.servicePartId || null, hymn.id)
+                                          }
+                                          e.currentTarget.blur() // Remove focus
+                                        }
                                       }}
                                       placeholder="Enter hymn title..."
                                       className="w-full text-sm text-gray-900 border-none outline-none bg-transparent placeholder-gray-400 focus:bg-gray-50 rounded-sm px-2 py-1 font-normal"
