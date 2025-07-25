@@ -11,6 +11,7 @@ import { InviteModal } from '../musicians/invite-modal'
 import { SendMessageModal } from '../messages/send-message-modal'
 import PdfProcessor from './pdf-processor'
 import jsPDF from 'jspdf'
+import { formatEventTimeForDisplay } from '@/lib/timezone-utils'
 
 interface EventDetailsModalProps {
   isOpen: boolean
@@ -1214,15 +1215,8 @@ export function EventDetailsModal({
         month: 'long',
         day: 'numeric'
       })
-      const timeStr = eventDate.toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-      }) + (eventEndDate ? ` - ${eventEndDate.toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-      })}` : '')
+      const timeStr = formatEventTimeForDisplay(currentEvent.startTime) + 
+        (currentEvent.endTime ? ` - ${formatEventTimeForDisplay(currentEvent.endTime)}` : '')
       
       pdf.text(`Date: ${dateStr}`, 25, yPosition)
       yPosition += 7
@@ -1581,17 +1575,9 @@ export function EventDetailsModal({
   const eventDate = new Date(currentEvent.startTime)
   const eventEndDate = currentEvent.endTime ? new Date(currentEvent.endTime) : null
   
-  const timeString = eventDate.toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true
-  })
+  const timeString = formatEventTimeForDisplay(currentEvent.startTime)
   
-  const endTimeString = eventEndDate ? eventEndDate.toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true
-  }) : null
+  const endTimeString = currentEvent.endTime ? formatEventTimeForDisplay(currentEvent.endTime) : null
 
   const dateString = eventDate.toLocaleDateString('en-US', {
     weekday: 'long',

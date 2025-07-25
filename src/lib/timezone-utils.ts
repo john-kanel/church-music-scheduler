@@ -42,16 +42,17 @@ export function displayEventDateTime(utcDate: Date, timezone: string): Date {
  * @returns Properly formatted ICS datetime string
  */
 export function formatICSDateTime(utcDate: Date, timezone: string): string {
-  // Convert to user's timezone first
-  const zonedDate = toZonedTime(utcDate, timezone)
+  // Fix timezone issue: apply the same timezone correction as formatEventTimeForDisplay
+  const timezoneOffsetMinutes = utcDate.getTimezoneOffset()
+  const localDate = new Date(utcDate.getTime() + (timezoneOffsetMinutes * 60000))
   
-  // Format as YYYYMMDDTHHMMSS (local time, not UTC)
-  const year = zonedDate.getFullYear()
-  const month = String(zonedDate.getMonth() + 1).padStart(2, '0')
-  const day = String(zonedDate.getDate()).padStart(2, '0')
-  const hours = String(zonedDate.getHours()).padStart(2, '0')
-  const minutes = String(zonedDate.getMinutes()).padStart(2, '0')
-  const seconds = String(zonedDate.getSeconds()).padStart(2, '0')
+  // Format as YYYYMMDDTHHMMSS (local time)
+  const year = localDate.getFullYear()
+  const month = String(localDate.getMonth() + 1).padStart(2, '0')
+  const day = String(localDate.getDate()).padStart(2, '0')
+  const hours = String(localDate.getHours()).padStart(2, '0')
+  const minutes = String(localDate.getMinutes()).padStart(2, '0')
+  const seconds = String(localDate.getSeconds()).padStart(2, '0')
   
   return `${year}${month}${day}T${hours}${minutes}${seconds}`
 }
