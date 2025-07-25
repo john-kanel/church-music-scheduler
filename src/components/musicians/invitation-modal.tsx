@@ -66,7 +66,7 @@ export default function InvitationModal({ isOpen, onClose }: InvitationModalProp
         width: 200,
         margin: 2,
         color: {
-          dark: '#660033',
+          dark: '#196119',
           light: '#FFFFFF'
         }
       })
@@ -171,7 +171,7 @@ export default function InvitationModal({ isOpen, onClose }: InvitationModalProp
               max-width: 600px;
               margin: 0 auto;
               text-align: center;
-              border: 2px solid #660033;
+              border: 2px solid #196119;
               padding: 40px;
               border-radius: 10px;
             }
@@ -181,13 +181,13 @@ export default function InvitationModal({ isOpen, onClose }: InvitationModalProp
             .logo {
               font-size: 24px;
               font-weight: bold;
-              color: #660033;
+              color: #196119;
               margin-bottom: 10px;
             }
             .title {
               font-size: 36px;
               font-weight: bold;
-              color: #660033;
+              color: #196119;
               margin-bottom: 20px;
             }
             .subtitle {
@@ -206,7 +206,7 @@ export default function InvitationModal({ isOpen, onClose }: InvitationModalProp
             }
             .url {
               font-size: 16px;
-              color: #660033;
+              color: #196119;
               font-weight: bold;
               margin: 20px 0;
               word-break: break-all;
@@ -224,7 +224,7 @@ export default function InvitationModal({ isOpen, onClose }: InvitationModalProp
             }
             @media print {
               body { margin: 0; padding: 20px; }
-              .flyer { border: 1px solid #660033; }
+              .flyer { border: 1px solid #196119; }
             }
           </style>
         </head>
