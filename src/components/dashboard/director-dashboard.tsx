@@ -11,7 +11,7 @@ import {
 import { OnboardingFlow } from './onboarding-flow'
 import { CreateEventModal } from '@/components/events/create-event-modal'
 import { EventDetailsModal } from '@/components/events/event-details-modal'
-import { InvitationModal } from '@/components/musicians/invitation-modal'
+import InvitationModal from '@/components/musicians/invitation-modal'
 import { SendMessageModal } from '@/components/messages/send-message-modal'
 import { GeneratePublicLinkModal } from '@/components/events/generate-public-link-modal'
 import { OpenEventsCard } from '@/components/events/open-events-card'
