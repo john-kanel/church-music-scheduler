@@ -1,24 +1,21 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useSession, signOut } from 'next-auth/react'
+import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { 
   Calendar, Clock, Users, Plus, Bell, Settings, ChevronDown, ChevronUp,
   MapPin, User, Music, MessageCircle, ExternalLink, BookOpen, Eye,
-  Trash2, Edit, ArrowUpRight, UserPlus, Send, Share2, ChevronLeft, ChevronRight,
-  HandHeart, CreditCard, UserCheck, Mail, Activity, TrendingUp, LifeBuoy,
-  Lightbulb, GiftIcon, X, RefreshCw, Award, Heart, MessageSquare
+  Trash2, Edit, ArrowUpRight, UserPlus, Send, Share2
 } from 'lucide-react'
 import { OnboardingFlow } from './onboarding-flow'
 import { CreateEventModal } from '@/components/events/create-event-modal'
 import { EventDetailsModal } from '@/components/events/event-details-modal'
-import InvitationModal from '@/components/musicians/invitation-modal'
+import { InvitationModal } from '@/components/musicians/invitation-modal'
 import { SendMessageModal } from '@/components/messages/send-message-modal'
 import { GeneratePublicLinkModal } from '@/components/events/generate-public-link-modal'
 import { OpenEventsCard } from '@/components/events/open-events-card'
-import ImportantDocsCard from './important-docs-card'
-import { Logo } from '@/components/ui/logo'
+import { ImportantDocsCard } from './important-docs-card'
 import { fetchWithCache, invalidateCache } from '@/lib/performance-cache'
 import { formatEventTimeForDisplay } from '@/lib/timezone-utils'
 
@@ -104,8 +101,8 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
           fetchWithCache('/api/activities')
         ])
         
-        setDashboardData(dashboardData as DashboardData)
-        setActivities(activitiesData as Activity[])
+        setDashboardData(dashboardData)
+        setActivities(activitiesData)
       } catch (error) {
         console.error('Error loading dashboard data:', error)
       } finally {
@@ -167,16 +164,16 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
       const year = targetDate.getFullYear()
       
       // Invalidate cache first, then fetch fresh data
-      invalidateCache.dashboard(`/api/dashboard?month=${month}&year=${year}`)
-      invalidateCache.activities('/api/activities')
+      invalidateCache(`/api/dashboard?month=${month}&year=${year}`)
+      invalidateCache('/api/activities')
       
       const [dashboardData, activitiesData] = await Promise.all([
         fetchWithCache(`/api/dashboard?month=${month}&year=${year}`),
         fetchWithCache('/api/activities')
       ])
       
-              setDashboardData(dashboardData as DashboardData)
-        setActivities(activitiesData as Activity[])
+      setDashboardData(dashboardData)
+      setActivities(activitiesData)
     } catch (error) {
       console.error('Error refreshing dashboard data:', error)
     }

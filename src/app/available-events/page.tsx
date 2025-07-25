@@ -128,11 +128,7 @@ export default function AvailableEventsPage() {
 
   const formatEventTime = (dateString: string) => {
     const date = new Date(dateString)
-    // Apply timezone fix to show correct local time
-    const timezoneOffsetMinutes = date.getTimezoneOffset()
-    const localDate = new Date(date.getTime() + (timezoneOffsetMinutes * 60000))
-    
-    return localDate.toLocaleTimeString('en-US', {
+    return date.toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
       hour12: true
