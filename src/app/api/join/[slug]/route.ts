@@ -220,7 +220,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             
             <p><strong>Your Login Details:</strong></p>
             <p>Email: ${email}</p>
-            <p>You can now log in to view upcoming events, sign up for services, and stay connected with your music ministry.</p>
+            <p><strong>Your PIN:</strong> <code style="background: #ddd6fe; padding: 4px 8px; border-radius: 4px; font-family: monospace; font-size: 16px; color: #5b21b6; font-weight: bold;">${musicianPin}</code></p>
+            <p>You can now log in to view upcoming events, sign up for services, and stay connected with your music ministry. Use your PIN for quick event signups!</p>
             
             <div style="text-align: center; margin: 30px 0;">
               <a href="${process.env.NEXTAUTH_URL}/auth/signin" style="background-color: #660033; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;">
