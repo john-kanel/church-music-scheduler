@@ -178,6 +178,9 @@ export async function PUT(
                          Object.keys(body).length <= 3 && // startTime, endTime, maybe one more field
                          !body.name && !body.location
     
+    // Detect if this is a status-only update (only has status field)
+    const isStatusOnly = Object.keys(body).length === 1 && body.status
+    
     // Handle drag-and-drop format (ISO strings) vs form format (separate date/time)
     let startDate, startTime, endTime, name, description, location, eventTypeId, status, roles, isRecurring, recurrencePattern, recurrenceEnd, isPastEvent
     
@@ -197,6 +200,27 @@ export async function PUT(
       location = existingEvent.location
       eventTypeId = existingEvent.eventTypeId
       status = existingEvent.status
+      roles = []
+      isRecurring = existingEvent.isRecurring
+      recurrencePattern = existingEvent.recurrencePattern
+      recurrenceEnd = existingEvent.recurrenceEnd
+      isPastEvent = false
+    } else if (isStatusOnly) {
+      console.log('🏷️ Detected status-only update request')
+      // Status-only update: preserve all existing event data except status
+      const startDateTime = new Date(existingEvent.startTime)
+      const endDateTime = existingEvent.endTime ? new Date(existingEvent.endTime) : null
+      
+      startDate = startDateTime.toISOString().split('T')[0] // "2025-07-24"
+      startTime = startDateTime.toTimeString().slice(0, 5) // "10:00"
+      endTime = endDateTime ? endDateTime.toTimeString().slice(0, 5) : null
+      
+      // Keep existing event data for all fields except status
+      name = existingEvent.name
+      description = existingEvent.description
+      location = existingEvent.location
+      eventTypeId = existingEvent.eventTypeId
+      status = body.status // Only change the status
       roles = []
       isRecurring = existingEvent.isRecurring
       recurrencePattern = existingEvent.recurrencePattern
@@ -222,6 +246,7 @@ export async function PUT(
 
     console.log('📨 API processed request:', {
       isDragAndDrop,
+      isStatusOnly,
       name,
       description,
       location,
@@ -236,12 +261,20 @@ export async function PUT(
     // Ensure roles is always an array
     const validRoles = Array.isArray(roles) ? roles : []
 
-    // Validation - more lenient for drag and drop
+    // Validation - more lenient for drag and drop and status-only updates
     if (isDragAndDrop) {
       // For drag and drop, only validate time fields
       if (!startDate || !startTime) {
         return NextResponse.json(
           { error: 'Valid start date and time are required' },
+          { status: 400 }
+        )
+      }
+    } else if (isStatusOnly) {
+      // For status-only updates, only validate status
+      if (!status) {
+        return NextResponse.json(
+          { error: 'Status is required' },
           { status: 400 }
         )
       }

@@ -99,9 +99,9 @@ export function formatEventTimeForDisplay(utcTimeString: string): string {
 }
 
 /**
- * Formats event time for compact display (24-hour format)
+ * Formats event time for compact display (12-hour format with AM/PM)
  * @param utcTimeString - UTC time string from database
- * @returns Compact time string (e.g., "10:00")
+ * @returns Compact time string (e.g., "10:00 AM")
  */
 export function formatEventTimeCompact(utcTimeString: string): string {
   const utcDate = new Date(utcTimeString)
@@ -109,8 +109,8 @@ export function formatEventTimeCompact(utcTimeString: string): string {
   const localDate = new Date(utcDate.getTime() + (timezoneOffsetMinutes * 60000))
   
   return localDate.toLocaleTimeString([], { 
-    hour: '2-digit', 
+    hour: 'numeric', 
     minute: '2-digit',
-    hour12: false
+    hour12: true
   })
 } 

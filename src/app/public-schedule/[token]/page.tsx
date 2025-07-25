@@ -224,7 +224,7 @@ export default function PublicSchedulePage({ params }: { params: Promise<{ token
                         ></div>
                         <h3 className="text-lg font-semibold text-gray-900">{event.name}</h3>
                         {availableRoles.length > 0 && (
-                          <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
+                          <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-lg">
                             {availableRoles.length} opening{availableRoles.length !== 1 ? 's' : ''}
                           </span>
                         )}
