@@ -58,6 +58,12 @@ export async function GET(
                 firstName: true,
                 lastName: true
               }
+            },
+            group: {
+              select: {
+                id: true,
+                name: true
+              }
             }
           }
         },
@@ -109,7 +115,8 @@ export async function GET(
           id: assignment.id,
           roleName: assignment.roleName || 'Musician',
           status: assignment.status,
-          user: assignment.user
+          user: assignment.user,
+          group: assignment.group
         })),
         hymns: event.hymns.map(hymn => ({
           id: hymn.id,

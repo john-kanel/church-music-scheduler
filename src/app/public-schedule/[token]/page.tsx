@@ -30,6 +30,10 @@ interface PublicScheduleData {
         firstName: string
         lastName: string
       }
+      group?: {
+        id: string
+        name: string
+      }
     }>
     hymns: Array<{
       id: string
@@ -377,6 +381,38 @@ export default function PublicSchedulePage({ params }: { params: Promise<{ token
                         </div>
                       </div>
                     )}
+
+                    {/* Groups */}
+                    <div className="mb-4">
+                      <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
+                        <Users className="w-4 h-4" />
+                        Groups
+                      </h4>
+                      <div className="bg-white p-3 rounded-lg">
+                        {(() => {
+                          const assignedGroups = event.assignments
+                            .filter(assignment => assignment.group)
+                            .map(assignment => assignment.group)
+                            .filter((group, index, self) => 
+                              group && self.findIndex(g => g?.id === group.id) === index
+                            ) // Remove duplicates
+                          
+                          if (assignedGroups.length > 0) {
+                            return assignedGroups.map((group, index) => (
+                              <div key={group!.id} className="text-gray-900">
+                                {index + 1}. {group!.name}
+                              </div>
+                            ))
+                          } else {
+                            return (
+                              <div className="text-gray-500 italic">
+                                No groups assigned
+                              </div>
+                            )
+                          }
+                        })()}
+                      </div>
+                    </div>
 
                     {/* Music/Hymns */}
                     {event.hymns.length > 0 && (
