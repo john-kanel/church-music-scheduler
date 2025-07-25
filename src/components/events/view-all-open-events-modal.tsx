@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, Calendar, Clock, MapPin, Users, Music, UserPlus, Search, Filter, ChevronDown } from 'lucide-react'
+import { X, Calendar, Clock, MapPin, Users, Music, UserPlus, Search, Filter, ChevronDown, Check, Loader2, Zap, AlertCircle, ExternalLink, CheckCircle, XCircle } from 'lucide-react'
 import { formatEventTimeForDisplay } from '@/lib/timezone-utils'
 
 interface OpenEvent {
