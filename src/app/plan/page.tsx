@@ -1534,12 +1534,25 @@ export default function EventPlannerPage() {
     try {
       const groupIds = selectedGroups[eventId] || []
       
+      // Validate that selected groups have members
+      const selectedGroupObjects = groups.filter(g => groupIds.includes(g.id))
+      const emptyGroups = selectedGroupObjects.filter(group => !group.members || group.members.length === 0)
+      
+      if (emptyGroups.length > 0) {
+        const groupNames = emptyGroups.map(g => g.name).join(', ')
+        showToast('error', `Cannot assign empty groups: ${groupNames}. Please add musicians to these groups first.`)
+        return
+      }
+      
+      // Check if any groups were selected
+      if (groupIds.length === 0) {
+        showToast('error', 'Please select at least one group to assign.')
+        return
+      }
+      
       // Optimistic update - update local state immediately
       setData(prev => {
         if (!prev) return prev
-        
-        // Get the selected groups with their details
-        const selectedGroupObjects = groups.filter(g => groupIds.includes(g.id))
         
         // Create new group assignments
         const newGroupAssignments = selectedGroupObjects.flatMap(group => 
