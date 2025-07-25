@@ -178,8 +178,21 @@ export function CreateRecurringEventModal({
     })
     
     if (isEditing && editingEvent) {
+      console.log('🕐 Starting timezone conversion for editing event:', {
+        eventId: editingEvent.id,
+        originalStartTime: editingEvent.startTime,
+        rawStartTimeType: typeof editingEvent.startTime
+      })
+      
       const eventDate = new Date(editingEvent.startTime)
       const eventEndDate = editingEvent.endTime ? new Date(editingEvent.endTime) : null
+      
+      console.log('🕐 Date objects created:', {
+        eventDate: eventDate.toISOString(),
+        eventDateLocal: eventDate.toString(),
+        eventEndDate: eventEndDate?.toISOString(),
+        eventEndDateLocal: eventEndDate?.toString()
+      })
       
       // Fix timezone issue: Convert UTC time back to user's local timezone for display
       // The stored time is in UTC, but we need to show it in the user's timezone
@@ -205,21 +218,26 @@ export function CreateRecurringEventModal({
         return `${year}-${month}-${day}`
       }
       
-      console.log('🕐 Time conversion debug:', {
+      const formattedStartTime = formatTimeForInput(localStartDate)
+      const formattedStartDate = formatDateForInput(localStartDate)
+      
+      console.log('🕐 FINAL Time conversion debug:', {
         originalStartTime: editingEvent.startTime,
         userTimezone,
         eventDateUTC: eventDate.toISOString(),
         localStartDate: localStartDate.toISOString(),
-        formattedTime: formatTimeForInput(localStartDate),
-        formattedDate: formatDateForInput(localStartDate)
+        formattedTime: formattedStartTime,
+        formattedDate: formattedStartDate,
+        timezoneOffset: eventDate.getTimezoneOffset(),
+        expectedLocalHour: localStartDate.getHours()
       })
       
       setFormData({
         name: editingEvent.name,
         description: editingEvent.description || '',
         location: editingEvent.location || '',
-        startDate: formatDateForInput(localStartDate),
-        startTime: formatTimeForInput(localStartDate),
+        startDate: formattedStartDate,
+        startTime: formattedStartTime,
         endTime: localEndDate ? formatTimeForInput(localEndDate) : '',
         endDate: editingEvent.recurrenceEnd ? formatDateForInput(new Date(editingEvent.recurrenceEnd)) : '',
         signupType: 'open', // Default, will be updated based on assignments
