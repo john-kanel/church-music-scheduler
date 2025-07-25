@@ -1054,15 +1054,33 @@ export default function EventPlannerPage() {
           : { title: h.title, notes: h.notes || '', servicePartId: h.servicePartId }
       ) || []
 
+      console.log('🎵 INDIVIDUAL SONG: Sending API request:', {
+        eventId: editingEventId,
+        hymnId: editingIndividualHymn.id,
+        encodedNotes: notesWithSectionTitle,
+        totalHymns: updatedHymns.length
+      })
+
       const response = await fetch(`/api/events/${editingEventId}/hymns`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ hymns: updatedHymns })
       })
+      
+      console.log('🎵 INDIVIDUAL SONG: API response status:', response.status)
 
       if (response.ok) {
+        const result = await response.json()
+        console.log('✅ Individual song saved successfully:', result)
         showToast('success', 'Song updated successfully')
+        
+        // Refresh data to ensure we have the latest state from the server
+        await fetchPlannerData()
       } else {
+        const errorData = await response.json()
+        console.error('❌ Failed to save individual song:', errorData)
+        showToast('error', errorData.error || 'Failed to update song')
+        
         // Revert optimistic update on failure
         setData(prev => {
           if (!prev) return prev
@@ -1082,15 +1100,34 @@ export default function EventPlannerPage() {
             )
           }
         })
-        showToast('error', 'Failed to update song')
       }
       
       setShowIndividualHymnEditModal(false)
       setEditingIndividualHymn(null)
       setEditingEventId('')
     } catch (error) {
-      console.error('Error saving individual hymn:', error)
-      showToast('error', 'Error updating song')
+      console.error('❌ Error saving individual song:', error)
+      showToast('error', 'Error updating song. Please try again.')
+      
+      // Revert optimistic update on error
+      setData(prev => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          events: prev.events.map(ev => 
+            ev.id === editingEventId 
+              ? {
+                  ...ev,
+                  hymns: ev.hymns.map(h => 
+                    h.id === editingIndividualHymn.id 
+                      ? { ...h, title: editingIndividualHymn.title, notes: editingIndividualHymn.notes || '' } 
+                      : h
+                  )
+                }
+              : ev
+          )
+        }
+      })
     }
   }
 
