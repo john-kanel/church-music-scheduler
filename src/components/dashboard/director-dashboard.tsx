@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { 
   Calendar, Clock, Users, Plus, Bell, Settings, ChevronDown, ChevronUp,
   MapPin, User, Music, MessageCircle, ExternalLink, BookOpen, Eye,
-  Trash2, Edit, ArrowUpRight, UserPlus, Send, Share2
+  Trash2, Edit, ArrowUpRight, UserPlus, Send, Share2, UserCheck, Mail, Activity
 } from 'lucide-react'
 import { OnboardingFlow } from './onboarding-flow'
 import { CreateEventModal } from '@/components/events/create-event-modal'
@@ -18,6 +18,7 @@ import { OpenEventsCard } from '@/components/events/open-events-card'
 import ImportantDocsCard from './important-docs-card'
 import { fetchWithCache, invalidateCache } from '@/lib/performance-cache'
 import { formatEventTimeForDisplay } from '@/lib/timezone-utils'
+import { Logo } from '@/components/ui/logo'
 
 interface User {
   id: string
@@ -101,8 +102,8 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
           fetchWithCache('/api/activities')
         ])
         
-        setDashboardData(dashboardData)
-        setActivities(activitiesData)
+        setDashboardData(dashboardData as DashboardData)
+        setActivities(activitiesData as Activity[])
       } catch (error) {
         console.error('Error loading dashboard data:', error)
       } finally {
@@ -164,16 +165,16 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
       const year = targetDate.getFullYear()
       
       // Invalidate cache first, then fetch fresh data
-      invalidateCache(`/api/dashboard?month=${month}&year=${year}`)
-      invalidateCache('/api/activities')
+      invalidateCache.dashboard(session.user.id)
+      invalidateCache.activities(session.user.id)
       
       const [dashboardData, activitiesData] = await Promise.all([
         fetchWithCache(`/api/dashboard?month=${month}&year=${year}`),
         fetchWithCache('/api/activities')
       ])
       
-      setDashboardData(dashboardData)
-      setActivities(activitiesData)
+              setDashboardData(dashboardData as DashboardData)
+        setActivities(activitiesData as Activity[])
     } catch (error) {
       console.error('Error refreshing dashboard data:', error)
     }
