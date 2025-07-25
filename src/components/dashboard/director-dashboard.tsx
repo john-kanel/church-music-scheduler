@@ -165,8 +165,10 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
       const year = targetDate.getFullYear()
       
       // Invalidate cache first, then fetch fresh data
-      invalidateCache.dashboard(session.user.id)
-      invalidateCache.activities(session.user.id)
+      if (session?.user?.id) {
+        invalidateCache.dashboard(session.user.id)
+        invalidateCache.activities(session.user.id)
+      }
       
       const [dashboardData, activitiesData] = await Promise.all([
         fetchWithCache(`/api/dashboard?month=${month}&year=${year}`),
