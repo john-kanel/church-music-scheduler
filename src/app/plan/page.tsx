@@ -1388,6 +1388,8 @@ export default function EventPlannerPage() {
 
   const handleAssignMusician = async (assignmentId: string, musicianId: string) => {
     try {
+      console.log('🎵 Assigning musician:', { assignmentId, musicianId })
+      
       const response = await fetch(`/api/assignments/${assignmentId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -1395,20 +1397,31 @@ export default function EventPlannerPage() {
       })
 
       if (response.ok) {
+        const result = await response.json()
+        console.log('✅ Assignment successful:', result)
+        
+        // Show success message
+        showToast('success', 'Musician assigned successfully!')
+        
         // Update local state to reflect the assignment
         await fetchPlannerData()
         setOpenDropdowns(prev => ({ ...prev, [assignmentId]: false }))
         setSearchTexts(prev => ({ ...prev, [assignmentId]: '' }))
       } else {
-        console.error('Failed to assign musician')
+        const errorData = await response.json()
+        console.error('❌ Failed to assign musician:', errorData)
+        showToast('error', errorData.error || 'Failed to assign musician')
       }
     } catch (error) {
-      console.error('Error assigning musician:', error)
+      console.error('❌ Error assigning musician:', error)
+      showToast('error', 'Error assigning musician. Please try again.')
     }
   }
 
   const handleRemoveMusician = async (assignmentId: string) => {
     try {
+      console.log('🗑️ Removing musician assignment:', { assignmentId })
+      
       const response = await fetch(`/api/assignments/${assignmentId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -1416,12 +1429,18 @@ export default function EventPlannerPage() {
       })
 
       if (response.ok) {
+        const result = await response.json()
+        console.log('✅ Musician removed successfully:', result)
+        showToast('success', 'Musician removed successfully!')
         await fetchPlannerData()
       } else {
-        console.error('Failed to remove musician')
+        const errorData = await response.json()
+        console.error('❌ Failed to remove musician:', errorData)
+        showToast('error', errorData.error || 'Failed to remove musician')
       }
     } catch (error) {
-      console.error('Error removing musician:', error)
+      console.error('❌ Error removing musician:', error)
+      showToast('error', 'Error removing musician. Please try again.')
     }
   }
 
@@ -1561,10 +1580,14 @@ export default function EventPlannerPage() {
   }
 
   const handleAddRole = async (eventId: string) => {
-    if (!newRoleName.trim()) return
+    if (!newRoleName.trim()) {
+      showToast('error', 'Please enter a role name')
+      return
+    }
     
     try {
       setAddingRole(true)
+      console.log('🎭 Adding new role:', { eventId, roleName: newRoleName.trim() })
       
       // Create a new assignment for this role
       const response = await fetch('/api/assignments', {
@@ -1580,42 +1603,21 @@ export default function EventPlannerPage() {
 
       if (!response.ok) {
         const errorData = await response.json()
+        console.error('❌ Failed to add role:', errorData)
         throw new Error(errorData.error || 'Failed to add role')
       }
 
       const result = await response.json()
+      console.log('✅ Role added successfully:', result)
       
-      // Optimistic update - add the new role to local state immediately
-      setData(prev => {
-        if (!prev) return prev
-        
-        const newAssignment = {
-          id: result.assignment.id,
-          roleName: newRoleName.trim(),
-          status: 'PENDING' as const,
-          isAutoAssigned: false,
-          user: undefined,
-          group: undefined
-        }
-        
-        return {
-          ...prev,
-          events: prev.events.map(ev => 
-            ev.id === eventId 
-              ? {
-                  ...ev,
-                  assignments: [...ev.assignments, newAssignment]
-                }
-              : ev
-          )
-        }
-      })
+      // Refresh the data to get the new role from the server
+      await fetchPlannerData()
 
       showToast('success', 'Role added successfully!')
       setNewRoleName('')
       setOpenRoleCreation(null)
     } catch (error) {
-      console.error('Error adding role:', error)
+      console.error('❌ Error adding role:', error)
       showToast('error', error instanceof Error ? error.message : 'Failed to add role')
     } finally {
       setAddingRole(false)
