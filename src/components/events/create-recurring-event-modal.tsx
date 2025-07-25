@@ -181,14 +181,47 @@ export function CreateRecurringEventModal({
       const eventDate = new Date(editingEvent.startTime)
       const eventEndDate = editingEvent.endTime ? new Date(editingEvent.endTime) : null
       
+      // Fix timezone issue: Convert UTC time back to user's local timezone for display
+      // The stored time is in UTC, but we need to show it in the user's timezone
+      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+      
+      // Simple approach: Use the Date object's local timezone methods
+      // This will automatically convert from UTC to local time
+      const localStartDate = new Date(eventDate.getTime())
+      const localEndDate = eventEndDate ? new Date(eventEndDate.getTime()) : null
+      
+      // Format time properly for input field (HH:MM format)
+      const formatTimeForInput = (date: Date) => {
+        const hours = date.getHours().toString().padStart(2, '0')
+        const minutes = date.getMinutes().toString().padStart(2, '0')
+        return `${hours}:${minutes}`
+      }
+      
+      // Format date for input field (YYYY-MM-DD format) 
+      const formatDateForInput = (date: Date) => {
+        const year = date.getFullYear()
+        const month = (date.getMonth() + 1).toString().padStart(2, '0')
+        const day = date.getDate().toString().padStart(2, '0')
+        return `${year}-${month}-${day}`
+      }
+      
+      console.log('🕐 Time conversion debug:', {
+        originalStartTime: editingEvent.startTime,
+        userTimezone,
+        eventDateUTC: eventDate.toISOString(),
+        localStartDate: localStartDate.toISOString(),
+        formattedTime: formatTimeForInput(localStartDate),
+        formattedDate: formatDateForInput(localStartDate)
+      })
+      
       setFormData({
         name: editingEvent.name,
         description: editingEvent.description || '',
         location: editingEvent.location || '',
-        startDate: eventDate.toISOString().split('T')[0],
-        startTime: eventDate.toTimeString().slice(0, 5),
-        endTime: eventEndDate ? eventEndDate.toTimeString().slice(0, 5) : '',
-        endDate: editingEvent.recurrenceEnd ? new Date(editingEvent.recurrenceEnd).toISOString().split('T')[0] : '',
+        startDate: formatDateForInput(localStartDate),
+        startTime: formatTimeForInput(localStartDate),
+        endTime: localEndDate ? formatTimeForInput(localEndDate) : '',
+        endDate: editingEvent.recurrenceEnd ? formatDateForInput(new Date(editingEvent.recurrenceEnd)) : '',
         signupType: 'open', // Default, will be updated based on assignments
         eventTypeColor: editingEvent.eventType?.color || '#10B981'
       })
