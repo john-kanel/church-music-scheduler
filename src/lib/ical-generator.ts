@@ -194,36 +194,26 @@ function buildEventDescription(event: EventWithDetails): string {
   if (allHymns.length > 0) {
     lines.push('MUSIC:')
     
-    // Group by service part
-    const hymnsByPart = new Map<string, typeof allHymns>()
+    // Process hymns in the order they come from the database
+    // (they're already ordered by servicePart.order ASC, createdAt ASC)
+    const processedParts = new Set<string>()
     
     allHymns.forEach(hymn => {
       const partName = hymn.servicePart?.name || 'General Music'
-      if (!hymnsByPart.has(partName)) {
-        hymnsByPart.set(partName, [])
+      const songTitle = hymn.title || ''
+      
+      // Add service part line only once per part
+      if (!processedParts.has(partName)) {
+        processedParts.add(partName)
+        lines.push(`${partName}:`)
       }
-      hymnsByPart.get(partName)!.push(hymn)
-    })
-
-    // Sort service parts by order
-    const sortedParts = Array.from(hymnsByPart.entries()).sort((a, b) => {
-      const orderA = allHymns.find(h => h.servicePart?.name === a[0])?.servicePart?.order || 999
-      const orderB = allHymns.find(h => h.servicePart?.name === b[0])?.servicePart?.order || 999
-      return orderA - orderB
-    })
-
-    sortedParts.forEach(([partName, partHymns]) => {
-      if (partHymns.length > 0) {
-        partHymns.forEach(hymn => {
-          // Show service part even if no song title is assigned yet
-          const songTitle = hymn.title || ''
-          let musicLine = `- ${partName}: ${songTitle}`
-          if (hymn.notes) {
-            musicLine += ` (${hymn.notes})`
-          }
-          lines.push(musicLine)
-        })
+      
+      // Add the song for this service part
+      let musicLine = `- ${songTitle}`
+      if (hymn.notes) {
+        musicLine += ` (${hymn.notes})`
       }
+      lines.push(musicLine)
     })
     lines.push('')
   }
