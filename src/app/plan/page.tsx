@@ -6,7 +6,7 @@ import {
   Plus, Calendar, Clock, MapPin, User, Music, Users, Trash2, 
   Edit, Save, X, Search, Filter, ChevronDown, Download, 
   FileText, ArrowLeft, Settings, Eye, EyeOff, Palette, Share2,
-  ChevronLeft, ChevronRight, Check, ExternalLink, ChevronUp
+  ChevronLeft, ChevronRight, Check, ExternalLink, ChevronUp, Zap
 } from 'lucide-react'
 import Link from 'next/link'
 import { CreateEventModal } from '@/components/events/create-event-modal'
