@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, Clock, MapPin, Users, Music, Download, FileText } from 'lucide-react'
+import { Calendar, Clock, MapPin, Users, Music, Download, FileText, ChevronUp, ChevronDown } from 'lucide-react'
 import { formatEventTimeForDisplay, formatEventTimeCompact } from '@/lib/timezone-utils'
 
 interface PublicScheduleData {
@@ -248,9 +248,9 @@ export default function PublicSchedulePage({ params }: { params: Promise<{ token
                     
                     <div className="ml-4">
                       {isExpanded ? (
-                        ChevronUp className="w-5 h-5 text-gray-400"
+                        <ChevronUp className="w-5 h-5 text-gray-400" />
                       ) : (
-                        ChevronDown className="w-5 h-5 text-gray-400"
+                        <ChevronDown className="w-5 h-5 text-gray-400" />
                       )}
                     </div>
                   </div>
