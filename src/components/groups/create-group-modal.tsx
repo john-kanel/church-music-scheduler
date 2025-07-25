@@ -326,7 +326,7 @@ export function CreateGroupModal({ isOpen, onClose, onGroupCreated, onMessageGro
               <button
                 type="submit"
                 disabled={loading || !!success}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center"
+                className="px-6 py-2 text-white rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50 flex items-center" style={{backgroundColor: '#196119'}}
               >
                 {loading ? (
                   <>

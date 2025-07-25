@@ -99,7 +99,7 @@ export default function GroupsPage() {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 flex items-center">
-                <Users className="h-8 w-8 mr-3 text-blue-600" />
+                <Users className="h-8 w-8 mr-3 text-success-600" />
                 Groups
               </h1>
               <p className="text-gray-600 mt-2">Organize musicians into groups like choir, band, or ensemble</p>
@@ -145,13 +145,13 @@ export default function GroupsPage() {
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {groups.map((group: any) => (
-                  <div key={group.id} className="border border-gray-200 rounded-lg p-6 hover:border-blue-300 hover:shadow-md transition-all relative group">
+                  <div key={group.id} className="border border-gray-200 rounded-lg p-6 hover:border-success-300 hover:shadow-md transition-all relative group">
                     {/* Edit button - only show for directors/pastors */}
                     {canCreateGroups && (
                       <div className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() => handleEditGroup(group)}
-                          className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full shadow-lg border border-gray-200 bg-white transition-colors"
+                          className="p-2 text-gray-400 hover:text-success-600 hover:bg-success-50 rounded-full shadow-lg border border-gray-200 bg-white transition-colors"
                           title="Edit group"
                         >
                           <Edit2 className="h-4 w-4" />
@@ -161,7 +161,7 @@ export default function GroupsPage() {
                     
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="text-lg font-semibold text-gray-900 pr-8">{group.name}</h3>
-                      <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                      <span className="bg-success-100 text-success-800 text-xs px-2 py-1 rounded-lg">
                         {group.memberCount} {group.memberCount === 1 ? 'member' : 'members'}
                       </span>
                     </div>
@@ -416,7 +416,7 @@ function EditGroupModal({ isOpen, onClose, group, onGroupUpdated, onMessageGroup
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-gray-500 bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{backgroundColor: '#E9EFE9'}}>
       <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b">
           <h2 className="text-2xl font-bold text-gray-900 flex items-center">
