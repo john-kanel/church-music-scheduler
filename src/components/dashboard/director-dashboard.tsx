@@ -15,7 +15,7 @@ import InvitationModal from '@/components/musicians/invitation-modal'
 import { SendMessageModal } from '@/components/messages/send-message-modal'
 import { GeneratePublicLinkModal } from '@/components/events/generate-public-link-modal'
 import { OpenEventsCard } from '@/components/events/open-events-card'
-import { ImportantDocsCard } from './important-docs-card'
+import ImportantDocsCard from './important-docs-card'
 import { fetchWithCache, invalidateCache } from '@/lib/performance-cache'
 import { formatEventTimeForDisplay } from '@/lib/timezone-utils'
 
