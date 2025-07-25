@@ -189,14 +189,15 @@ function buildEventDescription(event: EventWithDetails): string {
   lines.push('')
 
   // Add service parts and music with simplified formatting
-  const hymns = event.hymns.filter(h => h.title)
-  if (hymns.length > 0) {
+  // Include ALL hymns, even those without titles (empty service part placeholders)
+  const allHymns = event.hymns
+  if (allHymns.length > 0) {
     lines.push('MUSIC:')
     
     // Group by service part
-    const hymnsByPart = new Map<string, typeof hymns>()
+    const hymnsByPart = new Map<string, typeof allHymns>()
     
-    hymns.forEach(hymn => {
+    allHymns.forEach(hymn => {
       const partName = hymn.servicePart?.name || 'General Music'
       if (!hymnsByPart.has(partName)) {
         hymnsByPart.set(partName, [])
@@ -206,15 +207,17 @@ function buildEventDescription(event: EventWithDetails): string {
 
     // Sort service parts by order
     const sortedParts = Array.from(hymnsByPart.entries()).sort((a, b) => {
-      const orderA = hymns.find(h => h.servicePart?.name === a[0])?.servicePart?.order || 999
-      const orderB = hymns.find(h => h.servicePart?.name === b[0])?.servicePart?.order || 999
+      const orderA = allHymns.find(h => h.servicePart?.name === a[0])?.servicePart?.order || 999
+      const orderB = allHymns.find(h => h.servicePart?.name === b[0])?.servicePart?.order || 999
       return orderA - orderB
     })
 
     sortedParts.forEach(([partName, partHymns]) => {
       if (partHymns.length > 0) {
         partHymns.forEach(hymn => {
-          let musicLine = `- ${partName}: ${hymn.title}`
+          // Show service part even if no song title is assigned yet
+          const songTitle = hymn.title || '(No song assigned yet)'
+          let musicLine = `- ${partName}: ${songTitle}`
           if (hymn.notes) {
             musicLine += ` (${hymn.notes})`
           }
