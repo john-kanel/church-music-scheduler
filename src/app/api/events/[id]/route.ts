@@ -362,8 +362,12 @@ export async function PUT(
     }
 
     // Step 3: Handle recurring events (separate operation)
-    if (isRecurring && recurrencePattern) {
-      console.log('🔄 Processing recurring event settings...')
+    // Only regenerate recurring events if explicitly requested via forceRecurrenceUpdate flag
+    // This prevents individual event edits from affecting the entire series
+    const forceRecurrenceUpdate = body.forceRecurrenceUpdate === true
+    
+    if (isRecurring && recurrencePattern && forceRecurrenceUpdate) {
+      console.log('🔄 Processing recurring event settings (forced update)...')
       
       await prisma.$transaction(async (tx) => {
         // Remove any existing recurring events for this parent
@@ -414,6 +418,8 @@ export async function PUT(
       }, { timeout: 30000 })
       
       console.log('✅ Recurring events created')
+    } else if (isRecurring && recurrencePattern) {
+      console.log('🔄 Skipping recurring event regeneration - individual event edit')
     } else if (!isRecurring) {
       // If no longer recurring, remove any child events
       await prisma.event.deleteMany({

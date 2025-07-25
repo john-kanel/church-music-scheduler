@@ -2232,18 +2232,27 @@ export default function EventPlannerPage() {
                                     <ChevronDown className="h-3 w-3" />
                                   </button>
                                   {hymn.type === 'service-part' ? (
-                                    <button
-                                      onClick={(e) => {
-                                        const servicePart = data?.serviceParts.find(sp => sp.id === hymn.servicePartId)
-                                        if (servicePart) {
-                                          handleEditServicePart(servicePart, event.id, e)
-                                        }
-                                      }}
-                                      className="p-1 text-gray-400 hover:text-gray-600 transition-all"
-                                      title="Edit service part"
-                                    >
-                                      <Edit className="h-3 w-3" />
-                                    </button>
+                                    <>
+                                      <button
+                                        onClick={(e) => {
+                                          const servicePart = data?.serviceParts.find(sp => sp.id === hymn.servicePartId)
+                                          if (servicePart) {
+                                            handleEditServicePart(servicePart, event.id, e)
+                                          }
+                                        }}
+                                        className="p-1 text-gray-400 hover:text-gray-600 transition-all"
+                                        title="Edit service part"
+                                      >
+                                        <Edit className="h-3 w-3" />
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteIndividualHymn(hymn.id, event.id)}
+                                        className="p-1 text-gray-400 hover:text-red-600 transition-all"
+                                        title="Delete service part"
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </button>
+                                    </>
                                   ) : (
                                     <>
                                       <button
@@ -2823,18 +2832,27 @@ export default function EventPlannerPage() {
                                           <ChevronDown className="h-3 w-3" />
                                         </button>
                                         {hymn.type === 'service-part' ? (
-                                          <button
-                                            onClick={(e) => {
-                                              const servicePart = data?.serviceParts.find(sp => sp.id === hymn.servicePartId)
-                                              if (servicePart) {
-                                                handleEditServicePart(servicePart, event.id, e)
-                                              }
-                                            }}
-                                            className="p-1 text-gray-400 hover:text-gray-600 transition-all"
-                                            title="Edit service part"
-                                          >
-                                            <Edit className="h-3 w-3" />
-                                          </button>
+                                          <>
+                                            <button
+                                              onClick={(e) => {
+                                                const servicePart = data?.serviceParts.find(sp => sp.id === hymn.servicePartId)
+                                                if (servicePart) {
+                                                  handleEditServicePart(servicePart, event.id, e)
+                                                }
+                                              }}
+                                              className="p-1 text-gray-400 hover:text-gray-600 transition-all"
+                                              title="Edit service part"
+                                            >
+                                              <Edit className="h-3 w-3" />
+                                            </button>
+                                            <button
+                                              onClick={() => handleDeleteIndividualHymn(hymn.id, event.id)}
+                                              className="p-1 text-gray-400 hover:text-red-600 transition-all"
+                                              title="Delete service part"
+                                            >
+                                              <Trash2 className="h-3 w-3" />
+                                            </button>
+                                          </>
                                         ) : (
                                           <>
                                             <button
