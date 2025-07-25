@@ -21,6 +21,7 @@ import ImportantDocsCard from './important-docs-card'
 import { fetchWithCache, invalidateCache } from '@/lib/performance-cache'
 import { formatEventTimeForDisplay } from '@/lib/timezone-utils'
 import { Logo } from '@/components/ui/logo'
+import InviteModal from '@/components/musicians/invite-modal'
 
 interface User {
   id: string
