@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, Clock, MapPin, Users, Music, Download, FileText } from 'lucide-react'
+import { Calendar, Clock, MapPin, Users, Music, Download, FileText, ChevronUp, ChevronDown, Check } from 'lucide-react'
 import { formatEventTimeForDisplay, formatEventTimeCompact } from '@/lib/timezone-utils'
 
 interface PublicScheduleData {
