@@ -1,12 +1,14 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useSession } from 'next-auth/react'
+import { useSession, signOut } from 'next-auth/react'
 import Link from 'next/link'
 import { 
   Calendar, Clock, Users, Plus, Bell, Settings, ChevronDown, ChevronUp,
   MapPin, User, Music, MessageCircle, ExternalLink, BookOpen, Eye,
-  Trash2, Edit, ArrowUpRight, UserPlus, Send, Share2, UserCheck, Mail, Activity
+  Trash2, Edit, ArrowUpRight, UserPlus, Send, Share2, UserCheck, Mail, Activity,
+  Gift as GiftIcon, CreditCard, Heart as HandHeart, LifeBuoy, Lightbulb, 
+  MessageSquare, TrendingUp, ChevronLeft, ChevronRight
 } from 'lucide-react'
 import { OnboardingFlow } from './onboarding-flow'
 import { CreateEventModal } from '@/components/events/create-event-modal'
