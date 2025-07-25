@@ -216,7 +216,7 @@ function buildEventDescription(event: EventWithDetails): string {
       if (partHymns.length > 0) {
         partHymns.forEach(hymn => {
           // Show service part even if no song title is assigned yet
-          const songTitle = hymn.title || '(No song assigned yet)'
+          const songTitle = hymn.title || ''
           let musicLine = `- ${partName}: ${songTitle}`
           if (hymn.notes) {
             musicLine += ` (${hymn.notes})`
