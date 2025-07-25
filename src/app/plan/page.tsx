@@ -2058,12 +2058,7 @@ export default function EventPlannerPage() {
                         </div>
                         <p className="text-xs text-gray-500 mb-1">
                           {new Date(event.startTime).toLocaleDateString()} at{' '}
-                          {(() => {
-                            const date = new Date(event.startTime)
-                            const timezoneOffsetMinutes = date.getTimezoneOffset()
-                            const localDate = new Date(date.getTime() + (timezoneOffsetMinutes * 60000))
-                            return localDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                          })()}
+                          {formatEventTimeForDisplay(event.startTime)}
                         </p>
                         <p className="text-xs text-gray-500">{event.location}</p>
                         
@@ -2654,7 +2649,7 @@ export default function EventPlannerPage() {
                             </div>
                             <p className="text-xs text-gray-500 mb-1">
                               {new Date(event.startTime).toLocaleDateString()} at{' '}
-                              {new Date(event.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {formatEventTimeForDisplay(event.startTime)}
                             </p>
                             <p className="text-xs text-gray-500">{event.location}</p>
                             
