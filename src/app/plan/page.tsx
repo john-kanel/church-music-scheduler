@@ -3,10 +3,11 @@
 import { useState, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { 
-  ArrowLeft, Calendar, Plus, Search, Filter, Users, Clock, MapPin, 
-  ChevronLeft, ChevronRight, Settings, Trash2, Edit, Eye, EyeOff,
-  Palette, Save, X, FileText, Zap, ChevronDown, Check, ExternalLink, ChevronUp
-  } from 'lucide-react'
+  Plus, Calendar, Clock, MapPin, User, Music, Users, Trash2, 
+  Edit, Save, X, Search, Filter, ChevronDown, Download, 
+  FileText, ArrowLeft, Settings, Eye, EyeOff, Palette, Share2,
+  ChevronLeft, ChevronRight, Check, ExternalLink, ChevronUp
+} from 'lucide-react'
 import Link from 'next/link'
 import { CreateEventModal } from '@/components/events/create-event-modal'
 import { ServicePartEditModal } from '@/components/events/service-part-edit-modal'
@@ -15,6 +16,7 @@ import { EventDetailsModal } from '@/components/events/event-details-modal'
 import { CreateGroupModal } from '@/components/groups/create-group-modal'
 import { GeneratePublicLinkModal } from '@/components/events/generate-public-link-modal'
 import dynamic from 'next/dynamic'
+import { formatEventTimeForDisplay, formatEventTimeCompact } from '@/lib/timezone-utils'
 
 // Dynamically import PdfProcessor to prevent SSR issues
 const PdfProcessor = dynamic(() => import('@/components/events/pdf-processor'), {

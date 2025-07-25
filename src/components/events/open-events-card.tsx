@@ -6,6 +6,7 @@ import {
   Calendar, Clock, Users,
   AlertCircle, ExternalLink 
 } from 'lucide-react'
+import { formatEventTimeForDisplay } from '@/lib/timezone-utils'
 
 interface OpenEvent {
   id: string
@@ -89,8 +90,12 @@ export function OpenEventsCard({ onEventClick, onViewAllClick }: OpenEventsCardP
   }
 
   const formatEventTime = (dateString: string) => {
+    // Use timezone-aware formatting
     const date = new Date(dateString)
-    return date.toLocaleTimeString('en-US', {
+    const timezoneOffsetMinutes = date.getTimezoneOffset()
+    const localDate = new Date(date.getTime() + (timezoneOffsetMinutes * 60000))
+    
+    return localDate.toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
       hour12: true
