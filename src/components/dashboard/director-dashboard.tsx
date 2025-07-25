@@ -171,9 +171,28 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
     }
   }, [user.role])
 
+  // Check for onboarding on component mount (for users who have seen tour but not completed onboarding)
+  useEffect(() => {
+    const hasSeenTour = localStorage.getItem('hasSeenDirectorTour')
+    if (hasSeenTour && (user.role === 'DIRECTOR' || user.role === 'PASTOR') && !user.hasCompletedOnboarding) {
+      console.log('🎯 Triggering onboarding for user who has seen tour but not completed onboarding:', {
+        hasSeenTour: !!hasSeenTour,
+        role: user.role,
+        hasCompletedOnboarding: user.hasCompletedOnboarding
+      })
+      setShowOnboarding(true)
+    }
+  }, [user.role, user.hasCompletedOnboarding])
+
   const completeTour = () => {
     localStorage.setItem('hasSeenDirectorTour', 'true')
     setShowTour(false)
+    
+    console.log('🎯 Tour completed, checking onboarding eligibility:', {
+      role: user.role,
+      hasCompletedOnboarding: user.hasCompletedOnboarding,
+      shouldShowOnboarding: (user.role === 'DIRECTOR' || user.role === 'PASTOR') && !user.hasCompletedOnboarding
+    })
     
     // Check if user needs onboarding (directors/pastors only)
     if ((user.role === 'DIRECTOR' || user.role === 'PASTOR') && !user.hasCompletedOnboarding) {

@@ -179,6 +179,7 @@ export async function POST(request: NextRequest) {
           role: 'DIRECTOR',
           churchId: church.id,
           smsNotifications: smsOptIn || false,
+          hasCompletedOnboarding: false, // Explicitly set for new trial users
         },
         select: {
           id: true,

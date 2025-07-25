@@ -198,6 +198,7 @@ export async function POST(request: NextRequest) {
           role: role || 'DIRECTOR',
           churchId: church.id,
           smsNotifications: smsOptIn || false,
+          hasCompletedOnboarding: false, // Explicitly set for new users
         },
         select: {
           id: true,
