@@ -71,6 +71,7 @@ model User {
   calendarLink              String?
   hasCompletedOnboarding    Boolean                    @default(false)
   pin                       String?
+  eventServicePartOrder     Json?
   calendarSubscriptions     CalendarSubscription?
   cancellationNotifications CancellationNotification[]
   uploadedChurchDocs        ChurchDocument[]

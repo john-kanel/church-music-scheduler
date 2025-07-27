@@ -17,6 +17,25 @@ import { CreateGroupModal } from '@/components/groups/create-group-modal'
 import { GeneratePublicLinkModal } from '@/components/events/generate-public-link-modal'
 import dynamic from 'next/dynamic'
 import { formatEventTimeForDisplay, formatEventTimeCompact } from '@/lib/timezone-utils'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import {
+  useSortable,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 // Dynamically import PdfProcessor to prevent SSR issues
 const PdfProcessor = dynamic(() => import('@/components/events/pdf-processor'), {
@@ -29,6 +48,191 @@ interface ServicePart {
   name: string
   order: number
   isRequired?: boolean
+}
+
+// Sortable hymn item component
+interface SortableHymnItemProps {
+  hymn: any
+  hymnIndex: number
+  allHymns: any[]
+  eventId: string
+  data: any
+  setData: any
+  debouncedUpdateHymn: any
+  updateHymnTitle: any
+  handleReorderAnyHymn: (hymnId: string, direction: 'up' | 'down', eventId: string) => void
+  handleEditServicePart: (servicePart: ServicePart, eventId: string, e: React.MouseEvent) => void
+  handleEditIndividualHymn: (hymn: any, eventId: string, e: React.MouseEvent) => void
+  handleDeleteIndividualHymn: (hymnId: string, eventId: string) => void
+}
+
+function SortableHymnItem({
+  hymn,
+  hymnIndex,
+  allHymns,
+  eventId,
+  data,
+  setData,
+  debouncedUpdateHymn,
+  updateHymnTitle,
+  handleReorderAnyHymn,
+  handleEditServicePart,
+  handleEditIndividualHymn,
+  handleDeleteIndividualHymn
+}: SortableHymnItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: hymn.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="border-b border-gray-100 p-3 min-h-[60px] bg-white group hover:bg-gray-50 transition-colors relative"
+    >
+      <div 
+        {...attributes}
+        {...listeners}
+        className="absolute inset-0 cursor-grab active:cursor-grabbing"
+        style={{ zIndex: isDragging ? 10 : 1 }}
+      />
+      <div className="relative" style={{ zIndex: 2 }}>
+        <div className="flex items-center justify-between mb-1">
+          <div className="text-xs text-gray-500 font-normal">
+            {hymn.type === 'service-part' ? hymn.servicePartName : 'Individual Song'}
+          </div>
+          <div className="flex items-center opacity-0 group-hover:opacity-100 transition-all">
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                handleReorderAnyHymn(hymn.id, 'up', eventId)
+              }}
+              disabled={hymnIndex <= 0}
+              className="p-1 text-gray-400 hover:text-gray-600 transition-all disabled:opacity-30"
+              title="Move up"
+            >
+              <ChevronUp className="h-3 w-3" />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                handleReorderAnyHymn(hymn.id, 'down', eventId)
+              }}
+              disabled={hymnIndex >= allHymns.length - 1}
+              className="p-1 text-gray-400 hover:text-gray-600 transition-all disabled:opacity-30"
+              title="Move down"
+            >
+              <ChevronDown className="h-3 w-3" />
+            </button>
+            {hymn.type === 'service-part' ? (
+              <>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    const servicePart = data?.serviceParts.find((sp: ServicePart) => sp.id === hymn.servicePartId)
+                    if (servicePart) {
+                      handleEditServicePart(servicePart, eventId, e)
+                    }
+                  }}
+                  className="p-1 text-gray-400 hover:text-gray-600 transition-all"
+                  title="Edit service part"
+                >
+                  <Edit className="h-3 w-3" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleDeleteIndividualHymn(hymn.id, eventId)
+                  }}
+                  className="p-1 text-gray-400 hover:text-red-600 transition-all"
+                  title="Delete service part"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleEditIndividualHymn(hymn, eventId, e)
+                  }}
+                  className="p-1 text-gray-400 hover:text-gray-600 transition-all"
+                  title="Edit song notes"
+                >
+                  <Edit className="h-3 w-3" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleDeleteIndividualHymn(hymn.id, eventId)
+                  }}
+                  className="p-1 text-gray-400 hover:text-red-600 transition-all"
+                  title="Delete song"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+        <input
+          type="text"
+          value={hymn.title || ''}
+          onChange={(e) => {
+            const newTitle = e.target.value
+            // Update immediately in local state for responsive UI
+            setData((prev: any) => {
+              if (!prev) return prev
+              return {
+                ...prev,
+                events: prev.events.map((ev: any) => 
+                  ev.id === eventId 
+                    ? {
+                        ...ev,
+                        hymns: ev.hymns.map((h: any) => 
+                          h.id === hymn.id ? { ...h, title: newTitle } : h
+                        )
+                      }
+                    : ev
+                )
+              }
+            })
+            // Debounced save to server
+            debouncedUpdateHymn(eventId, newTitle, hymn.servicePartId || null, hymn.id)
+          }}
+          onBlur={(e) => {
+            const newTitle = e.target.value
+            console.log('🎵 Input blur - saving immediately:', { eventId, newTitle, hymnId: hymn.id })
+            // Save immediately when user clicks away (including empty titles for deletion)
+            updateHymnTitle(eventId, newTitle, hymn.servicePartId || null, hymn.id)
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              const newTitle = e.currentTarget.value
+              console.log('🎵 Enter key - saving immediately:', { eventId, newTitle, hymnId: hymn.id })
+              // Save immediately on Enter key (including empty titles for deletion)
+              updateHymnTitle(eventId, newTitle, hymn.servicePartId || null, hymn.id)
+              e.currentTarget.blur() // Remove focus
+            }
+          }}
+          placeholder="Enter hymn title..."
+          className="w-full text-sm text-gray-900 border-none outline-none bg-transparent placeholder-gray-400 focus:bg-gray-50 rounded-sm px-2 py-1 font-normal"
+        />
+      </div>
+    </div>
+  )
 }
 
 interface ToastMessage {
@@ -219,6 +423,14 @@ export default function EventPlannerPage() {
   // Service parts dropdown state
   const [openServicePartsDropdown, setOpenServicePartsDropdown] = useState<string | null>(null)
 
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
   // Toast functions
   const showToast = (type: 'success' | 'error', message: string) => {
     const id = Date.now().toString()
@@ -235,6 +447,39 @@ export default function EventPlannerPage() {
     setToasts(prev => prev.filter(toast => toast.id !== id))
   }
 
+  // Service part order persistence (database)
+  const saveEventServicePartOrder = async (order: Record<string, string[]>) => {
+    try {
+      const response = await fetch('/api/user/service-part-order', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventServicePartOrder: order })
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to save service part order')
+      }
+      
+      console.log('✅ Saved event service part order to database:', order)
+    } catch (error) {
+      console.error('❌ Error saving event service part order:', error)
+    }
+  }
+
+  const restoreEventServicePartOrder = async () => {
+    try {
+      const response = await fetch('/api/user/service-part-order')
+      if (response.ok) {
+        const data = await response.json()
+        const order = data.eventServicePartOrder || {}
+        setEventServicePartOrder(order)
+        console.log('✅ Restored event service part order from database:', order)
+      }
+    } catch (error) {
+      console.error('❌ Error restoring event service part order:', error)
+    }
+  }
+
   useEffect(() => {
     if (session?.user?.id) {
       fetchPlannerData()
@@ -242,8 +487,17 @@ export default function EventPlannerPage() {
       fetchGroups()
       // Check for backed-up changes on page load
       restoreBackedUpChanges()
+      // Restore event service part order from database
+      restoreEventServicePartOrder()
     }
   }, [session?.user?.id])
+
+  // Save eventServicePartOrder whenever it changes
+  useEffect(() => {
+    if (Object.keys(eventServicePartOrder).length > 0) {
+      saveEventServicePartOrder(eventServicePartOrder)
+    }
+  }, [eventServicePartOrder])
 
   // Close status dropdown when clicking outside
   useEffect(() => {
@@ -1318,6 +1572,88 @@ export default function EventPlannerPage() {
     return handleReorderAnyHymn(hymnId, direction, eventId)
   }
 
+  // Drag and drop handler
+  const handleDragEnd = async (event: DragEndEvent, eventId: string) => {
+    const { active, over } = event
+
+    if (!over || active.id === over.id) return
+
+    const allHymns = getAllHymnsInOrder(eventId)
+    const oldIndex = allHymns.findIndex(hymn => hymn.id === active.id)
+    const newIndex = allHymns.findIndex(hymn => hymn.id === over.id)
+
+    if (oldIndex === -1 || newIndex === -1) return
+
+    // Reorder the hymns array
+    const reorderedHymns = arrayMove(allHymns, oldIndex, newIndex)
+
+    // Optimistic update - show movement immediately
+    setData(prev => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        events: prev.events.map(ev => 
+          ev.id === eventId 
+            ? { 
+                ...ev, 
+                hymns: reorderedHymns.map(hymn => ({ 
+                  id: hymn.id, 
+                  title: hymn.title || 'New Song', 
+                  notes: hymn.notes || undefined, 
+                  servicePartId: hymn.servicePartId || undefined 
+                })) 
+              }
+            : ev
+        )
+      }
+    })
+
+    // Convert to API format and save
+    try {
+      const hymnsForAPI = reorderedHymns.map((hymn, index) => ({
+        title: hymn.title || 'New Song',
+        notes: hymn.notes || '',
+        servicePartId: hymn.servicePartId || null,
+        orderIndex: index
+      }))
+
+      const response = await fetch(`/api/events/${eventId}/hymns`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hymns: hymnsForAPI })
+      })
+
+      if (!response.ok) {
+        // Revert optimistic update on failure
+        setData(prev => {
+          if (!prev) return prev
+          return {
+            ...prev,
+            events: prev.events.map(ev => 
+              ev.id === eventId 
+                ? { 
+                    ...ev, 
+                    hymns: allHymns.map(hymn => ({ 
+                      id: hymn.id, 
+                      title: hymn.title || 'New Song', 
+                      notes: hymn.notes || undefined, 
+                      servicePartId: hymn.servicePartId || undefined 
+                    })) 
+                  }
+                : ev
+            )
+          }
+        })
+        throw new Error('Failed to reorder hymn')
+      }
+
+      showToast('success', 'Songs reordered successfully')
+    } catch (error) {
+      console.error('Error reordering hymns:', error)
+      showToast('error', 'Failed to reorder songs')
+    }
+  }
+
   // Function to delete individual hymn
   const handleDeleteIndividualHymn = async (hymnId: string, eventId: string) => {
     try {
@@ -2345,123 +2681,41 @@ export default function EventPlannerPage() {
                         )}
                       </div>
 
-                      {/* Hymns Grid - Unified Order */}
+                      {/* Hymns Grid - Unified Order with Drag & Drop */}
                       <div className="flex-1 overflow-y-auto">
-                        {getAllHymnsInOrder(event.id).map((hymn, index) => {
-                          const allHymns = getAllHymnsInOrder(event.id)
-                          const hymnIndex = index // Since we're already in the correct order
-                          
-                          return (
-                            <div key={`hymn-${hymn.id || index}`} className="border-b border-gray-100 p-3 min-h-[60px] bg-white group hover:bg-gray-50 transition-colors relative">
-                              <div className="flex items-center justify-between mb-1">
-                                <div className="text-xs text-gray-500 font-normal">
-                                  {hymn.type === 'service-part' ? hymn.servicePartName : 'Individual Song'}
-                                </div>
-                                <div className="flex items-center opacity-0 group-hover:opacity-100 transition-all">
-                                  <button
-                                    onClick={() => handleReorderAnyHymn(hymn.id, 'up', event.id)}
-                                    disabled={hymnIndex <= 0}
-                                    className="p-1 text-gray-400 hover:text-gray-600 transition-all disabled:opacity-30"
-                                    title="Move up"
-                                  >
-                                    <ChevronUp className="h-3 w-3" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleReorderAnyHymn(hymn.id, 'down', event.id)}
-                                    disabled={hymnIndex >= allHymns.length - 1}
-                                    className="p-1 text-gray-400 hover:text-gray-600 transition-all disabled:opacity-30"
-                                    title="Move down"
-                                  >
-                                    <ChevronDown className="h-3 w-3" />
-                                  </button>
-                                  {hymn.type === 'service-part' ? (
-                                    <>
-                                      <button
-                                        onClick={(e) => {
-                                          const servicePart = data?.serviceParts.find(sp => sp.id === hymn.servicePartId)
-                                          if (servicePart) {
-                                            handleEditServicePart(servicePart, event.id, e)
-                                          }
-                                        }}
-                                        className="p-1 text-gray-400 hover:text-gray-600 transition-all"
-                                        title="Edit service part"
-                                      >
-                                        <Edit className="h-3 w-3" />
-                                      </button>
-                                      <button
-                                        onClick={() => handleDeleteIndividualHymn(hymn.id, event.id)}
-                                        className="p-1 text-gray-400 hover:text-red-600 transition-all"
-                                        title="Delete service part"
-                                      >
-                                        <Trash2 className="h-3 w-3" />
-                                      </button>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <button
-                                        onClick={(e) => handleEditIndividualHymn(hymn, event.id, e)}
-                                        className="p-1 text-gray-400 hover:text-gray-600 transition-all"
-                                        title="Edit song notes"
-                                      >
-                                        <Edit className="h-3 w-3" />
-                                      </button>
-                                      <button
-                                        onClick={() => handleDeleteIndividualHymn(hymn.id, event.id)}
-                                        className="p-1 text-gray-400 hover:text-red-600 transition-all"
-                                        title="Delete song"
-                                      >
-                                        <Trash2 className="h-3 w-3" />
-                                      </button>
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-                              <input
-                                type="text"
-                                value={hymn.title || ''}
-                                onChange={(e) => {
-                                  const newTitle = e.target.value
-                                  // Update immediately in local state for responsive UI
-                                  setData(prev => {
-                                    if (!prev) return prev
-                                    return {
-                                      ...prev,
-                                      events: prev.events.map(ev => 
-                                        ev.id === event.id 
-                                          ? {
-                                              ...ev,
-                                              hymns: ev.hymns.map(h => 
-                                                h.id === hymn.id ? { ...h, title: newTitle } : h
-                                              )
-                                            }
-                                          : ev
-                                      )
-                                    }
-                                  })
-                                  // Debounced save to server
-                                  debouncedUpdateHymn(event.id, newTitle, hymn.servicePartId || null, hymn.id)
-                                }}
-                                onBlur={(e) => {
-                                  const newTitle = e.target.value
-                                  console.log('🎵 Input blur - saving immediately:', { eventId: event.id, newTitle, hymnId: hymn.id })
-                                  // Save immediately when user clicks away (including empty titles for deletion)
-                                  updateHymnTitle(event.id, newTitle, hymn.servicePartId || null, hymn.id)
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    const newTitle = e.currentTarget.value
-                                    console.log('🎵 Enter key - saving immediately:', { eventId: event.id, newTitle, hymnId: hymn.id })
-                                    // Save immediately on Enter key (including empty titles for deletion)
-                                    updateHymnTitle(event.id, newTitle, hymn.servicePartId || null, hymn.id)
-                                    e.currentTarget.blur() // Remove focus
-                                  }
-                                }}
-                                placeholder="Enter hymn title..."
-                                className="w-full text-sm text-gray-900 border-none outline-none bg-transparent placeholder-gray-400 focus:bg-gray-50 rounded-sm px-2 py-1 font-normal"
-                              />
-                            </div>
-                          )
-                        })}
+                        <DndContext 
+                          sensors={sensors}
+                          collisionDetection={closestCenter}
+                          onDragEnd={(dragEvent) => handleDragEnd(dragEvent, event.id)}
+                        >
+                          <SortableContext 
+                            items={getAllHymnsInOrder(event.id).map(hymn => hymn.id)}
+                            strategy={verticalListSortingStrategy}
+                          >
+                            {getAllHymnsInOrder(event.id).map((hymn, index) => {
+                              const allHymns = getAllHymnsInOrder(event.id)
+                              const hymnIndex = index
+                              
+                              return (
+                                <SortableHymnItem
+                                  key={`hymn-${hymn.id || index}`}
+                                  hymn={hymn}
+                                  hymnIndex={hymnIndex}
+                                  allHymns={allHymns}
+                                  eventId={event.id}
+                                  data={data}
+                                  setData={setData}
+                                  debouncedUpdateHymn={debouncedUpdateHymn}
+                                  updateHymnTitle={updateHymnTitle}
+                                  handleReorderAnyHymn={handleReorderAnyHymn}
+                                  handleEditServicePart={handleEditServicePart}
+                                  handleEditIndividualHymn={handleEditIndividualHymn}
+                                  handleDeleteIndividualHymn={handleDeleteIndividualHymn}
+                                />
+                              )
+                            })}
+                          </SortableContext>
+                        </DndContext>
                       </div>
 
                       {/* Groups Section */}
@@ -2953,123 +3207,41 @@ export default function EventPlannerPage() {
                             )}
                           </div>
 
-                          {/* Hymns Grid - Mobile Unified Order */}
+                          {/* Hymns Grid - Mobile Unified Order with Drag & Drop */}
                           <div className="flex-1 overflow-y-auto">
-                            {getAllHymnsInOrder(event.id).map((hymn, index) => {
-                                const allHymns = getAllHymnsInOrder(event.id)
-                                const hymnIndex = index // Since we're already in the correct order
-                                
-                                return (
-                                  <div key={`mobile-hymn-${hymn.id || index}`} className="border-b border-gray-100 p-3 min-h-[60px] bg-white group hover:bg-gray-50 transition-colors relative">
-                                    <div className="flex items-center justify-between mb-1">
-                                      <div className="text-xs text-gray-500 font-normal">
-                                        {hymn.type === 'service-part' ? hymn.servicePartName : 'Individual Song'}
-                                      </div>
-                                      <div className="flex items-center opacity-0 group-hover:opacity-100 transition-all">
-                                        <button
-                                          onClick={() => handleReorderAnyHymn(hymn.id, 'up', event.id)}
-                                          disabled={hymnIndex <= 0}
-                                          className="p-1 text-gray-400 hover:text-gray-600 transition-all disabled:opacity-30"
-                                          title="Move up"
-                                        >
-                                          <ChevronUp className="h-3 w-3" />
-                                        </button>
-                                        <button
-                                          onClick={() => handleReorderAnyHymn(hymn.id, 'down', event.id)}
-                                          disabled={hymnIndex >= allHymns.length - 1}
-                                          className="p-1 text-gray-400 hover:text-gray-600 transition-all disabled:opacity-30"
-                                          title="Move down"
-                                        >
-                                          <ChevronDown className="h-3 w-3" />
-                                        </button>
-                                        {hymn.type === 'service-part' ? (
-                                          <>
-                                            <button
-                                              onClick={(e) => {
-                                                const servicePart = data?.serviceParts.find(sp => sp.id === hymn.servicePartId)
-                                                if (servicePart) {
-                                                  handleEditServicePart(servicePart, event.id, e)
-                                                }
-                                              }}
-                                              className="p-1 text-gray-400 hover:text-gray-600 transition-all"
-                                              title="Edit service part"
-                                            >
-                                              <Edit className="h-3 w-3" />
-                                            </button>
-                                            <button
-                                              onClick={() => handleDeleteIndividualHymn(hymn.id, event.id)}
-                                              className="p-1 text-gray-400 hover:text-red-600 transition-all"
-                                              title="Delete service part"
-                                            >
-                                              <Trash2 className="h-3 w-3" />
-                                            </button>
-                                          </>
-                                        ) : (
-                                          <>
-                                            <button
-                                              onClick={(e) => handleEditIndividualHymn(hymn, event.id, e)}
-                                              className="p-1 text-gray-400 hover:text-gray-600 transition-all"
-                                              title="Edit song notes"
-                                            >
-                                              <Edit className="h-3 w-3" />
-                                            </button>
-                                            <button
-                                              onClick={() => handleDeleteIndividualHymn(hymn.id, event.id)}
-                                              className="p-1 text-gray-400 hover:text-red-600 transition-all"
-                                              title="Delete song"
-                                            >
-                                              <Trash2 className="h-3 w-3" />
-                                            </button>
-                                          </>
-                                        )}
-                                      </div>
-                                    </div>
-                                    <input
-                                      type="text"
-                                      value={hymn.title || ''}
-                                      onChange={(e) => {
-                                        const newTitle = e.target.value
-                                        // Update immediately in local state for responsive UI
-                                        setData(prev => {
-                                          if (!prev) return prev
-                                          return {
-                                            ...prev,
-                                            events: prev.events.map(ev => 
-                                              ev.id === event.id 
-                                                ? {
-                                                    ...ev,
-                                                    hymns: ev.hymns.map(h => 
-                                                      h.id === hymn.id ? { ...h, title: newTitle } : h
-                                                    )
-                                                  }
-                                                : ev
-                                            )
-                                          }
-                                        })
-                                        // Debounced save to server
-                                        debouncedUpdateHymn(event.id, newTitle, hymn.servicePartId || null, hymn.id)
-                                      }}
-                                                                             onBlur={(e) => {
-                                         const newTitle = e.target.value
-                                         console.log('🎵 Mobile input blur - saving immediately:', { eventId: event.id, newTitle, hymnId: hymn.id })
-                                         // Save immediately when user clicks away (including empty titles for deletion)
-                                         updateHymnTitle(event.id, newTitle, hymn.servicePartId || null, hymn.id)
-                                       }}
-                                                                             onKeyDown={(e) => {
-                                         if (e.key === 'Enter') {
-                                           const newTitle = e.currentTarget.value
-                                           console.log('🎵 Mobile Enter key - saving immediately:', { eventId: event.id, newTitle, hymnId: hymn.id })
-                                           // Save immediately on Enter key (including empty titles for deletion)
-                                           updateHymnTitle(event.id, newTitle, hymn.servicePartId || null, hymn.id)
-                                           e.currentTarget.blur() // Remove focus
-                                         }
-                                       }}
-                                      placeholder="Enter hymn title..."
-                                      className="w-full text-sm text-gray-900 border-none outline-none bg-transparent placeholder-gray-400 focus:bg-gray-50 rounded-sm px-2 py-1 font-normal"
+                            <DndContext 
+                              sensors={sensors}
+                              collisionDetection={closestCenter}
+                              onDragEnd={(dragEvent) => handleDragEnd(dragEvent, event.id)}
+                            >
+                              <SortableContext 
+                                items={getAllHymnsInOrder(event.id).map(hymn => hymn.id)}
+                                strategy={verticalListSortingStrategy}
+                              >
+                                {getAllHymnsInOrder(event.id).map((hymn, index) => {
+                                  const allHymns = getAllHymnsInOrder(event.id)
+                                  const hymnIndex = index
+                                  
+                                  return (
+                                    <SortableHymnItem
+                                      key={`mobile-hymn-${hymn.id || index}`}
+                                      hymn={hymn}
+                                      hymnIndex={hymnIndex}
+                                      allHymns={allHymns}
+                                      eventId={event.id}
+                                      data={data}
+                                      setData={setData}
+                                      debouncedUpdateHymn={debouncedUpdateHymn}
+                                      updateHymnTitle={updateHymnTitle}
+                                      handleReorderAnyHymn={handleReorderAnyHymn}
+                                      handleEditServicePart={handleEditServicePart}
+                                      handleEditIndividualHymn={handleEditIndividualHymn}
+                                      handleDeleteIndividualHymn={handleDeleteIndividualHymn}
                                     />
-                                  </div>
-                                )
-                              })}
+                                  )
+                                })}
+                              </SortableContext>
+                            </DndContext>
                           </div>
 
                           {/* Groups Section - Mobile */}
