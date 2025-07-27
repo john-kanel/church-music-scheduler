@@ -884,7 +884,7 @@ export default function MusiciansPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {editingId === musician.id && editingData ? (
-                          <div className="max-w-80">
+                          <div className="max-w-96">
                             <div className="space-y-1">
                               <div className="text-xs font-medium text-gray-700 mb-2">Select Instruments/Roles:</div>
                               <div className="max-h-32 overflow-y-auto grid grid-cols-2 gap-1">
@@ -909,7 +909,7 @@ export default function MusiciansPage() {
                             </div>
                           </div>
                         ) : (
-                          <div className="grid grid-cols-2 gap-1 max-w-80">
+                          <div className="grid grid-cols-2 gap-3 max-w-96">
                             {musician.instruments && musician.instruments.length > 0 ? (
                               musician.instruments.map((instrument, index) => (
                                 <span
