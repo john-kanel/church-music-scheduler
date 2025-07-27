@@ -182,8 +182,8 @@ export function ViewAllOpenEventsModal({
   const failedAssignments = assignments.filter(a => !a.musicianId)
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-blue-50 rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{backgroundColor: '#E6F0FA'}}>
+      <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="p-6 border-b flex items-center justify-between">
           <div>
