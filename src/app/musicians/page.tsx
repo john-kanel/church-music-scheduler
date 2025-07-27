@@ -909,19 +909,21 @@ export default function MusiciansPage() {
                             </div>
                           </div>
                         ) : (
-                          <div className="grid grid-cols-2 gap-1 max-w-64">
-                            {musician.instruments && musician.instruments.length > 0 ? (
-                              musician.instruments.map((instrument, index) => (
-                                <span
-                                  key={index}
-                                  className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 whitespace-nowrap"
-                                >
-                                  {instrument.charAt(0).toUpperCase() + instrument.slice(1)}
-                                </span>
-                              ))
-                            ) : (
-                              <span className="text-xs text-gray-400 italic col-span-2">No instruments specified</span>
-                            )}
+                          <div className="bg-purple-50 rounded-lg p-3 max-w-64">
+                            <div className="grid grid-cols-2 gap-2">
+                              {musician.instruments && musician.instruments.length > 0 ? (
+                                musician.instruments.map((instrument, index) => (
+                                  <span
+                                    key={index}
+                                    className="text-xs font-medium text-purple-800 whitespace-nowrap"
+                                  >
+                                    {instrument.charAt(0).toUpperCase() + instrument.slice(1)}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-xs text-gray-500 italic col-span-2">No instruments specified</span>
+                              )}
+                            </div>
                           </div>
                         )}
                       </td>
