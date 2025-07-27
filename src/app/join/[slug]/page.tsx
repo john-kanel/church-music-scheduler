@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { Logo } from '@/components/ui/logo'
 import { Mail, User, Phone, Lock, Music, Users, ChevronDown, CheckCircle, AlertCircle } from 'lucide-react'
+import { COMMON_INSTRUMENTS } from '@/lib/constants'
 
 interface Church {
   id: string
@@ -36,11 +37,7 @@ const SKILL_LEVELS = [
   { value: 'PROFESSIONAL', label: 'Professional' }
 ]
 
-const COMMON_INSTRUMENTS = [
-  'Piano', 'Guitar', 'Violin', 'Cello', 'Flute', 'Clarinet', 'Saxophone', 'Trumpet', 
-  'Trombone', 'Drums', 'Bass', 'Organ', 'Harp', 'Vocals', 'Oboe', 'French Horn',
-  'Tuba', 'Percussion', 'Director', 'Cantor', 'Other'
-]
+
 
 export default function JoinPage() {
   const params = useParams()

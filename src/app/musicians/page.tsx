@@ -6,6 +6,7 @@ import { ArrowLeft, Users, Plus, Search, UserPlus, Music, Phone, Calendar, Check
 import Link from 'next/link'
 import { InviteModal } from '../../components/musicians/invite-modal'
 import InvitationModal from '../../components/musicians/invitation-modal'
+import { COMMON_INSTRUMENTS } from '@/lib/constants'
 
 interface Musician {
   id: string
@@ -234,13 +235,21 @@ export default function MusiciansPage() {
   const startEditing = (musician: Musician) => {
     setEditingId(musician.id)
     
-    // Debug: Log the original and normalized instruments
+    // Debug: Log the original instruments
     console.log('🔍 DEBUG: Original musician instruments:', musician.instruments)
-    
-    // Normalize instruments to lowercase to match availableInstruments
-    const normalizedInstruments = (musician.instruments || []).map(inst => inst.toLowerCase())
-    console.log('🔍 DEBUG: Normalized instruments:', normalizedInstruments)
     console.log('🔍 DEBUG: Available instruments:', availableInstruments)
+    
+    // Use case-insensitive matching to find matching instruments
+    const matchedInstruments = (musician.instruments || [])
+      .map(musicianInst => {
+        // Find matching instrument from availableInstruments (case-insensitive)
+        const match = availableInstruments.find(availableInst => 
+          availableInst.toLowerCase() === musicianInst.toLowerCase()
+        )
+        return match || musicianInst // Use the properly cased version or original if no match
+      })
+    
+    console.log('🔍 DEBUG: Matched instruments:', matchedInstruments)
     
     setEditingData({
       id: musician.id,
@@ -249,7 +258,7 @@ export default function MusiciansPage() {
       email: musician.email,
       phone: musician.phone || '',
       status: musician.status || (musician.isVerified ? 'active' : 'pending'),
-      instruments: normalizedInstruments,
+      instruments: matchedInstruments,
       groups: musician.groups || []
     })
     // Fetch available groups when editing starts
@@ -264,10 +273,9 @@ export default function MusiciansPage() {
   const saveEdit = async () => {
     if (!editingData) return
 
-    // Debug: Log user role and instruments being saved
+    // Debug: Log user role
     console.log('💾 DEBUG: Current user role:', session?.user?.role)
     console.log('💾 DEBUG: Current user church ID:', session?.user?.churchId)
-    console.log('💾 DEBUG: Instruments being saved:', editingData.instruments)
 
     setSaving(true)
     try {
@@ -283,7 +291,7 @@ export default function MusiciansPage() {
           email: editingData.email,
           phone: editingData.phone || null,
           status: editingData.status,
-          instruments: editingData.instruments.map(inst => inst.toLowerCase())
+          instruments: editingData.instruments
         }),
       })
 
@@ -362,7 +370,7 @@ export default function MusiciansPage() {
               phone: editingData.phone || undefined,
               status: editingData.status,
               isVerified: editingData.status === 'active',
-              instruments: editingData.instruments.map(inst => inst.toLowerCase()),
+              instruments: editingData.instruments,
               groups: editingData.groups
             }
           : musician
@@ -513,20 +521,8 @@ export default function MusiciansPage() {
   // Check if user can edit musicians
   const canEditMusicians = session?.user?.role && ['DIRECTOR', 'ASSOCIATE_DIRECTOR', 'PASTOR', 'ASSOCIATE_PASTOR'].includes(session.user.role)
 
-  // Available instrument/role options
-  const availableInstruments = [
-    'musician',
-    'accompanist',
-    'vocalist',
-    'cantor',
-    'organist',
-    'pianist',
-    'guitarist',
-    'drummer',
-    'bassist',
-    'violinist',
-    'other'
-  ]
+  // Available instrument/role options (shared with join page)
+  const availableInstruments = COMMON_INSTRUMENTS
 
   // Filter musicians based on search term and status
   const filteredMusicians = musicians.filter(musician => {
@@ -894,10 +890,6 @@ export default function MusiciansPage() {
                               <div className="max-h-32 overflow-y-auto space-y-1">
                                 {availableInstruments.map((instrument) => {
                                   const isSelected = editingData.instruments.includes(instrument)
-                                  // Debug: Log checkbox state
-                                  if (editingData.instruments.length > 0) {
-                                    console.log(`🎯 DEBUG: Checking instrument "${instrument}" - isSelected: ${isSelected}, editingData.instruments:`, editingData.instruments)
-                                  }
                                   return (
                                     <label
                                       key={instrument}

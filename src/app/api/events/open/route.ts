@@ -229,18 +229,19 @@ export async function POST(request: NextRequest) {
       const roleNameLower = roleName.toLowerCase()
       const musicianInstruments = musician.instruments.map((i: string) => i.toLowerCase())
       
-      // Define role-to-instrument mappings
+      // Define role-to-instrument mappings (updated to match join page instruments)
       const roleInstrumentMap: { [key: string]: string[] } = {
-        'accompanist': ['accompanist', 'pianist', 'organist'],
-        'pianist': ['pianist', 'accompanist'],
-        'organist': ['organist', 'accompanist'],
-        'vocalist': ['vocalist', 'cantor'],
-        'cantor': ['cantor', 'vocalist'],
-        'guitarist': ['guitarist'],
-        'drummer': ['drummer'],
-        'bassist': ['bassist'],
-        'violinist': ['violinist'],
-        'musician': ['musician', 'accompanist', 'pianist', 'organist', 'vocalist', 'cantor', 'guitarist', 'drummer', 'bassist', 'violinist']
+        'accompanist': ['piano', 'organ'],
+        'pianist': ['piano'],
+        'organist': ['organ'],
+        'vocalist': ['vocals'],
+        'cantor': ['vocals', 'cantor'],
+        'guitarist': ['guitar'],
+        'drummer': ['drums', 'percussion'],
+        'bassist': ['bass'],
+        'violinist': ['violin'],
+        'director': ['director'],
+        'musician': ['piano', 'guitar', 'violin', 'cello', 'flute', 'clarinet', 'saxophone', 'trumpet', 'trombone', 'drums', 'bass', 'organ', 'harp', 'vocals', 'oboe', 'french horn', 'tuba', 'percussion', 'director', 'cantor', 'other']
       }
       
       // Check for direct role match in mappings
