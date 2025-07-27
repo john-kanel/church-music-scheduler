@@ -914,7 +914,7 @@ export default function MusiciansPage() {
                               musician.instruments.map((instrument, index) => (
                                 <span
                                   key={index}
-                                  className="inline-flex items-center px-4 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 whitespace-nowrap"
+                                  className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800"
                                 >
                                   {instrument.charAt(0).toUpperCase() + instrument.slice(1)}
                                 </span>
