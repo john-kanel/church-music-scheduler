@@ -645,7 +645,15 @@ export default function CalendarPage() {
       pdf.text('No events to display', pageWidth / 2, yPosition, { align: 'center' })
     } else {
       // Process each event and fetch hymns
-      for (const event of eventsToShow) {
+      for (let eventIndex = 0; eventIndex < eventsToShow.length; eventIndex++) {
+        const event = eventsToShow[eventIndex]
+        
+        // Start each event on a new page (except the first one)
+        if (eventIndex > 0) {
+          pdf.addPage()
+          yPosition = 20
+        }
+        
         // Fetch hymns for this event
         let eventHymns = []
         try {
@@ -656,12 +664,6 @@ export default function CalendarPage() {
           }
         } catch (error) {
           console.error(`Error fetching hymns for event ${event.id}:`, error)
-        }
-        
-        // Check if we need a new page (accounting for container height)
-        if (yPosition > pageHeight - 80) {
-          pdf.addPage()
-          yPosition = 20
         }
 
         // Container setup
