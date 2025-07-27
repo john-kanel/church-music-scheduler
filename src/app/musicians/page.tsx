@@ -884,7 +884,7 @@ export default function MusiciansPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {editingId === musician.id && editingData ? (
-                          <div className="max-w-96">
+                          <div className="max-w-[28rem]">
                             <div className="space-y-1">
                               <div className="text-xs font-medium text-gray-700 mb-2">Select Instruments/Roles:</div>
                               <div className="max-h-32 overflow-y-auto grid grid-cols-2 gap-1">
@@ -909,12 +909,12 @@ export default function MusiciansPage() {
                             </div>
                           </div>
                         ) : (
-                          <div className="grid grid-cols-2 gap-3 max-w-96">
+                          <div className="grid grid-cols-2 gap-6 max-w-[28rem]">
                             {musician.instruments && musician.instruments.length > 0 ? (
                               musician.instruments.map((instrument, index) => (
                                 <span
                                   key={index}
-                                  className="inline-flex items-center justify-center px-8 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200"
+                                  className="inline-flex items-center justify-center px-4 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 mb-2"
                                 >
                                   {instrument.charAt(0).toUpperCase() + instrument.slice(1)}
                                 </span>
