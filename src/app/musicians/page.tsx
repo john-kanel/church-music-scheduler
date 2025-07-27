@@ -684,11 +684,8 @@ export default function MusiciansPage() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Contact
                     </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Instruments
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Roles
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Instruments/Roles
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       <div className="flex items-center space-x-2">
@@ -885,14 +882,13 @@ export default function MusiciansPage() {
                           </div>
                         )}
                       </td>
-                      {/* Instruments Column */}
-                      <td className="px-3 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4 whitespace-nowrap">
                         {editingId === musician.id && editingData ? (
                           <div className="max-w-48">
                             <div className="space-y-1">
-                              <div className="text-xs font-medium text-gray-700 mb-2">Select Instruments:</div>
-                              <div className="max-h-32 overflow-y-auto space-y-1">
-                                {availableInstruments.filter(inst => !['Director', 'Cantor'].includes(inst)).map((instrument) => {
+                              <div className="text-xs font-medium text-gray-700 mb-2">Select Instruments/Roles:</div>
+                              <div className="max-h-32 overflow-y-auto grid grid-cols-2 gap-1">
+                                {availableInstruments.map((instrument) => {
                                   const isSelected = editingData.instruments.includes(instrument)
                                   return (
                                     <label
@@ -913,63 +909,18 @@ export default function MusiciansPage() {
                             </div>
                           </div>
                         ) : (
-                          <div className="flex flex-wrap gap-1">
-                            {musician.instruments && musician.instruments.filter(inst => !['Director', 'Cantor'].includes(inst)).length > 0 ? (
-                              musician.instruments.filter(inst => !['Director', 'Cantor'].includes(inst)).map((instrument, index) => (
+                          <div className="grid grid-cols-2 gap-1 max-w-48">
+                            {musician.instruments && musician.instruments.length > 0 ? (
+                              musician.instruments.map((instrument, index) => (
                                 <span
                                   key={index}
-                                  className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                                  className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800"
                                 >
                                   {instrument.charAt(0).toUpperCase() + instrument.slice(1)}
                                 </span>
                               ))
                             ) : (
-                              <span className="text-xs text-gray-400 italic">None</span>
-                            )}
-                          </div>
-                        )}
-                      </td>
-                      
-                      {/* Roles Column */}
-                      <td className="px-3 py-4 whitespace-nowrap">
-                        {editingId === musician.id && editingData ? (
-                          <div className="max-w-48">
-                            <div className="space-y-1">
-                              <div className="text-xs font-medium text-gray-700 mb-2">Select Roles:</div>
-                              <div className="max-h-32 overflow-y-auto space-y-1">
-                                {availableInstruments.filter(inst => ['Director', 'Cantor'].includes(inst)).map((role) => {
-                                  const isSelected = editingData.instruments.includes(role)
-                                  return (
-                                    <label
-                                      key={role}
-                                      className="flex items-center space-x-2 text-xs cursor-pointer hover:bg-gray-50 px-2 py-1 rounded"
-                                    >
-                                      <input
-                                        type="checkbox"
-                                        checked={isSelected}
-                                        onChange={() => handleInstrumentToggle(role)}
-                                        className="h-3 w-3 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-                                      />
-                                      <span className="text-gray-700 capitalize">{role}</span>
-                                    </label>
-                                  )
-                                })}
-                              </div>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex flex-wrap gap-1">
-                            {musician.instruments && musician.instruments.filter(inst => ['Director', 'Cantor'].includes(inst)).length > 0 ? (
-                              musician.instruments.filter(inst => ['Director', 'Cantor'].includes(inst)).map((role, index) => (
-                                <span
-                                  key={index}
-                                  className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800"
-                                >
-                                  {role.charAt(0).toUpperCase() + role.slice(1)}
-                                </span>
-                              ))
-                            ) : (
-                              <span className="text-xs text-gray-400 italic">None</span>
+                              <span className="text-xs text-gray-400 italic col-span-2">No instruments specified</span>
                             )}
                           </div>
                         )}
