@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { 
   ArrowLeft, Calendar, Plus, Search, Filter, Users, Clock, MapPin, 
   ChevronLeft, ChevronRight, Settings, Trash2, Edit, Eye, EyeOff,
@@ -113,6 +114,7 @@ interface CalendarEvent {
 
 export default function CalendarPage() {
   const { data: session } = useSession()
+  const router = useRouter()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
   const [listFilter, setListFilter] = useState<'upcoming' | 'past'>('upcoming')
@@ -427,9 +429,8 @@ export default function CalendarPage() {
 
   const handleEventClick = (event: CalendarEvent) => {
     console.log('🎯 Event clicked:', event.name)
-    setSelectedEvent(event)
-    setShowEventDetails(true)
-    setIsEditingEvent(false)
+    // Navigate to plan page where users can view and edit event details
+    router.push('/plan')
   }
 
   const handleDateClick = (day: number, e: React.MouseEvent) => {
