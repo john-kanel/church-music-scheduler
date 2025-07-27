@@ -233,6 +233,15 @@ export default function MusiciansPage() {
 
   const startEditing = (musician: Musician) => {
     setEditingId(musician.id)
+    
+    // Debug: Log the original and normalized instruments
+    console.log('🔍 DEBUG: Original musician instruments:', musician.instruments)
+    
+    // Normalize instruments to lowercase to match availableInstruments
+    const normalizedInstruments = (musician.instruments || []).map(inst => inst.toLowerCase())
+    console.log('🔍 DEBUG: Normalized instruments:', normalizedInstruments)
+    console.log('🔍 DEBUG: Available instruments:', availableInstruments)
+    
     setEditingData({
       id: musician.id,
       firstName: musician.firstName,
@@ -240,7 +249,7 @@ export default function MusiciansPage() {
       email: musician.email,
       phone: musician.phone || '',
       status: musician.status || (musician.isVerified ? 'active' : 'pending'),
-      instruments: musician.instruments || [],
+      instruments: normalizedInstruments,
       groups: musician.groups || []
     })
     // Fetch available groups when editing starts
@@ -255,9 +264,10 @@ export default function MusiciansPage() {
   const saveEdit = async () => {
     if (!editingData) return
 
-    // Debug: Log user role
-    console.log('Current user role:', session?.user?.role)
-    console.log('Current user church ID:', session?.user?.churchId)
+    // Debug: Log user role and instruments being saved
+    console.log('💾 DEBUG: Current user role:', session?.user?.role)
+    console.log('💾 DEBUG: Current user church ID:', session?.user?.churchId)
+    console.log('💾 DEBUG: Instruments being saved:', editingData.instruments)
 
     setSaving(true)
     try {
@@ -273,7 +283,7 @@ export default function MusiciansPage() {
           email: editingData.email,
           phone: editingData.phone || null,
           status: editingData.status,
-          instruments: editingData.instruments
+          instruments: editingData.instruments.map(inst => inst.toLowerCase())
         }),
       })
 
@@ -352,7 +362,7 @@ export default function MusiciansPage() {
               phone: editingData.phone || undefined,
               status: editingData.status,
               isVerified: editingData.status === 'active',
-              instruments: editingData.instruments,
+              instruments: editingData.instruments.map(inst => inst.toLowerCase()),
               groups: editingData.groups
             }
           : musician
@@ -884,6 +894,10 @@ export default function MusiciansPage() {
                               <div className="max-h-32 overflow-y-auto space-y-1">
                                 {availableInstruments.map((instrument) => {
                                   const isSelected = editingData.instruments.includes(instrument)
+                                  // Debug: Log checkbox state
+                                  if (editingData.instruments.length > 0) {
+                                    console.log(`🎯 DEBUG: Checking instrument "${instrument}" - isSelected: ${isSelected}, editingData.instruments:`, editingData.instruments)
+                                  }
                                   return (
                                     <label
                                       key={instrument}
