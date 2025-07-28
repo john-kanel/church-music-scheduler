@@ -277,17 +277,43 @@ export function EventDetailsModal({
       const startDate = new Date(currentEvent.startTime)
       const endDate = currentEvent.endTime ? new Date(currentEvent.endTime) : null
       
+      // Fix timezone issue: Proper timezone conversion for editing
+      // The stored time might be in UTC, but we need to show it in the user's intended timezone
+      const timezoneOffsetMinutes = startDate.getTimezoneOffset()
+      console.log('🕐 Timezone conversion in event details modal:', {
+        originalStartTime: currentEvent.startTime,
+        startDateUTC: startDate.toISOString(),
+        timezoneOffsetMinutes,
+        offsetHours: timezoneOffsetMinutes / 60
+      })
+      
+      // Create local dates by adjusting for timezone if needed
+      // This ensures the time shows correctly for editing
+      const localStartDate = new Date(startDate.getTime() + (timezoneOffsetMinutes * 60000))
+      const localEndDate = endDate ? new Date(endDate.getTime() + (timezoneOffsetMinutes * 60000)) : null
+      
+      // Format time properly for input field (HH:MM format)
+      const formatTimeForInput = (date: Date) => {
+        const hours = date.getHours().toString().padStart(2, '0')
+        const minutes = date.getMinutes().toString().padStart(2, '0')
+        return `${hours}:${minutes}`
+      }
+      
+      // Format date for input field (YYYY-MM-DD format) 
+      const formatDateForInput = (date: Date) => {
+        const year = date.getFullYear()
+        const month = (date.getMonth() + 1).toString().padStart(2, '0')
+        const day = date.getDate().toString().padStart(2, '0')
+        return `${year}-${month}-${day}`
+      }
+      
       const newEditData = {
         name: currentEvent.name,
         description: currentEvent.description || '',
         location: currentEvent.location || '',
-        startDate: startDate.getFullYear() + '-' + 
-                   String(startDate.getMonth() + 1).padStart(2, '0') + '-' + 
-                   String(startDate.getDate()).padStart(2, '0'),
-        startTime: String(startDate.getHours()).padStart(2, '0') + ':' + 
-                   String(startDate.getMinutes()).padStart(2, '0'),
-        endTime: endDate ? String(endDate.getHours()).padStart(2, '0') + ':' + 
-                          String(endDate.getMinutes()).padStart(2, '0') : '',
+        startDate: formatDateForInput(localStartDate),
+        startTime: formatTimeForInput(localStartDate),
+        endTime: localEndDate ? formatTimeForInput(localEndDate) : '',
         status: (currentEvent.status && ['confirmed', 'tentative', 'cancelled', 'pending', 'error'].includes(currentEvent.status.toLowerCase())) ? currentEvent.status.toLowerCase() as 'confirmed' | 'tentative' | 'cancelled' | 'pending' | 'error' : 'confirmed',
         signupType: 'open' as 'open' | 'assigned', // Default to open for existing events
         eventTypeId: currentEvent.eventType?.id || '',

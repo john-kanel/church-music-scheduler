@@ -6,7 +6,7 @@ import {
   Plus, Calendar, Clock, MapPin, User, Music, Users, Trash2, 
   Edit, Save, X, Search, Filter, ChevronDown, Download, 
   FileText, ArrowLeft, Settings, Eye, EyeOff, Palette, Share2,
-  ChevronLeft, ChevronRight, Check, ExternalLink, ChevronUp, Zap
+  ChevronLeft, ChevronRight, Check, ExternalLink, ChevronUp, Zap, Copy
 } from 'lucide-react'
 import Link from 'next/link'
 import { CreateEventModal } from '@/components/events/create-event-modal'
@@ -244,6 +244,7 @@ interface ToastMessage {
 interface Event {
   id: string
   name: string
+  description?: string
   startTime: string
   endTime: string
   location: string
@@ -351,6 +352,39 @@ export default function EventPlannerPage() {
   const [loading, setLoading] = useState(true)
   const [visibleServiceParts, setVisibleServiceParts] = useState<Set<string>>(new Set())
   const [visibleEventColors, setVisibleEventColors] = useState<Set<string>>(new Set())
+
+  // Load filter settings from localStorage on component mount
+  useEffect(() => {
+    try {
+      const savedFilters = localStorage.getItem('eventPlannerFilters')
+      if (savedFilters) {
+        const { visibleServiceParts: savedServiceParts, visibleEventColors: savedEventColors } = JSON.parse(savedFilters)
+        if (savedServiceParts) {
+          setVisibleServiceParts(new Set(savedServiceParts))
+        }
+        if (savedEventColors) {
+          setVisibleEventColors(new Set(savedEventColors))
+        }
+        console.log('✅ Restored filter settings from localStorage:', { savedServiceParts, savedEventColors })
+      }
+    } catch (error) {
+      console.error('❌ Error loading filter settings from localStorage:', error)
+    }
+  }, [])
+
+  // Save filter settings to localStorage when they change
+  useEffect(() => {
+    try {
+      const filterSettings = {
+        visibleServiceParts: Array.from(visibleServiceParts),
+        visibleEventColors: Array.from(visibleEventColors)
+      }
+      localStorage.setItem('eventPlannerFilters', JSON.stringify(filterSettings))
+      console.log('💾 Saved filter settings to localStorage:', filterSettings)
+    } catch (error) {
+      console.error('❌ Error saving filter settings to localStorage:', error)
+    }
+  }, [visibleServiceParts, visibleEventColors])
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showPublicLinkModal, setShowPublicLinkModal] = useState(false)
   const [showPdfProcessor, setShowPdfProcessor] = useState(false)
@@ -418,6 +452,25 @@ export default function EventPlannerPage() {
   // Role creation state
   const [openRoleCreation, setOpenRoleCreation] = useState<string | null>(null)
   const [newRoleName, setNewRoleName] = useState('')
+
+  // Copy event state
+  const [showCopyDropdown, setShowCopyDropdown] = useState<string | null>(null)
+  const [copySourceEvent, setCopySourceEvent] = useState<Event | null>(null)
+  const [copySelectedParts, setCopySelectedParts] = useState<{
+    documents: boolean
+    serviceParts: boolean
+    groups: boolean
+    musicians: boolean
+  }>({
+    documents: false,
+    serviceParts: false,
+    groups: false,
+    musicians: false
+  })
+
+  // Event description editing state
+  const [editingDescription, setEditingDescription] = useState<string | null>(null)
+  const [tempDescription, setTempDescription] = useState<string>('')
   const [addingRole, setAddingRole] = useState(false)
 
   // Service parts dropdown state
@@ -579,11 +632,24 @@ export default function EventPlannerPage() {
         }
         
         setData(updatedPlannerData)
-        // Initially show all service parts
-        setVisibleServiceParts(new Set(plannerData.serviceParts.map((sp: ServicePart) => sp.id)))
-        // Get unique event colors and show all initially
-        const uniqueColors = plannerData.events.map((event: Event) => event.eventType.color)
-        setVisibleEventColors(new Set<string>(uniqueColors))
+        
+        // Only set initial filter state if not already set from localStorage
+        setVisibleServiceParts(prev => {
+          if (prev.size === 0) {
+            // If no saved filters, show all service parts initially
+            return new Set(plannerData.serviceParts.map((sp: ServicePart) => sp.id))
+          }
+          return prev
+        })
+        
+        setVisibleEventColors(prev => {
+          if (prev.size === 0) {
+            // If no saved filters, show all event colors initially
+            const uniqueColors = plannerData.events.map((event: Event) => event.eventType.color)
+            return new Set<string>(uniqueColors)
+          }
+          return prev
+        })
         
         // Close any open interfaces when data refreshes
         setOpenGroupDropdown(null)
@@ -1109,20 +1175,20 @@ export default function EventPlannerPage() {
 
       // Process suggestions and intelligently merge with existing hymns
       // PRESERVE ORIGINAL ORDER by mapping existing hymns with their original index
-      // Give ALL empty existing hymns placeholder titles so they won't be filtered out by the API
+      // Leave empty hymns as empty instead of adding placeholder titles
       const processedHymns = [...existingHymns.map((hymn, index) => ({
-        title: hymn.title || 'New Song', // Ensure ALL empty slots get placeholder title
+        title: hymn.title || '', // Leave empty instead of adding 'New Song'
         notes: hymn.notes || '',
         servicePartId: hymn.servicePartId || null,
         orderIndex: index // Preserve original order
       }))]
 
-              // Track which service parts already have content (original titles, not placeholder)
-        const servicePartsWithContent = new Set(
-          existingHymns
-            .filter(h => h.servicePartId && h.title?.trim() && h.title !== 'New Song')
-            .map(h => h.servicePartId)
-        )
+                    // Track which service parts already have content (original titles, not placeholder or empty)
+      const servicePartsWithContent = new Set(
+        existingHymns
+          .filter(h => h.servicePartId && h.title?.trim() && h.title !== 'New Song' && h.title !== '')
+          .map(h => h.servicePartId)
+      )
 
       for (const suggestion of suggestions) {
         // Find matching service part
@@ -1181,7 +1247,7 @@ export default function EventPlannerPage() {
         } else {
           // Service part doesn't have real content yet, try to find empty slot to update
           const existingIndex = processedHymns.findIndex(h => 
-            h.servicePartId === servicePartId && (!h.title?.trim() || h.title === 'New Song')
+            h.servicePartId === servicePartId && (!h.title?.trim() || h.title === 'New Song' || h.title === '')
           )
           
           if (existingIndex !== -1) {
@@ -2302,6 +2368,126 @@ export default function EventPlannerPage() {
     console.log('🚀 Modal should be opening now with event:', event.id)
   }
 
+  // Copy event functionality
+  const handleCopyEvent = (targetEvent: Event) => {
+    setCopySourceEvent(targetEvent)
+    setShowCopyDropdown(targetEvent.id)
+    // Reset copy selection
+    setCopySelectedParts({
+      documents: false,
+      serviceParts: false,
+      groups: false,
+      musicians: false
+    })
+  }
+
+  const getSortedEventsForCopy = (currentEvent: Event) => {
+    if (!data?.events) return []
+    
+    const currentDate = new Date(currentEvent.startTime)
+    const otherEvents = data.events.filter(e => e.id !== currentEvent.id)
+    
+    // Sort events by proximity to current event date
+    return otherEvents.sort((a, b) => {
+      const dateA = new Date(a.startTime)
+      const dateB = new Date(b.startTime)
+      
+      // Calculate days difference from current event
+      const diffA = Math.abs((dateA.getTime() - currentDate.getTime()) / (1000 * 3600 * 24))
+      const diffB = Math.abs((dateB.getTime() - currentDate.getTime()) / (1000 * 3600 * 24))
+      
+      // If dates are very close, prioritize future events over past events
+      if (Math.abs(diffA - diffB) < 1) {
+        if (dateA >= currentDate && dateB < currentDate) return -1
+        if (dateB >= currentDate && dateA < currentDate) return 1
+      }
+      
+      return diffA - diffB
+    })
+  }
+
+  const handleCopyFromEvent = async (sourceEventId: string) => {
+    if (!copySourceEvent) return
+    
+    const selectedParts = Object.entries(copySelectedParts)
+      .filter(([_, selected]) => selected)
+      .map(([part, _]) => part)
+    
+    if (selectedParts.length === 0) {
+      showToast('error', 'Please select at least one part to copy')
+      return
+    }
+
+    try {
+      const response = await fetch('/api/events/copy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sourceEventId,
+          targetEventId: copySourceEvent.id,
+          parts: selectedParts
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to copy event parts')
+      }
+
+      showToast('success', `Successfully copied ${selectedParts.join(', ')} to event`)
+      setShowCopyDropdown(null)
+      setCopySourceEvent(null)
+      fetchPlannerData() // Refresh to show copied data
+    } catch (error) {
+      console.error('Error copying event parts:', error)
+      showToast('error', 'Failed to copy event parts')
+    }
+  }
+
+  // Event description editing
+  const handleEditDescription = (eventId: string, currentDescription: string) => {
+    setEditingDescription(eventId)
+    setTempDescription(currentDescription || '')
+  }
+
+  const handleSaveDescription = async (eventId: string) => {
+    try {
+      const response = await fetch(`/api/events/${eventId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: tempDescription })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update description')
+      }
+
+      // Update local state
+      setData(prev => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          events: prev.events.map(event => 
+            event.id === eventId 
+              ? { ...event, description: tempDescription }
+              : event
+          )
+        }
+      })
+
+      setEditingDescription(null)
+      setTempDescription('')
+      showToast('success', 'Description updated')
+    } catch (error) {
+      console.error('Error updating description:', error)
+      showToast('error', 'Failed to update description')
+    }
+  }
+
+  const handleCancelDescriptionEdit = () => {
+    setEditingDescription(null)
+    setTempDescription('')
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -2511,6 +2697,13 @@ export default function EventPlannerPage() {
                           {/* Edit and Delete buttons */}
                           <div className="flex items-center gap-1">
                             <button
+                              onClick={() => handleCopyEvent(event)}
+                              className="p-1 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-md transition-colors"
+                              title="Copy from another event"
+                            >
+                              <Copy className="w-3 h-3" />
+                            </button>
+                            <button
                               onClick={() => {
                                 console.log('🔘 EDIT BUTTON CLICKED! Event:', event?.id)
                                 console.log('🔘 Button click event fired, calling handleEditEvent...')
@@ -2539,7 +2732,52 @@ export default function EventPlannerPage() {
                           {new Date(event.startTime).toLocaleDateString()} at{' '}
                           {formatEventTimeForDisplay(event.startTime)}
                         </p>
-                        <p className="text-xs text-gray-500">{event.location}</p>
+                        <p className="text-xs text-gray-500 mb-1">{event.location}</p>
+                        
+                        {/* Event Description with inline editing */}
+                        <div className="mt-1">
+                          {editingDescription === event.id ? (
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="text"
+                                value={tempDescription}
+                                onChange={(e) => setTempDescription(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    handleSaveDescription(event.id)
+                                  } else if (e.key === 'Escape') {
+                                    handleCancelDescriptionEdit()
+                                  }
+                                }}
+                                className="text-xs text-gray-600 bg-white border border-gray-300 rounded px-1 py-0.5 flex-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                placeholder="Add description..."
+                                autoFocus
+                              />
+                              <button
+                                onClick={() => handleSaveDescription(event.id)}
+                                className="p-0.5 text-green-600 hover:bg-green-50 rounded"
+                                title="Save description"
+                              >
+                                <Check className="w-3 h-3" />
+                              </button>
+                              <button
+                                onClick={handleCancelDescriptionEdit}
+                                className="p-0.5 text-gray-400 hover:bg-gray-50 rounded"
+                                title="Cancel"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ) : (
+                            <p 
+                              className="text-xs text-gray-600 cursor-pointer hover:bg-gray-100 rounded px-1 py-0.5 -mx-1"
+                              onClick={() => handleEditDescription(event.id, event.description || '')}
+                              title="Click to edit description"
+                            >
+                              {event.description || 'No Description'}
+                            </p>
+                          )}
+                        </div>
                         
                         {/* Action Buttons */}
                         <div className="mt-3">
@@ -2578,6 +2816,125 @@ export default function EventPlannerPage() {
                                 </button>
                               </div>
                             ))}
+                          </div>
+                        )}
+
+                        {/* Copy Event Dropdown - appears as its own cell */}
+                        {showCopyDropdown === event.id && (
+                          <div className="border-b border-gray-100 bg-green-50">
+                            <div className="p-3 border-b border-green-200 bg-green-100">
+                              <h4 className="text-sm font-medium text-gray-900 mb-1">Copy from Another Event</h4>
+                              <p className="text-xs text-gray-600">
+                                Select an event to copy from and choose what to copy.
+                              </p>
+                            </div>
+
+                            {/* Event Selection */}
+                            <div className="p-3 border-b border-green-200">
+                              <h5 className="text-xs font-medium text-gray-700 mb-2">Select Event to Copy From:</h5>
+                              <div className="max-h-32 overflow-y-auto space-y-1">
+                                {getSortedEventsForCopy(event).map((sourceEvent) => (
+                                  <button
+                                    key={sourceEvent.id}
+                                    onClick={() => handleCopyFromEvent(sourceEvent.id)}
+                                    className="w-full text-left p-2 rounded border border-gray-200 bg-white hover:bg-gray-50 transition-colors"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <div 
+                                        className="w-2 h-2 rounded-full flex-shrink-0"
+                                        style={{ backgroundColor: sourceEvent.eventType.color }}
+                                      />
+                                      <div className="flex-1 min-w-0">
+                                        <div className="text-xs font-medium text-gray-900 truncate">
+                                          {sourceEvent.name}
+                                        </div>
+                                        <div className="text-xs text-gray-500">
+                                          {new Date(sourceEvent.startTime).toLocaleDateString()}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Copy Options */}
+                            <div className="p-3">
+                              <h5 className="text-xs font-medium text-gray-700 mb-2">What to Copy:</h5>
+                              <div className="space-y-2">
+                                <label className="flex items-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={copySelectedParts.documents}
+                                    onChange={(e) => setCopySelectedParts(prev => ({
+                                      ...prev,
+                                      documents: e.target.checked
+                                    }))}
+                                    className="rounded border-gray-300 text-green-600 focus:ring-green-500 mr-2"
+                                  />
+                                  <span className="text-xs text-gray-700">Documents</span>
+                                </label>
+                                <label className="flex items-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={copySelectedParts.serviceParts}
+                                    onChange={(e) => setCopySelectedParts(prev => ({
+                                      ...prev,
+                                      serviceParts: e.target.checked
+                                    }))}
+                                    className="rounded border-gray-300 text-green-600 focus:ring-green-500 mr-2"
+                                  />
+                                  <span className="text-xs text-gray-700">Service Parts & Music</span>
+                                </label>
+                                <label className="flex items-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={copySelectedParts.groups}
+                                    onChange={(e) => setCopySelectedParts(prev => ({
+                                      ...prev,
+                                      groups: e.target.checked
+                                    }))}
+                                    className="rounded border-gray-300 text-green-600 focus:ring-green-500 mr-2"
+                                  />
+                                  <span className="text-xs text-gray-700">Groups</span>
+                                </label>
+                                <label className="flex items-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={copySelectedParts.musicians}
+                                    onChange={(e) => setCopySelectedParts(prev => ({
+                                      ...prev,
+                                      musicians: e.target.checked
+                                    }))}
+                                    className="rounded border-gray-300 text-green-600 focus:ring-green-500 mr-2"
+                                  />
+                                  <span className="text-xs text-gray-700">Musicians & Roles</span>
+                                </label>
+                              </div>
+
+                              {/* Action Buttons */}
+                              <div className="flex gap-2 mt-3 pt-2 border-t border-green-200">
+                                <button
+                                  onClick={() => {
+                                    setShowCopyDropdown(null)
+                                    setCopySourceEvent(null)
+                                  }}
+                                  className="flex-1 px-3 py-1.5 text-xs text-gray-600 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    // Copy logic will be handled by individual event buttons above
+                                    // This is just a placeholder - actual copy happens when selecting an event
+                                  }}
+                                  disabled={Object.values(copySelectedParts).every(v => !v)}
+                                  className="flex-1 px-3 py-1.5 text-xs text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed rounded transition-colors"
+                                >
+                                  Ready to Copy
+                                </button>
+                              </div>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -3041,6 +3398,13 @@ export default function EventPlannerPage() {
                                                              {/* Edit and Delete buttons */}
                                <div className="flex items-center gap-1">
                                  <button
+                                   onClick={() => handleCopyEvent(event)}
+                                   className="p-1 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-md transition-colors"
+                                   title="Copy from another event"
+                                 >
+                                   <Copy className="w-3 h-3" />
+                                 </button>
+                                 <button
                                    onClick={() => handleEditEvent(event)}
                                    className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
                                    title="Edit event"
@@ -3065,7 +3429,52 @@ export default function EventPlannerPage() {
                               {new Date(event.startTime).toLocaleDateString()} at{' '}
                               {formatEventTimeForDisplay(event.startTime)}
                             </p>
-                            <p className="text-xs text-gray-500">{event.location}</p>
+                            <p className="text-xs text-gray-500 mb-1">{event.location}</p>
+                            
+                            {/* Event Description with inline editing - Mobile */}
+                            <div className="mt-1">
+                              {editingDescription === event.id ? (
+                                <div className="flex items-center gap-1">
+                                  <input
+                                    type="text"
+                                    value={tempDescription}
+                                    onChange={(e) => setTempDescription(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        handleSaveDescription(event.id)
+                                      } else if (e.key === 'Escape') {
+                                        handleCancelDescriptionEdit()
+                                      }
+                                    }}
+                                    className="text-xs text-gray-600 bg-white border border-gray-300 rounded px-1 py-0.5 flex-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    placeholder="Add description..."
+                                    autoFocus
+                                  />
+                                  <button
+                                    onClick={() => handleSaveDescription(event.id)}
+                                    className="p-0.5 text-green-600 hover:bg-green-50 rounded"
+                                    title="Save description"
+                                  >
+                                    <Check className="w-3 h-3" />
+                                  </button>
+                                  <button
+                                    onClick={handleCancelDescriptionEdit}
+                                    className="p-0.5 text-gray-400 hover:bg-gray-50 rounded"
+                                    title="Cancel"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <p 
+                                  className="text-xs text-gray-600 cursor-pointer hover:bg-gray-100 rounded px-1 py-0.5 -mx-1"
+                                  onClick={() => handleEditDescription(event.id, event.description || '')}
+                                  title="Click to edit description"
+                                >
+                                  {event.description || 'No Description'}
+                                </p>
+                              )}
+                            </div>
                             
                             {/* Action Buttons */}
                             <div className="mt-3">
