@@ -194,23 +194,21 @@ export function CreateRecurringEventModal({
         eventEndDateLocal: eventEndDate?.toString()
       })
       
-      // Fix timezone issue: Convert UTC time back to user's local timezone for display
-      // The stored time is in UTC, but we need to show it in the user's timezone
-      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
-      
-      // Proper timezone conversion: adjust for the timezone offset
-      const timezoneOffsetMinutes = eventDate.getTimezoneOffset()
-      console.log('🕐 Timezone offset details:', {
-        timezoneOffsetMinutes,
-        offsetHours: timezoneOffsetMinutes / 60,
-        eventDateUTC: eventDate.getUTCHours(),
-        eventDateLocal: eventDate.getHours()
+      console.log('🕐 FIXED: Using direct time values without broken timezone conversion:', {
+        eventDateLocal: eventDate.toString(),
+        eventEndDateLocal: eventEndDate?.toString(),
+        directTimeExtraction: {
+          hours: eventDate.getHours(),
+          minutes: eventDate.getMinutes(),
+          date: eventDate.getDate(),
+          month: eventDate.getMonth() + 1,
+          year: eventDate.getFullYear()
+        }
       })
       
-      // Create local dates by adjusting for timezone
-      // If UTC time is 10:00 and user is in UTC-5, we want to show 10:00 local (not 5:00)
-      const localStartDate = new Date(eventDate.getTime() + (timezoneOffsetMinutes * 60000))
-      const localEndDate = eventEndDate ? new Date(eventEndDate.getTime() + (timezoneOffsetMinutes * 60000)) : null
+      // Use the date objects directly - no timezone conversion needed
+      const localStartDate = eventDate
+      const localEndDate = eventEndDate
       
       // Format time properly for input field (HH:MM format)
       const formatTimeForInput = (date: Date) => {
@@ -230,15 +228,13 @@ export function CreateRecurringEventModal({
       const formattedStartTime = formatTimeForInput(localStartDate)
       const formattedStartDate = formatDateForInput(localStartDate)
       
-      console.log('🕐 FINAL Time conversion debug:', {
+      console.log('🕐 FINAL Time conversion debug (FIXED):', {
         originalStartTime: editingEvent.startTime,
-        userTimezone,
-        eventDateUTC: eventDate.toISOString(),
+        eventDateLocal: eventDate.toString(),
         localStartDate: localStartDate.toISOString(),
         formattedTime: formattedStartTime,
         formattedDate: formattedStartDate,
-        timezoneOffset: eventDate.getTimezoneOffset(),
-        expectedLocalHour: localStartDate.getHours()
+        directHour: localStartDate.getHours()
       })
       
       setFormData({
