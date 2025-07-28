@@ -49,6 +49,7 @@ export async function POST(request: NextRequest) {
     }
 
     const copyResults = {
+      documents: 0,
       serviceParts: 0,
       groups: 0,
       musicians: 0
@@ -57,12 +58,11 @@ export async function POST(request: NextRequest) {
     // Copy service parts (hymns)
     if (parts.includes('serviceParts') && sourceEvent.hymns?.length > 0) {
       // Get unique service part IDs from source hymns
-      const sourceServicePartIds = [...new Set(
-        sourceEvent.hymns
-          .filter(h => h.servicePartId)
-          .map(h => h.servicePartId)
-          .filter((id): id is string => id !== null)
-      )]
+      const servicePartIds = sourceEvent.hymns
+        .filter(h => h.servicePartId)
+        .map(h => h.servicePartId)
+        .filter((id): id is string => id !== null)
+      const sourceServicePartIds = Array.from(new Set(servicePartIds))
 
       // Remove any existing hymns in target event that have the same service part IDs
       // This ensures no duplicates - preference given to the ones being copied
@@ -77,20 +77,48 @@ export async function POST(request: NextRequest) {
         })
       }
 
-      // Now add the new hymns from source
-      for (const hymn of sourceEvent.hymns) {
+      // Now add the new hymns from source, preserving order
+      for (let i = 0; i < sourceEvent.hymns.length; i++) {
+        const hymn = sourceEvent.hymns[i]
         try {
           await prisma.eventHymn.create({
             data: {
               eventId: targetEventId,
               title: hymn.title,
               notes: hymn.notes || null,
-              servicePartId: hymn.servicePartId
+              servicePartId: hymn.servicePartId,
+              // Use a timestamp offset to preserve order
+              createdAt: new Date(Date.now() + i)
             }
           })
           copyResults.serviceParts++
         } catch (error) {
           console.error('Error copying hymn:', error)
+        }
+      }
+    }
+
+    // Copy documents
+    if (parts.includes('documents') && sourceEvent.documents?.length > 0) {
+      for (const doc of sourceEvent.documents) {
+        try {
+          // Create a copy of the document record for the target event
+          await prisma.eventDocument.create({
+            data: {
+              eventId: targetEventId,
+              filename: doc.filename,
+              originalFilename: doc.originalFilename,
+              filePath: doc.filePath,
+              fileSize: doc.fileSize,
+              mimeType: doc.mimeType,
+              uploadedBy: session.user.id, // Current user becomes the uploader
+              aiProcessed: doc.aiProcessed || false,
+              aiResults: doc.aiResults || undefined
+            }
+          })
+          copyResults.documents++
+        } catch (error) {
+          console.error('Error copying document:', error)
         }
       }
     }
@@ -120,10 +148,11 @@ export async function POST(request: NextRequest) {
             await prisma.eventAssignment.create({
               data: {
                 eventId: targetEventId,
-                roleName: assignment.roleName,
-                groupId: assignment.groupId,
-                userId: assignment.userId,
-                maxMusicians: assignment.maxMusicians,
+                roleName: assignment.roleName || null,
+                groupId: assignment.groupId || null,
+                userId: assignment.userId || null,
+                maxMusicians: assignment.maxMusicians || null,
+                customRoleId: assignment.customRoleId || null,
                 status: 'PENDING'
               }
             })
