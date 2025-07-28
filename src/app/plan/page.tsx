@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { 
   Plus, Calendar, Clock, MapPin, User, Music, Users, Trash2, 
   Edit, Save, X, Search, Filter, ChevronDown, Download, 
@@ -348,8 +349,18 @@ function ToastContainer({ toasts, removeToast }: { toasts: ToastMessage[], remov
 
 export default function EventPlannerPage() {
   const { data: session } = useSession()
+  const router = useRouter()
   const [data, setData] = useState<EventPlannerData | null>(null)
   const [loading, setLoading] = useState(true)
+
+  // CRITICAL SECURITY: Redirect musicians away from plan page
+  useEffect(() => {
+    if (session?.user?.role && !['DIRECTOR', 'PASTOR', 'ASSOCIATE_DIRECTOR'].includes(session.user.role)) {
+      console.warn('🚫 SECURITY: Musician attempted to access plan page, redirecting to calendar')
+      router.push('/calendar')
+      return
+    }
+  }, [session?.user?.role, router])
   const [visibleServiceParts, setVisibleServiceParts] = useState<Set<string>>(new Set())
   const [visibleEventColors, setVisibleEventColors] = useState<Set<string>>(new Set())
 

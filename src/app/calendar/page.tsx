@@ -428,9 +428,18 @@ export default function CalendarPage() {
   }
 
   const handleEventClick = (event: CalendarEvent) => {
-    console.log('🎯 Event clicked:', event.name)
-    // Navigate to plan page where users can view and edit event details
-    router.push('/plan')
+    console.log('🎯 Event clicked:', event.name, 'User role:', session?.user?.role)
+    
+    // Role-based navigation: ONLY directors/pastors can access plan page
+    if (session?.user?.role === 'DIRECTOR' || session?.user?.role === 'PASTOR' || session?.user?.role === 'ASSOCIATE_DIRECTOR') {
+      // Directors get the plan page for full event management
+      router.push('/plan')
+    } else {
+      // Musicians get the event details modal (read-only view)
+      setSelectedEvent(event)
+      setShowEventDetails(true)
+      setIsEditingEvent(false) // Ensure musicians can't edit
+    }
   }
 
   const handleDateClick = (day: number, e: React.MouseEvent) => {
