@@ -2415,6 +2415,12 @@ export default function EventPlannerPage() {
   const handleCopySubmit = async () => {
     if (!copyTargetEvent || !selectedSourceEventId) return
     
+    // Check if trying to copy to the same event
+    if (selectedSourceEventId === copyTargetEvent.id) {
+      showToast('error', 'Cannot copy from an event to itself')
+      return
+    }
+    
     const selectedParts = Object.entries(copySelectedParts)
       .filter(([_, selected]) => selected)
       .map(([part, _]) => part)

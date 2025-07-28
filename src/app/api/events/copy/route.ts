@@ -56,6 +56,28 @@ export async function POST(request: NextRequest) {
 
     // Copy service parts (hymns)
     if (parts.includes('serviceParts') && sourceEvent.hymns?.length > 0) {
+      // Get unique service part IDs from source hymns
+      const sourceServicePartIds = [...new Set(
+        sourceEvent.hymns
+          .filter(h => h.servicePartId)
+          .map(h => h.servicePartId)
+          .filter((id): id is string => id !== null)
+      )]
+
+      // Remove any existing hymns in target event that have the same service part IDs
+      // This ensures no duplicates - preference given to the ones being copied
+      if (sourceServicePartIds.length > 0) {
+        await prisma.eventHymn.deleteMany({
+          where: {
+            eventId: targetEventId,
+            servicePartId: {
+              in: sourceServicePartIds
+            }
+          }
+        })
+      }
+
+      // Now add the new hymns from source
       for (const hymn of sourceEvent.hymns) {
         try {
           await prisma.eventHymn.create({
