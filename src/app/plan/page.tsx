@@ -455,7 +455,8 @@ export default function EventPlannerPage() {
 
   // Copy event state
   const [showCopyDropdown, setShowCopyDropdown] = useState<string | null>(null)
-  const [copySourceEvent, setCopySourceEvent] = useState<Event | null>(null)
+  const [copyTargetEvent, setCopyTargetEvent] = useState<Event | null>(null)
+  const [selectedSourceEventId, setSelectedSourceEventId] = useState<string | null>(null)
   const [copySelectedParts, setCopySelectedParts] = useState<{
     documents: boolean
     serviceParts: boolean
@@ -2370,8 +2371,9 @@ export default function EventPlannerPage() {
 
   // Copy event functionality
   const handleCopyEvent = (targetEvent: Event) => {
-    setCopySourceEvent(targetEvent)
+    setCopyTargetEvent(targetEvent)
     setShowCopyDropdown(targetEvent.id)
+    setSelectedSourceEventId(null)
     // Reset copy selection
     setCopySelectedParts({
       documents: false,
@@ -2406,8 +2408,12 @@ export default function EventPlannerPage() {
     })
   }
 
-  const handleCopyFromEvent = async (sourceEventId: string) => {
-    if (!copySourceEvent) return
+  const handleSelectSourceEvent = (sourceEventId: string) => {
+    setSelectedSourceEventId(sourceEventId)
+  }
+
+  const handleCopySubmit = async () => {
+    if (!copyTargetEvent || !selectedSourceEventId) return
     
     const selectedParts = Object.entries(copySelectedParts)
       .filter(([_, selected]) => selected)
@@ -2423,8 +2429,8 @@ export default function EventPlannerPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sourceEventId,
-          targetEventId: copySourceEvent.id,
+          sourceEventId: selectedSourceEventId,  // Event we're copying FROM
+          targetEventId: copyTargetEvent.id,     // Event we're copying TO
           parts: selectedParts
         })
       })
@@ -2433,9 +2439,11 @@ export default function EventPlannerPage() {
         throw new Error('Failed to copy event parts')
       }
 
-      showToast('success', `Successfully copied ${selectedParts.join(', ')} to event`)
+      const sourceEventName = getSortedEventsForCopy(copyTargetEvent).find(e => e.id === selectedSourceEventId)?.name || 'source event'
+      showToast('success', `Successfully copied ${selectedParts.join(', ')} from "${sourceEventName}" to "${copyTargetEvent.name}"`)
       setShowCopyDropdown(null)
-      setCopySourceEvent(null)
+      setCopyTargetEvent(null)
+      setSelectedSourceEventId(null)
       fetchPlannerData() // Refresh to show copied data
     } catch (error) {
       console.error('Error copying event parts:', error)
@@ -2451,13 +2459,31 @@ export default function EventPlannerPage() {
 
   const handleSaveDescription = async (eventId: string) => {
     try {
+      // Find the current event to get its complete data
+      const currentEvent = data?.events.find(e => e.id === eventId)
+      if (!currentEvent) {
+        throw new Error('Event not found')
+      }
+
+      // Send complete event data with updated description
       const response = await fetch(`/api/events/${eventId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description: tempDescription })
+        body: JSON.stringify({
+          name: currentEvent.name,
+          description: tempDescription,
+          location: currentEvent.location,
+          startDate: new Date(currentEvent.startTime).toISOString().split('T')[0],
+          startTime: new Date(currentEvent.startTime).toTimeString().slice(0, 5),
+          endTime: currentEvent.endTime ? new Date(currentEvent.endTime).toTimeString().slice(0, 5) : '',
+          status: currentEvent.status,
+          eventTypeId: currentEvent.eventType.id
+        })
       })
 
       if (!response.ok) {
+        const errorData = await response.text()
+        console.error('API Error:', errorData)
         throw new Error('Failed to update description')
       }
 
@@ -2836,8 +2862,12 @@ export default function EventPlannerPage() {
                                 {getSortedEventsForCopy(event).map((sourceEvent) => (
                                   <button
                                     key={sourceEvent.id}
-                                    onClick={() => handleCopyFromEvent(sourceEvent.id)}
-                                    className="w-full text-left p-2 rounded border border-gray-200 bg-white hover:bg-gray-50 transition-colors"
+                                    onClick={() => handleSelectSourceEvent(sourceEvent.id)}
+                                    className={`w-full text-left p-2 rounded border transition-colors ${
+                                      selectedSourceEventId === sourceEvent.id 
+                                        ? 'border-green-500 bg-green-50' 
+                                        : 'border-gray-200 bg-white hover:bg-gray-50'
+                                    }`}
                                   >
                                     <div className="flex items-center gap-2">
                                       <div 
@@ -2917,21 +2947,19 @@ export default function EventPlannerPage() {
                                 <button
                                   onClick={() => {
                                     setShowCopyDropdown(null)
-                                    setCopySourceEvent(null)
+                                    setCopyTargetEvent(null)
+                                    setSelectedSourceEventId(null)
                                   }}
                                   className="flex-1 px-3 py-1.5 text-xs text-gray-600 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
                                 >
                                   Cancel
                                 </button>
                                 <button
-                                  onClick={() => {
-                                    // Copy logic will be handled by individual event buttons above
-                                    // This is just a placeholder - actual copy happens when selecting an event
-                                  }}
-                                  disabled={Object.values(copySelectedParts).every(v => !v)}
+                                  onClick={handleCopySubmit}
+                                  disabled={Object.values(copySelectedParts).every(v => !v) || !selectedSourceEventId}
                                   className="flex-1 px-3 py-1.5 text-xs text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed rounded transition-colors"
                                 >
-                                  Ready to Copy
+                                  Copy Now
                                 </button>
                               </div>
                             </div>

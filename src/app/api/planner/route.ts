@@ -87,6 +87,7 @@ export async function GET(request: NextRequest) {
       events: events.map((event: any) => ({
         id: event.id,
         name: event.name,
+        description: event.description,
         startTime: event.startTime.toISOString(),
         endTime: event.endTime?.toISOString(),
         location: event.location || '',
