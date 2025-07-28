@@ -2514,6 +2514,52 @@ export default function EventPlannerPage() {
     setTempDescription('')
   }
 
+  // Clear all service parts for an event
+  const handleClearAllServiceParts = async (eventId: string) => {
+    const confirmed = window.confirm('Are you sure you want to clear all service parts for this event? This action cannot be undone.')
+    
+    if (!confirmed) return
+
+    try {
+      // Get current event hymns
+      const currentEvent = data?.events.find(e => e.id === eventId)
+      const existingHymns = currentEvent?.hymns || []
+
+      if (existingHymns.length === 0) {
+        showToast('error', 'No service parts to clear')
+        return
+      }
+
+      const response = await fetch(`/api/events/${eventId}/hymns`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hymns: [] }) // Empty array to clear all
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to clear service parts')
+      }
+
+      // Update local state
+      setData(prev => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          events: prev.events.map(event => 
+            event.id === eventId 
+              ? { ...event, hymns: [] }
+              : event
+          )
+        }
+      })
+
+      showToast('success', `Cleared ${existingHymns.length} service parts`)
+    } catch (error) {
+      console.error('Error clearing service parts:', error)
+      showToast('error', 'Failed to clear service parts')
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -2969,9 +3015,18 @@ export default function EventPlannerPage() {
 
                       {/* Service Parts Header */}
                       <div className="border-t border-gray-200">
-                        <div className="border-b border-gray-100 p-3 min-h-[30px] bg-gray-50">
+                        <div className="border-b border-gray-100 p-3 min-h-[30px] bg-gray-50 group">
                           <div className="flex items-center justify-between">
-                            <div className="text-xs text-black font-bold">Service Parts</div>
+                            <div className="flex items-center gap-2">
+                              <div className="text-xs text-black font-bold">Service Parts</div>
+                              <button
+                                onClick={() => handleClearAllServiceParts(event.id)}
+                                className="text-xs text-red-600 hover:text-red-800 hover:bg-red-50 px-2 py-1 rounded transition-colors opacity-0 group-hover:opacity-100"
+                                title="Clear all service parts"
+                              >
+                                Clear
+                              </button>
+                            </div>
                             <button
                               onClick={() => toggleServicePartsDropdown(event.id)}
                               className="text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
@@ -3547,9 +3602,18 @@ export default function EventPlannerPage() {
 
                           {/* Service Parts Header - Mobile */}
                           <div className="border-t border-gray-200">
-                            <div className="border-b border-gray-100 p-3 min-h-[30px] bg-gray-50">
+                            <div className="border-b border-gray-100 p-3 min-h-[30px] bg-gray-50 group">
                               <div className="flex items-center justify-between">
-                                <div className="text-xs text-black font-bold">Service Parts</div>
+                                <div className="flex items-center gap-2">
+                                  <div className="text-xs text-black font-bold">Service Parts</div>
+                                  <button
+                                    onClick={() => handleClearAllServiceParts(event.id)}
+                                    className="text-xs text-red-600 hover:text-red-800 hover:bg-red-50 px-2 py-1 rounded transition-colors opacity-0 group-hover:opacity-100"
+                                    title="Clear all service parts"
+                                  >
+                                    Clear
+                                  </button>
+                                </div>
                                 <button
                                   onClick={() => toggleServicePartsDropdown(event.id)}
                                   className="text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
