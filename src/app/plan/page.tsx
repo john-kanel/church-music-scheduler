@@ -3623,13 +3623,12 @@ export default function EventPlannerPage() {
                     <div className="flex-shrink-0 w-80 border-r border-gray-200 bg-gray-50 flex items-center justify-center min-h-screen">
                       <button
                         onClick={loadMoreEvents}
-                        className="flex flex-col items-center gap-3 px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-lg"
+                        className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-lg"
                       >
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                         </svg>
                         <span className="font-medium">See More</span>
-                        <span className="text-xs opacity-90">Load 30 more events</span>
                       </button>
                     </div>
                   )}
