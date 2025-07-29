@@ -1301,7 +1301,8 @@ export default function EventPlannerPage() {
                   if (!prev || !matchingPart) return prev
                   return {
                     ...prev,
-                    serviceParts: [...prev.serviceParts, matchingPart].sort((a, b) => (a?.order || 0) - (b?.order || 0))
+                    // FIXED: DO NOT auto-sort when adding new service parts - preserve user order
+                    serviceParts: [...prev.serviceParts, matchingPart]
                   }
                 })
               }
@@ -1564,10 +1565,10 @@ export default function EventPlannerPage() {
         .filter(Boolean) as ServicePart[]
     }
     
-    // Use default global order, but only show parts with hymns
+    // FIXED: DO NOT auto-sort - preserve the order as the user left it
+    // Only filter by visibility, but maintain the original order from the event
     return servicePartsWithHymns
       .filter(sp => visibleServiceParts.has(sp.id))
-      .sort((a, b) => a.order - b.order)
   }
 
   // Helper function to get hymns without service parts for a specific event  
