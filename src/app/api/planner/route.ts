@@ -21,6 +21,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No church found' }, { status: 404 })
     }
 
+    // Get pagination parameters from query string
+    const { searchParams } = new URL(request.url)
+    const offset = parseInt(searchParams.get('offset') || '0')
+    const limit = parseInt(searchParams.get('limit') || '20')
+
     // Fetch service parts in the order they're configured
     const serviceParts = await prisma.servicePart.findMany({
       where: { churchId: user.church.id },
@@ -33,7 +38,7 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Fetch upcoming events (limit to first 20 as requested)
+    // Fetch upcoming events with pagination
     const now = new Date()
     const events = await prisma.event.findMany({
       where: {
@@ -43,7 +48,8 @@ export async function GET(request: NextRequest) {
         }
       },
       orderBy: { startTime: 'asc' },
-      take: 20,
+      skip: offset,
+      take: limit,
       include: {
         eventType: {
           select: {
@@ -81,6 +87,16 @@ export async function GET(request: NextRequest) {
       }
     })
 
+    // Get total count for pagination
+    const totalEvents = await prisma.event.count({
+      where: {
+        churchId: user.church.id,
+        startTime: {
+          gte: now
+        }
+      }
+    })
+
     // Transform the data for the frontend
     const plannerData = {
       serviceParts,
@@ -95,7 +111,13 @@ export async function GET(request: NextRequest) {
         eventType: event.eventType,
         hymns: event.hymns,
         assignments: event.assignments
-      }))
+      })),
+      pagination: {
+        offset,
+        limit,
+        total: totalEvents,
+        hasMore: offset + limit < totalEvents
+      }
     }
 
     return NextResponse.json(plannerData)

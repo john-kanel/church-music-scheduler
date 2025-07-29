@@ -354,6 +354,12 @@ interface Event {
 interface EventPlannerData {
   serviceParts: ServicePart[]
   events: Event[]
+  pagination?: {
+    offset: number
+    limit: number
+    total: number
+    hasMore: boolean
+  }
 }
 
 // Toast Container Component
@@ -414,6 +420,10 @@ export default function EventPlannerPage() {
   const router = useRouter()
   const [data, setData] = useState<EventPlannerData | null>(null)
   const [loading, setLoading] = useState(true)
+  
+  // Infinite scroll state
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const eventsContainerRef = useRef<HTMLDivElement>(null)
 
   // CRITICAL SECURITY: Redirect musicians away from plan page
   useEffect(() => {
@@ -672,10 +682,13 @@ export default function EventPlannerPage() {
     }
   }
 
-  const fetchPlannerData = async () => {
+  const fetchPlannerData = async (appendMode = false) => {
     try {
-      setLoading(true)
-      const response = await fetch('/api/planner')
+      if (!appendMode) setLoading(true)
+      if (appendMode) setIsLoadingMore(true)
+      
+      const offset = appendMode ? (data?.events.length || 0) : 0
+      const response = await fetch(`/api/planner?offset=${offset}&limit=20`)
       if (response.ok) {
         const plannerData = await response.json()
         
@@ -710,7 +723,18 @@ export default function EventPlannerPage() {
           events: eventsWithDocuments
         }
         
-        setData(updatedPlannerData)
+        setData(prevData => {
+          if (appendMode && prevData) {
+            // Append new events to existing data
+            return {
+              ...updatedPlannerData,
+              events: [...prevData.events, ...eventsWithDocuments]
+            }
+          } else {
+            // Replace all data (initial load)
+            return updatedPlannerData
+          }
+        })
         
         // Only set initial filter state if not already set from localStorage
         setVisibleServiceParts(prev => {
@@ -741,9 +765,36 @@ export default function EventPlannerPage() {
     } catch (error) {
       console.error('Error fetching planner data:', error)
     } finally {
-      setLoading(false)
+      if (!appendMode) setLoading(false)
+      if (appendMode) setIsLoadingMore(false)
     }
   }
+
+  // Load more events when scrolling to the end
+  const loadMoreEvents = () => {
+    if (isLoadingMore || !data?.pagination?.hasMore) return
+    fetchPlannerData(true)
+  }
+
+  // Scroll detection for infinite scroll
+  useEffect(() => {
+    const container = eventsContainerRef.current
+    if (!container) return
+
+    const handleScroll = () => {
+      const scrollLeft = container.scrollLeft
+      const scrollWidth = container.scrollWidth
+      const clientWidth = container.clientWidth
+      
+      // Check if user is within 100px of the end
+      if (scrollLeft + clientWidth >= scrollWidth - 100) {
+        loadMoreEvents()
+      }
+    }
+
+    container.addEventListener('scroll', handleScroll)
+    return () => container.removeEventListener('scroll', handleScroll)
+  }, [isLoadingMore, data?.pagination?.hasMore])
 
   const fetchMusicians = async () => {
     try {
@@ -2875,7 +2926,7 @@ export default function EventPlannerPage() {
               {/* Desktop: Horizontal scroll, Mobile: Single column */}
               <div className="h-full">
                 {/* Desktop View */}
-                <div className="hidden lg:flex h-full">
+                <div ref={eventsContainerRef} className="hidden lg:flex h-full">
                   {filteredEvents.map(event => (
                     <div key={event.id} className="flex-shrink-0 w-80 border-r border-gray-200 bg-white relative">
                       {/* Event Header */}
@@ -3585,6 +3636,26 @@ export default function EventPlannerPage() {
                       </div>
                     </div>
                   ))}
+                  
+                  {/* Loading more indicator */}
+                  {isLoadingMore && (
+                    <div className="flex-shrink-0 w-80 border-r border-gray-200 bg-white flex items-center justify-center">
+                      <div className="text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                        <p className="text-gray-600 text-sm">Loading more events...</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* End of events indicator */}
+                  {!isLoadingMore && data?.pagination && !data.pagination.hasMore && (
+                    <div className="flex-shrink-0 w-80 border-r border-gray-200 bg-gray-50 flex items-center justify-center">
+                      <div className="text-center text-gray-500">
+                        <p className="text-sm">No more events</p>
+                        <p className="text-xs">You've reached the end</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Mobile View - Single Column */}
