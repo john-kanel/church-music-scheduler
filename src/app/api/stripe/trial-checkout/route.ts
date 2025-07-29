@@ -6,6 +6,7 @@ export async function POST(req: NextRequest) {
     const { 
       email, 
       name, 
+      phone,
       password,
       churchName, 
       role, 
@@ -71,6 +72,7 @@ export async function POST(req: NextRequest) {
           signupData: JSON.stringify({
             name,
             email,
+            phone: phone || null,
             password,
             churchName,
             role,

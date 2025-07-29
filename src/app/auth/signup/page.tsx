@@ -12,6 +12,7 @@ function SignUpForm() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    phone: '',
     password: '',
     confirmPassword: '',
     churchName: '',
@@ -81,6 +82,7 @@ function SignUpForm() {
         body: JSON.stringify({
           name: formData.name,
           email: formData.email,
+          phone: formData.phone,
           password: formData.password,
           churchName: formData.churchName,
           role: formData.role,
@@ -158,6 +160,24 @@ function SignUpForm() {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent text-gray-900"
               placeholder="your.email@church.org"
             />
+          </div>
+
+          <div>
+            <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+              Phone Number (Optional)
+            </label>
+            <input
+              type="tel"
+              id="phone"
+              name="phone"
+              value={formData.phone}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent text-gray-900"
+              placeholder="(555) 123-4567"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              📱 Used for text message notifications and musician contact info
+            </p>
           </div>
 
           <div>
