@@ -421,9 +421,8 @@ export default function EventPlannerPage() {
   const [data, setData] = useState<EventPlannerData | null>(null)
   const [loading, setLoading] = useState(true)
   
-  // Infinite scroll state
+  // Load more state
   const [isLoadingMore, setIsLoadingMore] = useState(false)
-  const eventsContainerRef = useRef<HTMLDivElement>(null)
 
   // CRITICAL SECURITY: Redirect musicians away from plan page
   useEffect(() => {
@@ -688,17 +687,11 @@ export default function EventPlannerPage() {
       if (appendMode) setIsLoadingMore(true)
       
       const offset = appendMode ? (data?.events.length || 0) : 0
-      console.log(`🌐 Fetching planner data: offset=${offset}, limit=20, appendMode=${appendMode}`)
+      const limit = appendMode ? 30 : 20  // Load 30 more events when "See more" is clicked
       
-      const response = await fetch(`/api/planner?offset=${offset}&limit=20`)
+      const response = await fetch(`/api/planner?offset=${offset}&limit=${limit}`)
       if (response.ok) {
         const plannerData = await response.json()
-        
-        console.log('📦 Received planner data:', {
-          eventsReceived: plannerData.events.length,
-          pagination: plannerData.pagination,
-          appendMode
-        })
         
         // Fetch documents for each event
         const eventsWithDocuments = await Promise.all(
@@ -778,57 +771,11 @@ export default function EventPlannerPage() {
     }
   }
 
-  // Load more events when scrolling to the end
+  // Load more events when "See more" button is clicked
   const loadMoreEvents = () => {
-    console.log('📞 loadMoreEvents called:', {
-      isLoadingMore,
-      hasMore: data?.pagination?.hasMore,
-      pagination: data?.pagination,
-      currentEventCount: data?.events.length
-    })
-    
-    if (isLoadingMore || !data?.pagination?.hasMore) {
-      console.log('❌ Not loading more events because:', {
-        isLoadingMore,
-        hasMore: data?.pagination?.hasMore
-      })
-      return
-    }
-    
-    console.log('✅ Calling fetchPlannerData(true)...')
+    if (isLoadingMore || !data?.pagination?.hasMore) return
     fetchPlannerData(true)
   }
-
-  // Scroll detection for infinite scroll
-  useEffect(() => {
-    const container = eventsContainerRef.current
-    if (!container) return
-
-    const handleScroll = () => {
-      const scrollLeft = container.scrollLeft
-      const scrollWidth = container.scrollWidth
-      const clientWidth = container.clientWidth
-      
-      console.log('🔄 Scroll detected:', {
-        scrollLeft,
-        scrollWidth,
-        clientWidth,
-        isNearEnd: scrollLeft + clientWidth >= scrollWidth - 100,
-        hasMore: data?.pagination?.hasMore,
-        isLoadingMore,
-        totalEvents: data?.events.length
-      })
-      
-      // Check if user is within 100px of the end
-      if (scrollLeft + clientWidth >= scrollWidth - 100) {
-        console.log('🚀 Triggering loadMoreEvents...')
-        loadMoreEvents()
-      }
-    }
-
-    container.addEventListener('scroll', handleScroll)
-    return () => container.removeEventListener('scroll', handleScroll)
-  }, [isLoadingMore, data?.pagination?.hasMore])
 
   const fetchMusicians = async () => {
     try {
@@ -2960,7 +2907,7 @@ export default function EventPlannerPage() {
               {/* Desktop: Horizontal scroll, Mobile: Single column */}
               <div className="h-full">
                 {/* Desktop View */}
-                <div ref={eventsContainerRef} className="hidden lg:flex h-full">
+                <div className="hidden lg:flex h-full">
                   {filteredEvents.map(event => (
                     <div key={event.id} className="flex-shrink-0 w-80 border-r border-gray-200 bg-white relative">
                       {/* Event Header */}
@@ -3671,21 +3618,37 @@ export default function EventPlannerPage() {
                     </div>
                   ))}
                   
+                  {/* See More button */}
+                  {data?.pagination?.hasMore && !isLoadingMore && (
+                    <div className="flex-shrink-0 w-80 border-r border-gray-200 bg-gray-50 flex items-center justify-center min-h-screen">
+                      <button
+                        onClick={loadMoreEvents}
+                        className="flex flex-col items-center gap-3 px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-lg"
+                      >
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        <span className="font-medium">See More</span>
+                        <span className="text-xs opacity-90">Load 30 more events</span>
+                      </button>
+                    </div>
+                  )}
+                  
                   {/* Loading more indicator */}
                   {isLoadingMore && (
-                    <div className="flex-shrink-0 w-80 border-r border-gray-200 bg-white flex items-center justify-center">
+                    <div className="flex-shrink-0 w-80 border-r border-gray-200 bg-white flex items-center justify-center min-h-screen">
                       <div className="text-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                        <p className="text-gray-600 text-sm">Loading more events...</p>
+                        <p className="text-gray-600 text-sm">Loading 30 more events...</p>
                       </div>
                     </div>
                   )}
                   
                   {/* End of events indicator */}
                   {!isLoadingMore && data?.pagination && !data.pagination.hasMore && (
-                    <div className="flex-shrink-0 w-80 border-r border-gray-200 bg-gray-50 flex items-center justify-center">
+                    <div className="flex-shrink-0 w-80 border-r border-gray-200 bg-gray-50 flex items-center justify-center min-h-screen">
                       <div className="text-center text-gray-500">
-                        <p className="text-sm">No more events</p>
+                        <p className="text-sm font-medium">No more events</p>
                         <p className="text-xs">You've reached the end</p>
                       </div>
                     </div>
