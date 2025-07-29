@@ -12,6 +12,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const songTitle = searchParams.get('title')
+    const excludeEventId = searchParams.get('excludeEventId')
     
     if (!songTitle) {
       return NextResponse.json({ error: 'Song title is required' }, { status: 400 })
@@ -49,7 +50,12 @@ export async function GET(request: NextRequest) {
             churchId: session.user.churchId,
             startTime: {
               gte: sixtyDaysAgo
-            }
+            },
+            ...(excludeEventId && {
+              NOT: {
+                id: excludeEventId
+              }
+            })
           },
           OR: searchConditions
         },

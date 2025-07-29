@@ -65,7 +65,7 @@ interface SortableHymnItemProps {
   handleEditServicePart: (servicePart: ServicePart, eventId: string, e: React.MouseEvent) => void
   handleEditIndividualHymn: (hymn: any, eventId: string, e: React.MouseEvent) => void
   handleDeleteIndividualHymn: (hymnId: string, eventId: string) => void
-  handleSongHistoryClick: (hymnId: string, songTitle: string, e: React.MouseEvent) => void
+  handleSongHistoryClick: (hymnId: string, songTitle: string, currentEventId: string, e: React.MouseEvent) => void
   showingSongHistory: string | null
   songHistoryData: {[hymnId: string]: any[]}
   loadingSongHistory: string | null
@@ -197,7 +197,7 @@ function SortableHymnItem({
             {/* Song History Clock Icon - Show for all songs with titles */}
             {hymn.title && hymn.title.trim() && (
               <button
-                onClick={(e) => handleSongHistoryClick(hymn.id, hymn.title, e)}
+                onClick={(e) => handleSongHistoryClick(hymn.id, hymn.title, eventId, e)}
                 className="p-1 text-gray-400 hover:text-blue-600 transition-all"
                 title={`See when "${hymn.title}" was last played`}
                 disabled={loadingSongHistory === hymn.id}
@@ -278,14 +278,11 @@ function SortableHymnItem({
                         </span>
                       )}
                     </div>
-                    {history.servicePart && (
-                      <div className="text-blue-500 text-xs mt-1">
-                        Service part: {history.servicePart.name}
-                      </div>
-                    )}
-                    <div className="text-blue-400 text-xs mt-1">
-                      Similarity: {Math.round((history.similarityScore || 0) * 100)}%
-                    </div>
+                                         {history.servicePart && (
+                       <div className="text-blue-500 text-xs mt-1">
+                         Service part: {history.servicePart.name}
+                       </div>
+                     )}
                   </div>
                 ))}
               </div>
@@ -2602,7 +2599,7 @@ export default function EventPlannerPage() {
   }
 
   // Handle song history search
-  const handleSongHistoryClick = async (hymnId: string, songTitle: string, e: React.MouseEvent) => {
+  const handleSongHistoryClick = async (hymnId: string, songTitle: string, currentEventId: string, e: React.MouseEvent) => {
     e.stopPropagation()
     
     // If already showing this hymn's history, hide it
@@ -2620,7 +2617,7 @@ export default function EventPlannerPage() {
     // Fetch the history
     setLoadingSongHistory(hymnId)
     try {
-      const response = await fetch(`/api/song-history?title=${encodeURIComponent(songTitle)}`)
+      const response = await fetch(`/api/song-history?title=${encodeURIComponent(songTitle)}&excludeEventId=${currentEventId}`)
       if (!response.ok) {
         throw new Error('Failed to fetch song history')
       }
