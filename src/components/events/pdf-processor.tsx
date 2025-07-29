@@ -124,37 +124,67 @@ export default function PdfProcessor({ onSuggestionsAccepted, onClose, eventId, 
       return;
     }
 
+    console.log('🚨 DEBUG: Starting acceptSuggestionsAndAddDocument:', {
+      hasFile: !!file,
+      fileName: file?.name,
+      fileSize: file?.size,
+      eventId,
+      hasOnSuggestionsAcceptedAndSaveDocument: !!onSuggestionsAcceptedAndSaveDocument,
+      suggestionsCount: suggestions.length
+    });
+
     setSavingDocument(true);
     setError('');
 
     try {
       if (eventId) {
+        console.log('🚨 DEBUG: Processing existing event document save...');
+        
         // Existing event - add suggestions and save document
+        console.log('🚨 DEBUG: Adding suggestions to event...');
         onSuggestionsAccepted(suggestions);
 
         // Then save the document to the event
+        console.log('🚨 DEBUG: Creating FormData for document upload...');
         const formData = new FormData();
         formData.append('file', file);
 
+        console.log('🚨 DEBUG: Making API call to:', `/api/events/${eventId}/documents`);
         const response = await fetch(`/api/events/${eventId}/documents`, {
           method: 'POST',
           body: formData,
         });
 
+        console.log('🚨 DEBUG: API response received:', {
+          status: response.status,
+          statusText: response.statusText,
+          ok: response.ok,
+          headers: Object.fromEntries(response.headers.entries())
+        });
+
         if (!response.ok) {
-          const errorData = await response.json();
+          const errorData = await response.json().catch(() => ({ error: 'Failed to parse error response' }));
+          console.error('🚨 DEBUG: API error response:', errorData);
           throw new Error(errorData.error || 'Failed to save document');
         }
+
+        const successData = await response.json();
+        console.log('🚨 DEBUG: Document saved successfully:', successData);
+        
       } else if (onSuggestionsAcceptedAndSaveDocument) {
+        console.log('🚨 DEBUG: Processing new event with document...');
         // New event - trigger creation with document
         onSuggestionsAcceptedAndSaveDocument(suggestions, file);
       } else {
+        console.error('🚨 DEBUG: No valid save method available');
         throw new Error('Cannot save document: no event ID or creation callback provided');
       }
 
+      console.log('🚨 DEBUG: Document save process completed successfully');
       // Success - close the modal
       onClose();
     } catch (err) {
+      console.error('🚨 DEBUG: Document save failed:', err);
       setError(err instanceof Error ? err.message : 'Failed to save document to event');
       setSavingDocument(false);
     }
