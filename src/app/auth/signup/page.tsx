@@ -60,6 +60,11 @@ function SignUpForm() {
     setError('')
 
     // Validation
+    if (!formData.phone.trim()) {
+      setError('Phone number is required')
+      return
+    }
+
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match')
       return
@@ -164,7 +169,7 @@ function SignUpForm() {
 
           <div>
             <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-              Phone Number (Optional)
+              Phone Number
             </label>
             <input
               type="tel"
@@ -172,12 +177,10 @@ function SignUpForm() {
               name="phone"
               value={formData.phone}
               onChange={handleInputChange}
+              required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent text-gray-900"
               placeholder="(555) 123-4567"
             />
-            <p className="text-xs text-gray-500 mt-1">
-              📱 Used for text message notifications and musician contact info
-            </p>
           </div>
 
           <div>

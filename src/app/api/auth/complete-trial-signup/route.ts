@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
 
     const { name, email, phone, password, churchName, role, referralCode, smsOptIn } = signupData
 
-    if (!name || !email || !password || !churchName || !role) {
+    if (!name || !email || !phone || !password || !churchName || !role) {
       return NextResponse.json(
         { error: 'Missing required signup data' },
         { status: 400 }
@@ -175,7 +175,7 @@ export async function POST(request: NextRequest) {
           firstName: userFirstName,
           lastName: userLastName,
           email: email.toLowerCase().trim(),
-          phone: phone?.trim() || null,
+          phone: phone.trim(),
           password: hashedPassword,
           role: 'DIRECTOR',
           churchId: church.id,

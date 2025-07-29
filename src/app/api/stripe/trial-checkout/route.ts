@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
       smsOptIn 
     } = await req.json()
     
-    if (!email || !name || !password || !churchName || !role) {
+    if (!email || !name || !phone || !password || !churchName || !role) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
           signupData: JSON.stringify({
             name,
             email,
-            phone: phone || null,
+            phone: phone,
             password,
             churchName,
             role,
