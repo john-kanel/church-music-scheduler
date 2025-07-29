@@ -688,9 +688,17 @@ export default function EventPlannerPage() {
       if (appendMode) setIsLoadingMore(true)
       
       const offset = appendMode ? (data?.events.length || 0) : 0
+      console.log(`🌐 Fetching planner data: offset=${offset}, limit=20, appendMode=${appendMode}`)
+      
       const response = await fetch(`/api/planner?offset=${offset}&limit=20`)
       if (response.ok) {
         const plannerData = await response.json()
+        
+        console.log('📦 Received planner data:', {
+          eventsReceived: plannerData.events.length,
+          pagination: plannerData.pagination,
+          appendMode
+        })
         
         // Fetch documents for each event
         const eventsWithDocuments = await Promise.all(
@@ -772,7 +780,22 @@ export default function EventPlannerPage() {
 
   // Load more events when scrolling to the end
   const loadMoreEvents = () => {
-    if (isLoadingMore || !data?.pagination?.hasMore) return
+    console.log('📞 loadMoreEvents called:', {
+      isLoadingMore,
+      hasMore: data?.pagination?.hasMore,
+      pagination: data?.pagination,
+      currentEventCount: data?.events.length
+    })
+    
+    if (isLoadingMore || !data?.pagination?.hasMore) {
+      console.log('❌ Not loading more events because:', {
+        isLoadingMore,
+        hasMore: data?.pagination?.hasMore
+      })
+      return
+    }
+    
+    console.log('✅ Calling fetchPlannerData(true)...')
     fetchPlannerData(true)
   }
 
@@ -786,8 +809,19 @@ export default function EventPlannerPage() {
       const scrollWidth = container.scrollWidth
       const clientWidth = container.clientWidth
       
+      console.log('🔄 Scroll detected:', {
+        scrollLeft,
+        scrollWidth,
+        clientWidth,
+        isNearEnd: scrollLeft + clientWidth >= scrollWidth - 100,
+        hasMore: data?.pagination?.hasMore,
+        isLoadingMore,
+        totalEvents: data?.events.length
+      })
+      
       // Check if user is within 100px of the end
       if (scrollLeft + clientWidth >= scrollWidth - 100) {
+        console.log('🚀 Triggering loadMoreEvents...')
         loadMoreEvents()
       }
     }
