@@ -274,29 +274,38 @@ export function EventDetailsModal({
     
     if (currentEvent && isEditing) {
       console.log('🔧 Initializing editData from currentEvent:', currentEvent)
+      
+      // CRITICAL FIX: Use proper display formatting to show correct times
+      // Database times have been processed by timezone utils, so we need to reverse that for display
+      const { formatEventTimeForDisplay } = require('@/lib/timezone-utils')
+      
       const startDate = new Date(currentEvent.startTime)
       const endDate = currentEvent.endTime ? new Date(currentEvent.endTime) : null
       
-      console.log('🕐 FIXED: Using direct time values without timezone conversion:', {
+      // Apply timezone correction for display (reverses the storage conversion)
+      const timezoneOffsetMinutes = startDate.getTimezoneOffset()
+      const displayStartDate = new Date(startDate.getTime() + (timezoneOffsetMinutes * 60000))
+      const displayEndDate = endDate ? new Date(endDate.getTime() + (timezoneOffsetMinutes * 60000)) : null
+      
+      console.log('🕐 CRITICAL FIX: Using proper display conversion for edit modal:', {
         originalStartTime: currentEvent.startTime,
-        startDateLocal: startDate.toString(),
-        directTimeExtraction: {
-          hours: startDate.getHours(),
-          minutes: startDate.getMinutes(),
-          date: startDate.getDate(),
-          month: startDate.getMonth() + 1,
-          year: startDate.getFullYear()
+        rawDatabaseTime: startDate.toString(),
+        timezoneOffsetMinutes,
+        correctedDisplayTime: displayStartDate.toString(),
+        timeComparison: {
+          raw: `${startDate.getHours()}:${startDate.getMinutes().toString().padStart(2, '0')}`,
+          corrected: `${displayStartDate.getHours()}:${displayStartDate.getMinutes().toString().padStart(2, '0')}`
         }
       })
       
-      // Format time properly for input field (HH:MM format) - DIRECTLY from date object
+      // Format time properly for input field (HH:MM format) - from DISPLAY-CORRECTED time
       const formatTimeForInput = (date: Date) => {
         const hours = date.getHours().toString().padStart(2, '0')
         const minutes = date.getMinutes().toString().padStart(2, '0')
         return `${hours}:${minutes}`
       }
       
-      // Format date for input field (YYYY-MM-DD format) - DIRECTLY from date object
+      // Format date for input field (YYYY-MM-DD format) - from DISPLAY-CORRECTED date
       const formatDateForInput = (date: Date) => {
         const year = date.getFullYear()
         const month = (date.getMonth() + 1).toString().padStart(2, '0')
@@ -308,9 +317,9 @@ export function EventDetailsModal({
         name: currentEvent.name,
         description: currentEvent.description || '',
         location: currentEvent.location || '',
-        startDate: formatDateForInput(startDate),
-        startTime: formatTimeForInput(startDate),
-        endTime: endDate ? formatTimeForInput(endDate) : '',
+        startDate: formatDateForInput(displayStartDate),
+        startTime: formatTimeForInput(displayStartDate),
+        endTime: displayEndDate ? formatTimeForInput(displayEndDate) : '',
         status: (currentEvent.status && ['confirmed', 'tentative', 'cancelled', 'pending', 'error'].includes(currentEvent.status.toLowerCase())) ? currentEvent.status.toLowerCase() as 'confirmed' | 'tentative' | 'cancelled' | 'pending' | 'error' : 'confirmed',
         signupType: 'open' as 'open' | 'assigned', // Default to open for existing events
         eventTypeId: currentEvent.eventType?.id || '',
