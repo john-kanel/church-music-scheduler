@@ -65,6 +65,10 @@ interface SortableHymnItemProps {
   handleEditServicePart: (servicePart: ServicePart, eventId: string, e: React.MouseEvent) => void
   handleEditIndividualHymn: (hymn: any, eventId: string, e: React.MouseEvent) => void
   handleDeleteIndividualHymn: (hymnId: string, eventId: string) => void
+  handleSongHistoryClick: (hymnId: string, songTitle: string, e: React.MouseEvent) => void
+  showingSongHistory: string | null
+  songHistoryData: {[hymnId: string]: any[]}
+  loadingSongHistory: string | null
 }
 
 function SortableHymnItem({
@@ -79,7 +83,11 @@ function SortableHymnItem({
   handleReorderAnyHymn,
   handleEditServicePart,
   handleEditIndividualHymn,
-  handleDeleteIndividualHymn
+  handleDeleteIndividualHymn,
+  handleSongHistoryClick,
+  showingSongHistory,
+  songHistoryData,
+  loadingSongHistory
 }: SortableHymnItemProps) {
   const {
     attributes,
@@ -186,6 +194,21 @@ function SortableHymnItem({
                 </button>
               </>
             )}
+            {/* Song History Clock Icon - Show for all songs with titles */}
+            {hymn.title && hymn.title.trim() && (
+              <button
+                onClick={(e) => handleSongHistoryClick(hymn.id, hymn.title, e)}
+                className="p-1 text-gray-400 hover:text-blue-600 transition-all"
+                title={`See when "${hymn.title}" was last played`}
+                disabled={loadingSongHistory === hymn.id}
+              >
+                {loadingSongHistory === hymn.id ? (
+                  <div className="animate-spin rounded-full h-3 w-3 border border-gray-400 border-t-transparent" />
+                ) : (
+                  <Clock className="h-3 w-3" />
+                )}
+              </button>
+            )}
           </div>
         </div>
         <input
@@ -231,6 +254,48 @@ function SortableHymnItem({
           placeholder="Enter hymn title..."
           className="w-full text-sm text-gray-900 border-none outline-none bg-transparent placeholder-gray-400 focus:bg-gray-50 rounded-sm px-2 py-1 font-normal"
         />
+        
+        {/* Song History Dropdown */}
+        {showingSongHistory === hymn.id && songHistoryData[hymn.id] && (
+          <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
+            <div className="text-xs font-medium text-blue-800 mb-2">
+              Last played history for "{hymn.title}":
+            </div>
+            {songHistoryData[hymn.id].length > 0 ? (
+              <div className="space-y-2">
+                {songHistoryData[hymn.id].map((history, index) => (
+                  <div key={index} className="text-xs text-blue-700 bg-white p-2 rounded border">
+                    <div className="font-medium">{history.title}</div>
+                    <div className="text-blue-600 mt-1">
+                      <span className="font-medium">{history.event?.name}</span>
+                      {history.event?.startTime && (
+                        <span className="ml-2">
+                          {new Date(history.event.startTime).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
+                          })}
+                        </span>
+                      )}
+                    </div>
+                    {history.servicePart && (
+                      <div className="text-blue-500 text-xs mt-1">
+                        Service part: {history.servicePart.name}
+                      </div>
+                    )}
+                    <div className="text-blue-400 text-xs mt-1">
+                      Similarity: {Math.round((history.similarityScore || 0) * 100)}%
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-xs text-blue-600">
+                No matches found in the last 60 days.
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -487,6 +552,11 @@ export default function EventPlannerPage() {
 
   // Service parts dropdown state
   const [openServicePartsDropdown, setOpenServicePartsDropdown] = useState<string | null>(null)
+
+  // Song History functionality
+  const [showingSongHistory, setShowingSongHistory] = useState<string | null>(null) // hymn ID whose history is being shown
+  const [songHistoryData, setSongHistoryData] = useState<{[hymnId: string]: any[]}>({}) // cache for song history
+  const [loadingSongHistory, setLoadingSongHistory] = useState<string | null>(null) // hymn ID currently loading
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -2531,6 +2601,50 @@ export default function EventPlannerPage() {
     setTempDescription('')
   }
 
+  // Handle song history search
+  const handleSongHistoryClick = async (hymnId: string, songTitle: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    
+    // If already showing this hymn's history, hide it
+    if (showingSongHistory === hymnId) {
+      setShowingSongHistory(null)
+      return
+    }
+
+    // If we already have the data cached, just show it
+    if (songHistoryData[hymnId]) {
+      setShowingSongHistory(hymnId)
+      return
+    }
+
+    // Fetch the history
+    setLoadingSongHistory(hymnId)
+    try {
+      const response = await fetch(`/api/song-history?title=${encodeURIComponent(songTitle)}`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch song history')
+      }
+      
+      const data = await response.json()
+      console.log('🎵 Song history fetched:', { songTitle, results: data.songHistory })
+      
+      // Cache the results
+      setSongHistoryData(prev => ({
+        ...prev,
+        [hymnId]: data.songHistory || []
+      }))
+      
+      // Show the dropdown
+      setShowingSongHistory(hymnId)
+      
+    } catch (error) {
+      console.error('Error fetching song history:', error)
+      showToast('error', 'Failed to fetch song history')
+    } finally {
+      setLoadingSongHistory(null)
+    }
+  }
+
   // Clear all service parts for an event
   const handleClearAllServiceParts = async (eventId: string) => {
     const confirmed = window.confirm('Are you sure you want to clear all service parts for this event? This action cannot be undone.')
@@ -3168,6 +3282,10 @@ export default function EventPlannerPage() {
                                   handleEditServicePart={handleEditServicePart}
                                   handleEditIndividualHymn={handleEditIndividualHymn}
                                   handleDeleteIndividualHymn={handleDeleteIndividualHymn}
+                                  handleSongHistoryClick={handleSongHistoryClick}
+                                  showingSongHistory={showingSongHistory}
+                                  songHistoryData={songHistoryData}
+                                  loadingSongHistory={loadingSongHistory}
                                 />
                               )
                             })}
@@ -3755,6 +3873,10 @@ export default function EventPlannerPage() {
                                       handleEditServicePart={handleEditServicePart}
                                       handleEditIndividualHymn={handleEditIndividualHymn}
                                       handleDeleteIndividualHymn={handleDeleteIndividualHymn}
+                                      handleSongHistoryClick={handleSongHistoryClick}
+                                      showingSongHistory={showingSongHistory}
+                                      songHistoryData={songHistoryData}
+                                      loadingSongHistory={loadingSongHistory}
                                     />
                                   )
                                 })}
