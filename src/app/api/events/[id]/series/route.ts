@@ -151,12 +151,16 @@ export async function PATCH(
       endTime = '',
       recurrencePattern = null,
       recurrenceEndDate = null,
-      roles = [],
-      hymns = [],
+      roles,
+      hymns, 
       selectedGroups = [],
       editScope = 'future', // 'future' or 'all'
       eventTypeColor = null // Added eventTypeColor
     } = requestData
+    
+    // Use empty arrays as fallback, but preserve undefined for smart detection
+    const rolesArray = roles || []
+    const hymnsArray = hymns || []
 
     // Validation
     if (!name || !location || !startDate || !startTime) {
@@ -192,18 +196,16 @@ export async function PATCH(
       return NextResponse.json({ error: 'Root recurring event not found' }, { status: 404 })
     }
 
-    // Create dates using ISO string format (consistent with event creation logic)
-    const [year, month, day] = startDate.split('-').map(Number)
-    const [startHour, startMinute] = startTime.split(':').map(Number)
-    
-    const dateString = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}T${startHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}:00`
-    const startDateTime = new Date(dateString)
+    // Get user's timezone and create proper datetime (consistent with main events API)
+    const { getUserTimezone, createEventDateTime } = await import('@/lib/timezone-utils')
+    const userTimezone = await getUserTimezone(session.user.id)
+
+    // Create dates using proper timezone handling
+    const startDateTime = createEventDateTime(startDate, startTime, userTimezone)
     
     let endDateTime = null
     if (endTime) {
-      const [endHour, endMinute] = endTime.split(':').map(Number)
-      const endDateString = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}T${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}:00`
-      endDateTime = new Date(endDateString)
+      endDateTime = createEventDateTime(startDate, endTime, userTimezone)
     }
 
     // Find or create event type based on color (similar to main events API)
@@ -233,7 +235,7 @@ export async function PATCH(
 
     // Prepare assignments
     const assignmentsToCreate: any[] = []
-    for (const role of roles) {
+    for (const role of rolesArray) {
       if (role.assignedMusicians && role.assignedMusicians.length > 0) {
         for (const musicianId of role.assignedMusicians) {
           assignmentsToCreate.push({
@@ -254,7 +256,7 @@ export async function PATCH(
     }
 
     // Prepare hymns
-    const hymnsToCreate = hymns.map((hymn: any) => ({
+    const hymnsToCreate = hymnsArray.map((hymn: any) => ({
       title: hymn.title?.trim() || '',
       notes: hymn.notes?.trim() || null,
       servicePartId: hymn.servicePartId === 'custom' || !hymn.servicePartId ? null : hymn.servicePartId
@@ -305,30 +307,59 @@ export async function PATCH(
           location: location || null,
           startTime: startDateTime,
           endTime: endDateTime,
+          eventTypeId: finalEventTypeId, // Apply the color/event type
           recurrencePattern: JSON.stringify(recurrencePattern),
           recurrenceEnd: recurrenceEndDate ? new Date(recurrenceEndDate) : null,
           assignedGroups: selectedGroups
         }
       })
 
-      // Update root event assignments and hymns
-      await tx.eventAssignment.deleteMany({ where: { eventId: rootEventId } })
-      await tx.eventHymn.deleteMany({ where: { eventId: rootEventId } })
-
+      // Smart assignment handling: only update if roles/hymns were explicitly provided in request
+      // roles/hymns === undefined means "don't change", empty array means "clear everything"  
+      const hasRoleChanges = roles !== undefined
+      const hasHymnChanges = hymns !== undefined
+      
+      // Prepare assignments for later use (even if not applying to root)
       const allAssignments = [
         ...assignmentsToCreate.map(a => ({ ...a, eventId: rootEventId })),
         ...groupAssignmentsToCreate.map(a => ({ ...a, eventId: rootEventId })),
         ...individualAssignmentsFromGroups.map(a => ({ ...a, eventId: rootEventId }))
       ]
+      
+      console.log('🎭 Assignment update analysis:', {
+        hasRoleChanges,
+        hasHymnChanges,
+        rolesInRequest: roles !== undefined,
+        hymnsInRequest: hymns !== undefined,
+        rolesLength: rolesArray.length,
+        hymnsLength: hymnsArray.length,
+        preservingExistingData: !hasRoleChanges || !hasHymnChanges
+      })
 
-      if (allAssignments.length > 0) {
-        await tx.eventAssignment.createMany({ data: allAssignments })
+      if (hasRoleChanges) {
+        // Only update assignments if roles were explicitly provided
+        await tx.eventAssignment.deleteMany({ where: { eventId: rootEventId } })
+
+        if (allAssignments.length > 0) {
+          await tx.eventAssignment.createMany({ data: allAssignments })
+        }
+        console.log('✅ Updated assignments for root event')
+      } else {
+        console.log('⏩ Preserving existing assignments for root event')
       }
 
-      if (hymnsToCreate.length > 0) {
-        await tx.eventHymn.createMany({
-          data: hymnsToCreate.map((h: any) => ({ ...h, eventId: rootEventId }))
-        })
+      if (hasHymnChanges) {
+        // Only update hymns if hymns were explicitly provided
+        await tx.eventHymn.deleteMany({ where: { eventId: rootEventId } })
+        
+        if (hymnsToCreate.length > 0) {
+          await tx.eventHymn.createMany({
+            data: hymnsToCreate.map((h: any) => ({ ...h, eventId: rootEventId }))
+          })
+        }
+        console.log('✅ Updated hymns for root event')
+      } else {
+        console.log('⏩ Preserving existing hymns for root event')
       }
 
       // Get existing generated events
@@ -396,9 +427,9 @@ export async function PATCH(
           session.user.churchId
         )
 
-        // Create assignments and hymns for new events
+        // Create assignments and hymns for new events (only if explicitly provided)
         for (const event of newEvents) {
-          if (allAssignments.length > 0) {
+          if (hasRoleChanges && allAssignments.length > 0) {
             const eventAssignments = allAssignments.map(a => ({
               ...a,
               eventId: event.id
@@ -406,7 +437,7 @@ export async function PATCH(
             await tx.eventAssignment.createMany({ data: eventAssignments })
           }
 
-          if (hymnsToCreate.length > 0) {
+          if (hasHymnChanges && hymnsToCreate.length > 0) {
             const eventHymns = hymnsToCreate.map((h: any) => ({
               ...h,
               eventId: event.id
@@ -438,28 +469,34 @@ export async function PATCH(
               description: description || null,
               location: location || null,
               startTime: newEventTime,
-              endTime: newEventEndTime
+              endTime: newEventEndTime,
+              eventTypeId: finalEventTypeId // Apply the color/event type
             }
           })
 
-          // Update assignments and hymns
-          await tx.eventAssignment.deleteMany({ where: { eventId: event.id } })
-          await tx.eventHymn.deleteMany({ where: { eventId: event.id } })
-
-          if (allAssignments.length > 0) {
-            const eventAssignments = allAssignments.map(a => ({
-              ...a,
-              eventId: event.id
-            }))
-            await tx.eventAssignment.createMany({ data: eventAssignments })
+          // Smart assignment handling for individual events
+          if (hasRoleChanges) {
+            await tx.eventAssignment.deleteMany({ where: { eventId: event.id } })
+            
+            if (allAssignments.length > 0) {
+              const eventAssignments = allAssignments.map(a => ({
+                ...a,
+                eventId: event.id
+              }))
+              await tx.eventAssignment.createMany({ data: eventAssignments })
+            }
           }
 
-          if (hymnsToCreate.length > 0) {
-            const eventHymns = hymnsToCreate.map((h: any) => ({
-              ...h,
-              eventId: event.id
-            }))
-            await tx.eventHymn.createMany({ data: eventHymns })
+          if (hasHymnChanges) {
+            await tx.eventHymn.deleteMany({ where: { eventId: event.id } })
+            
+            if (hymnsToCreate.length > 0) {
+              const eventHymns = hymnsToCreate.map((h: any) => ({
+                ...h,
+                eventId: event.id
+              }))
+              await tx.eventHymn.createMany({ data: eventHymns })
+            }
           }
 
           eventsUpdated++
