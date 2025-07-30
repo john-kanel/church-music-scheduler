@@ -3,6 +3,9 @@ import { prisma } from '@/lib/db'
 import { sendReferralPromotionEmail, sendNotificationEmail } from '@/lib/resend'
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now()
+  const TIMEOUT_MS = 25000 // 25 seconds to stay well under most cron timeout limits
+  
   try {
     // Simple auth check - in production you'd want proper cron authentication
     const authHeader = request.headers.get('authorization')
@@ -11,6 +14,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Find emails scheduled to be sent (due now or overdue)
+    // Reduced batch size to prevent timeouts
     const scheduledEmails = await prisma.emailSchedule.findMany({
       where: {
         sentAt: null, // Not yet sent
@@ -25,7 +29,7 @@ export async function POST(request: NextRequest) {
         church: true,
         user: true
       },
-      take: 50 // Process up to 50 emails at a time
+      take: 10 // Reduced from 50 to 10 to prevent timeouts
     })
 
     if (scheduledEmails.length === 0) {
@@ -41,6 +45,12 @@ export async function POST(request: NextRequest) {
     let errorCount = 0
 
     for (const email of scheduledEmails) {
+      // Check timeout
+      if (Date.now() - startTime > TIMEOUT_MS) {
+        console.log(`⏰ Timeout reached, stopping email processing. Processed ${successCount} emails successfully.`)
+        break
+      }
+      
       try {
         // Update attempt counter
         await prisma.emailSchedule.update({
@@ -68,19 +78,22 @@ export async function POST(request: NextRequest) {
             continue
         }
 
-        // Mark as sent
-        await prisma.emailSchedule.update({
-          where: { id: email.id },
-          data: {
-            sentAt: new Date()
-          }
-        })
-
-        // Update church referral email sent timestamp if this is a referral email
+        // Mark as sent and update church timestamp if needed in a single transaction
         if (email.emailType === 'REFERRAL_PROMOTION') {
-          await prisma.church.update({
-            where: { id: email.churchId },
-            data: { referralEmailSentAt: new Date() }
+          await prisma.$transaction([
+            prisma.emailSchedule.update({
+              where: { id: email.id },
+              data: { sentAt: new Date() }
+            }),
+            prisma.church.update({
+              where: { id: email.churchId },
+              data: { referralEmailSentAt: new Date() }
+            })
+          ])
+        } else {
+          await prisma.emailSchedule.update({
+            where: { id: email.id },
+            data: { sentAt: new Date() }
           })
         }
 
@@ -123,7 +136,7 @@ export async function POST(request: NextRequest) {
           }
         }
       },
-      take: 20 // Process up to 20 messages at a time
+      take: 5 // Reduced from 20 to 5 to prevent timeouts
     })
 
     let messageSuccessCount = 0
@@ -133,6 +146,12 @@ export async function POST(request: NextRequest) {
       console.log(`📧 Processing ${scheduledMessages.length} scheduled messages`)
 
       for (const message of scheduledMessages) {
+        // Check timeout
+        if (Date.now() - startTime > TIMEOUT_MS) {
+          console.log(`⏰ Timeout reached, stopping message processing. Processed ${messageSuccessCount} messages successfully.`)
+          break
+        }
+        
         try {
           // Get recipients
           const recipients = await prisma.user.findMany({
@@ -201,8 +220,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const executionTime = Date.now() - startTime
+    const timedOut = executionTime > TIMEOUT_MS
+    
     return NextResponse.json({
-      message: `Processed ${scheduledEmails.length} scheduled emails and ${scheduledMessages.length} scheduled messages`,
+      message: `Processed ${scheduledEmails.length} scheduled emails and ${scheduledMessages.length} scheduled messages${timedOut ? ' (TIMED OUT)' : ''}`,
       emails: {
         processed: scheduledEmails.length,
         successful: successCount,
@@ -212,7 +234,9 @@ export async function POST(request: NextRequest) {
         processed: scheduledMessages.length,
         successful: messageSuccessCount,
         failed: messageErrorCount
-      }
+      },
+      executionTimeMs: executionTime,
+      timedOut: timedOut
     })
 
   } catch (error) {

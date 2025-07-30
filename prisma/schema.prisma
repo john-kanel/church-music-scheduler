@@ -264,6 +264,9 @@ model Communication {
   event        Event?            @relation(fields: [eventId], references: [id])
   sender       User              @relation(fields: [sentBy], references: [id])
 
+  @@index([isScheduled, sentAt, scheduledFor])
+  @@index([churchId])
+  @@index([eventId])
   @@map("communications")
 }
 
@@ -466,6 +469,9 @@ model EmailSchedule {
   church        Church    @relation(fields: [churchId], references: [id], onDelete: Cascade)
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([sentAt, scheduledFor, attempts])
+  @@index([churchId])
+  @@index([scheduledFor])
   @@map("email_schedules")
 }
 
