@@ -139,6 +139,12 @@ function buildEventDescription(event: EventWithDetails): string {
     lines.push('')
   }
 
+  // Add officiant if specified
+  if ((event as any).officiant) {
+    lines.push(`Officiant: ${(event as any).officiant}`)
+    lines.push('')
+  }
+
   // Add event description if it exists
   if (event.description) {
     lines.push(event.description)

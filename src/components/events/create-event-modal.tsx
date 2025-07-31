@@ -83,6 +83,7 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
     name: '',
     description: '',
     location: '',
+    officiant: '',
     startDate: '',
     startTime: '',
     endTime: '',
@@ -477,6 +478,7 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
           name: '',
           description: '',
           location: '',
+          officiant: '',
           startDate: '',
           startTime: '',
           endTime: '',
@@ -589,6 +591,18 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
                   required
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                   placeholder="Main Church, Chapel, etc."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Officiant</label>
+                <input
+                  type="text"
+                  name="officiant"
+                  value={formData.officiant}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  placeholder="Fr. Smith, Pastor Johnson, etc."
                 />
               </div>
 
