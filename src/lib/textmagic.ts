@@ -28,14 +28,12 @@ class TextMagicService {
 
   private async initializeClient() {
     try {
-      // Use dynamic import to avoid module resolution issues
-      const TMClientModule = await import('textmagic-rest-client')
-      this.TMClient = TMClientModule.default || TMClientModule
-      
-      this.client = new this.TMClient(
-        process.env.TEXTMAGIC_USERNAME!,
-        process.env.TEXTMAGIC_API_KEY!
-      )
+      // Direct HTTP implementation - no problematic client library
+      this.client = {
+        username: process.env.TEXTMAGIC_USERNAME!,
+        apiKey: process.env.TEXTMAGIC_API_KEY!,
+        baseUrl: 'https://rest.textmagic.com/api/v2'
+      }
     } catch (error) {
       console.error('Failed to initialize TextMagic client:', error)
       this.isConfigured = false
@@ -106,22 +104,28 @@ class TextMagicService {
 
       console.log(`📱 Sending SMS to ${formattedPhone}: ${message.substring(0, 50)}...`)
 
-      // Send the SMS
-      const result = await new Promise((resolve, reject) => {
-        this.client.Messages.send(messageData, (err: any, res: any) => {
-          if (err) {
-            console.error('TextMagic send error:', err)
-            reject(err)
-          } else {
-            console.log('TextMagic send result:', res)
-            resolve(res)
-          }
-        })
+      // Send SMS via direct HTTP API call
+      const response = await fetch(`${this.client.baseUrl}/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-TM-Username': this.client.username,
+          'X-TM-Key': this.client.apiKey
+        },
+        body: new URLSearchParams(messageData).toString()
       })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`TextMagic API error: ${response.status} ${errorText}`)
+      }
+
+      const result = await response.json()
+      console.log('✅ TextMagic send result:', result)
 
       return {
         success: true,
-        messageId: (result as any)?.id || (result as any)?.messageId,
+        messageId: result?.id || result?.messageId,
         details: result
       }
 
@@ -156,17 +160,21 @@ class TextMagicService {
         }
       }
 
-      const result = await new Promise((resolve, reject) => {
-        this.client.User.getCurrent((err: any, res: any) => {
-          if (err) {
-            reject(err)
-          } else {
-            resolve(res)
-          }
-        })
+      // Check balance via direct HTTP API call
+      const response = await fetch(`${this.client.baseUrl}/user`, {
+        method: 'GET',
+        headers: {
+          'X-TM-Username': this.client.username,
+          'X-TM-Key': this.client.apiKey
+        }
       })
 
-      const userData = result as any
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`TextMagic API error: ${response.status} ${errorText}`)
+      }
+
+      const userData = await response.json()
       return {
         success: true,
         balance: userData.balance,
