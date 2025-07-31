@@ -18,6 +18,8 @@ export function SendMessageModal({ isOpen, onClose, onMessageSent, recipients, g
   const [error, setError] = useState('')
   const [groups, setGroups] = useState<any[]>([])
   const [events, setEvents] = useState<any[]>([])
+  const [churchMembers, setChurchMembers] = useState<any[]>([])
+  const [loadingMembers, setLoadingMembers] = useState(false)
   const [selectedEventId, setSelectedEventId] = useState('')
 
   const [messageData, setMessageData] = useState({
@@ -47,22 +49,34 @@ export function SendMessageModal({ isOpen, onClose, onMessageSent, recipients, g
     { value: 'event', label: 'Event Participants' }
   ]
 
-  // Mock data for invited musicians who have accepted
-  const availableMusicians = [
-    { id: '1', name: 'John Smith', email: 'john@example.com', role: 'Organist' },
-    { id: '2', name: 'Mary Johnson', email: 'mary@example.com', role: 'Vocalist' },
-    { id: '3', name: 'David Wilson', email: 'david@example.com', role: 'Guitarist' },
-    { id: '4', name: 'Sarah Brown', email: 'sarah@example.com', role: 'Pianist' },
-    { id: '5', name: 'Michael Davis', email: 'michael@example.com', role: 'Cantor' }
-  ]
+  // Fetch church members for individual selection
+  const fetchChurchMembers = async () => {
+    if (!session?.user?.churchId) return
+    
+    setLoadingMembers(true)
+    try {
+      const response = await fetch('/api/church-members')
+      if (response.ok) {
+        const data = await response.json()
+        setChurchMembers(data.members || [])
+      } else {
+        console.error('Failed to fetch church members')
+      }
+    } catch (error) {
+      console.error('Error fetching church members:', error)
+    } finally {
+      setLoadingMembers(false)
+    }
+  }
 
   const [selectedIndividuals, setSelectedIndividuals] = useState<string[]>([])
 
-  // Fetch groups and events when modal opens
+  // Fetch groups, events, and church members when modal opens
   useEffect(() => {
     if (isOpen) {
       fetchGroups()
       fetchEvents()
+      fetchChurchMembers()
     }
   }, [isOpen])
 
@@ -305,30 +319,54 @@ export function SendMessageModal({ isOpen, onClose, onMessageSent, recipients, g
               {messageData.recipients === 'individual' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Select People</label>
-                  <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-300 rounded-lg p-3">
-                    {availableMusicians.map((musician) => (
-                      <label key={musician.id} className="flex items-center p-2 hover:bg-gray-50 rounded">
-                        <input
-                          type="checkbox"
-                          checked={selectedIndividuals.includes(musician.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedIndividuals([...selectedIndividuals, musician.id])
-                            } else {
-                              setSelectedIndividuals(selectedIndividuals.filter(id => id !== musician.id))
-                            }
-                          }}
-                          className="mr-3"
-                        />
-                        <div className="flex-1">
-                          <div className="font-medium text-gray-900">{musician.name}</div>
-                          <div className="text-sm text-gray-500">{musician.email} • {musician.role}</div>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
+                  {loadingMembers ? (
+                    <div className="flex items-center justify-center p-8">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
+                      <span className="ml-2 text-sm text-gray-500">Loading church members...</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-300 rounded-lg p-3">
+                      {churchMembers.length === 0 ? (
+                        <p className="text-sm text-gray-500 p-2">No church members found</p>
+                      ) : (
+                        churchMembers.map((member) => (
+                          <label key={member.id} className="flex items-center p-2 hover:bg-gray-50 rounded">
+                            <input
+                              type="checkbox"
+                              checked={selectedIndividuals.includes(member.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedIndividuals([...selectedIndividuals, member.id])
+                                } else {
+                                  setSelectedIndividuals(selectedIndividuals.filter(id => id !== member.id))
+                                }
+                              }}
+                              className="mr-3"
+                            />
+                            <div className="flex-1">
+                              <div className="font-medium text-gray-900">{member.name}</div>
+                              <div className="text-sm text-gray-500">
+                                {member.email} • {member.role}
+                                {messageData.sendMethod === 'sms' && !member.canReceiveSMS && (
+                                  <span className="text-red-500 ml-1">(No SMS)</span>
+                                )}
+                                {messageData.sendMethod === 'both' && !member.canReceiveSMS && (
+                                  <span className="text-orange-500 ml-1">(Email only)</span>
+                                )}
+                              </div>
+                            </div>
+                          </label>
+                        ))
+                      )}
+                    </div>
+                  )}
                   <p className="text-sm text-gray-500 mt-2">
                     {selectedIndividuals.length} people selected
+                    {messageData.sendMethod === 'sms' && (
+                      <span className="ml-2 text-orange-600">
+                        (Only members with phone numbers will receive SMS)
+                      </span>
+                    )}
                   </p>
                 </div>
               )}
