@@ -286,7 +286,9 @@ export async function extendRecurringEvents(
     data: eventsToCreate 
   })
   
-  // Copy assignments and hymns to new events (in batches for performance)
+  // Copy assignments to new events (in batches for performance)
+  // NOTE: Service parts (hymns) are NOT copied from root events to new recurring events
+  // Each event should have its own unique set of service parts
   for (const event of createdEvents) {
     if (rootEvent.assignments.length > 0) {
       const assignmentsToCreate = rootEvent.assignments.map((a: any) => ({
@@ -299,15 +301,8 @@ export async function extendRecurringEvents(
       await prisma.eventAssignment.createMany({ data: assignmentsToCreate })
     }
     
-    if (rootEvent.hymns.length > 0) {
-      const hymnsToCreate = rootEvent.hymns.map((h: any) => ({
-        eventId: event.id,
-        title: h.title,
-        notes: h.notes,
-        servicePartId: h.servicePartId
-      }))
-      await prisma.eventHymn.createMany({ data: hymnsToCreate })
-    }
+    // Service parts are intentionally NOT copied from root events
+    // Each event should start with its own empty set of service parts
   }
   
   return createdEvents

@@ -367,7 +367,7 @@ export async function POST(request: NextRequest) {
           session.user.churchId
         )
 
-        // Create assignments and hymns for each recurring event
+        // Create assignments and service part structure for each recurring event
         for (const recurringEvent of recurringEvents) {
           // Copy assignments to recurring events
           if (allAssignments.length > 0) {
@@ -378,7 +378,8 @@ export async function POST(request: NextRequest) {
             await tx.eventAssignment.createMany({ data: recurringAssignments })
           }
 
-          // Copy hymns to recurring events
+          // Apply default service part structure to new recurring events
+          // This creates the service part placeholders, but each event can have its own hymn selections
           if (hymnsToCreate.length > 0) {
             const recurringHymns = hymnsToCreate.map((h: any) => ({
               ...h,

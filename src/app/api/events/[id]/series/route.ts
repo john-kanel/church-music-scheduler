@@ -7,6 +7,52 @@ import { logActivity } from '@/lib/activity'
 import { checkSubscriptionStatus, createSubscriptionErrorResponse } from '@/lib/subscription-check'
 import { generateRecurringEvents, parseRecurrencePattern, extendRecurringEvents } from '@/lib/recurrence'
 
+// Helper function to update service part structure while preserving individual hymn titles
+async function updateEventServicePartStructure(
+  tx: any,
+  eventId: string,
+  newServiceParts: any[],
+  rootEventId: string
+) {
+  // Get current hymns for this event
+  const currentHymns = await tx.eventHymn.findMany({
+    where: { eventId },
+    select: {
+      id: true,
+      title: true,
+      notes: true,
+      servicePartId: true
+    }
+  })
+
+  // Create a map of existing hymns by servicePartId for quick lookup
+  const existingHymnsByServicePart = new Map()
+  currentHymns.forEach((hymn: any) => {
+    if (hymn.servicePartId) {
+      existingHymnsByServicePart.set(hymn.servicePartId, hymn)
+    }
+  })
+
+  // Delete all current hymns
+  await tx.eventHymn.deleteMany({ where: { eventId } })
+
+  // Create new hymns, preserving titles where service parts already existed
+  const hymnsToCreate = newServiceParts.map((newServicePart: any) => {
+    const existingHymn = existingHymnsByServicePart.get(newServicePart.servicePartId)
+    
+    return {
+      eventId,
+      title: existingHymn ? existingHymn.title : (newServicePart.title || ''),
+      notes: existingHymn ? existingHymn.notes : (newServicePart.notes || null),
+      servicePartId: newServicePart.servicePartId
+    }
+  })
+
+  if (hymnsToCreate.length > 0) {
+    await tx.eventHymn.createMany({ data: hymnsToCreate })
+  }
+}
+
 // DELETE /api/events/[id]/series - Delete entire recurring series
 export async function DELETE(
   request: NextRequest,
@@ -427,7 +473,7 @@ export async function PATCH(
           session.user.churchId
         )
 
-        // Create assignments and hymns for new events (only if explicitly provided)
+        // Create assignments and service parts for new events (only if explicitly provided)
         for (const event of newEvents) {
           if (hasRoleChanges && allAssignments.length > 0) {
             const eventAssignments = allAssignments.map(a => ({
@@ -437,12 +483,14 @@ export async function PATCH(
             await tx.eventAssignment.createMany({ data: eventAssignments })
           }
 
+          // For new events, apply the default service part structure from root event
           if (hasHymnChanges && hymnsToCreate.length > 0) {
-            const eventHymns = hymnsToCreate.map((h: any) => ({
-              ...h,
-              eventId: event.id
-            }))
-            await tx.eventHymn.createMany({ data: eventHymns })
+            await tx.eventHymn.createMany({
+              data: hymnsToCreate.map((h: any) => ({
+                ...h,
+                eventId: event.id
+              }))
+            })
           }
         }
         
@@ -487,16 +535,14 @@ export async function PATCH(
             }
           }
 
+          // Smart service part handling: update structure but preserve individual hymn titles
           if (hasHymnChanges) {
-            await tx.eventHymn.deleteMany({ where: { eventId: event.id } })
-            
-            if (hymnsToCreate.length > 0) {
-              const eventHymns = hymnsToCreate.map((h: any) => ({
-                ...h,
-                eventId: event.id
-              }))
-              await tx.eventHymn.createMany({ data: eventHymns })
-            }
+            await updateEventServicePartStructure(
+              tx, 
+              event.id, 
+              hymnsToCreate, 
+              rootEventId
+            )
           }
 
           eventsUpdated++
