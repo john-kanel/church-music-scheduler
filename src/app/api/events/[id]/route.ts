@@ -50,6 +50,7 @@ function generateRecurringEvents(
       name: baseEvent.name,
       description: baseEvent.description,
       location: baseEvent.location,
+      officiant: baseEvent.officiant,
       startTime: eventStartTime,
       endTime: eventEndTime,
       isRecurring: false, // Child events are not recurring themselves
@@ -182,7 +183,7 @@ export async function PUT(
     const isStatusOnly = Object.keys(body).length === 1 && body.status
     
     // Handle drag-and-drop format (ISO strings) vs form format (separate date/time)
-    let startDate, startTime, endTime, name, description, location, eventTypeId, status, roles, isRecurring, recurrencePattern, recurrenceEnd, isPastEvent
+    let startDate, startTime, endTime, name, description, location, officiant, eventTypeId, status, roles, isRecurring, recurrencePattern, recurrenceEnd, isPastEvent
     
     if (isDragAndDrop) {
       console.log('🎯 Detected drag-and-drop request')
@@ -198,6 +199,7 @@ export async function PUT(
       name = existingEvent.name
       description = existingEvent.description
       location = existingEvent.location
+      officiant = existingEvent.officiant
       eventTypeId = existingEvent.eventTypeId
       status = existingEvent.status
       roles = []
@@ -219,6 +221,7 @@ export async function PUT(
       name = existingEvent.name
       description = existingEvent.description
       location = existingEvent.location
+      officiant = existingEvent.officiant
       eventTypeId = existingEvent.eventTypeId
       status = body.status // Only change the status
       roles = []
@@ -235,6 +238,7 @@ export async function PUT(
       name = body.name
       description = body.description
       location = body.location
+      officiant = body.officiant
       eventTypeId = body.eventTypeId
       status = body.status
       roles = body.roles || []
@@ -331,6 +335,7 @@ export async function PUT(
       name,
       description,
       location,
+      officiant,
       startTime: startDateTime,
       endTime: endDateTime,
       isRecurring,

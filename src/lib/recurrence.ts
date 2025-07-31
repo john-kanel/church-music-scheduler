@@ -182,6 +182,7 @@ export async function generateRecurringEvents(
       name: rootEvent.name,
       description: rootEvent.description,
       location: rootEvent.location,
+      officiant: rootEvent.officiant,
       startTime: date,
       endTime: endTime,
       isRecurring: false, // Generated events are not recurring themselves
