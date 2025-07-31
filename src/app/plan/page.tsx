@@ -3073,9 +3073,11 @@ export default function EventPlannerPage() {
                             </div>
                           ) : (
                             <div className="flex items-center gap-1 group">
-                              <span className="text-xs text-gray-500">
-                                Officiant: {event.officiant || 'Not specified'}
-                              </span>
+                              {event.officiant && (
+                                <span className="text-xs text-gray-500">
+                                  Officiant: {event.officiant}
+                                </span>
+                              )}
                               <button
                                 onClick={() => handleEditOfficiant(event.id, event.officiant || '')}
                                 className="opacity-0 group-hover:opacity-100 p-0.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-all"
@@ -3085,9 +3087,6 @@ export default function EventPlannerPage() {
                               </button>
                             </div>
                           )}
-                          <p className="text-xs text-gray-400 mt-0.5">
-                            This action does not automatically communicate any event details to the officiant.
-                          </p>
                         </div>
                         
                         {/* Event Description with inline editing */}
@@ -3873,9 +3872,11 @@ export default function EventPlannerPage() {
                                 </div>
                               ) : (
                                 <div className="flex items-center gap-1 group">
-                                  <span className="text-xs text-gray-500">
-                                    Officiant: {event.officiant || 'Not specified'}
-                                  </span>
+                                  {event.officiant && (
+                                    <span className="text-xs text-gray-500">
+                                      Officiant: {event.officiant}
+                                    </span>
+                                  )}
                                   <button
                                     onClick={() => handleEditOfficiant(event.id, event.officiant || '')}
                                     className="opacity-0 group-hover:opacity-100 p-0.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-all"
@@ -3885,9 +3886,6 @@ export default function EventPlannerPage() {
                                   </button>
                                 </div>
                               )}
-                              <p className="text-xs text-gray-400 mt-0.5">
-                                This action does not automatically communicate any event details to the officiant.
-                              </p>
                             </div>
                             
                             {/* Event Description with inline editing - Mobile */}
