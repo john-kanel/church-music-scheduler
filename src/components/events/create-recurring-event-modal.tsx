@@ -526,6 +526,7 @@ export function CreateRecurringEventModal({
         name: formData.name,
         description: formData.description,
         location: formData.location,
+        officiant: formData.officiant,
         startDate: formData.startDate,
         startTime: formData.startTime,
         endTime: formData.endTime,

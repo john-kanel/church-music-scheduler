@@ -3,6 +3,7 @@ import { Event, EventAssignment, EventHymn, User, Group, EventType, ServicePart 
 // Extended types for the data we need
 type EventWithDetails = Event & {
   eventType: EventType
+  officiant?: string
   assignments: (EventAssignment & {
     user: User | null
     group: Group | null
@@ -140,8 +141,8 @@ function buildEventDescription(event: EventWithDetails): string {
   }
 
   // Add officiant if specified
-  if ((event as any).officiant) {
-    lines.push(`Officiant: ${(event as any).officiant}`)
+  if (event.officiant) {
+    lines.push(`Officiant: ${event.officiant}`)
     lines.push('')
   }
 

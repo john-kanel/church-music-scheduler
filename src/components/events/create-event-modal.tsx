@@ -390,6 +390,7 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
         name: formData.name,
         description: formData.description,
         location: formData.location,
+        officiant: formData.officiant,
         startDate: formData.startDate,
         startTime: formData.startTime,
         endTime: formData.endTime,

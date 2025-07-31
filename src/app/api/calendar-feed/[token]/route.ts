@@ -42,9 +42,9 @@ export async function GET(
       startTime: {
         gte: new Date(), // Only future events
       },
-      // Only include confirmed and cancelled events, exclude tentative
+      // Include all events except tentative ones
       status: {
-        in: ['CONFIRMED', 'CANCELLED']
+        not: 'TENTATIVE'
       }
     }
 
