@@ -311,7 +311,6 @@ interface Event {
   startTime: string
   endTime: string
   location: string
-  officiant?: string
   status?: 'error' | 'confirmed' | 'tentative' | 'cancelled' | 'pending'
   eventType: {
     id: string
@@ -555,11 +554,6 @@ export default function EventPlannerPage() {
   // Event description editing state
   const [editingDescription, setEditingDescription] = useState<string | null>(null)
   const [tempDescription, setTempDescription] = useState<string>('')
-  
-  // Event officiant editing state
-  const [editingOfficiant, setEditingOfficiant] = useState<string | null>(null)
-  const [tempOfficiant, setTempOfficiant] = useState<string>('')
-  
   const [addingRole, setAddingRole] = useState(false)
 
   // Service parts dropdown state
@@ -2637,70 +2631,6 @@ export default function EventPlannerPage() {
     setTempDescription('')
   }
 
-  // Event officiant editing
-  const handleEditOfficiant = (eventId: string, currentOfficiant: string) => {
-    setEditingOfficiant(eventId)
-    setTempOfficiant(currentOfficiant || '')
-  }
-
-  const handleSaveOfficiant = async (eventId: string) => {
-    try {
-      // Find the current event to get its complete data
-      const currentEvent = data?.events.find(e => e.id === eventId)
-      if (!currentEvent) {
-        throw new Error('Event not found')
-      }
-
-      // Send complete event data with updated officiant
-      const response = await fetch(`/api/events/${eventId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: currentEvent.name,
-          description: currentEvent.description,
-          location: currentEvent.location,
-          officiant: tempOfficiant,
-          startDate: new Date(currentEvent.startTime).toISOString().split('T')[0],
-          startTime: new Date(currentEvent.startTime).toTimeString().slice(0, 5),
-          endTime: currentEvent.endTime ? new Date(currentEvent.endTime).toTimeString().slice(0, 5) : '',
-          status: currentEvent.status,
-          eventTypeId: currentEvent.eventType.id
-        })
-      })
-
-      if (!response.ok) {
-        const errorData = await response.text()
-        console.error('API Error:', errorData)
-        throw new Error('Failed to update officiant')
-      }
-
-      // Update local state
-      setData(prev => {
-        if (!prev) return prev
-        return {
-          ...prev,
-          events: prev.events.map(event => 
-            event.id === eventId 
-              ? { ...event, officiant: tempOfficiant }
-              : event
-          )
-        }
-      })
-
-      setEditingOfficiant(null)
-      setTempOfficiant('')
-      showToast('success', 'Officiant updated')
-    } catch (error) {
-      console.error('Error updating officiant:', error)
-      showToast('error', 'Failed to update officiant')
-    }
-  }
-
-  const handleCancelOfficiantEdit = () => {
-    setEditingOfficiant(null)
-    setTempOfficiant('')
-  }
-
   // Handle song history search
   const handleSongHistoryClick = async (hymnId: string, songTitle: string, currentEventId: string, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -3036,58 +2966,6 @@ export default function EventPlannerPage() {
                           {formatEventTimeForDisplay(event.startTime)}
                         </p>
                         <p className="text-xs text-gray-500 mb-1">{event.location}</p>
-                        
-                        {/* Officiant with inline editing */}
-                        <div className="mt-1">
-                          {editingOfficiant === event.id ? (
-                            <div className="flex items-center gap-1">
-                              <input
-                                type="text"
-                                value={tempOfficiant}
-                                onChange={(e) => setTempOfficiant(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    handleSaveOfficiant(event.id)
-                                  } else if (e.key === 'Escape') {
-                                    handleCancelOfficiantEdit()
-                                  }
-                                }}
-                                className="text-xs text-gray-600 bg-white border border-gray-300 rounded px-1 py-0.5 flex-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                placeholder="Add officiant..."
-                                autoFocus
-                              />
-                              <button
-                                onClick={() => handleSaveOfficiant(event.id)}
-                                className="p-0.5 text-green-600 hover:bg-green-50 rounded"
-                                title="Save officiant"
-                              >
-                                <Check className="w-3 h-3" />
-                              </button>
-                              <button
-                                onClick={handleCancelOfficiantEdit}
-                                className="p-0.5 text-gray-400 hover:bg-gray-50 rounded"
-                                title="Cancel"
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-1 group">
-                              {event.officiant && (
-                                <span className="text-xs text-gray-500">
-                                  Officiant: {event.officiant}
-                                </span>
-                              )}
-                              <button
-                                onClick={() => handleEditOfficiant(event.id, event.officiant || '')}
-                                className="opacity-0 group-hover:opacity-100 p-0.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-all"
-                                title="Edit officiant"
-                              >
-                                <Edit className="w-3 h-3" />
-                              </button>
-                            </div>
-                          )}
-                        </div>
                         
                         {/* Event Description with inline editing */}
                         <div className="mt-1">
@@ -3835,58 +3713,6 @@ export default function EventPlannerPage() {
                               {formatEventTimeForDisplay(event.startTime)}
                             </p>
                             <p className="text-xs text-gray-500 mb-1">{event.location}</p>
-                            
-                            {/* Officiant with inline editing - Mobile */}
-                            <div className="mt-1">
-                              {editingOfficiant === event.id ? (
-                                <div className="flex items-center gap-1">
-                                  <input
-                                    type="text"
-                                    value={tempOfficiant}
-                                    onChange={(e) => setTempOfficiant(e.target.value)}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') {
-                                        handleSaveOfficiant(event.id)
-                                      } else if (e.key === 'Escape') {
-                                        handleCancelOfficiantEdit()
-                                      }
-                                    }}
-                                    className="text-xs text-gray-600 bg-white border border-gray-300 rounded px-1 py-0.5 flex-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                    placeholder="Add officiant..."
-                                    autoFocus
-                                  />
-                                  <button
-                                    onClick={() => handleSaveOfficiant(event.id)}
-                                    className="p-0.5 text-green-600 hover:bg-green-50 rounded"
-                                    title="Save officiant"
-                                  >
-                                    <Check className="w-3 h-3" />
-                                  </button>
-                                  <button
-                                    onClick={handleCancelOfficiantEdit}
-                                    className="p-0.5 text-gray-400 hover:bg-gray-50 rounded"
-                                    title="Cancel"
-                                  >
-                                    <X className="w-3 h-3" />
-                                  </button>
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-1 group">
-                                  {event.officiant && (
-                                    <span className="text-xs text-gray-500">
-                                      Officiant: {event.officiant}
-                                    </span>
-                                  )}
-                                  <button
-                                    onClick={() => handleEditOfficiant(event.id, event.officiant || '')}
-                                    className="opacity-0 group-hover:opacity-100 p-0.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-all"
-                                    title="Edit officiant"
-                                  >
-                                    <Edit className="w-3 h-3" />
-                                  </button>
-                                </div>
-                              )}
-                            </div>
                             
                             {/* Event Description with inline editing - Mobile */}
                             <div className="mt-1">

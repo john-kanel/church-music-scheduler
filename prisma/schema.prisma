@@ -122,7 +122,6 @@ model Event {
   name                      String
   description               String?
   location                  String
-  officiant                 String?
   startTime                 DateTime
   endTime                   DateTime?
   isRecurring               Boolean                    @default(false)
