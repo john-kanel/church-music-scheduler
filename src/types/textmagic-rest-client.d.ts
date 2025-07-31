@@ -36,5 +36,6 @@ declare module 'textmagic-rest-client' {
     constructor(username: string, apiKey: string)
   }
 
-  export = TMClient
+  const TMClientConstructor: typeof TMClient
+  export = TMClientConstructor
 }

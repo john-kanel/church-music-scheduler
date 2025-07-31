@@ -1,5 +1,3 @@
-import TMClient = require('textmagic-rest-client')
-
 interface SMSMessage {
   to: string
   message: string
@@ -14,18 +12,33 @@ interface SMSResponse {
 }
 
 class TextMagicService {
-  private client: TMClient | null
+  private client: any
   private isConfigured: boolean
+  private TMClient: any
 
   constructor() {
     this.isConfigured = this.validateConfig()
     this.client = null
+    this.TMClient = null
     
     if (this.isConfigured) {
-      this.client = new TMClient(
+      this.initializeClient()
+    }
+  }
+
+  private async initializeClient() {
+    try {
+      // Use dynamic import to avoid module resolution issues
+      const TMClientModule = await import('textmagic-rest-client')
+      this.TMClient = TMClientModule.default || TMClientModule
+      
+      this.client = new this.TMClient(
         process.env.TEXTMAGIC_USERNAME!,
         process.env.TEXTMAGIC_API_KEY!
       )
+    } catch (error) {
+      console.error('Failed to initialize TextMagic client:', error)
+      this.isConfigured = false
     }
   }
 
@@ -57,11 +70,23 @@ class TextMagicService {
 
   async sendSMS({ to, message, from }: SMSMessage): Promise<SMSResponse> {
     try {
-      if (!this.isConfigured || !this.client) {
+      if (!this.isConfigured) {
         console.warn('TextMagic not configured - SMS sending disabled')
         return {
           success: false,
           error: 'TextMagic not configured. SMS sending is disabled.'
+        }
+      }
+
+      // Initialize client if needed
+      if (!this.client) {
+        await this.initializeClient()
+      }
+
+      if (!this.client) {
+        return {
+          success: false,
+          error: 'Failed to initialize TextMagic client'
         }
       }
 
@@ -83,7 +108,7 @@ class TextMagicService {
 
       // Send the SMS
       const result = await new Promise((resolve, reject) => {
-        this.client!.Messages.send(messageData, (err: any, res: any) => {
+        this.client.Messages.send(messageData, (err: any, res: any) => {
           if (err) {
             console.error('TextMagic send error:', err)
             reject(err)
@@ -112,15 +137,27 @@ class TextMagicService {
 
   async checkBalance(): Promise<{ success: boolean; balance?: number; currency?: string; error?: string }> {
     try {
-      if (!this.isConfigured || !this.client) {
+      if (!this.isConfigured) {
         return {
           success: false,
           error: 'TextMagic not configured'
         }
       }
 
+      // Initialize client if needed
+      if (!this.client) {
+        await this.initializeClient()
+      }
+
+      if (!this.client) {
+        return {
+          success: false,
+          error: 'Failed to initialize TextMagic client'
+        }
+      }
+
       const result = await new Promise((resolve, reject) => {
-        this.client!.User.getCurrent((err: any, res: any) => {
+        this.client.User.getCurrent((err: any, res: any) => {
           if (err) {
             reject(err)
           } else {
