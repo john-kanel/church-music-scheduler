@@ -231,6 +231,27 @@ export async function POST(request: NextRequest) {
           r.smsNotifications && r.phone && r.phone.trim() !== ''
         )
         
+        // Check if SMS-only mode has no valid recipients
+        if (sendMethod === 'sms' && smsRecipients.length === 0) {
+          // Analyze why no SMS recipients
+          const hasPhone = recipients.filter((r: any) => r.phone && r.phone.trim() !== '')
+          const hasSMSEnabled = recipients.filter((r: any) => r.smsNotifications)
+          
+          let errorMessage = 'Cannot send SMS: '
+          if (hasPhone.length === 0) {
+            errorMessage += 'No recipients have phone numbers.'
+          } else if (hasSMSEnabled.length === 0) {
+            errorMessage += 'No recipients have SMS notifications enabled.'
+          } else {
+            errorMessage += 'No recipients have both phone numbers and SMS notifications enabled.'
+          }
+          
+          return NextResponse.json(
+            { error: errorMessage },
+            { status: 400 }
+          )
+        }
+        
         // Create SMS message (shorter version for SMS)
         const smsMessage = sendMethod === 'sms' ? 
           content : 
@@ -252,6 +273,12 @@ export async function POST(request: NextRequest) {
           } catch (smsError) {
             console.error(`Failed to send SMS to ${recipient.phone}:`, smsError)
           }
+        }
+        
+        // Add warning for 'both' mode if some recipients can't receive SMS
+        if (sendMethod === 'both' && smsRecipients.length < recipients.length) {
+          const missingSMS = recipients.length - smsRecipients.length
+          console.warn(`⚠️  ${missingSMS} recipients cannot receive SMS (missing phone or SMS disabled)`)
         }
       } else if (sendMethod === 'sms' || sendMethod === 'both') {
         console.warn('SMS sending requested but TextMagic is not configured')
