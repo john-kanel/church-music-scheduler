@@ -20,6 +20,7 @@ export function SendMessageModal({ isOpen, onClose, onMessageSent, recipients, g
   const [events, setEvents] = useState<any[]>([])
   const [churchMembers, setChurchMembers] = useState<any[]>([])
   const [loadingMembers, setLoadingMembers] = useState(false)
+  const [includeSelf, setIncludeSelf] = useState(false)
   const [selectedEventId, setSelectedEventId] = useState('')
 
   const [messageData, setMessageData] = useState({
@@ -55,7 +56,8 @@ export function SendMessageModal({ isOpen, onClose, onMessageSent, recipients, g
     
     setLoadingMembers(true)
     try {
-      const response = await fetch('/api/church-members')
+      const url = `/api/church-members${includeSelf ? '?includeSelf=true' : ''}`
+      const response = await fetch(url)
       if (response.ok) {
         const data = await response.json()
         setChurchMembers(data.members || [])
@@ -79,6 +81,13 @@ export function SendMessageModal({ isOpen, onClose, onMessageSent, recipients, g
       fetchChurchMembers()
     }
   }, [isOpen])
+
+  // Refetch church members when includeSelf changes
+  useEffect(() => {
+    if (isOpen && messageData.recipients === 'individual') {
+      fetchChurchMembers()
+    }
+  }, [includeSelf])
 
   const fetchGroups = async () => {
     try {
@@ -318,7 +327,18 @@ export function SendMessageModal({ isOpen, onClose, onMessageSent, recipients, g
 
               {messageData.recipients === 'individual' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Select People</label>
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="block text-sm font-medium text-gray-700">Select People</label>
+                    <label className="flex items-center text-sm">
+                      <input
+                        type="checkbox"
+                        checked={includeSelf}
+                        onChange={(e) => setIncludeSelf(e.target.checked)}
+                        className="mr-2 h-4 w-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
+                      />
+                      <span className="text-gray-600">Include myself</span>
+                    </label>
+                  </div>
                   {loadingMembers ? (
                     <div className="flex items-center justify-center p-8">
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
@@ -360,14 +380,21 @@ export function SendMessageModal({ isOpen, onClose, onMessageSent, recipients, g
                       )}
                     </div>
                   )}
-                  <p className="text-sm text-gray-500 mt-2">
-                    {selectedIndividuals.length} people selected
-                    {messageData.sendMethod === 'sms' && (
-                      <span className="ml-2 text-orange-600">
-                        (Only members with phone numbers will receive SMS)
-                      </span>
+                  <div className="text-sm text-gray-500 mt-2">
+                    <p>
+                      {selectedIndividuals.length} people selected
+                      {messageData.sendMethod === 'sms' && (
+                        <span className="ml-2 text-orange-600">
+                          (Only members with phone numbers will receive SMS)
+                        </span>
+                      )}
+                    </p>
+                    {!includeSelf && (
+                      <p className="text-xs text-gray-400 mt-1">
+                        💡 Your own account is excluded by default. Use "Include myself" to send messages to yourself (useful for testing).
+                      </p>
                     )}
-                  </p>
+                  </div>
                 </div>
               )}
 
