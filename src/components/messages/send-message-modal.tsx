@@ -187,6 +187,7 @@ export function SendMessageModal({ isOpen, onClose, onMessageSent, recipients, g
           content: messageData.message,
           type: messageType,
           recipientIds: Array.isArray(recipientList) ? recipientList : [],
+          sendMethod: messageData.sendMethod, // Include the send method!
           scheduledFor: scheduledFor,
           // eventId could be added later for event-specific messages
         })
