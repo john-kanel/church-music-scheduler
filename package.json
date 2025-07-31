@@ -60,6 +60,7 @@
     "react-hook-form": "^7.58.1",
     "resend": "^4.6.0",
     "stripe": "^18.2.1",
+    "textmagic-rest-client": "^1.0.11",
     "twilio": "^5.7.1",
     "uploadthing": "^7.7.2",
     "zod": "^3.25.67"

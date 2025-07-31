@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { sendNotificationEmail } from '@/lib/resend'
+import { sendSMS, isSMSAvailable } from '@/lib/textmagic'
 import { logActivity } from '@/lib/activity'
 
 // GET /api/messages - List communications for the church
@@ -83,7 +84,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { subject, content, type, recipientIds, scheduledFor } = body
+    const { subject, content, type, recipientIds, scheduledFor, sendMethod = 'email' } = body
 
     // Validation
     if (!subject || !content || !type) {
@@ -124,7 +125,9 @@ export async function POST(request: NextRequest) {
           firstName: true,
           lastName: true,
           email: true,
-          emailNotifications: true
+          phone: true,
+          emailNotifications: true,
+          smsNotifications: true
         }
       })
     } else if (type === 'INDIVIDUAL' && recipientIds) {
@@ -139,7 +142,9 @@ export async function POST(request: NextRequest) {
           firstName: true,
           lastName: true,
           email: true,
-          emailNotifications: true
+          phone: true,
+          emailNotifications: true,
+          smsNotifications: true
         }
       })
 
@@ -151,12 +156,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Determine communication type based on send method
+    let communicationType: string
+    switch (sendMethod) {
+      case 'sms':
+        communicationType = 'SMS'
+        break
+      case 'both':
+        communicationType = 'EMAIL' // Primary type, will handle both in logic
+        break
+      default:
+        communicationType = 'EMAIL'
+    }
+
     // Create the communication record
     const communication = await prisma.communication.create({
       data: {
         subject,
         message: content,
-        type: 'EMAIL', // Map to the enum value
+        type: communicationType as any, // Map to the enum value
         churchId: session.user.churchId,
         sentBy: session.user.id,
         recipients: recipients.map((r: any) => r.id),
@@ -166,29 +184,30 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Determine how many emails were sent
+    // Track successful sends
     let emailsSent = 0
+    let smsSent = 0
     
-    // Send email notifications immediately only if not scheduled
+    // Send notifications immediately only if not scheduled
     if (!isScheduled) {
-      const emailRecipients = recipients.filter((r: any) => r.emailNotifications)
-      
-      if (emailRecipients.length > 0) {
-        // Get church and sender info for email templates
-        const church = await prisma.church.findUnique({
-          where: { id: session.user.churchId },
-          select: { name: true }
-        })
+      // Get church and sender info for templates
+      const church = await prisma.church.findUnique({
+        where: { id: session.user.churchId },
+        select: { name: true }
+      })
 
-        const sender = await prisma.user.findUnique({
-          where: { id: session.user.id },
-          select: { firstName: true, lastName: true }
-        })
+      const sender = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { firstName: true, lastName: true }
+      })
 
-        const churchName = church?.name || 'Church Music Ministry'
-        const senderName = sender ? `${sender.firstName} ${sender.lastName}` : 'Music Director'
+      const churchName = church?.name || 'Church Music Ministry'
+      const senderName = sender ? `${sender.firstName} ${sender.lastName}` : 'Music Director'
 
-        // Send emails
+      // Send emails if method is 'email' or 'both'
+      if (sendMethod === 'email' || sendMethod === 'both') {
+        const emailRecipients = recipients.filter((r: any) => r.emailNotifications)
+        
         for (const recipient of emailRecipients) {
           try {
             await sendNotificationEmail(
@@ -202,9 +221,40 @@ export async function POST(request: NextRequest) {
             emailsSent++
           } catch (emailError) {
             console.error(`Failed to send email to ${recipient.email}:`, emailError)
-            // Continue sending to other recipients even if one fails
           }
         }
+      }
+
+      // Send SMS if method is 'sms' or 'both'
+      if ((sendMethod === 'sms' || sendMethod === 'both') && isSMSAvailable()) {
+        const smsRecipients = recipients.filter((r: any) => 
+          r.smsNotifications && r.phone && r.phone.trim() !== ''
+        )
+        
+        // Create SMS message (shorter version for SMS)
+        const smsMessage = sendMethod === 'sms' ? 
+          content : 
+          `${subject}\n\n${content.length > 100 ? content.substring(0, 97) + '...' : content}\n\n- ${senderName}, ${churchName}`
+
+        for (const recipient of smsRecipients) {
+          try {
+            const result = await sendSMS(
+              recipient.phone,
+              smsMessage
+            )
+            
+            if (result.success) {
+              smsSent++
+              console.log(`✅ SMS sent to ${recipient.phone}`)
+            } else {
+              console.error(`❌ Failed to send SMS to ${recipient.phone}:`, result.error)
+            }
+          } catch (smsError) {
+            console.error(`Failed to send SMS to ${recipient.phone}:`, smsError)
+          }
+        }
+      } else if (sendMethod === 'sms' || sendMethod === 'both') {
+        console.warn('SMS sending requested but TextMagic is not configured')
       }
     }
 
@@ -218,7 +268,10 @@ export async function POST(request: NextRequest) {
         metadata: {
           subject,
           recipientCount: recipients.length,
-          messageType: type
+          messageType: type,
+          sendMethod: sendMethod,
+          emailsSent: emailsSent,
+          smsSent: smsSent
         }
       }
     })
@@ -227,7 +280,10 @@ export async function POST(request: NextRequest) {
       message: isScheduled ? 'Message scheduled successfully' : 'Message sent successfully',
       communication: communication,
       recipientCount: recipients.length,
-      emailsSent: emailsSent
+      emailsSent: emailsSent,
+      smsSent: smsSent,
+      sendMethod: sendMethod,
+      smsAvailable: isSMSAvailable()
     }, { status: 201 })
 
   } catch (error) {

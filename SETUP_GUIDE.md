@@ -42,7 +42,7 @@ Your Church Music Pro is a comprehensive platform for organizing music ministrie
 - **UI Components**: Radix UI, Lucide React icons
 - **Payments**: Stripe (configured)
 - **Email**: Resend (configured)
-- **SMS**: Twilio (configured)
+- **SMS**: TextMagic (configured)
 - **File Storage**: UploadThing (configured)
 
 ## 🚀 Getting Started
@@ -67,10 +67,10 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_test_your_stripe_publishable_key"
 # Resend (Email)
 RESEND_API_KEY="your_resend_api_key"
 
-# Twilio (SMS)
-TWILIO_ACCOUNT_SID="your_twilio_account_sid"
-TWILIO_AUTH_TOKEN="your_twilio_auth_token"
-TWILIO_PHONE_NUMBER="your_twilio_phone_number"
+# TextMagic (SMS)
+TEXTMAGIC_USERNAME="your_textmagic_username"
+TEXTMAGIC_API_KEY="your_textmagic_api_key"
+TEXTMAGIC_SENDER_ID="your_sender_id" # Optional: Custom sender ID
 
 # UploadThing (File Storage)
 UPLOADTHING_SECRET="your_uploadthing_secret"
