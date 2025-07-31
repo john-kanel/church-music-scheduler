@@ -20,16 +20,10 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')
     const verified = searchParams.get('verified') !== 'false' // Default to verified users only
-    const includeSelf = searchParams.get('includeSelf') === 'true' // Option to include current user
 
     // Build search filter for all church members
     const whereClause: any = {
       churchId: session.user.churchId
-    }
-
-    // Exclude current user unless specifically requested
-    if (!includeSelf) {
-      whereClause.id = { not: session.user.id }
     }
 
     // Filter by verified status 
