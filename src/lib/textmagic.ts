@@ -1,4 +1,4 @@
-import TMClient from 'textmagic-rest-client'
+import TMClient = require('textmagic-rest-client')
 
 interface SMSMessage {
   to: string
@@ -14,11 +14,12 @@ interface SMSResponse {
 }
 
 class TextMagicService {
-  private client: any
+  private client: TMClient | null
   private isConfigured: boolean
 
   constructor() {
     this.isConfigured = this.validateConfig()
+    this.client = null
     
     if (this.isConfigured) {
       this.client = new TMClient(
@@ -56,7 +57,7 @@ class TextMagicService {
 
   async sendSMS({ to, message, from }: SMSMessage): Promise<SMSResponse> {
     try {
-      if (!this.isConfigured) {
+      if (!this.isConfigured || !this.client) {
         console.warn('TextMagic not configured - SMS sending disabled')
         return {
           success: false,
@@ -82,7 +83,7 @@ class TextMagicService {
 
       // Send the SMS
       const result = await new Promise((resolve, reject) => {
-        this.client.Messages.send(messageData, (err: any, res: any) => {
+        this.client!.Messages.send(messageData, (err: any, res: any) => {
           if (err) {
             console.error('TextMagic send error:', err)
             reject(err)
@@ -111,7 +112,7 @@ class TextMagicService {
 
   async checkBalance(): Promise<{ success: boolean; balance?: number; currency?: string; error?: string }> {
     try {
-      if (!this.isConfigured) {
+      if (!this.isConfigured || !this.client) {
         return {
           success: false,
           error: 'TextMagic not configured'
@@ -119,7 +120,7 @@ class TextMagicService {
       }
 
       const result = await new Promise((resolve, reject) => {
-        this.client.User.getCurrent((err: any, res: any) => {
+        this.client!.User.getCurrent((err: any, res: any) => {
           if (err) {
             reject(err)
           } else {
