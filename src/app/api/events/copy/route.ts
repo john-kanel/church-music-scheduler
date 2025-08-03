@@ -81,8 +81,14 @@ export async function POST(request: NextRequest) {
 
       // Now add the new hymns from source, preserving exact order
       const baseTime = new Date()
+      console.log(`📋 COPY: Copying ${sourceEvent.hymns.length} hymns from ${sourceEventId} to ${targetEventId}`)
+      
       for (let i = 0; i < sourceEvent.hymns.length; i++) {
         const hymn = sourceEvent.hymns[i]
+        const newCreatedAt = new Date(baseTime.getTime() + i * 1000)
+        
+        console.log(`📋 COPY: [${i}] "${hymn.title}" (${hymn.servicePartId}) -> createdAt: ${newCreatedAt.toISOString()}`)
+        
         try {
           await prisma.eventHymn.create({
             data: {
@@ -91,7 +97,7 @@ export async function POST(request: NextRequest) {
               notes: hymn.notes || null,
               servicePartId: hymn.servicePartId,
               // Use same second-based interval system as hymn creation API
-              createdAt: new Date(baseTime.getTime() + i * 1000)
+              createdAt: newCreatedAt
             }
           })
           copyResults.serviceParts++
@@ -99,6 +105,8 @@ export async function POST(request: NextRequest) {
           console.error('Error copying hymn:', error)
         }
       }
+      
+      console.log(`📋 COPY: Successfully copied ${copyResults.serviceParts} hymns`)
     }
 
     // Copy documents

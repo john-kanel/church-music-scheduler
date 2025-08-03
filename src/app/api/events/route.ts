@@ -46,7 +46,8 @@ export async function GET(request: NextRequest) {
           hymns: {
             include: {
               servicePart: true
-            }
+            },
+            orderBy: { createdAt: 'asc' } // Ensure hymns are in correct order
           }
         },
         orderBy: { startTime: 'asc' }
@@ -115,7 +116,8 @@ export async function GET(request: NextRequest) {
         hymns: {
           include: {
             servicePart: true
-          }
+          },
+          orderBy: { createdAt: 'asc' } // Ensure hymns are in correct order
         },
         musicFiles: true
       },

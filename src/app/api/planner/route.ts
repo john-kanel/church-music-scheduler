@@ -64,7 +64,8 @@ export async function GET(request: NextRequest) {
             title: true,
             servicePartId: true,
             notes: true
-          }
+          },
+          orderBy: { createdAt: 'asc' } // CRITICAL: Order hymns by creation time
         },
         assignments: {
           include: {
