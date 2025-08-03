@@ -108,7 +108,7 @@ export default function TermsOfServicePage() {
           <ul>
             <li>Your privacy is governed by our Privacy Policy</li>
             <li>You consent to receive communications related to the Service via email and SMS (if enabled)</li>
-            <li>Communications are sent through third-party services including Resend (email) and TextMagic (SMS)</li>
+            <li>Communications are sent through trusted third-party services</li>
             <li>You may opt out of non-essential communications through your account settings</li>
             <li>Emergency, security, or billing notifications cannot be opted out of</li>
             <li>Data retention period is up to 5 years after account deletion for legal compliance</li>

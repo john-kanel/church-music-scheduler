@@ -67,16 +67,14 @@ export default function PrivacyPolicyPage() {
           <p><strong>We do not sell your personal information to third parties.</strong></p>
 
           <h2>Third-Party Services</h2>
-          <p>Our service integrates with the following third-party providers to deliver our service:</p>
+          <p>We use trusted third-party services to operate our platform:</p>
           <ul>
-            <li><strong>Resend:</strong> Email delivery service for event notifications, musician invitations, password resets, weekly reports, and automated communications. Your email address and basic profile information are shared to enable delivery.</li>
-            <li><strong>TextMagic:</strong> SMS service for text message notifications and alerts (when enabled by users). Your phone number and message content are shared only when you have SMS notifications enabled.</li>
-            <li><strong>Stripe:</strong> Payment processing for subscription billing, trial management, and payment collection. Financial information is processed securely and we do not store credit card details on our servers.</li>
-            <li><strong>Railway:</strong> Cloud hosting platform for application infrastructure and data storage. All your data is hosted on Railway's secure servers.</li>
-            <li><strong>PostgreSQL on Railway:</strong> Database hosting for secure storage of all application data including events, user profiles, and church information.</li>
-            <li><strong>NextAuth.js:</strong> Authentication service for secure login management and session handling. No data is shared with external parties through this service.</li>
-            <li><strong>Google/Apple Calendar Integration:</strong> For calendar feed generation and event synchronization when users enable calendar subscriptions.</li>
+            <li><strong>Payment processing</strong> for subscription billing</li>
+            <li><strong>Email services</strong> for notifications and communications</li>
+            <li><strong>SMS services</strong> for text notifications (when enabled)</li>
+            <li><strong>Cloud hosting</strong> for data storage and application delivery</li>
           </ul>
+          <p>These services only receive the minimum data necessary to perform their functions.</p>
 
           <h2>Data Security</h2>
           <p>We implement appropriate security measures to protect your information:</p>
