@@ -21,7 +21,9 @@ export async function POST(request: NextRequest) {
       prisma.event.findUnique({
         where: { id: sourceEventId },
         include: {
-          hymns: true,
+          hymns: {
+            orderBy: { createdAt: 'asc' } // Ensure hymns are in correct order
+          },
           documents: true,
           assignments: true
         }
@@ -77,7 +79,8 @@ export async function POST(request: NextRequest) {
         })
       }
 
-      // Now add the new hymns from source, preserving order
+      // Now add the new hymns from source, preserving exact order
+      const baseTime = new Date()
       for (let i = 0; i < sourceEvent.hymns.length; i++) {
         const hymn = sourceEvent.hymns[i]
         try {
@@ -87,8 +90,8 @@ export async function POST(request: NextRequest) {
               title: hymn.title,
               notes: hymn.notes || null,
               servicePartId: hymn.servicePartId,
-              // Use a timestamp offset to preserve order
-              createdAt: new Date(Date.now() + i)
+              // Use same second-based interval system as hymn creation API
+              createdAt: new Date(baseTime.getTime() + i * 1000)
             }
           })
           copyResults.serviceParts++
