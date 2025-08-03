@@ -594,19 +594,48 @@ export default function EventPlannerPage() {
 
   // Function to scroll to a specific event
   const scrollToEvent = (eventId: string) => {
-    setTimeout(() => {
+    console.log(`🎯 scrollToEvent called with eventId: ${eventId}`)
+    
+    // Try multiple times with increasing delays to ensure DOM is ready
+    const attemptScroll = (attempt: number) => {
       const eventElement = document.querySelector(`[data-event-id="${eventId}"]`)
+      console.log(`📍 Attempt ${attempt}: Found element:`, eventElement)
+      
       if (eventElement) {
+        // Log current scroll position before scrolling
+        const currentScrollTop = window.pageYOffset || document.documentElement.scrollTop
+        console.log(`📍 Current scroll position: ${currentScrollTop}`)
+        
         eventElement.scrollIntoView({ 
           behavior: 'smooth', 
           block: 'center',
           inline: 'nearest'
         })
-        console.log(`🎯 Scrolled to event: ${eventId}`)
+        
+        // Log new position after a short delay
+        setTimeout(() => {
+          const newScrollTop = window.pageYOffset || document.documentElement.scrollTop
+          console.log(`🎯 Scrolled to event ${eventId}. New position: ${newScrollTop}`)
+        }, 500)
+        
+        return true // Success
       } else {
-        console.warn(`⚠️ Could not find event element with ID: ${eventId}`)
+        console.warn(`⚠️ Attempt ${attempt}: Could not find event element with ID: ${eventId}`)
+        
+        // Log all elements with data-event-id for debugging
+        const allEventElements = document.querySelectorAll('[data-event-id]')
+        console.log(`🔍 Available event elements:`, Array.from(allEventElements).map(el => el.getAttribute('data-event-id')))
+        
+        if (attempt < 5) {
+          // Try again with longer delay
+          setTimeout(() => attemptScroll(attempt + 1), attempt * 200)
+        }
+        return false
       }
-    }, 100) // Small delay to ensure DOM is updated
+    }
+    
+    // Start with immediate attempt, then retry with delays if needed
+    setTimeout(() => attemptScroll(1), 100)
   }
 
   // Service part order persistence (database)
@@ -770,10 +799,14 @@ export default function EventPlannerPage() {
 
         // Scroll to edited event after data refresh
         if (preservePosition && lastEditedEventId) {
+          console.log(`🔄 fetchPlannerData: preservePosition=${preservePosition}, lastEditedEventId=${lastEditedEventId}`)
+          console.log(`🔄 fetchPlannerData: Data loaded successfully, ${eventsWithDocuments.length} events`)
           console.log(`🎯 Attempting to scroll to edited event: ${lastEditedEventId}`)
           scrollToEvent(lastEditedEventId)
           setLastEditedEventId(null) // Clear after scrolling
           setPreserveLoadedCount(null) // Clear preserved count
+        } else {
+          console.log(`🔄 fetchPlannerData: No scroll needed. preservePosition=${preservePosition}, lastEditedEventId=${lastEditedEventId}`)
         }
         
         // Only set initial filter state if not already set from localStorage
@@ -4429,12 +4462,18 @@ export default function EventPlannerPage() {
         event={selectedEventForEdit}
         onEventUpdated={() => {
           console.log('🔄 Event updated, refreshing data')
+          console.log(`🔄 selectedEventForEdit?.id: ${selectedEventForEdit?.id}`)
+          console.log(`🔄 data?.events.length: ${data?.events.length}`)
           if (selectedEventForEdit?.id) {
             // Preserve position when refreshing after edit
             setLastEditedEventId(selectedEventForEdit.id)
             setPreserveLoadedCount(data?.events.length || 20)
+            console.log(`🔄 Set lastEditedEventId to: ${selectedEventForEdit.id}`)
+            console.log(`🔄 Set preserveLoadedCount to: ${data?.events.length || 20}`)
+            console.log(`🔄 Calling fetchPlannerData(false, true)`)
             fetchPlannerData(false, true) // Refresh with position preservation
           } else {
+            console.log(`🔄 No selectedEventForEdit.id, calling normal fetchPlannerData`)
             fetchPlannerData() // Fallback to normal refresh
           }
         }}
