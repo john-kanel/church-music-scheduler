@@ -24,7 +24,7 @@ export default function TermsOfServicePage() {
         <div className="bg-white rounded-lg shadow-sm border p-8 prose prose-gray max-w-none">
           <h2>Agreement to Terms</h2>
           <p>
-            By accessing and using Church Music Pro ("Service," "we," "us," or "our"), you agree to be bound by these Terms of Service ("Terms"). If you disagree with any part of these terms, you may not access the Service.
+            By accessing and using Church Music Pro ("Service," "we," "us," or "our"), operated by VERITAS FUND, LLC, you agree to be bound by these Terms of Service ("Terms"). If you disagree with any part of these terms, you may not access the Service.
           </p>
 
           <h2>Description of Service</h2>
@@ -107,9 +107,11 @@ export default function TermsOfServicePage() {
           <h2>Privacy and Communications</h2>
           <ul>
             <li>Your privacy is governed by our Privacy Policy</li>
-            <li>You consent to receive communications related to the Service</li>
-            <li>You may opt out of non-essential communications</li>
-            <li>Emergency or security notifications cannot be opted out of</li>
+            <li>You consent to receive communications related to the Service via email and SMS (if enabled)</li>
+            <li>Communications are sent through third-party services including Resend (email) and TextMagic (SMS)</li>
+            <li>You may opt out of non-essential communications through your account settings</li>
+            <li>Emergency, security, or billing notifications cannot be opted out of</li>
+            <li>Data retention period is up to 5 years after account deletion for legal compliance</li>
           </ul>
 
           <h2>Service Availability</h2>
@@ -161,8 +163,9 @@ export default function TermsOfServicePage() {
           <ul>
             <li>Any disputes will be resolved through binding arbitration</li>
             <li>Class action lawsuits are waived</li>
-            <li>These Terms are governed by [State/Country] law</li>
+            <li>These Terms are governed by Nebraska, USA law</li>
             <li>Disputes must be filed within one year of the claim arising</li>
+            <li>Arbitration proceedings will be conducted in Nebraska</li>
           </ul>
 
           <h2>Changes to Terms</h2>
@@ -181,8 +184,9 @@ export default function TermsOfServicePage() {
           <h2>Contact Information</h2>
           <p>If you have questions about these Terms, please contact us:</p>
           <ul>
-            <li><strong>Email:</strong> legal@churchmusicpro.com</li>
+            <li><strong>Email:</strong> support@churchmusicpro.com</li>
             <li><strong>Support:</strong> Through our in-app support system</li>
+            <li><strong>Company:</strong> VERITAS FUND, LLC (Nebraska)</li>
           </ul>
 
           <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">

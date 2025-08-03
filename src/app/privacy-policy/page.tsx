@@ -67,12 +67,15 @@ export default function PrivacyPolicyPage() {
           <p><strong>We do not sell your personal information to third parties.</strong></p>
 
           <h2>Third-Party Services</h2>
-          <p>Our service integrates with:</p>
+          <p>Our service integrates with the following third-party providers to deliver our service:</p>
           <ul>
-            <li><strong>Email Services:</strong> For sending notifications and communications</li>
-            <li><strong>SMS Services:</strong> For text message notifications (if enabled)</li>
-            <li><strong>Payment Processing:</strong> For subscription billing</li>
-            <li><strong>Analytics:</strong> For service improvement and usage insights</li>
+            <li><strong>Resend:</strong> Email delivery service for event notifications, musician invitations, password resets, weekly reports, and automated communications. Your email address and basic profile information are shared to enable delivery.</li>
+            <li><strong>TextMagic:</strong> SMS service for text message notifications and alerts (when enabled by users). Your phone number and message content are shared only when you have SMS notifications enabled.</li>
+            <li><strong>Stripe:</strong> Payment processing for subscription billing, trial management, and payment collection. Financial information is processed securely and we do not store credit card details on our servers.</li>
+            <li><strong>Railway:</strong> Cloud hosting platform for application infrastructure and data storage. All your data is hosted on Railway's secure servers.</li>
+            <li><strong>PostgreSQL on Railway:</strong> Database hosting for secure storage of all application data including events, user profiles, and church information.</li>
+            <li><strong>NextAuth.js:</strong> Authentication service for secure login management and session handling. No data is shared with external parties through this service.</li>
+            <li><strong>Google/Apple Calendar Integration:</strong> For calendar feed generation and event synchronization when users enable calendar subscriptions.</li>
           </ul>
 
           <h2>Data Security</h2>
@@ -97,8 +100,9 @@ export default function PrivacyPolicyPage() {
           <h2>Data Retention</h2>
           <p>
             We retain your information for as long as your account is active or as needed to provide services. 
-            After account deletion, we may retain certain information for legal compliance, fraud prevention, 
-            and legitimate business purposes.
+            After account deletion, we may retain certain information for up to 5 years for legal compliance, 
+            fraud prevention, and legitimate business purposes. Some anonymized usage data may be retained 
+            indefinitely for service improvement purposes.
           </p>
 
           <h2>Children's Privacy</h2>
@@ -110,8 +114,9 @@ export default function PrivacyPolicyPage() {
 
           <h2>International Users</h2>
           <p>
-            Our service is hosted in the United States. If you are accessing our service from outside the US, 
-            your information may be transferred to, stored, and processed in the US where our servers are located.
+            Our service is operated by VERITAS FUND, LLC in Nebraska, USA, and hosted on servers in the United States. 
+            If you are accessing our service from outside the US, your information may be transferred to, stored, 
+            and processed in the US where our servers are located and governed by US federal and Nebraska state laws.
           </p>
 
           <h2>Changes to This Policy</h2>
@@ -124,8 +129,9 @@ export default function PrivacyPolicyPage() {
           <h2>Contact Us</h2>
           <p>If you have questions about this Privacy Policy or our data practices, please contact us:</p>
           <ul>
-            <li><strong>Email:</strong> privacy@churchmusicpro.com</li>
+            <li><strong>Email:</strong> support@churchmusicpro.com</li>
             <li><strong>Support:</strong> Through our in-app support system</li>
+            <li><strong>Company:</strong> VERITAS FUND, LLC (Nebraska)</li>
           </ul>
 
           <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
