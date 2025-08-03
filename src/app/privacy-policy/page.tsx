@@ -21,7 +21,7 @@ export default function PrivacyPolicyPage() {
         </div>
 
         {/* Content */}
-        <div className="bg-white rounded-lg shadow-sm border p-8 prose prose-gray max-w-none">
+        <div className="bg-white rounded-lg shadow-sm border p-8 prose prose-slate max-w-none text-gray-900">
           <h2>Overview</h2>
           <p>
             This Privacy Policy describes how Church Music Pro ("we," "our," or "us") collects, uses, and protects your personal information when you use our church music scheduling service.
@@ -134,12 +134,7 @@ export default function PrivacyPolicyPage() {
             <li><strong>Company:</strong> VERITAS FUND, LLC (Nebraska)</li>
           </ul>
 
-          <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm text-blue-800 mb-0">
-              <strong>Note:</strong> This privacy policy template should be reviewed by legal counsel 
-              and customized for your specific business practices and applicable laws.
-            </p>
-          </div>
+
         </div>
       </div>
     </div>

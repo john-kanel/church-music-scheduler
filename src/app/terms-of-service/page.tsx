@@ -21,7 +21,7 @@ export default function TermsOfServicePage() {
         </div>
 
         {/* Content */}
-        <div className="bg-white rounded-lg shadow-sm border p-8 prose prose-gray max-w-none">
+        <div className="bg-white rounded-lg shadow-sm border p-8 prose prose-slate max-w-none text-gray-900">
           <h2>Agreement to Terms</h2>
           <p>
             By accessing and using Church Music Pro ("Service," "we," "us," or "our"), operated by VERITAS FUND, LLC, you agree to be bound by these Terms of Service ("Terms"). If you disagree with any part of these terms, you may not access the Service.
@@ -189,12 +189,7 @@ export default function TermsOfServicePage() {
             <li><strong>Company:</strong> VERITAS FUND, LLC (Nebraska)</li>
           </ul>
 
-          <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm text-blue-800 mb-0">
-              <strong>Note:</strong> This terms of service template should be reviewed by legal counsel 
-              and customized for your specific business model, applicable laws, and jurisdiction.
-            </p>
-          </div>
+
         </div>
       </div>
     </div>
