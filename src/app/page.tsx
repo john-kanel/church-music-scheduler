@@ -698,6 +698,23 @@ export default function HomePage() {
                 Church Music Pro
               </span>
             </div>
+            
+            {/* Legal Links */}
+            <div className="flex items-center justify-center space-x-6 mb-4">
+              <a 
+                href="/privacy-policy"
+                className="text-white opacity-90 hover:opacity-100 transition-opacity text-sm underline"
+              >
+                Privacy Policy
+              </a>
+              <a 
+                href="/terms-of-service"
+                className="text-white opacity-90 hover:opacity-100 transition-opacity text-sm underline"
+              >
+                Terms of Service
+              </a>
+            </div>
+            
             <p className="text-white opacity-90">
               © 2024 Church Music Pro. All rights reserved.
             </p>

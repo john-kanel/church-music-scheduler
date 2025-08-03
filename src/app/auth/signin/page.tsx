@@ -55,6 +55,29 @@ function SignInContent() {
               </Link>
             </p>
           </div>
+
+          {/* Legal Links */}
+          <div className="mt-6 text-center">
+            <div className="flex items-center justify-center space-x-4 text-xs text-gray-500">
+              <a 
+                href="/privacy-policy"
+                className="hover:text-brand-600 transition-colors underline"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Privacy Policy
+              </a>
+              <span>•</span>
+              <a 
+                href="/terms-of-service"
+                className="hover:text-brand-600 transition-colors underline"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Terms of Service
+              </a>
+            </div>
+          </div>
         </div>
       </div>
     </div>
