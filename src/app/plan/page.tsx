@@ -423,6 +423,10 @@ export default function EventPlannerPage() {
   
   // Load more state
   const [isLoadingMore, setIsLoadingMore] = useState(false)
+  
+  // Scroll position and pagination preservation
+  const [lastEditedEventId, setLastEditedEventId] = useState<string | null>(null)
+  const [preserveLoadedCount, setPreserveLoadedCount] = useState<number | null>(null)
 
   // CRITICAL SECURITY: Redirect musicians away from plan page
   useEffect(() => {
@@ -588,6 +592,23 @@ export default function EventPlannerPage() {
     setToasts(prev => prev.filter(toast => toast.id !== id))
   }
 
+  // Function to scroll to a specific event
+  const scrollToEvent = (eventId: string) => {
+    setTimeout(() => {
+      const eventElement = document.querySelector(`[data-event-id="${eventId}"]`)
+      if (eventElement) {
+        eventElement.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center',
+          inline: 'nearest'
+        })
+        console.log(`🎯 Scrolled to event: ${eventId}`)
+      } else {
+        console.warn(`⚠️ Could not find event element with ID: ${eventId}`)
+      }
+    }, 100) // Small delay to ensure DOM is updated
+  }
+
   // Service part order persistence (database)
   const saveEventServicePartOrder = async (order: Record<string, string[]>) => {
     try {
@@ -681,13 +702,23 @@ export default function EventPlannerPage() {
     }
   }
 
-  const fetchPlannerData = async (appendMode = false) => {
+  const fetchPlannerData = async (appendMode = false, preservePosition = false) => {
     try {
       if (!appendMode) setLoading(true)
       if (appendMode) setIsLoadingMore(true)
       
-      const offset = appendMode ? (data?.events.length || 0) : 0
-      const limit = appendMode ? 30 : 20  // Load 30 more events when "See more" is clicked
+      let offset = 0
+      let limit = 20
+      
+      if (appendMode) {
+        offset = data?.events.length || 0
+        limit = 30
+      } else if (preservePosition && preserveLoadedCount) {
+        // Load all events up to the previously loaded count to restore pagination state
+        offset = 0
+        limit = preserveLoadedCount
+        console.log(`🔄 Preserving position: Loading ${limit} events to restore pagination state`)
+      }
       
       const response = await fetch(`/api/planner?offset=${offset}&limit=${limit}`)
       if (response.ok) {
@@ -736,6 +767,14 @@ export default function EventPlannerPage() {
             return updatedPlannerData
           }
         })
+
+        // Scroll to edited event after data refresh
+        if (preservePosition && lastEditedEventId) {
+          console.log(`🎯 Attempting to scroll to edited event: ${lastEditedEventId}`)
+          scrollToEvent(lastEditedEventId)
+          setLastEditedEventId(null) // Clear after scrolling
+          setPreserveLoadedCount(null) // Clear preserved count
+        }
         
         // Only set initial filter state if not already set from localStorage
         setVisibleServiceParts(prev => {
@@ -1410,8 +1449,14 @@ export default function EventPlannerPage() {
 
       showToast('success', `Added ${suggestions.length} songs from document (merged with existing content)`)
       
-      // Refresh the data to show updated hymns
-      await fetchPlannerData()
+      // Refresh the data to show updated hymns with position preservation
+      if (editingEventId) {
+        setLastEditedEventId(editingEventId)
+        setPreserveLoadedCount(data?.events.length || 20)
+        await fetchPlannerData(false, true)
+      } else {
+        await fetchPlannerData()
+      }
       setShowPdfProcessor(false)
       setCurrentEventIdForUpload('')
     } catch (error) {
@@ -1517,8 +1562,14 @@ export default function EventPlannerPage() {
         console.log('✅ Individual song saved successfully:', result)
         showToast('success', 'Song updated successfully')
         
-        // Refresh data to ensure we have the latest state from the server
+              // Refresh data to ensure we have the latest state from the server with position preservation
+      if (editingEventId) {
+        setLastEditedEventId(editingEventId)
+        setPreserveLoadedCount(data?.events.length || 20)
+        await fetchPlannerData(false, true)
+      } else {
         await fetchPlannerData()
+      }
       } else {
         const errorData = await response.json()
         console.error('❌ Failed to save individual song:', errorData)
@@ -1912,8 +1963,10 @@ export default function EventPlannerPage() {
 
         if (response.ok) {
           showToast('success', 'Document uploaded successfully!')
-          // Refresh data to show new document
-          await fetchPlannerData()
+                  // Refresh data to show new document with position preservation
+        setLastEditedEventId(currentEventIdForUpload)
+        setPreserveLoadedCount(data?.events.length || 20)
+        await fetchPlannerData(false, true)
         } else {
           showToast('error', 'Failed to upload document')
         }
@@ -1942,8 +1995,10 @@ export default function EventPlannerPage() {
 
       if (response.ok) {
         showToast('success', 'Document deleted successfully!')
-        // Refresh data to remove deleted document
-        await fetchPlannerData()
+        // Refresh data to remove deleted document with position preservation
+        setLastEditedEventId(eventId)
+        setPreserveLoadedCount(data?.events.length || 20)
+        await fetchPlannerData(false, true)
       } else {
         showToast('error', 'Failed to delete document')
       }
@@ -2186,8 +2241,10 @@ export default function EventPlannerPage() {
       const result = await response.json()
       console.log('✅ Role added successfully:', result)
       
-      // Refresh the data to get the new role from the server
-      await fetchPlannerData()
+      // Refresh the data to get the new role from the server with position preservation
+      setLastEditedEventId(eventId)
+      setPreserveLoadedCount(data?.events.length || 20)
+      await fetchPlannerData(false, true)
 
       showToast('success', 'Role added successfully!')
       setNewRoleName('')
@@ -2561,7 +2618,14 @@ export default function EventPlannerPage() {
       setShowCopyDropdown(null)
       setCopyTargetEvent(null)
       setSelectedSourceEventId(null)
-      fetchPlannerData() // Refresh to show copied data
+      // Refresh to show copied data with position preservation
+      if (copyTargetEvent?.id) {
+        setLastEditedEventId(copyTargetEvent.id)
+        setPreserveLoadedCount(data?.events.length || 20)
+        fetchPlannerData(false, true)
+      } else {
+        fetchPlannerData()
+      }
     } catch (error) {
       console.error('Error copying event parts:', error)
       showToast('error', 'Failed to copy event parts')
@@ -2909,7 +2973,7 @@ export default function EventPlannerPage() {
                 {/* Desktop View */}
                 <div className="hidden lg:flex h-full">
                   {filteredEvents.map(event => (
-                    <div key={event.id} className="flex-shrink-0 w-80 border-r border-gray-200 bg-white relative">
+                    <div key={event.id} data-event-id={event.id} className="flex-shrink-0 w-80 border-r border-gray-200 bg-white relative">
                       {/* Event Header */}
                       <div className="p-4 border-b border-gray-200 bg-gray-50">
                         <div className="flex items-center justify-between mb-2">
@@ -3656,7 +3720,7 @@ export default function EventPlannerPage() {
 
                 {/* Mobile View - Single Column */}
                 {filteredEvents[currentEventIndex] && (
-                  <div className="lg:hidden bg-white h-full relative">
+                  <div className="lg:hidden bg-white h-full relative" data-event-id={filteredEvents[currentEventIndex].id}>
                     {(() => {
                       const event = filteredEvents[currentEventIndex]
                       return (
@@ -4365,7 +4429,14 @@ export default function EventPlannerPage() {
         event={selectedEventForEdit}
         onEventUpdated={() => {
           console.log('🔄 Event updated, refreshing data')
-          fetchPlannerData() // Refresh data after event update
+          if (selectedEventForEdit?.id) {
+            // Preserve position when refreshing after edit
+            setLastEditedEventId(selectedEventForEdit.id)
+            setPreserveLoadedCount(data?.events.length || 20)
+            fetchPlannerData(false, true) // Refresh with position preservation
+          } else {
+            fetchPlannerData() // Fallback to normal refresh
+          }
         }}
         onEventDeleted={() => {
           console.log('🔄 Event deleted, closing modal and refreshing')
