@@ -82,6 +82,16 @@ export default function SettingsPage() {
     timezone: 'America/Chicago'
   })
 
+  // Password change state
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  })
+  const [passwordLoading, setPasswordLoading] = useState(false)
+  const [passwordSuccess, setPasswordSuccess] = useState('')
+  const [passwordError, setPasswordError] = useState('')
+
   // Documents & Links Management
   const [churchDocuments, setChurchDocuments] = useState<ChurchDocument[]>([])
   const [churchLinks, setChurchLinks] = useState<ChurchLink[]>([])
@@ -670,14 +680,150 @@ export default function SettingsPage() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
   }
 
+  // Password change functions
+  const handlePasswordInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    setPasswordData(prev => ({ ...prev, [name]: value }))
+    
+    // Clear errors when user starts typing
+    if (passwordError) setPasswordError('')
+    if (passwordSuccess) setPasswordSuccess('')
+  }
+
+  const validatePassword = (password: string) => {
+    if (password.length < 8) {
+      return 'Password must be at least 8 characters long'
+    }
+    return null
+  }
+
+  const getPasswordStrength = (password: string) => {
+    let strength = 0
+    if (password.length >= 8) strength++
+    if (/(?=.*[a-z])(?=.*[A-Z])/.test(password)) strength++
+    if (/(?=.*\d)/.test(password)) strength++
+    if (/(?=.*[!@#$%^&*])/.test(password)) strength++
+    
+    if (strength === 0) return { level: 'Very Weak', color: 'bg-red-500', width: '20%' }
+    if (strength === 1) return { level: 'Weak', color: 'bg-red-400', width: '40%' }
+    if (strength === 2) return { level: 'Fair', color: 'bg-yellow-400', width: '60%' }
+    if (strength === 3) return { level: 'Good', color: 'bg-blue-500', width: '80%' }
+    return { level: 'Strong', color: 'bg-green-500', width: '100%' }
+  }
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setPasswordError('')
+    setPasswordSuccess('')
+
+    const { currentPassword, newPassword, confirmPassword } = passwordData
+
+    // Validate inputs
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordError('All fields are required')
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New passwords do not match')
+      return
+    }
+
+    const passwordError = validatePassword(newPassword)
+    if (passwordError) {
+      setPasswordError(passwordError)
+      return
+    }
+
+    setPasswordLoading(true)
+
+    try {
+      const response = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword
+        })
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setPasswordSuccess('Password changed successfully!')
+        setPasswordData({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        })
+      } else {
+        setPasswordError(data.error || 'Failed to change password')
+      }
+    } catch (error) {
+      setPasswordError('Network error. Please try again.')
+    } finally {
+      setPasswordLoading(false)
+    }
+  }
+
   const timezones = [
+    // North America
     'America/New_York',
     'America/Chicago', 
     'America/Denver',
     'America/Los_Angeles',
     'America/Phoenix',
     'America/Anchorage',
-    'Pacific/Honolulu'
+    'Pacific/Honolulu',
+    'America/Toronto',
+    'America/Vancouver',
+    'America/Montreal',
+    'America/Mexico_City',
+    
+    // Europe
+    'Europe/London',
+    'Europe/Paris',
+    'Europe/Berlin',
+    'Europe/Rome',
+    'Europe/Madrid',
+    'Europe/Amsterdam',
+    'Europe/Stockholm',
+    'Europe/Warsaw',
+    'Europe/Athens',
+    'Europe/Dublin',
+    'Europe/Zurich',
+    'Europe/Vienna',
+    
+    // Asia Pacific
+    'Asia/Tokyo',
+    'Asia/Shanghai',
+    'Asia/Seoul',
+    'Asia/Hong_Kong',
+    'Asia/Singapore',
+    'Asia/Manila',
+    'Asia/Jakarta',
+    'Asia/Bangkok',
+    'Asia/Mumbai',
+    'Asia/Dubai',
+    'Asia/Karachi',
+    'Australia/Sydney',
+    'Australia/Melbourne',
+    'Australia/Perth',
+    'Pacific/Auckland',
+    
+    // Africa
+    'Africa/Cairo',
+    'Africa/Lagos',
+    'Africa/Johannesburg',
+    'Africa/Nairobi',
+    'Africa/Casablanca',
+    
+    // South America
+    'America/Sao_Paulo',
+    'America/Buenos_Aires',
+    'America/Lima',
+    'America/Bogota',
+    'America/Santiago'
   ]
 
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -1134,13 +1280,128 @@ export default function SettingsPage() {
                     >
                       {timezones.map(tz => (
                         <option key={tz} value={tz}>
-                          {tz.replace('_', ' ').replace('America/', '').replace('Pacific/', '')}
+                          {tz.replace(/_/g, ' ')
+                            .replace('America/', '')
+                            .replace('Pacific/', '')
+                            .replace('Europe/', '')
+                            .replace('Asia/', '')
+                            .replace('Africa/', '')
+                            .replace('Australia/', '')
+                          } ({tz})
                         </option>
                       ))}
                     </select>
                     <p className="text-sm text-gray-500 mt-1">
                       Used for scheduling and notification timing
                     </p>
+                  </div>
+
+                  {/* Password Change Section */}
+                  <div className="border-t pt-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <Lock className="h-4 w-4 mr-2" />
+                      Change Password
+                    </h3>
+                    
+                    <form onSubmit={handlePasswordSubmit} className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Current Password
+                        </label>
+                        <input
+                          type="password"
+                          name="currentPassword"
+                          value={passwordData.currentPassword}
+                          onChange={handlePasswordInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="Enter your current password"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          New Password
+                        </label>
+                        <input
+                          type="password"
+                          name="newPassword"
+                          value={passwordData.newPassword}
+                          onChange={handlePasswordInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="Enter your new password"
+                        />
+                        
+                        {/* Password Strength Indicator */}
+                        {passwordData.newPassword && (
+                          <div className="mt-2">
+                            <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
+                              <span>Password Strength:</span>
+                              <span className={`font-medium ${
+                                getPasswordStrength(passwordData.newPassword).level === 'Strong' ? 'text-green-600' :
+                                getPasswordStrength(passwordData.newPassword).level === 'Good' ? 'text-blue-600' :
+                                getPasswordStrength(passwordData.newPassword).level === 'Fair' ? 'text-yellow-600' :
+                                'text-red-600'
+                              }`}>
+                                {getPasswordStrength(passwordData.newPassword).level}
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div
+                                className={`h-2 rounded-full transition-all duration-300 ${getPasswordStrength(passwordData.newPassword).color}`}
+                                style={{ width: getPasswordStrength(passwordData.newPassword).width }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                        
+                        <p className="text-xs text-gray-500 mt-1">
+                          Password must be at least 8 characters long
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Confirm New Password
+                        </label>
+                        <input
+                          type="password"
+                          name="confirmPassword"
+                          value={passwordData.confirmPassword}
+                          onChange={handlePasswordInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="Confirm your new password"
+                        />
+                      </div>
+
+                      {/* Error Message */}
+                      {passwordError && (
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                          <p className="text-red-600 text-sm">{passwordError}</p>
+                        </div>
+                      )}
+
+                      {/* Success Message */}
+                      {passwordSuccess && (
+                        <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                          <p className="text-green-600 text-sm">{passwordSuccess}</p>
+                        </div>
+                      )}
+
+                      <button
+                        type="submit"
+                        disabled={passwordLoading || !passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword}
+                        className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                      >
+                        {passwordLoading ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            Changing Password...
+                          </>
+                        ) : (
+                          'Change Password'
+                        )}
+                      </button>
+                    </form>
                   </div>
                 </div>
               </div>
