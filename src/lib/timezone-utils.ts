@@ -42,14 +42,15 @@ export function displayEventDateTime(utcDate: Date, timezone: string): Date {
  * Formats date for ICS with proper timezone
  * @param utcDate - UTC Date from database  
  * @param timezone - Timezone for the event
- * @returns Properly formatted ICS datetime string
+ * @returns Properly formatted ICS datetime string with timezone
  */
 export function formatICSDateTime(utcDate: Date, timezone: string): string {
-  // Fix timezone issue: apply the same timezone correction as formatEventTimeForDisplay
+  // For ICS generation, we need to preserve the existing working behavior
+  // but fix the format for Google Calendar compatibility
   const timezoneOffsetMinutes = utcDate.getTimezoneOffset()
   const localDate = new Date(utcDate.getTime() + (timezoneOffsetMinutes * 60000))
   
-  // Format as YYYYMMDDTHHMMSS (local time)
+  // Format as YYYYMMDDTHHMMSS with TZID for Google Calendar compatibility
   const year = localDate.getFullYear()
   const month = String(localDate.getMonth() + 1).padStart(2, '0')
   const day = String(localDate.getDate()).padStart(2, '0')
@@ -57,7 +58,9 @@ export function formatICSDateTime(utcDate: Date, timezone: string): string {
   const minutes = String(localDate.getMinutes()).padStart(2, '0')
   const seconds = String(localDate.getSeconds()).padStart(2, '0')
   
-  return `${year}${month}${day}T${hours}${minutes}${seconds}`
+  // Use TZID format for better Google Calendar compatibility - this was the missing piece
+  const tzidName = timezone.replace(/\//g, '\\/') // Escape forward slashes  
+  return `TZID=${tzidName}:${year}${month}${day}T${hours}${minutes}${seconds}`
 }
 
 /**

@@ -37,10 +37,10 @@ export function generateICalFeed(events: EventWithDetails[], churchName: string,
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     // Required headers for subscription recognition
-    `X-WR-CALNAME:${churchName} Music Ministry`,
-    `X-WR-CALDESC:🔄 LIVE FEED: ${churchName} Music Ministry - Updates every 30 seconds`,
+    wrapICalLine(`X-WR-CALNAME:${churchName} Music Ministry`),
+    wrapICalLine(`X-WR-CALDESC:🔄 LIVE FEED: ${churchName} Music Ministry - Updates every 30 seconds`),
     `X-WR-TIMEZONE:${timezone}`,
-    `X-WR-RELCALID:${churchName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-music-ministry-${Date.now()}`,
+    wrapICalLine(`X-WR-RELCALID:${churchName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-music-ministry-${Date.now()}`),
     // AGGRESSIVE live sync for immediate updates
     'X-PUBLISHED-TTL:PT10S', // Refresh every 10 seconds 
     'REFRESH-INTERVAL;VALUE=DURATION:PT10S', // Alternative refresh directive
@@ -58,11 +58,14 @@ export function generateICalFeed(events: EventWithDetails[], churchName: string,
     ''
   ].join('\r\n')
 
+  // Add VTIMEZONE block for Google Calendar compatibility
+  const timezoneBlock = generateVTimezone(timezone)
+  
   const calendarFooter = 'END:VCALENDAR'
 
   const icalContent = icalEvents.map(event => formatICalEvent(event, timezone)).join('\r\n')
 
-  return calendarHeader + icalContent + '\r\n' + calendarFooter
+  return calendarHeader + timezoneBlock + icalContent + '\r\n' + calendarFooter
 }
 
 /**
@@ -77,19 +80,22 @@ export function generateSingleEventICalFile(event: EventWithDetails, churchName:
     'PRODID:-//Church Music Pro//Single Event 1.0//EN',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
-    `X-WR-CALNAME:${event.name} - ${churchName}`,
-    `X-WR-CALDESC:Event: ${event.name}`,
+    wrapICalLine(`X-WR-CALNAME:${event.name} - ${churchName}`),
+    wrapICalLine(`X-WR-CALDESC:Event: ${event.name}`),
     `X-WR-TIMEZONE:${timezone}`,
     'X-APPLE-CALENDAR-COLOR:#8B5CF6',
     'X-OUTLOOK-COLOR:#8B5CF6',
     ''
   ].join('\r\n')
 
+  // Add VTIMEZONE block for Google Calendar compatibility
+  const timezoneBlock = generateVTimezone(timezone)
+
   const calendarFooter = 'END:VCALENDAR'
 
   const icalContent = formatICalEvent(icalEvent, timezone)
 
-  return calendarHeader + icalContent + '\r\n' + calendarFooter
+  return calendarHeader + timezoneBlock + icalContent + '\r\n' + calendarFooter
 }
 
 /**
@@ -225,20 +231,56 @@ function buildEventDescription(event: EventWithDetails): string {
 }
 
 /**
+ * Generates VTIMEZONE block for proper timezone support
+ */
+function generateVTimezone(timezone: string): string {
+  // Common timezone mappings for better compatibility
+  const timezoneMap: { [key: string]: string } = {
+    'America/Chicago': 'US/Central',
+    'America/New_York': 'US/Eastern', 
+    'America/Los_Angeles': 'US/Pacific',
+    'America/Denver': 'US/Mountain'
+  }
+  
+  const tzid = timezoneMap[timezone] || timezone
+  
+  return [
+    'BEGIN:VTIMEZONE',
+    `TZID:${tzid}`,
+    'BEGIN:STANDARD',
+    'DTSTART:20231105T020000',
+    'RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU',
+    'TZNAME:CST',
+    'TZOFFSETFROM:-0500',
+    'TZOFFSETTO:-0600',
+    'END:STANDARD',
+    'BEGIN:DAYLIGHT', 
+    'DTSTART:20240310T020000',
+    'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU',
+    'TZNAME:CDT',
+    'TZOFFSETFROM:-0600',
+    'TZOFFSETTO:-0500',
+    'END:DAYLIGHT',
+    'END:VTIMEZONE',
+    ''
+  ].join('\r\n')
+}
+
+/**
  * Formats an iCal event object into the proper iCal format
  */
 function formatICalEvent(event: ICalEvent, timezone: string = 'America/Chicago'): string {
   const lines = [
     'BEGIN:VEVENT',
-    `UID:${event.uid}`,
-    `SUMMARY:${escapeICalText(event.summary)}`,
-    `DESCRIPTION:${escapeICalText(event.description)}`,
-    `LOCATION:${escapeICalText(event.location)}`,
-    `DTSTART:${formatICalDate(event.startDate, timezone)}`,
-    `DTEND:${formatICalDate(event.endDate, timezone)}`,
-    `DTSTAMP:${formatICalDate(new Date(), timezone)}`,
-    `LAST-MODIFIED:${formatICalDate(event.lastModified, timezone)}`,
-    `CREATED:${formatICalDate(event.created, timezone)}`,
+    wrapICalLine(`UID:${event.uid}`),
+    wrapICalLine(`SUMMARY:${escapeICalText(event.summary)}`),
+    wrapICalLine(`DESCRIPTION:${escapeICalText(event.description)}`),
+    wrapICalLine(`LOCATION:${escapeICalText(event.location)}`),
+    wrapICalLine(`DTSTART;${formatICalDate(event.startDate, timezone)}`),
+    wrapICalLine(`DTEND;${formatICalDate(event.endDate, timezone)}`),
+    wrapICalLine(`DTSTAMP:${formatICalDate(new Date(), 'UTC')}`),
+    wrapICalLine(`LAST-MODIFIED:${formatICalDate(event.lastModified, 'UTC')}`),
+    wrapICalLine(`CREATED:${formatICalDate(event.created, 'UTC')}`),
     `STATUS:${event.status}`,
     'TRANSP:OPAQUE',
     'END:VEVENT',
@@ -252,8 +294,21 @@ function formatICalEvent(event: ICalEvent, timezone: string = 'America/Chicago')
  * Formats a date for iCal with proper timezone support
  */
 function formatICalDate(date: Date, timezone: string = 'America/Chicago'): string {
-  const { formatICSDateTime } = require('@/lib/timezone-utils')
-  return formatICSDateTime(date, timezone)
+  if (timezone === 'UTC') {
+    // For UTC dates (DTSTAMP, CREATED, LAST-MODIFIED), use Z suffix
+    const utc = new Date(date.getTime())
+    const year = utc.getUTCFullYear()
+    const month = String(utc.getUTCMonth() + 1).padStart(2, '0')
+    const day = String(utc.getUTCDate()).padStart(2, '0')
+    const hours = String(utc.getUTCHours()).padStart(2, '0')
+    const minutes = String(utc.getUTCMinutes()).padStart(2, '0')
+    const seconds = String(utc.getUTCSeconds()).padStart(2, '0')
+    return `${year}${month}${day}T${hours}${minutes}${seconds}Z`
+  } else {
+    // For event dates, use TZID format
+    const { formatICSDateTime } = require('@/lib/timezone-utils')
+    return formatICSDateTime(date, timezone)
+  }
 }
 
 /**
