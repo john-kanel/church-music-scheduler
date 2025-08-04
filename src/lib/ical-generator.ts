@@ -234,36 +234,54 @@ function buildEventDescription(event: EventWithDetails): string {
  * Generates VTIMEZONE block for proper timezone support
  */
 function generateVTimezone(timezone: string): string {
-  // Common timezone mappings for better compatibility
-  const timezoneMap: { [key: string]: string } = {
-    'America/Chicago': 'US/Central',
-    'America/New_York': 'US/Eastern', 
-    'America/Los_Angeles': 'US/Pacific',
-    'America/Denver': 'US/Mountain'
+  // Use the exact timezone name to match what events use
+  const tzid = timezone
+  
+  // Generate timezone rules based on the specific timezone
+  if (timezone === 'America/Chicago') {
+    return [
+      'BEGIN:VTIMEZONE',
+      `TZID:${tzid}`,
+      'BEGIN:STANDARD',
+      'DTSTART:20071104T020000',
+      'RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU',
+      'TZNAME:CST',
+      'TZOFFSETFROM:-0500',
+      'TZOFFSETTO:-0600',
+      'END:STANDARD',
+      'BEGIN:DAYLIGHT', 
+      'DTSTART:20070311T020000',
+      'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU',
+      'TZNAME:CDT',
+      'TZOFFSETFROM:-0600',
+      'TZOFFSETTO:-0500',
+      'END:DAYLIGHT',
+      'END:VTIMEZONE',
+      ''
+    ].join('\r\n')
+  } else {
+    // Generic timezone block for other timezones
+    return [
+      'BEGIN:VTIMEZONE',
+      `TZID:${tzid}`,
+      'BEGIN:STANDARD',
+      'DTSTART:20071104T020000',
+      'RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU',
+      'TZNAME:STD',
+      'TZOFFSETFROM:-0500',
+      'TZOFFSETTO:-0600',
+      'END:STANDARD',
+      'BEGIN:DAYLIGHT', 
+      'DTSTART:20070311T020000',
+      'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU',
+      'TZNAME:DST',
+      'TZOFFSETFROM:-0600',
+      'TZOFFSETTO:-0500',
+      'END:DAYLIGHT',
+      'END:VTIMEZONE',
+      ''
+    ].join('\r\n')
   }
-  
-  const tzid = timezoneMap[timezone] || timezone
-  
-  return [
-    'BEGIN:VTIMEZONE',
-    `TZID:${tzid}`,
-    'BEGIN:STANDARD',
-    'DTSTART:20231105T020000',
-    'RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU',
-    'TZNAME:CST',
-    'TZOFFSETFROM:-0500',
-    'TZOFFSETTO:-0600',
-    'END:STANDARD',
-    'BEGIN:DAYLIGHT', 
-    'DTSTART:20240310T020000',
-    'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU',
-    'TZNAME:CDT',
-    'TZOFFSETFROM:-0600',
-    'TZOFFSETTO:-0500',
-    'END:DAYLIGHT',
-    'END:VTIMEZONE',
-    ''
-  ].join('\r\n')
 }
 
 /**

@@ -58,9 +58,9 @@ export function formatICSDateTime(utcDate: Date, timezone: string): string {
   const minutes = String(localDate.getMinutes()).padStart(2, '0')
   const seconds = String(localDate.getSeconds()).padStart(2, '0')
   
-  // Use TZID format for better Google Calendar compatibility - this was the missing piece
-  const tzidName = timezone.replace(/\//g, '\\/') // Escape forward slashes  
-  return `TZID=${tzidName}:${year}${month}${day}T${hours}${minutes}${seconds}`
+  // Use TZID format for better Google Calendar compatibility
+  // Note: Forward slashes don't need escaping in TZID parameters
+  return `TZID=${timezone}:${year}${month}${day}T${hours}${minutes}${seconds}`
 }
 
 /**
