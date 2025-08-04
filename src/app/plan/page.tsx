@@ -1977,6 +1977,19 @@ export default function EventPlannerPage() {
     return handleReorderAnyHymn(hymn.id, direction, eventId)
   }
 
+  // Helper function to find eventId from assignmentId
+  const findEventIdByAssignmentId = (assignmentId: string): string | null => {
+    if (!data?.events) return null
+    
+    for (const event of data.events) {
+      const assignment = event.assignments?.find(a => a.id === assignmentId)
+      if (assignment) {
+        return event.id
+      }
+    }
+    return null
+  }
+
   const handleAddDocument = async (eventId: string) => {
     try {
       const input = document.createElement('input')
@@ -1996,10 +2009,10 @@ export default function EventPlannerPage() {
 
         if (response.ok) {
           showToast('success', 'Document uploaded successfully!')
-                  // Refresh data to show new document with position preservation
-        setLastEditedEventId(currentEventIdForUpload)
-        setPreserveLoadedCount(data?.events.length || 20)
-        await fetchPlannerData(false, true)
+          // Refresh data to show new document with position preservation
+          setLastEditedEventId(eventId)
+          setPreserveLoadedCount(data?.events.length || 20)
+          await fetchPlannerData(false, true)
         } else {
           showToast('error', 'Failed to upload document')
         }
@@ -2058,8 +2071,15 @@ export default function EventPlannerPage() {
         // Show success message
         showToast('success', 'Musician assigned successfully!')
         
-        // Update local state to reflect the assignment
-        await fetchPlannerData()
+        // Update local state to reflect the assignment with position preservation
+        const eventId = findEventIdByAssignmentId(assignmentId)
+        if (eventId) {
+          setLastEditedEventId(eventId)
+          setPreserveLoadedCount(data?.events.length || 20)
+          await fetchPlannerData(false, true)
+        } else {
+          await fetchPlannerData()
+        }
         setOpenDropdowns(prev => ({ ...prev, [assignmentId]: false }))
         setSearchTexts(prev => ({ ...prev, [assignmentId]: '' }))
       } else {
@@ -2087,7 +2107,16 @@ export default function EventPlannerPage() {
         const result = await response.json()
         console.log('✅ Musician removed successfully:', result)
         showToast('success', 'Musician removed successfully!')
-        await fetchPlannerData()
+        
+        // Update local state with position preservation
+        const eventId = findEventIdByAssignmentId(assignmentId)
+        if (eventId) {
+          setLastEditedEventId(eventId)
+          setPreserveLoadedCount(data?.events.length || 20)
+          await fetchPlannerData(false, true)
+        } else {
+          await fetchPlannerData()
+        }
       } else {
         const errorData = await response.json()
         console.error('❌ Failed to remove musician:', errorData)
@@ -2205,15 +2234,19 @@ export default function EventPlannerPage() {
         setOpenGroupDropdown(null)
         setSelectedGroups(prev => ({ ...prev, [eventId]: [] }))
       } else {
-        // Revert optimistic update on failure
-        await fetchPlannerData()
+        // Revert optimistic update on failure with position preservation
+        setLastEditedEventId(eventId)
+        setPreserveLoadedCount(data?.events.length || 20)
+        await fetchPlannerData(false, true)
         const errorData = await response.json()
         showToast('error', errorData.error || 'Failed to update group assignments')
       }
     } catch (error) {
       console.error('Error updating group assignments:', error)
-      // Revert optimistic update on error
-      await fetchPlannerData()
+      // Revert optimistic update on error with position preservation
+      setLastEditedEventId(eventId)
+      setPreserveLoadedCount(data?.events.length || 20)
+      await fetchPlannerData(false, true)
       showToast('error', 'Error updating group assignments')
     }
   }
@@ -2485,8 +2518,10 @@ export default function EventPlannerPage() {
         console.log('✅ Status updated successfully')
         showToast('success', `Event status changed to ${newStatus.toLowerCase()}`)
         
-        // Refresh the planner data to reflect the change
-        await fetchPlannerData()
+        // Refresh the planner data to reflect the change with position preservation
+        setLastEditedEventId(eventId)
+        setPreserveLoadedCount(data?.events.length || 20)
+        await fetchPlannerData(false, true)
       } else {
         const errorData = await response.json()
         console.error('❌ Failed to update status:', errorData)
