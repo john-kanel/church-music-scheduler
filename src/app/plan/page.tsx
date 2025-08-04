@@ -1177,7 +1177,7 @@ export default function EventPlannerPage() {
 
       // Create placeholder hymns for each default service part
       const defaultHymns = defaultServiceParts.map(sp => ({
-        title: 'New Song',
+        title: '',
         notes: '',
         servicePartId: sp.id
       }))
@@ -1201,7 +1201,7 @@ export default function EventPlannerPage() {
 
       const allHymns = [
         ...existingHymns.map(hymn => ({
-          title: hymn.title || 'New Song', // Ensure empty service parts have placeholder title
+          title: hymn.title || '', // Allow empty titles
           notes: hymn.notes || '',
           servicePartId: hymn.servicePartId || null
         })),
@@ -1274,7 +1274,7 @@ export default function EventPlannerPage() {
 
       // Add a new hymn without a service part (general music)
       const newHymn = {
-        title: 'New Song',
+        title: '',
         notes: '',
         servicePartId: null
       }
@@ -1282,14 +1282,14 @@ export default function EventPlannerPage() {
       // Add the new individual song to existing hymns (preserving ALL existing hymns including empty ones)
       const allHymns = [
         ...existingHymns.map(hymn => ({
-          title: hymn.title || 'New Song', // Ensure empty service parts have placeholder title
+          title: hymn.title || '', // Allow empty titles
           notes: hymn.notes || '',
           servicePartId: hymn.servicePartId || null
         })),
         newHymn
       ]
 
-      console.log('🎵 DEBUG: Final hymns array with new song:', allHymns)
+      console.log('🎵 DEBUG: Final hymns array with new hymns:', allHymns)
 
       // Save to the event
       console.log('🎵 DEBUG: Making API call to:', `/api/events/${eventId}/hymns`)
@@ -1323,7 +1323,7 @@ export default function EventPlannerPage() {
                     ...ev.hymns,
                     {
                       id: `temp-${Date.now()}`,
-                      title: 'New Song',
+                      title: '',
                       notes: '',
                       servicePartId: undefined
                     }
@@ -1334,7 +1334,7 @@ export default function EventPlannerPage() {
         }
       })
 
-      showToast('success', 'Added new song slot')
+      showToast('success', 'Added new service part slot')
       console.log('🎵 DEBUG: Song added with optimistic update')
     } catch (error) {
       console.error('Error adding song:', error)
@@ -1369,7 +1369,7 @@ export default function EventPlannerPage() {
                     // Track which service parts already have content (original titles, not placeholder or empty)
       const servicePartsWithContent = new Set(
         existingHymns
-          .filter(h => h.servicePartId && h.title?.trim() && h.title !== 'New Song' && h.title !== '')
+          .filter(h => h.servicePartId && h.title?.trim())
           .map(h => h.servicePartId)
       )
 
@@ -1431,7 +1431,7 @@ export default function EventPlannerPage() {
         } else {
           // Service part doesn't have real content yet, try to find empty slot to update
           const existingIndex = processedHymns.findIndex(h => 
-            h.servicePartId === servicePartId && (!h.title?.trim() || h.title === 'New Song' || h.title === '')
+            h.servicePartId === servicePartId && (!h.title?.trim())
           )
           
           if (existingIndex !== -1) {
@@ -1451,7 +1451,7 @@ export default function EventPlannerPage() {
               servicePartId: servicePartId,
               orderIndex: processedHymns.length // Next available index
             })
-            console.log(`🎵 AUTO-POPULATE: Added new song to service part: ${suggestion.servicePartName}`)
+            console.log(`🎵 AUTO-POPULATE: Added new hymn to service part: ${suggestion.servicePartName}`)
           }
           
           if (servicePartId) {
@@ -1772,7 +1772,7 @@ export default function EventPlannerPage() {
                   ...ev, 
                   hymns: reorderedHymns.map(hymn => ({ 
                     id: hymn.id, 
-                    title: hymn.title || 'New Song', // Ensure title exists
+                    title: hymn.title || '', // Allow empty titles
                     notes: hymn.notes || undefined, 
                     servicePartId: hymn.servicePartId || undefined 
                   })) 
@@ -1784,7 +1784,7 @@ export default function EventPlannerPage() {
 
       // Convert back to API format with proper ordering timestamps
       const hymnsForAPI = reorderedHymns.map((hymn, index) => ({
-        title: hymn.title || 'New Song', // Ensure empty service parts have title
+                  title: hymn.title || '', // Allow empty titles
         notes: hymn.notes || '',
         servicePartId: hymn.servicePartId || null,
         // Use index to preserve order - API will use this for creation timestamp offset
@@ -1810,7 +1810,7 @@ export default function EventPlannerPage() {
                     ...ev, 
                     hymns: allHymns.map(hymn => ({ 
                       id: hymn.id, 
-                      title: hymn.title || 'New Song', 
+                      title: hymn.title || '', 
                       notes: hymn.notes || undefined, 
                       servicePartId: hymn.servicePartId || undefined 
                     })) 
@@ -1860,7 +1860,7 @@ export default function EventPlannerPage() {
                 ...ev, 
                 hymns: reorderedHymns.map(hymn => ({ 
                   id: hymn.id, 
-                  title: hymn.title || 'New Song', 
+                  title: hymn.title || '', 
                   notes: hymn.notes || undefined, 
                   servicePartId: hymn.servicePartId || undefined 
                 })) 
@@ -1897,7 +1897,7 @@ export default function EventPlannerPage() {
                     ...ev, 
                     hymns: allHymns.map(hymn => ({ 
                       id: hymn.id, 
-                      title: hymn.title || 'New Song', 
+                      title: hymn.title || '', 
                       notes: hymn.notes || undefined, 
                       servicePartId: hymn.servicePartId || undefined 
                     })) 
