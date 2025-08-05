@@ -33,7 +33,7 @@ export function generateICalFeed(events: EventWithDetails[], churchName: string,
   const calendarHeader = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Church Music Pro//Live Music Calendar 1.0//EN',
+    'PRODID:-//Church Music Pro//Church Music Scheduler v1.0//EN',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     // Required headers for subscription recognition
@@ -77,7 +77,7 @@ export function generateSingleEventICalFile(event: EventWithDetails, churchName:
   const calendarHeader = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Church Music Pro//Single Event 1.0//EN',
+    'PRODID:-//Church Music Pro//Church Music Scheduler v1.0//EN',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     wrapICalLine(`X-WR-CALNAME:${event.name} - ${churchName}`),
@@ -299,6 +299,7 @@ function formatICalEvent(event: ICalEvent, timezone: string = 'America/Chicago')
     wrapICalLine(`DTSTAMP:${formatICalDate(new Date(), 'UTC')}`),
     wrapICalLine(`LAST-MODIFIED:${formatICalDate(event.lastModified, 'UTC')}`),
     wrapICalLine(`CREATED:${formatICalDate(event.created, 'UTC')}`),
+    'SEQUENCE:0',
     `STATUS:${event.status}`,
     'TRANSP:OPAQUE',
     'END:VEVENT',
@@ -330,31 +331,43 @@ function formatICalDate(date: Date, timezone: string = 'America/Chicago'): strin
 }
 
 /**
- * Escapes text for iCal format
+ * Escapes text for iCal format with proper Google Calendar compatibility
  */
 function escapeICalText(text: string): string {
+  if (!text) return ''
+  
   return text
-    .replace(/\\/g, '\\\\')
-    .replace(/;/g, '\\;')
-    .replace(/,/g, '\\,')
-    .replace(/\n/g, '\\n')
-    .replace(/\r/g, '')
+    .replace(/\\/g, '\\\\')   // Escape backslashes first
+    .replace(/;/g, '\\;')     // Escape semicolons
+    .replace(/,/g, '\\,')     // Escape commas  
+    .replace(/\n/g, '\\n')    // Escape newlines
+    .replace(/\r/g, '')       // Remove carriage returns
+    .replace(/"/g, '\\"')     // Escape quotes
+    .trim()                   // Remove leading/trailing whitespace
 }
 
 /**
  * Wraps long lines to 75 characters as per iCal specification
+ * This is critical for Google Calendar compatibility
  */
 function wrapICalLine(line: string): string {
-  if (line.length <= 75) {
+  if (!line || line.length <= 75) {
     return line
   }
 
   const wrapped: string[] = []
   let remaining = line
   
+  // More aggressive wrapping - break at 75 bytes exactly
   while (remaining.length > 75) {
-    wrapped.push(remaining.substring(0, 75))
-    remaining = ' ' + remaining.substring(75) // Continuation lines start with space
+    // Find a good break point (avoid breaking in the middle of escaped sequences)
+    let breakPoint = 75
+    if (remaining.charAt(breakPoint - 1) === '\\') {
+      breakPoint = 74 // Don't break escape sequences
+    }
+    
+    wrapped.push(remaining.substring(0, breakPoint))
+    remaining = ' ' + remaining.substring(breakPoint) // Continuation lines start with space
   }
   
   if (remaining.length > 0) {
