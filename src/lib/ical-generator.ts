@@ -36,25 +36,19 @@ export function generateICalFeed(events: EventWithDetails[], churchName: string,
     'PRODID:-//Church Music Pro//Church Music Scheduler v1.0//EN',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
-    // Required headers for subscription recognition
+    // Calendar identification headers
     wrapICalLine(`X-WR-CALNAME:${churchName} Music Ministry`),
-    wrapICalLine(`X-WR-CALDESC:🔄 LIVE FEED: ${churchName} Music Ministry - Updates every 30 seconds`),
+    wrapICalLine(`X-WR-CALDESC:🔄 LIVE FEED: ${churchName} Music Ministry - Updates automatically`),
     `X-WR-TIMEZONE:${timezone}`,
-    wrapICalLine(`X-WR-RELCALID:${churchName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-music-ministry-${Date.now()}`),
-    // AGGRESSIVE live sync for immediate updates
-    'X-PUBLISHED-TTL:PT10S', // Refresh every 10 seconds 
-    'REFRESH-INTERVAL;VALUE=DURATION:PT10S', // Alternative refresh directive
-    'X-WR-REFRESH-INTERVAL:PT10S', // Apple Calendar specific
-    'X-MS-WR-REFRESH-INTERVAL:PT10S', // Microsoft specific
-    // Multiple fallback refresh intervals
-    'X-WR-REFRESH-INTERVAL:PT30S', // 30 second fallback
-    'X-WR-REFRESH-INTERVAL:PT1M', // 1 minute fallback
-    // Calendar appearance with live indicator
+    wrapICalLine(`X-WR-RELCALID:${churchName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-music-ministry`),
+    // Refresh settings - single authoritative setting for better compatibility
+    'X-PUBLISHED-TTL:PT30S', // Refresh every 30 seconds for live updates
+    'X-WR-REFRESH-INTERVAL:PT30S', // Single refresh interval to avoid parser confusion
+    // Calendar appearance
     'X-APPLE-CALENDAR-COLOR:#8B5CF6', // Purple for music ministry
     'X-OUTLOOK-COLOR:#8B5CF6',
     'X-WR-CALTYPE:SUBSCRIPTION', // Explicitly mark as subscription
     'X-MICROSOFT-CDO-BUSYSTATUS:FREE', // Mark events as free time
-    `X-WR-UPDATE-TIMESTAMP:${Date.now()}`, // Force refresh with timestamp
     ''
   ].join('\r\n')
 
@@ -237,47 +231,118 @@ function generateVTimezone(timezone: string): string {
   // Use the exact timezone name to match what events use
   const tzid = timezone
   
-  // Generate timezone rules based on the specific timezone
+  // Generate proper timezone rules based on the specific timezone
+  // These are Google Calendar compatible VTIMEZONE definitions
   if (timezone === 'America/Chicago') {
     return [
       'BEGIN:VTIMEZONE',
       `TZID:${tzid}`,
-      'BEGIN:STANDARD',
-      'DTSTART:20071104T020000',
-      'RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU',
-      'TZNAME:CST',
-      'TZOFFSETFROM:-0500',
-      'TZOFFSETTO:-0600',
-      'END:STANDARD',
-      'BEGIN:DAYLIGHT', 
-      'DTSTART:20070311T020000',
-      'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU',
-      'TZNAME:CDT',
+      'BEGIN:DAYLIGHT',
       'TZOFFSETFROM:-0600',
       'TZOFFSETTO:-0500',
+      'TZNAME:CDT',
+      'DTSTART:19700308T020000',
+      'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU',
       'END:DAYLIGHT',
+      'BEGIN:STANDARD',
+      'TZOFFSETFROM:-0500',
+      'TZOFFSETTO:-0600',
+      'TZNAME:CST',
+      'DTSTART:19701101T020000',
+      'RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU',
+      'END:STANDARD',
       'END:VTIMEZONE',
       ''
     ].join('\r\n')
-  } else {
-    // Generic timezone block for other timezones
+  } else if (timezone === 'America/New_York') {
+    return [
+      'BEGIN:VTIMEZONE',
+      `TZID:${tzid}`,
+      'BEGIN:DAYLIGHT',
+      'TZOFFSETFROM:-0500',
+      'TZOFFSETTO:-0400',
+      'TZNAME:EDT',
+      'DTSTART:19700308T020000',
+      'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU',
+      'END:DAYLIGHT',
+      'BEGIN:STANDARD',
+      'TZOFFSETFROM:-0400',
+      'TZOFFSETTO:-0500',
+      'TZNAME:EST',
+      'DTSTART:19701101T020000',
+      'RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU',
+      'END:STANDARD',
+      'END:VTIMEZONE',
+      ''
+    ].join('\r\n')
+  } else if (timezone === 'America/Los_Angeles') {
+    return [
+      'BEGIN:VTIMEZONE',
+      `TZID:${tzid}`,
+      'BEGIN:DAYLIGHT',
+      'TZOFFSETFROM:-0800',
+      'TZOFFSETTO:-0700',
+      'TZNAME:PDT',
+      'DTSTART:19700308T020000',
+      'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU',
+      'END:DAYLIGHT',
+      'BEGIN:STANDARD',
+      'TZOFFSETFROM:-0700',
+      'TZOFFSETTO:-0800',
+      'TZNAME:PST',
+      'DTSTART:19701101T020000',
+      'RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU',
+      'END:STANDARD',
+      'END:VTIMEZONE',
+      ''
+    ].join('\r\n')
+  } else if (timezone === 'Europe/London') {
+    return [
+      'BEGIN:VTIMEZONE',
+      `TZID:${tzid}`,
+      'BEGIN:DAYLIGHT',
+      'TZOFFSETFROM:+0000',
+      'TZOFFSETTO:+0100',
+      'TZNAME:BST',
+      'DTSTART:19700329T010000',
+      'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU',
+      'END:DAYLIGHT',
+      'BEGIN:STANDARD',
+      'TZOFFSETFROM:+0100',
+      'TZOFFSETTO:+0000',
+      'TZNAME:GMT',
+      'DTSTART:19701025T020000',
+      'RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU',
+      'END:STANDARD',
+      'END:VTIMEZONE',
+      ''
+    ].join('\r\n')
+  } else if (timezone === 'UTC') {
     return [
       'BEGIN:VTIMEZONE',
       `TZID:${tzid}`,
       'BEGIN:STANDARD',
-      'DTSTART:20071104T020000',
-      'RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU',
-      'TZNAME:STD',
-      'TZOFFSETFROM:-0500',
-      'TZOFFSETTO:-0600',
+      'TZOFFSETFROM:+0000',
+      'TZOFFSETTO:+0000',
+      'TZNAME:UTC',
+      'DTSTART:19700101T000000',
       'END:STANDARD',
-      'BEGIN:DAYLIGHT', 
-      'DTSTART:20070311T020000',
-      'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU',
-      'TZNAME:DST',
-      'TZOFFSETFROM:-0600',
-      'TZOFFSETTO:-0500',
-      'END:DAYLIGHT',
+      'END:VTIMEZONE',
+      ''
+    ].join('\r\n')
+  } else {
+    // For unknown timezones, provide a basic definition
+    // This prevents ICS parsing errors but may need manual adjustment
+    console.warn(`Unknown timezone ${timezone}, using generic UTC definition. Please add proper timezone rules for better compatibility.`)
+    return [
+      'BEGIN:VTIMEZONE',
+      `TZID:${tzid}`,
+      'BEGIN:STANDARD',
+      'TZOFFSETFROM:+0000',
+      'TZOFFSETTO:+0000',
+      'TZNAME:UTC',
+      'DTSTART:19700101T000000',
+      'END:STANDARD',
       'END:VTIMEZONE',
       ''
     ].join('\r\n')
@@ -301,7 +366,7 @@ function formatICalEvent(event: ICalEvent, timezone: string = 'America/Chicago')
     wrapICalLine(`LAST-MODIFIED:${formatICalDate(event.lastModified, 'UTC')}`),
     wrapICalLine(`CREATED:${formatICalDate(event.created, 'UTC')}`),
     'SEQUENCE:0',
-    'STATUS:CONFIRMED',  // Google Calendar expects explicit CONFIRMED status
+    `STATUS:${event.status}`,  // Use actual event status (CONFIRMED/CANCELLED)
     'TRANSP:OPAQUE',
     'END:VEVENT',
     ''
@@ -332,47 +397,72 @@ function formatICalDate(date: Date, timezone: string = 'America/Chicago'): strin
 }
 
 /**
- * Escapes text for iCal format with proper Google Calendar compatibility
+ * Escapes text for iCal format with proper RFC 5545 and Google Calendar compatibility
+ * Handles all special characters that need escaping in iCalendar text fields
  */
 function escapeICalText(text: string): string {
   if (!text) return ''
   
   return text
-    .replace(/\\/g, '\\\\')   // Escape backslashes first
-    .replace(/;/g, '\\;')     // Escape semicolons
-    .replace(/,/g, '\\,')     // Escape commas  
+    .replace(/\\/g, '\\\\')   // Escape backslashes first (MUST be first)
+    .replace(/\r\n/g, '\\n')  // Handle CRLF sequences
+    .replace(/\r/g, '\\n')    // Handle lone CR as newline
     .replace(/\n/g, '\\n')    // Escape newlines
-    .replace(/\r/g, '')       // Remove carriage returns
-    .replace(/"/g, '\\"')     // Escape quotes
+    .replace(/;/g, '\\;')     // Escape semicolons
+    .replace(/,/g, '\\,')     // Escape commas (for parameter values)
+    .replace(/"/g, '\\"')     // Escape quotes (though not strictly required by RFC 5545)
     .trim()                   // Remove leading/trailing whitespace
 }
 
 /**
- * Wraps long lines to 75 characters as per iCal specification
+ * Wraps long lines to 75 octets as per RFC 5545 specification
  * This is critical for Google Calendar compatibility
+ * Handles UTF-8 byte boundaries correctly
  */
 function wrapICalLine(line: string): string {
-  if (!line || line.length <= 75) {
+  if (!line) return ''
+  
+  // Convert to bytes to check actual octet length (RFC 5545 requirement)
+  const lineBytes = Buffer.from(line, 'utf8')
+  if (lineBytes.length <= 75) {
     return line
   }
 
   const wrapped: string[] = []
   let remaining = line
   
-  // More aggressive wrapping - break at 75 bytes exactly
-  while (remaining.length > 75) {
-    // Find a good break point (avoid breaking in the middle of escaped sequences)
+  while (remaining.length > 0) {
     let breakPoint = 75
-    if (remaining.charAt(breakPoint - 1) === '\\') {
-      breakPoint = 74 // Don't break escape sequences
+    let currentSlice = remaining
+    
+    // Find the maximum number of characters that fit within 75 bytes
+    while (Buffer.from(currentSlice.substring(0, breakPoint), 'utf8').length > 75 && breakPoint > 1) {
+      breakPoint--
     }
     
-    wrapped.push(remaining.substring(0, breakPoint))
-    remaining = ' ' + remaining.substring(breakPoint) // Continuation lines start with space
-  }
-  
-  if (remaining.length > 0) {
-    wrapped.push(remaining)
+    // Avoid breaking in the middle of escape sequences
+    if (breakPoint > 1 && remaining.charAt(breakPoint - 1) === '\\') {
+      breakPoint--
+    }
+    
+    // Avoid breaking in the middle of multi-byte UTF-8 sequences
+    const slice = remaining.substring(0, breakPoint)
+    const sliceBytes = Buffer.from(slice, 'utf8')
+    
+    if (sliceBytes.length <= 75) {
+      wrapped.push(slice)
+      remaining = remaining.substring(breakPoint)
+      
+      // Add continuation space for subsequent lines (RFC 5545 requirement)
+      if (remaining.length > 0) {
+        remaining = ' ' + remaining
+      }
+    } else {
+      // Fallback: reduce break point further
+      breakPoint = Math.max(1, breakPoint - 1)
+      wrapped.push(remaining.substring(0, breakPoint))
+      remaining = ' ' + remaining.substring(breakPoint)
+    }
   }
   
   return wrapped.join('\r\n')
