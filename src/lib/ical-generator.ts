@@ -30,7 +30,7 @@ interface ICalEvent {
  */
 export function generateICalFeed(events: EventWithDetails[], churchName: string, timezone: string = 'America/Chicago'): string {
   // Convert all events to minimal ICS format
-  const icalEvents = events.map(event => convertEventToMinimalICal(event))
+  const icalEvents = events.map(event => convertEventToMinimalICal(event, timezone))
   
   // Minimal calendar header - only required fields for Google Calendar compatibility
   const calendarLines = [
@@ -57,7 +57,7 @@ export function generateICalFeed(events: EventWithDetails[], churchName: string,
  */
 export function generateSingleEventICalFile(event: EventWithDetails, churchName: string, timezone: string = 'America/Chicago'): string {
   // Use the minimal conversion for this single event
-  const eventLines = convertEventToMinimalICal(event)
+  const eventLines = convertEventToMinimalICal(event, timezone)
   
   // Minimal calendar structure
   const calendarLines = [
@@ -77,17 +77,17 @@ export function generateSingleEventICalFile(event: EventWithDetails, churchName:
  * Converts a database event to minimal ICS format for maximum Google Calendar compatibility
  * Returns array of ICS lines for the event
  */
-function convertEventToMinimalICal(event: EventWithDetails): string[] {
+function convertEventToMinimalICal(event: EventWithDetails, timezone: string): string[] {
   // Generate unique identifier (required by Google)
   const uid = `event-${event.id}@churchmusicpro.com`
   
   // Calculate end time - default to 1 hour if not specified
   const endDate = event.endTime || new Date(event.startTime.getTime() + 60 * 60 * 1000)
 
-  // Convert all times to UTC format (YYYYMMDDTHHMMSSZ) - required by Google
-  const dtstart = formatUTCDateTime(event.startTime)
-  const dtend = formatUTCDateTime(endDate)
-  const dtstamp = formatUTCDateTime(new Date()) // Current timestamp (required by Google)
+  // Format timestamps - use TZID for event times, UTC for metadata
+  const dtstart = `TZID=${timezone}:${formatLocalDateTime(event.startTime)}`
+  const dtend = `TZID=${timezone}:${formatLocalDateTime(endDate)}`
+  const dtstamp = formatUTCDateTime(new Date()) // Metadata timestamps stay in UTC
   const created = formatUTCDateTime(event.createdAt)
   const lastModified = formatUTCDateTime(event.updatedAt)
 
@@ -106,8 +106,8 @@ function convertEventToMinimalICal(event: EventWithDetails): string[] {
     'BEGIN:VEVENT',
     `UID:${uid}`,
     `DTSTAMP:${dtstamp}`, // Required by Google
-    `DTSTART:${dtstart}`, // UTC format required
-    `DTEND:${dtend}`,     // UTC format required
+    `DTSTART;${dtstart}`, // Use TZID format for event times
+    `DTEND;${dtend}`,     // Use TZID format for event times
     `SUMMARY:${summary}`,
     `CREATED:${created}`,
     `LAST-MODIFIED:${lastModified}`,
@@ -232,7 +232,7 @@ function buildEventDescription(event: EventWithDetails): string {
 // REMOVED: Old complex formatting functions - using minimal approach for Google Calendar compatibility
 
 /**
- * Formats a date to UTC format required by Google Calendar: YYYYMMDDTHHMMSSZ
+ * Formats a date in UTC format (YYYYMMDDTHHMMSSZ) for metadata fields
  */
 function formatUTCDateTime(date: Date): string {
   const year = date.getUTCFullYear()
@@ -243,6 +243,21 @@ function formatUTCDateTime(date: Date): string {
   const seconds = String(date.getUTCSeconds()).padStart(2, '0')
   
   return `${year}${month}${day}T${hours}${minutes}${seconds}Z`
+}
+
+/**
+ * Formats a date in local format (YYYYMMDDTHHMMSS) for event times
+ * This preserves the time as shown in the calendar UI
+ */
+function formatLocalDateTime(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  const seconds = String(date.getSeconds()).padStart(2, '0')
+  
+  return `${year}${month}${day}T${hours}${minutes}${seconds}`
 }
 
 /**

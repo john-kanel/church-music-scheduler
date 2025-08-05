@@ -33,8 +33,8 @@ export async function GET(
     const { user } = subscription
     const church = user.church
 
-    // Get church timezone for proper date formatting
-    const timezone = 'America/Chicago' // Default timezone - can be made configurable later
+    // Use the user's configured timezone
+    const timezone = user.timezone || 'America/Chicago' // Fallback to default if not set
 
     // Build event query based on filter type
     let eventQuery: any = {
