@@ -131,38 +131,29 @@ export async function GET(
       }
     })
 
-    // Return live iCal feed with proper headers for subscription recognition
+    // Return live iCal feed with Google Calendar optimized headers
     return new NextResponse(icalContent, {
       status: 200,
       headers: {
+        // Essential headers for Google Calendar compatibility
         'Content-Type': 'text/calendar; charset=utf-8',
-        // Use inline disposition for subscription feeds
         'Content-Disposition': `inline; filename="${church.name.replace(/[^a-zA-Z0-9]/g, '_')}_music_ministry.ics"`,
         
-        // LIVE SYNC: Aggressive no-cache headers + unique ETag for immediate updates
-        'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
-        'Pragma': 'no-cache',
-        'Expires': '0',
+        // Reasonable caching for live feeds - Google Calendar friendly
+        'Cache-Control': 'public, max-age=300', // 5 minutes - reasonable for live updates
         'Last-Modified': new Date().toUTCString(),
-        'ETag': `"live-${subscription.id}-${Date.now()}-${Math.random()}"`,
+        'ETag': `"${subscription.id}-${Math.floor(Date.now() / 300000)}"`, // Stable ETag for 5 min intervals
         
-        // Calendar subscription headers
-        'X-Content-Type-Options': 'nosniff',
-        'X-Frame-Options': 'DENY',
+        // CORS headers for cross-origin access
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Access-Control-Allow-Headers': 'Content-Type',
         
-        // AGGRESSIVE live refresh hints for calendar apps
-        'Refresh': '10', // 10 seconds for aggressive live sync
-        'X-Published-TTL': 'PT10S',
-        'X-WR-REFRESH-INTERVAL': 'PT10S',
-        'X-MS-WR-REFRESH-INTERVAL': 'PT10S',
+        // Single, reasonable refresh interval that all calendar apps understand
+        'X-Published-TTL': 'PT15M', // 15 minutes - Google Calendar standard
         
-        // Additional cache busting headers
-        'Vary': 'Accept-Encoding, User-Agent',
-        'X-Live-Feed': 'true',
-        'X-Update-Time': new Date().toISOString(),
+        // Security headers
+        'X-Content-Type-Options': 'nosniff',
       }
     })
 
