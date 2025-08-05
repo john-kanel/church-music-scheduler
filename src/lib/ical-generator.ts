@@ -286,6 +286,7 @@ function generateVTimezone(timezone: string): string {
 
 /**
  * Formats an iCal event object into the proper iCal format
+ * Optimized for maximum Google Calendar compatibility
  */
 function formatICalEvent(event: ICalEvent, timezone: string = 'America/Chicago'): string {
   const lines = [
@@ -300,7 +301,7 @@ function formatICalEvent(event: ICalEvent, timezone: string = 'America/Chicago')
     wrapICalLine(`LAST-MODIFIED:${formatICalDate(event.lastModified, 'UTC')}`),
     wrapICalLine(`CREATED:${formatICalDate(event.created, 'UTC')}`),
     'SEQUENCE:0',
-    `STATUS:${event.status}`,
+    'STATUS:CONFIRMED',  // Google Calendar expects explicit CONFIRMED status
     'TRANSP:OPAQUE',
     'END:VEVENT',
     ''
