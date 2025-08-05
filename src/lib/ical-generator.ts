@@ -84,9 +84,9 @@ function convertEventToMinimalICal(event: EventWithDetails, timezone: string): s
   // Calculate end time - default to 1 hour if not specified
   const endDate = event.endTime || new Date(event.startTime.getTime() + 60 * 60 * 1000)
 
-  // Format timestamps - use TZID for event times, UTC for metadata
-  const dtstart = `TZID=${timezone}:${formatLocalDateTime(event.startTime)}`
-  const dtend = `TZID=${timezone}:${formatLocalDateTime(endDate)}`
+  // Format timestamps - use quoted TZID for event times, UTC for metadata
+  const dtstart = `TZID="${timezone}":${formatLocalDateTime(event.startTime)}`
+  const dtend = `TZID="${timezone}":${formatLocalDateTime(endDate)}`
   const dtstamp = formatUTCDateTime(new Date()) // Metadata timestamps stay in UTC
   const created = formatUTCDateTime(event.createdAt)
   const lastModified = formatUTCDateTime(event.updatedAt)
@@ -278,30 +278,44 @@ function cleanText(text: string): string {
 }
 
 /**
- * Simple line folding for ICS - keeps lines under 75 characters
+ * Improved line folding for ICS - handles UTF-8 characters correctly
+ * Ensures each line is no more than 75 bytes when encoded as UTF-8
  */
 function foldLine(line: string): string {
-  if (!line || line.length <= 75) {
-    return line
-  }
-  
+  if (!line) return line
+
   const result: string[] = []
-  let remaining = line
-  
-  while (remaining.length > 75) {
-    // Find a safe break point (avoid breaking escape sequences)
-    let breakPoint = 75
-    if (remaining.charAt(74) === '\\') {
-      breakPoint = 74
+  let currentLine = ''
+  let currentBytes = 0
+  let chars = Array.from(line) // Split into Unicode characters
+
+  for (let i = 0; i < chars.length; i++) {
+    const char = chars[i]
+    const charBytes = Buffer.from(char, 'utf8').length
+
+    // If adding this character would exceed 75 bytes
+    if (currentBytes + charBytes > 75) {
+      result.push(currentLine)
+      currentLine = ' ' + char // Start new line with continuation space
+      currentBytes = 1 + charBytes // Count the space
+    } else {
+      currentLine += char
+      currentBytes += charBytes
     }
-    
-    result.push(remaining.substring(0, breakPoint))
-    remaining = ' ' + remaining.substring(breakPoint) // Continuation with space
+
+    // Special handling for escape sequences
+    if (char === '\\' && i < chars.length - 1) {
+      const nextChar = chars[i + 1]
+      // Keep escape sequence together
+      currentLine += nextChar
+      currentBytes += Buffer.from(nextChar, 'utf8').length
+      i++ // Skip next character
+    }
   }
-  
-  if (remaining.length > 0) {
-    result.push(remaining)
+
+  if (currentLine) {
+    result.push(currentLine)
   }
-  
+
   return result.join('\r\n')
 } 
