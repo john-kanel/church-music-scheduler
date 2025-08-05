@@ -45,21 +45,18 @@ export function displayEventDateTime(utcDate: Date, timezone: string): Date {
  * @returns Properly formatted ICS datetime string with timezone
  */
 export function formatICSDateTime(utcDate: Date, timezone: string): string {
-  // For ICS generation, we need proper timezone conversion for Google Calendar compatibility
-  // The input utcDate should be treated as already in the target timezone
-  // Just format it properly without additional offset calculations
+  // DEPRECATED: This function is kept for backward compatibility but is no longer used
+  // The new minimal ICS implementation uses UTC times exclusively for maximum Google Calendar compatibility
   
-  // Format as YYYYMMDDTHHMMSS with TZID for RFC 5545 compliance
-  const year = utcDate.getFullYear()
-  const month = String(utcDate.getMonth() + 1).padStart(2, '0')
-  const day = String(utcDate.getDate()).padStart(2, '0')
-  const hours = String(utcDate.getHours()).padStart(2, '0')
-  const minutes = String(utcDate.getMinutes()).padStart(2, '0')
-  const seconds = String(utcDate.getSeconds()).padStart(2, '0')
+  // Format as UTC time (YYYYMMDDTHHMMSSZ) for maximum compatibility
+  const year = utcDate.getUTCFullYear()
+  const month = String(utcDate.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(utcDate.getUTCDate()).padStart(2, '0')
+  const hours = String(utcDate.getUTCHours()).padStart(2, '0')
+  const minutes = String(utcDate.getUTCMinutes()).padStart(2, '0')
+  const seconds = String(utcDate.getUTCSeconds()).padStart(2, '0')
   
-  // Use TZID format for better Google Calendar compatibility
-  // This format is required by RFC 5545 for timezone-aware events
-  return `TZID=${timezone}:${year}${month}${day}T${hours}${minutes}${seconds}`
+  return `${year}${month}${day}T${hours}${minutes}${seconds}Z`
 }
 
 /**

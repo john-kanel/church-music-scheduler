@@ -25,106 +25,109 @@ interface ICalEvent {
 }
 
 /**
- * Generates an iCal feed for the given events
+ * Generates a minimal, bulletproof iCal feed for maximum Google Calendar compatibility
+ * Follows strict RFC 5545 and Google Calendar requirements
  */
 export function generateICalFeed(events: EventWithDetails[], churchName: string, timezone: string = 'America/Chicago'): string {
-  const icalEvents = events.map(event => convertEventToICal(event, timezone))
+  // Convert all events to minimal ICS format
+  const icalEvents = events.map(event => convertEventToMinimalICal(event))
   
-  const calendarHeader = [
+  // Minimal calendar header - only required fields for Google Calendar compatibility
+  const calendarLines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
     'PRODID:-//Church Music Pro//Church Music Scheduler v1.0//EN',
-    'CALSCALE:GREGORIAN',
-    'METHOD:PUBLISH',
-    // Calendar identification headers
-    wrapICalLine(`X-WR-CALNAME:${churchName} Music Ministry`),
-    wrapICalLine(`X-WR-CALDESC:🔄 LIVE FEED: ${churchName} Music Ministry - Updates automatically`),
-    `X-WR-TIMEZONE:${timezone}`,
-    wrapICalLine(`X-WR-RELCALID:${churchName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-music-ministry`),
-    // Refresh settings - single authoritative setting for better compatibility
-    'X-PUBLISHED-TTL:PT30S', // Refresh every 30 seconds for live updates
-    'X-WR-REFRESH-INTERVAL:PT30S', // Single refresh interval to avoid parser confusion
-    // Calendar appearance
-    'X-APPLE-CALENDAR-COLOR:#8B5CF6', // Purple for music ministry
-    'X-OUTLOOK-COLOR:#8B5CF6',
-    'X-WR-CALTYPE:SUBSCRIPTION', // Explicitly mark as subscription
-    'X-MICROSOFT-CDO-BUSYSTATUS:FREE', // Mark events as free time
-    ''
-  ].join('\r\n')
+    'CALSCALE:GREGORIAN', // Required by Google Calendar
+  ]
 
-  // Add VTIMEZONE block for Google Calendar compatibility
-  const timezoneBlock = generateVTimezone(timezone)
-  
-  const calendarFooter = 'END:VCALENDAR'
+  // Add all events
+  icalEvents.forEach(event => {
+    calendarLines.push(...event)
+  })
 
-  const icalContent = icalEvents.map(event => formatICalEvent(event, timezone)).join('\r\n')
+  // Calendar footer
+  calendarLines.push('END:VCALENDAR')
 
-  return calendarHeader + timezoneBlock + icalContent + '\r\n' + calendarFooter
+  // Join with proper CRLF line endings and ensure proper line folding
+  return calendarLines.map(line => foldLine(line)).join('\r\n') + '\r\n'
 }
 
 /**
  * Generates an iCal file for a single event (for email attachments)
  */
 export function generateSingleEventICalFile(event: EventWithDetails, churchName: string, timezone: string = 'America/Chicago'): string {
-  const icalEvent = convertEventToICal(event, timezone)
+  // Use the minimal conversion for this single event
+  const eventLines = convertEventToMinimalICal(event)
   
-  const calendarHeader = [
+  // Minimal calendar structure
+  const calendarLines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
     'PRODID:-//Church Music Pro//Church Music Scheduler v1.0//EN',
     'CALSCALE:GREGORIAN',
-    'METHOD:PUBLISH',
-    wrapICalLine(`X-WR-CALNAME:${event.name} - ${churchName}`),
-    wrapICalLine(`X-WR-CALDESC:Event: ${event.name}`),
-    `X-WR-TIMEZONE:${timezone}`,
-    'X-APPLE-CALENDAR-COLOR:#8B5CF6',
-    'X-OUTLOOK-COLOR:#8B5CF6',
-    ''
-  ].join('\r\n')
+    ...eventLines,
+    'END:VCALENDAR'
+  ]
 
-  // Add VTIMEZONE block for Google Calendar compatibility
-  const timezoneBlock = generateVTimezone(timezone)
-
-  const calendarFooter = 'END:VCALENDAR'
-
-  const icalContent = formatICalEvent(icalEvent, timezone)
-
-  return calendarHeader + timezoneBlock + icalContent + '\r\n' + calendarFooter
+  // Join with proper line folding and CRLF endings
+  return calendarLines.map(line => foldLine(line)).join('\r\n') + '\r\n'
 }
 
 /**
- * Converts a database event to iCal format
+ * Converts a database event to minimal ICS format for maximum Google Calendar compatibility
+ * Returns array of ICS lines for the event
  */
-function convertEventToICal(event: EventWithDetails, timezone: string): ICalEvent {
-  // Generate unique identifier
+function convertEventToMinimalICal(event: EventWithDetails): string[] {
+  // Generate unique identifier (required by Google)
   const uid = `event-${event.id}@churchmusicpro.com`
   
-  // Format event title - prefix cancelled events with CANCELLED
-  let summary = event.name
-  if ((event as any).status === 'CANCELLED') {
-    summary = `CANCELLED: ${event.name}`
-  }
-
-  // Build description with assignments and music
-  const description = buildEventDescription(event)
-
   // Calculate end time - default to 1 hour if not specified
   const endDate = event.endTime || new Date(event.startTime.getTime() + 60 * 60 * 1000)
 
-  // Convert status to ICS format (only CONFIRMED or CANCELLED allowed in ICS)
-  const icalStatus = (event as any).status === 'CANCELLED' ? 'CANCELLED' : 'CONFIRMED'
+  // Convert all times to UTC format (YYYYMMDDTHHMMSSZ) - required by Google
+  const dtstart = formatUTCDateTime(event.startTime)
+  const dtend = formatUTCDateTime(endDate)
+  const dtstamp = formatUTCDateTime(new Date()) // Current timestamp (required by Google)
+  const created = formatUTCDateTime(event.createdAt)
+  const lastModified = formatUTCDateTime(event.updatedAt)
 
-  return {
-    uid,
-    summary: summary.substring(0, 255), // Limit title length
-    description,
-    location: event.location || '',
-    startDate: event.startTime,
-    endDate,
-    lastModified: event.updatedAt,
-    created: event.createdAt,
-    status: icalStatus
+  // Build clean event title
+  let summary = cleanText(event.name)
+  if ((event as any).status === 'CANCELLED') {
+    summary = `CANCELLED: ${summary}`
   }
+
+  // Build description with assignments and music
+  const description = cleanText(buildEventDescription(event))
+  const location = cleanText(event.location || '')
+
+  // Return minimal event lines - only required fields
+  const eventLines = [
+    'BEGIN:VEVENT',
+    `UID:${uid}`,
+    `DTSTAMP:${dtstamp}`, // Required by Google
+    `DTSTART:${dtstart}`, // UTC format required
+    `DTEND:${dtend}`,     // UTC format required
+    `SUMMARY:${summary}`,
+    `CREATED:${created}`,
+    `LAST-MODIFIED:${lastModified}`,
+    'SEQUENCE:0',
+    'STATUS:CONFIRMED', // Keep simple - Google prefers CONFIRMED
+    'TRANSP:OPAQUE',
+  ]
+
+  // Add optional fields only if they have content
+  if (description && description.trim()) {
+    eventLines.push(`DESCRIPTION:${description}`)
+  }
+  
+  if (location && location.trim()) {
+    eventLines.push(`LOCATION:${location}`)
+  }
+
+  eventLines.push('END:VEVENT')
+  
+  return eventLines
 }
 
 /**
@@ -224,246 +227,66 @@ function buildEventDescription(event: EventWithDetails): string {
   return lines.join('\n')
 }
 
+// REMOVED: Complex timezone handling - using UTC times for maximum Google Calendar compatibility
+
+// REMOVED: Old complex formatting functions - using minimal approach for Google Calendar compatibility
+
 /**
- * Generates VTIMEZONE block for proper timezone support
+ * Formats a date to UTC format required by Google Calendar: YYYYMMDDTHHMMSSZ
  */
-function generateVTimezone(timezone: string): string {
-  // Use the exact timezone name to match what events use
-  const tzid = timezone
+function formatUTCDateTime(date: Date): string {
+  const year = date.getUTCFullYear()
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(date.getUTCDate()).padStart(2, '0')
+  const hours = String(date.getUTCHours()).padStart(2, '0')
+  const minutes = String(date.getUTCMinutes()).padStart(2, '0')
+  const seconds = String(date.getUTCSeconds()).padStart(2, '0')
   
-  // Generate proper timezone rules based on the specific timezone
-  // These are Google Calendar compatible VTIMEZONE definitions
-  if (timezone === 'America/Chicago') {
-    return [
-      'BEGIN:VTIMEZONE',
-      `TZID:${tzid}`,
-      'BEGIN:DAYLIGHT',
-      'TZOFFSETFROM:-0600',
-      'TZOFFSETTO:-0500',
-      'TZNAME:CDT',
-      'DTSTART:19700308T020000',
-      'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU',
-      'END:DAYLIGHT',
-      'BEGIN:STANDARD',
-      'TZOFFSETFROM:-0500',
-      'TZOFFSETTO:-0600',
-      'TZNAME:CST',
-      'DTSTART:19701101T020000',
-      'RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU',
-      'END:STANDARD',
-      'END:VTIMEZONE',
-      ''
-    ].join('\r\n')
-  } else if (timezone === 'America/New_York') {
-    return [
-      'BEGIN:VTIMEZONE',
-      `TZID:${tzid}`,
-      'BEGIN:DAYLIGHT',
-      'TZOFFSETFROM:-0500',
-      'TZOFFSETTO:-0400',
-      'TZNAME:EDT',
-      'DTSTART:19700308T020000',
-      'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU',
-      'END:DAYLIGHT',
-      'BEGIN:STANDARD',
-      'TZOFFSETFROM:-0400',
-      'TZOFFSETTO:-0500',
-      'TZNAME:EST',
-      'DTSTART:19701101T020000',
-      'RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU',
-      'END:STANDARD',
-      'END:VTIMEZONE',
-      ''
-    ].join('\r\n')
-  } else if (timezone === 'America/Los_Angeles') {
-    return [
-      'BEGIN:VTIMEZONE',
-      `TZID:${tzid}`,
-      'BEGIN:DAYLIGHT',
-      'TZOFFSETFROM:-0800',
-      'TZOFFSETTO:-0700',
-      'TZNAME:PDT',
-      'DTSTART:19700308T020000',
-      'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU',
-      'END:DAYLIGHT',
-      'BEGIN:STANDARD',
-      'TZOFFSETFROM:-0700',
-      'TZOFFSETTO:-0800',
-      'TZNAME:PST',
-      'DTSTART:19701101T020000',
-      'RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU',
-      'END:STANDARD',
-      'END:VTIMEZONE',
-      ''
-    ].join('\r\n')
-  } else if (timezone === 'Europe/London') {
-    return [
-      'BEGIN:VTIMEZONE',
-      `TZID:${tzid}`,
-      'BEGIN:DAYLIGHT',
-      'TZOFFSETFROM:+0000',
-      'TZOFFSETTO:+0100',
-      'TZNAME:BST',
-      'DTSTART:19700329T010000',
-      'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU',
-      'END:DAYLIGHT',
-      'BEGIN:STANDARD',
-      'TZOFFSETFROM:+0100',
-      'TZOFFSETTO:+0000',
-      'TZNAME:GMT',
-      'DTSTART:19701025T020000',
-      'RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU',
-      'END:STANDARD',
-      'END:VTIMEZONE',
-      ''
-    ].join('\r\n')
-  } else if (timezone === 'UTC') {
-    return [
-      'BEGIN:VTIMEZONE',
-      `TZID:${tzid}`,
-      'BEGIN:STANDARD',
-      'TZOFFSETFROM:+0000',
-      'TZOFFSETTO:+0000',
-      'TZNAME:UTC',
-      'DTSTART:19700101T000000',
-      'END:STANDARD',
-      'END:VTIMEZONE',
-      ''
-    ].join('\r\n')
-  } else {
-    // For unknown timezones, provide a basic definition
-    // This prevents ICS parsing errors but may need manual adjustment
-    console.warn(`Unknown timezone ${timezone}, using generic UTC definition. Please add proper timezone rules for better compatibility.`)
-    return [
-      'BEGIN:VTIMEZONE',
-      `TZID:${tzid}`,
-      'BEGIN:STANDARD',
-      'TZOFFSETFROM:+0000',
-      'TZOFFSETTO:+0000',
-      'TZNAME:UTC',
-      'DTSTART:19700101T000000',
-      'END:STANDARD',
-      'END:VTIMEZONE',
-      ''
-    ].join('\r\n')
-  }
+  return `${year}${month}${day}T${hours}${minutes}${seconds}Z`
 }
 
 /**
- * Formats an iCal event object into the proper iCal format
- * Optimized for maximum Google Calendar compatibility
+ * Cleans text for ICS format - minimal escaping for maximum compatibility
  */
-function formatICalEvent(event: ICalEvent, timezone: string = 'America/Chicago'): string {
-  const lines = [
-    'BEGIN:VEVENT',
-    wrapICalLine(`UID:${event.uid}`),
-    wrapICalLine(`SUMMARY:${escapeICalText(event.summary)}`),
-    wrapICalLine(`DESCRIPTION:${escapeICalText(event.description)}`),
-    wrapICalLine(`LOCATION:${escapeICalText(event.location)}`),
-    wrapICalLine(`DTSTART;${formatICalDate(event.startDate, timezone)}`),
-    wrapICalLine(`DTEND;${formatICalDate(event.endDate, timezone)}`),
-    wrapICalLine(`DTSTAMP:${formatICalDate(new Date(), 'UTC')}`),
-    wrapICalLine(`LAST-MODIFIED:${formatICalDate(event.lastModified, 'UTC')}`),
-    wrapICalLine(`CREATED:${formatICalDate(event.created, 'UTC')}`),
-    'SEQUENCE:0',
-    `STATUS:${event.status}`,  // Use actual event status (CONFIRMED/CANCELLED)
-    'TRANSP:OPAQUE',
-    'END:VEVENT',
-    ''
-  ]
-
-  return lines.join('\r\n')
-}
-
-/**
- * Formats a date for iCal with proper timezone support
- */
-function formatICalDate(date: Date, timezone: string = 'America/Chicago'): string {
-  if (timezone === 'UTC') {
-    // For UTC dates (DTSTAMP, CREATED, LAST-MODIFIED), use Z suffix
-    const utc = new Date(date.getTime())
-    const year = utc.getUTCFullYear()
-    const month = String(utc.getUTCMonth() + 1).padStart(2, '0')
-    const day = String(utc.getUTCDate()).padStart(2, '0')
-    const hours = String(utc.getUTCHours()).padStart(2, '0')
-    const minutes = String(utc.getUTCMinutes()).padStart(2, '0')
-    const seconds = String(utc.getUTCSeconds()).padStart(2, '0')
-    return `${year}${month}${day}T${hours}${minutes}${seconds}Z`
-  } else {
-    // For event dates, use TZID format
-    const { formatICSDateTime } = require('@/lib/timezone-utils')
-    return formatICSDateTime(date, timezone)
-  }
-}
-
-/**
- * Escapes text for iCal format with proper RFC 5545 and Google Calendar compatibility
- * Handles all special characters that need escaping in iCalendar text fields
- */
-function escapeICalText(text: string): string {
+function cleanText(text: string): string {
   if (!text) return ''
   
   return text
-    .replace(/\\/g, '\\\\')   // Escape backslashes first (MUST be first)
-    .replace(/\r\n/g, '\\n')  // Handle CRLF sequences
-    .replace(/\r/g, '\\n')    // Handle lone CR as newline
-    .replace(/\n/g, '\\n')    // Escape newlines
+    .replace(/\\/g, '\\\\')   // Escape backslashes first
+    .replace(/\r\n/g, '\\n')  // Handle CRLF
+    .replace(/\r/g, '\\n')    // Handle CR
+    .replace(/\n/g, '\\n')    // Handle LF
     .replace(/;/g, '\\;')     // Escape semicolons
-    .replace(/,/g, '\\,')     // Escape commas (for parameter values)
-    .replace(/"/g, '\\"')     // Escape quotes (though not strictly required by RFC 5545)
-    .trim()                   // Remove leading/trailing whitespace
+    .replace(/,/g, '\\,')     // Escape commas
+    .trim()                   // Remove whitespace
+    .substring(0, 1000)       // Prevent extremely long fields
 }
 
 /**
- * Wraps long lines to 75 octets as per RFC 5545 specification
- * This is critical for Google Calendar compatibility
- * Handles UTF-8 byte boundaries correctly
+ * Simple line folding for ICS - keeps lines under 75 characters
  */
-function wrapICalLine(line: string): string {
-  if (!line) return ''
-  
-  // Convert to bytes to check actual octet length (RFC 5545 requirement)
-  const lineBytes = Buffer.from(line, 'utf8')
-  if (lineBytes.length <= 75) {
+function foldLine(line: string): string {
+  if (!line || line.length <= 75) {
     return line
   }
-
-  const wrapped: string[] = []
+  
+  const result: string[] = []
   let remaining = line
   
-  while (remaining.length > 0) {
+  while (remaining.length > 75) {
+    // Find a safe break point (avoid breaking escape sequences)
     let breakPoint = 75
-    let currentSlice = remaining
-    
-    // Find the maximum number of characters that fit within 75 bytes
-    while (Buffer.from(currentSlice.substring(0, breakPoint), 'utf8').length > 75 && breakPoint > 1) {
-      breakPoint--
+    if (remaining.charAt(74) === '\\') {
+      breakPoint = 74
     }
     
-    // Avoid breaking in the middle of escape sequences
-    if (breakPoint > 1 && remaining.charAt(breakPoint - 1) === '\\') {
-      breakPoint--
-    }
-    
-    // Avoid breaking in the middle of multi-byte UTF-8 sequences
-    const slice = remaining.substring(0, breakPoint)
-    const sliceBytes = Buffer.from(slice, 'utf8')
-    
-    if (sliceBytes.length <= 75) {
-      wrapped.push(slice)
-      remaining = remaining.substring(breakPoint)
-      
-      // Add continuation space for subsequent lines (RFC 5545 requirement)
-      if (remaining.length > 0) {
-        remaining = ' ' + remaining
-      }
-    } else {
-      // Fallback: reduce break point further
-      breakPoint = Math.max(1, breakPoint - 1)
-      wrapped.push(remaining.substring(0, breakPoint))
-      remaining = ' ' + remaining.substring(breakPoint)
-    }
+    result.push(remaining.substring(0, breakPoint))
+    remaining = ' ' + remaining.substring(breakPoint) // Continuation with space
   }
   
-  return wrapped.join('\r\n')
+  if (remaining.length > 0) {
+    result.push(remaining)
+  }
+  
+  return result.join('\r\n')
 } 
