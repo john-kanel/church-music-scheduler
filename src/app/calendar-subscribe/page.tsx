@@ -207,10 +207,23 @@ export default function CalendarSubscribePage() {
     }
   }
 
-  const copyFeedUrl = () => {
+  const [showCopyToast, setShowCopyToast] = useState(false)
+
+  const copyFeedUrl = async () => {
     if (subscription?.feedUrl) {
-      navigator.clipboard.writeText(subscription.feedUrl)
-      alert('Calendar feed URL copied to clipboard!')
+      try {
+        // Convert to webcal:// URL for better compatibility
+        const webcalUrl = subscription.feedUrl.startsWith('webcal://')
+          ? subscription.feedUrl
+          : subscription.feedUrl.replace(/^https?:\/\//, 'webcal://')
+        
+        await navigator.clipboard.writeText(webcalUrl)
+        setShowCopyToast(true)
+        setTimeout(() => setShowCopyToast(false), 2000) // Hide after 2 seconds
+      } catch (error) {
+        console.error('Error copying to clipboard:', error)
+        alert('Failed to copy URL. Please try again.')
+      }
     }
   }
 
@@ -267,20 +280,32 @@ export default function CalendarSubscribePage() {
                 <div className="mt-2 text-sm text-green-700">
                   <p>Filter: {subscription.filterType.replace('_', ' ').toLowerCase()}</p>
                                       {subscription.feedUrl && (
-                      <button
-                        onClick={() => {
-                          if (subscription.feedUrl) {
-                            const webcalUrl = subscription.feedUrl.startsWith('webcal://') 
-                              ? subscription.feedUrl 
-                              : subscription.feedUrl.replace(/^https?:\/\//, 'webcal://')
-                            window.open(webcalUrl, '_blank')
-                          }
-                        }}
-                        className="mt-1 inline-flex items-center text-green-600 hover:text-green-800 underline"
-                      >
-                        <ExternalLink className="h-4 w-4 mr-1" />
-                        Open calendar subscription
-                      </button>
+                      <div className="mt-1 flex items-center gap-4">
+                        <button
+                          onClick={() => {
+                            if (subscription.feedUrl) {
+                              const webcalUrl = subscription.feedUrl.startsWith('webcal://') 
+                                ? subscription.feedUrl 
+                                : subscription.feedUrl.replace(/^https?:\/\//, 'webcal://')
+                              window.open(webcalUrl, '_blank')
+                            }
+                          }}
+                          className="inline-flex items-center text-green-600 hover:text-green-800 underline"
+                        >
+                          <ExternalLink className="h-4 w-4 mr-1" />
+                          Open calendar subscription
+                        </button>
+                        <button
+                          onClick={copyFeedUrl}
+                          className="inline-flex items-center text-green-600 hover:text-green-800"
+                          title="Copy subscription URL"
+                        >
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                          </svg>
+                          <span className="ml-1">Copy URL</span>
+                        </button>
+                      </div>
                     )}
                 </div>
               </div>
@@ -460,6 +485,16 @@ export default function CalendarSubscribePage() {
           </p>
         </div>
       </div>
+
+      {/* Toast Notification */}
+      {showCopyToast && (
+        <div className="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center">
+          <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          Calendar URL copied to clipboard!
+        </div>
+      )}
     </div>
   )
 } 
