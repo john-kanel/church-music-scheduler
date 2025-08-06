@@ -38,6 +38,7 @@ export default function CalendarSubscribePage() {
   const [filterType, setFilterType] = useState<'ALL' | 'GROUPS' | 'EVENT_TYPES'>('ALL')
   const [selectedGroups, setSelectedGroups] = useState<string[]>([])
   const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>([])
+  const [showCopyToast, setShowCopyToast] = useState(false)
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -465,6 +466,75 @@ export default function CalendarSubscribePage() {
             </div>
           </div>
         </div>
+
+        {/* Manual URL Options */}
+        {subscription?.feedUrl && (
+          <div className="mt-8 bg-gray-50 border border-gray-200 rounded-lg p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Manual Calendar Subscription</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              If the automatic method doesn't work, you can manually add these URLs to your calendar app:
+            </p>
+            
+            <div className="space-y-4">
+              {/* Webcal URL */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Webcal URL (Recommended for most calendar apps):
+                </label>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="text"
+                    value={subscription.feedUrl}
+                    readOnly
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md bg-white text-sm font-mono"
+                  />
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(subscription.feedUrl || '')
+                      setShowCopyToast(true)
+                      setTimeout(() => setShowCopyToast(false), 2000)
+                    }}
+                    className="px-3 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-sm"
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
+
+              {/* HTTPS URL */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  HTTPS URL (Alternative for some Google Calendar users):
+                </label>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="text"
+                    value={subscription.feedUrl?.replace('webcal://', 'https://') || ''}
+                    readOnly
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md bg-white text-sm font-mono"
+                  />
+                  <button
+                    onClick={() => {
+                      const httpsUrl = subscription.feedUrl?.replace('webcal://', 'https://') || ''
+                      navigator.clipboard.writeText(httpsUrl)
+                      setShowCopyToast(true)
+                      setTimeout(() => setShowCopyToast(false), 2000)
+                    }}
+                    className="px-3 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-sm"
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 text-xs text-gray-500">
+              <strong>Google Calendar:</strong> Settings → Add calendar → From URL → paste either URL above<br/>
+              <strong>Apple Calendar:</strong> File → New Calendar Subscription → paste webcal:// URL<br/>
+              <strong>Outlook:</strong> Add calendar → Subscribe from web → paste either URL
+            </div>
+          </div>
+        )}
 
         {/* Instructions */}
         <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
