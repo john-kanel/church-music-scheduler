@@ -554,14 +554,59 @@ export default function CalendarPage() {
             const opened = window.open(subscription.feedUrl, '_blank')
             
             if (opened) {
-              alert('🎉 Calendar subscription opened! Your calendar app should prompt you to create a new "[Church Name] Music Ministry" calendar.')
+              // Show improved success message with both URL options
+              const webcalUrl = subscription.feedUrl
+              const httpsUrl = subscription.feedUrl.replace('webcal://', 'https://')
+              
+              alert(`🎉 Calendar subscription opened! Your calendar app should prompt you to create a new "[Church Name] Music Ministry" calendar.
+
+If it doesn't work automatically, manually add one of these URLs:
+
+📱 For most calendar apps (recommended):
+${webcalUrl}
+
+🌐 For Google Calendar (alternative):
+${httpsUrl}
+
+Instructions:
+• Google Calendar: Settings → Add calendar → From URL
+• Apple Calendar: File → New Calendar Subscription  
+• Outlook: Add calendar → Subscribe from web`)
             } else {
-              // Fallback if popup was blocked
-              alert('Calendar subscription created! Please manually open this URL in your calendar app:\n\n' + subscription.feedUrl)
+              // Fallback with both URLs if popup was blocked
+              const webcalUrl = subscription.feedUrl
+              const httpsUrl = subscription.feedUrl.replace('webcal://', 'https://')
+              
+              alert(`Calendar subscription created! Please manually add one of these URLs to your calendar app:
+
+📱 For most calendar apps (recommended):
+${webcalUrl}
+
+🌐 For Google Calendar (alternative):  
+${httpsUrl}
+
+Instructions:
+• Google Calendar: Settings → Add calendar → From URL
+• Apple Calendar: File → New Calendar Subscription
+• Outlook: Add calendar → Subscribe from web`)
             }
           } catch (openError) {
             console.error('Error opening calendar URL:', openError)
-            alert('Calendar subscription created! Please manually add this URL to your calendar app:\n\n' + subscription.feedUrl)
+            const webcalUrl = subscription.feedUrl
+            const httpsUrl = subscription.feedUrl.replace('webcal://', 'https://')
+            
+            alert(`Calendar subscription created! Please manually add one of these URLs to your calendar app:
+
+📱 For most calendar apps (recommended):
+${webcalUrl}
+
+🌐 For Google Calendar (alternative):
+${httpsUrl}
+
+Instructions:
+• Google Calendar: Settings → Add calendar → From URL
+• Apple Calendar: File → New Calendar Subscription
+• Outlook: Add calendar → Subscribe from web`)
           }
         } else {
           console.error('No feedUrl in response:', subscription)
@@ -910,18 +955,27 @@ export default function CalendarPage() {
                   Public Link
                 </button>
               )}
-              <button
-                onClick={handleCalendarSubscription}
-                className="flex items-center px-4 py-2 bg-success-600 text-white rounded-lg hover:bg-success-700 transition-colors"
-                disabled={isCreatingSubscription}
-              >
-                {isCreatingSubscription ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                ) : (
-                  <Calendar className="h-4 w-4 mr-2" />
-                )}
-                {isCreatingSubscription ? 'Subscribing...' : 'Subscribe'}
-              </button>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={handleCalendarSubscription}
+                  className="flex items-center px-4 py-2 bg-success-600 text-white rounded-lg hover:bg-success-700 transition-colors"
+                  disabled={isCreatingSubscription}
+                >
+                  {isCreatingSubscription ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  ) : (
+                    <Calendar className="h-4 w-4 mr-2" />
+                  )}
+                  {isCreatingSubscription ? 'Subscribing...' : 'Quick Subscribe'}
+                </button>
+                <Link
+                  href="/calendar-subscribe"
+                  className="flex items-center px-3 py-2 border border-success-600 text-success-600 rounded-lg hover:bg-success-50 transition-colors text-sm"
+                >
+                  <Settings className="h-4 w-4 mr-1" />
+                  Options
+                </Link>
+              </div>
               <button
                 onClick={() => generatePDF()}
                 className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
