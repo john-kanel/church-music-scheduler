@@ -32,13 +32,20 @@ export function generateICalFeed(events: EventWithDetails[], churchName: string,
   // Convert all events to minimal ICS format
   const icalEvents = events.map(event => convertEventToMinimalICal(event, timezone))
   
-  // Minimal calendar header - only required fields for Google Calendar compatibility
+  // Google Calendar optimized header with required metadata
   const calendarLines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
     'PRODID:-//Church Music Pro//Church Music Scheduler v1.0//EN',
-    'CALSCALE:GREGORIAN', // Required by Google Calendar
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH', // Required for subscription feeds
+    `X-WR-CALNAME:${cleanText(churchName)} Music Ministry`, // Calendar name in Google Calendar
+    `X-WR-CALDESC:${cleanText(churchName)} Music Ministry - Live calendar subscription`, // Calendar description
+    `X-WR-TIMEZONE:${timezone}`, // Default timezone for the calendar
   ]
+
+  // Add VTIMEZONE definition for proper Google Calendar compatibility
+  calendarLines.push(...generateVTimezone(timezone))
 
   // Add all events
   icalEvents.forEach(event => {
@@ -59,12 +66,16 @@ export function generateSingleEventICalFile(event: EventWithDetails, churchName:
   // Use the minimal conversion for this single event
   const eventLines = convertEventToMinimalICal(event, timezone)
   
-  // Minimal calendar structure
+  // Google Calendar optimized structure with VTIMEZONE
   const calendarLines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
     'PRODID:-//Church Music Pro//Church Music Scheduler v1.0//EN',
     'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    `X-WR-CALNAME:${cleanText(churchName)} Music Ministry`,
+    `X-WR-TIMEZONE:${timezone}`,
+    ...generateVTimezone(timezone),
     ...eventLines,
     'END:VCALENDAR'
   ]
@@ -84,9 +95,9 @@ function convertEventToMinimalICal(event: EventWithDetails, timezone: string): s
   // Calculate end time - default to 1 hour if not specified
   const endDate = event.endTime || new Date(event.startTime.getTime() + 60 * 60 * 1000)
 
-  // Format timestamps - use quoted TZID for event times, UTC for metadata
-  const dtstart = `TZID="${timezone}":${formatLocalDateTime(event.startTime)}`
-  const dtend = `TZID="${timezone}":${formatLocalDateTime(endDate)}`
+  // Format timestamps - use unquoted TZID for event times (Google Calendar prefers this), UTC for metadata
+  const dtstart = `TZID=${timezone}:${formatLocalDateTime(event.startTime)}`
+  const dtend = `TZID=${timezone}:${formatLocalDateTime(endDate)}`
   const dtstamp = formatUTCDateTime(new Date()) // Metadata timestamps stay in UTC
   const created = formatUTCDateTime(event.createdAt)
   const lastModified = formatUTCDateTime(event.updatedAt)
@@ -318,4 +329,89 @@ function foldLine(line: string): string {
   }
 
   return result.join('\r\n')
+}
+
+/**
+ * Generates VTIMEZONE definition for proper Google Calendar compatibility
+ * This is essential for Google Calendar to understand timezone references
+ */
+function generateVTimezone(timezone: string): string[] {
+  // For now, we'll support the most common US timezones
+  // This could be expanded to support more timezones as needed
+  
+  if (timezone === 'America/Chicago') {
+    return [
+      'BEGIN:VTIMEZONE',
+      'TZID:America/Chicago',
+      'BEGIN:DAYLIGHT',
+      'TZOFFSETFROM:-0600',
+      'TZOFFSETTO:-0500',
+      'TZNAME:CDT',
+      'DTSTART:19700308T020000',
+      'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU',
+      'END:DAYLIGHT',
+      'BEGIN:STANDARD',
+      'TZOFFSETFROM:-0500',
+      'TZOFFSETTO:-0600',
+      'TZNAME:CST',
+      'DTSTART:19701101T020000',
+      'RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU',
+      'END:STANDARD',
+      'END:VTIMEZONE'
+    ]
+  } else if (timezone === 'America/New_York') {
+    return [
+      'BEGIN:VTIMEZONE',
+      'TZID:America/New_York',
+      'BEGIN:DAYLIGHT',
+      'TZOFFSETFROM:-0500',
+      'TZOFFSETTO:-0400',
+      'TZNAME:EDT',
+      'DTSTART:19700308T020000',
+      'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU',
+      'END:DAYLIGHT',
+      'BEGIN:STANDARD',
+      'TZOFFSETFROM:-0400',
+      'TZOFFSETTO:-0500',
+      'TZNAME:EST',
+      'DTSTART:19701101T020000',
+      'RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU',
+      'END:STANDARD',
+      'END:VTIMEZONE'
+    ]
+  } else if (timezone === 'America/Los_Angeles') {
+    return [
+      'BEGIN:VTIMEZONE',
+      'TZID:America/Los_Angeles',
+      'BEGIN:DAYLIGHT',
+      'TZOFFSETFROM:-0800',
+      'TZOFFSETTO:-0700',
+      'TZNAME:PDT',
+      'DTSTART:19700308T020000',
+      'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU',
+      'END:DAYLIGHT',
+      'BEGIN:STANDARD',
+      'TZOFFSETFROM:-0700',
+      'TZOFFSETTO:-0800',
+      'TZNAME:PST',
+      'DTSTART:19701101T020000',
+      'RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU',
+      'END:STANDARD',
+      'END:VTIMEZONE'
+    ]
+  } else {
+    // Fallback: For unsupported timezones, use UTC
+    console.warn(`Timezone ${timezone} not supported in VTIMEZONE generation, falling back to UTC`)
+    return [
+      'BEGIN:VTIMEZONE',
+      'TZID:UTC',
+      'BEGIN:STANDARD',
+      'TZOFFSETFROM:+0000',
+      'TZOFFSETTO:+0000',
+      'TZNAME:UTC',
+      'DTSTART:19700101T000000',
+      'END:STANDARD',
+      'END:VTIMEZONE'
+    ]
+  }
 } 
