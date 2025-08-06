@@ -208,8 +208,6 @@ export default function CalendarSubscribePage() {
     }
   }
 
-  const [showCopyToast, setShowCopyToast] = useState(false)
-
   const copyFeedUrl = async () => {
     if (subscription?.feedUrl) {
       try {
