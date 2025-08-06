@@ -25,8 +25,24 @@ export async function GET(request: NextRequest) {
     console.log('🎵 Song history search:', {
       songTitle,
       churchId: session.user.churchId,
-      searchFrom: sixtyDaysAgo.toISOString()
+      searchFrom: sixtyDaysAgo.toISOString(),
+      excludeEventId
     })
+
+    // Get the excluded event's date if provided (to exclude same-day events)
+    let excludeDate: Date | null = null
+    if (excludeEventId) {
+      const excludedEvent = await prisma.event.findUnique({
+        where: { id: excludeEventId },
+        select: { startTime: true }
+      })
+      if (excludedEvent?.startTime) {
+        excludeDate = new Date(excludedEvent.startTime)
+        // Set to start of day for comparison
+        excludeDate.setHours(0, 0, 0, 0)
+        console.log('🎵 Excluding events from date:', excludeDate.toISOString().split('T')[0])
+      }
+    }
 
     // Search for similar song titles in the last 60 days
     // Use fuzzy matching by searching for songs that contain similar words
@@ -50,12 +66,7 @@ export async function GET(request: NextRequest) {
             churchId: session.user.churchId,
             startTime: {
               gte: sixtyDaysAgo
-            },
-            ...(excludeEventId && {
-              NOT: {
-                id: excludeEventId
-              }
-            })
+            }
           },
           OR: searchConditions
         },
@@ -81,6 +92,18 @@ export async function GET(request: NextRequest) {
         },
         take: 10 // Limit to most recent 10 matches
       })
+
+      // Filter out same-day events if we have an exclude date
+      if (excludeDate) {
+        const beforeFilter = songHistory.length
+        songHistory = songHistory.filter(hymn => {
+          if (!hymn.event?.startTime) return true
+          const eventDate = new Date(hymn.event.startTime)
+          eventDate.setHours(0, 0, 0, 0)
+          return eventDate.getTime() !== excludeDate!.getTime()
+        })
+        console.log(`🎵 Filtered out same-day events: ${beforeFilter} -> ${songHistory.length}`)
+      }
 
       // Filter results by similarity score
       // Calculate how similar each result is to the original title

@@ -200,7 +200,7 @@ function SortableHymnItem({
                 onClick={(e) => handleSongHistoryClick(hymn.id, hymn.title, eventId, e)}
                 className={`p-1 transition-all ${
                   songHistoryData[hymn.id] && songHistoryData[hymn.id].length > 0
-                    ? 'text-blue-600 hover:text-blue-800' // Blue when results exist
+                    ? 'text-blue-600 hover:text-blue-800' // Blue when results exist - always visible
                     : 'text-gray-400 hover:text-blue-600' // Default gray
                 }`}
                 title={`See when "${hymn.title}" was last played`}
