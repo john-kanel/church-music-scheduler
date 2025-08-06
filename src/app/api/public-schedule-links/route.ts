@@ -23,7 +23,19 @@ export async function GET(request: NextRequest) {
       take: 10 // Limit to last 10 links
     })
 
-    return NextResponse.json({ links })
+    const baseUrl = process.env.NEXTAUTH_URL || 'https://churchmusicpro.com'
+    
+    // Add the full URL to each link
+    const linksWithUrls = links.map(link => ({
+      id: link.id,
+      token: link.token,
+      url: `${baseUrl}/public-schedule/${link.token}`,
+      startDate: link.startDate,
+      endDate: link.endDate,
+      createdAt: link.createdAt
+    }))
+
+    return NextResponse.json({ links: linksWithUrls })
   } catch (error) {
     console.error('Error fetching public schedule links:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
