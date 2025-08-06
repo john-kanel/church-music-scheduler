@@ -6,17 +6,6 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Calendar, ExternalLink } from 'lucide-react'
 
-interface Group {
-  id: string
-  name: string
-}
-
-interface EventType {
-  id: string
-  name: string
-  color: string
-}
-
 interface CalendarSubscription {
   id: string
   filterType: 'ALL' | 'GROUPS' | 'EVENT_TYPES'
@@ -32,12 +21,7 @@ export default function CalendarSubscribePage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [groups, setGroups] = useState<Group[]>([])
-  const [eventTypes, setEventTypes] = useState<EventType[]>([])
   const [subscription, setSubscription] = useState<CalendarSubscription | null>(null)
-  const [filterType, setFilterType] = useState<'ALL' | 'GROUPS' | 'EVENT_TYPES'>('ALL')
-  const [selectedGroups, setSelectedGroups] = useState<string[]>([])
-  const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>([])
   const [showCopyToast, setShowCopyToast] = useState(false)
 
   // Redirect if not authenticated
@@ -61,29 +45,12 @@ export default function CalendarSubscribePage() {
     
     const loadData = async () => {
       try {
-        const [groupsRes, eventTypesRes, subscriptionRes] = await Promise.all([
-          fetch('/api/groups'),
-          fetch('/api/event-types'),
-          fetch('/api/calendar-subscription')
-        ])
-
-        if (groupsRes.ok) {
-          const groupsData = await groupsRes.json()
-          setGroups(groupsData)
-        }
-
-        if (eventTypesRes.ok) {
-          const eventTypesData = await eventTypesRes.json()
-          setEventTypes(eventTypesData)
-        }
+        const subscriptionRes = await fetch('/api/calendar-subscription')
 
         if (subscriptionRes.ok) {
           const subData = await subscriptionRes.json()
           if (subData) {
             setSubscription(subData)
-            setFilterType(subData.filterType)
-            setSelectedGroups(subData.groupIds)
-            setSelectedEventTypes(subData.eventTypeIds)
           }
         }
       } catch (error) {
@@ -101,11 +68,7 @@ export default function CalendarSubscribePage() {
     
     setSaving(true)
     try {
-      console.log('Creating calendar subscription...', {
-        filterType,
-        groupIds: filterType === 'GROUPS' ? selectedGroups : [],
-        eventTypeIds: filterType === 'EVENT_TYPES' ? selectedEventTypes : [],
-      })
+      console.log('Creating calendar subscription for all events...')
 
       const response = await fetch('/api/calendar-subscription', {
         method: 'POST',
@@ -113,9 +76,9 @@ export default function CalendarSubscribePage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          filterType,
-          groupIds: filterType === 'GROUPS' ? selectedGroups : [],
-          eventTypeIds: filterType === 'EVENT_TYPES' ? selectedEventTypes : [],
+          filterType: 'ALL',
+          groupIds: [],
+          eventTypeIds: [],
         }),
       })
 
@@ -312,138 +275,24 @@ export default function CalendarSubscribePage() {
           </div>
         )}
 
-        {/* Filter Options */}
+        {/* Calendar Information */}
         <div className="bg-white shadow rounded-lg">
           <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-medium text-gray-900">Choose Your Calendar Filter</h2>
+            <h2 className="text-lg font-medium text-gray-900">Complete Church Calendar</h2>
             <p className="mt-1 text-sm text-gray-500">
-              Select which events you want to see in your calendar feed
+              Your subscription will include all church events and music ministry activities
             </p>
           </div>
 
-          <div className="p-6 space-y-6">
-            {/* All Events Option */}
-            <div className="flex items-start">
-              <div className="flex items-center h-5">
-                <input
-                  id="filter-all"
-                  name="filter-type"
-                  type="radio"
-                  checked={filterType === 'ALL'}
-                  onChange={() => setFilterType('ALL')}
-                  className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300"
-                />
-              </div>
-              <div className="ml-3">
-                <label htmlFor="filter-all" className="text-sm font-medium text-gray-700">
-                  All Church Events
-                </label>
-                <p className="text-sm text-gray-500">
-                  See every event in your church calendar, including events you're not assigned to
-                </p>
-              </div>
-            </div>
-
-            {/* Specific Groups Option */}
-            <div className="flex items-start">
-              <div className="flex items-center h-5">
-                <input
-                  id="filter-groups"
-                  name="filter-type"
-                  type="radio"
-                  checked={filterType === 'GROUPS'}
-                  onChange={() => setFilterType('GROUPS')}
-                  className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300"
-                />
-              </div>
-              <div className="ml-3 flex-1">
-                <label htmlFor="filter-groups" className="text-sm font-medium text-gray-700">
-                  Specific Groups
-                </label>
-                <p className="text-sm text-gray-500 mb-3">
-                  See events where specific groups are assigned
-                </p>
-                
-                {filterType === 'GROUPS' && (
-                  <div className="space-y-2 bg-gray-50 rounded-md p-3">
-                    {groups.length > 0 ? (
-                      groups.map((group) => (
-                        <label key={group.id} className="flex items-center">
-                          <input
-                            type="checkbox"
-                            checked={selectedGroups.includes(group.id)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedGroups([...selectedGroups, group.id])
-                              } else {
-                                setSelectedGroups(selectedGroups.filter(id => id !== group.id))
-                              }
-                            }}
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                          />
-                          <span className="ml-2 text-sm text-gray-700">{group.name}</span>
-                        </label>
-                      ))
-                    ) : (
-                      <p className="text-sm text-gray-500">No groups available</p>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Specific Event Types Option */}
-            <div className="flex items-start">
-              <div className="flex items-center h-5">
-                <input
-                  id="filter-event-types"
-                  name="filter-type"
-                  type="radio"
-                  checked={filterType === 'EVENT_TYPES'}
-                  onChange={() => setFilterType('EVENT_TYPES')}
-                  className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300"
-                />
-              </div>
-              <div className="ml-3 flex-1">
-                <label htmlFor="filter-event-types" className="text-sm font-medium text-gray-700">
-                  Specific Event Types
-                </label>
-                <p className="text-sm text-gray-500 mb-3">
-                  See only specific types of events (e.g., Sunday Service, Choir Practice)
-                </p>
-                
-                {filterType === 'EVENT_TYPES' && (
-                  <div className="space-y-2 bg-gray-50 rounded-md p-3">
-                    {eventTypes.length > 0 ? (
-                      eventTypes.map((eventType) => (
-                        <label key={eventType.id} className="flex items-center">
-                          <input
-                            type="checkbox"
-                            checked={selectedEventTypes.includes(eventType.id)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedEventTypes([...selectedEventTypes, eventType.id])
-                              } else {
-                                setSelectedEventTypes(selectedEventTypes.filter(id => id !== eventType.id))
-                              }
-                            }}
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                          />
-                          <span className="ml-2 text-sm text-gray-700 flex items-center">
-                            <span
-                              className="w-3 h-3 rounded-full mr-2"
-                              style={{ backgroundColor: eventType.color }}
-                            ></span>
-                            {eventType.name}
-                          </span>
-                        </label>
-                      ))
-                    ) : (
-                      <p className="text-sm text-gray-500">No event types available</p>
-                    )}
-                  </div>
-                )}
-              </div>
+          <div className="p-6">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h3 className="text-sm font-medium text-blue-900 mb-2">What's Included:</h3>
+              <ul className="text-sm text-blue-800 space-y-1">
+                <li>• All worship services and special events</li>
+                <li>• Choir practices and rehearsals</li>
+                <li>• Music ministry meetings and activities</li>
+                <li>• Your personal assignments and responsibilities</li>
+              </ul>
             </div>
           </div>
 
