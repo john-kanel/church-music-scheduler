@@ -340,9 +340,10 @@ export function convertToGoogleCalendarEvent(event: any, churchTimezone?: string
 
   // Add group information
   const eventGroups = event.assignments?.filter((a: any) => a.group).map((a: any) => a.group) || []
-  const uniqueGroups = Array.from(new Set(eventGroups.map((g: any) => g?.id))).map((id: string) => 
-    eventGroups.find((g: any) => g?.id === id)
-  ).filter(Boolean)
+  const uniqueGroupIds = new Set(eventGroups.map((g: any) => g?.id))
+  const uniqueGroups = eventGroups.filter((g: any, index: number, arr: any[]) => 
+    g && uniqueGroupIds.has(g.id) && arr.findIndex((group: any) => group?.id === g.id) === index
+  )
   
   descriptionParts.push('Group:')
   if (uniqueGroups.length > 0) {
