@@ -37,19 +37,21 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Calculate date 60 days before the reference date (event date or today)
-    const sixtyDaysAgo = new Date(referenceDate)
-    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60)
+    // Calculate 61-day window around the reference date (±61 days)
+    const windowStart = new Date(referenceDate)
+    windowStart.setDate(windowStart.getDate() - 61)
+    const windowEnd = new Date(referenceDate)
+    windowEnd.setDate(windowEnd.getDate() + 61)
 
     console.log('🎵 Song history search:', {
       songTitle,
       churchId: session.user.churchId,
       referenceDate: referenceDate.toISOString().split('T')[0],
-      searchFrom: sixtyDaysAgo.toISOString().split('T')[0],
+      searchWindow: `${windowStart.toISOString().split('T')[0]} to ${windowEnd.toISOString().split('T')[0]}`,
       excludeEventId
     })
 
-    // Search for similar song titles in the last 60 days
+    // Search for similar song titles within ±61 days of the event
     // Use fuzzy matching by searching for songs that contain similar words
     const words = songTitle.toLowerCase().split(' ').filter(word => word.length > 2)
     
@@ -70,7 +72,8 @@ export async function GET(request: NextRequest) {
           event: {
             churchId: session.user.churchId,
             startTime: {
-              gte: sixtyDaysAgo
+              gte: windowStart,
+              lte: windowEnd
             }
           },
           OR: searchConditions
