@@ -89,14 +89,16 @@ timezones.forEach(timezone => {
     console.log(`   ✅ SEQUENCE fields found: ${sequences.length}`)
     
     // Check that updated events have different sequences
-    const seq1 = parseInt(sequences[0].split(':')[1])
-    const seq2 = parseInt(sequences[1].split(':')[1])
-    const seq3 = parseInt(sequences[2].split(':')[1])
-    
-    if (seq1 !== seq2 && seq2 !== seq3) {
-      console.log('   ✅ SEQUENCE numbers vary based on update times')
-    } else {
-      console.log('   ⚠️  SEQUENCE numbers should vary more')
+    if (sequences.length >= 3) {
+      const seq1 = parseInt(sequences[0]?.split(':')[1] || '0')
+      const seq2 = parseInt(sequences[1]?.split(':')[1] || '0')
+      const seq3 = parseInt(sequences[2]?.split(':')[1] || '0')
+      
+      if (seq1 !== seq2 && seq2 !== seq3) {
+        console.log('   ✅ SEQUENCE numbers vary based on update times')
+      } else {
+        console.log('   ⚠️  SEQUENCE numbers should vary more')
+      }
     }
   }
   
