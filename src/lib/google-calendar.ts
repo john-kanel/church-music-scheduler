@@ -131,12 +131,59 @@ export class GoogleCalendarService {
         throw new Error('Calendar created but no ID returned')
       }
 
-      console.log(`✅ Created dedicated calendar: ${calendarName} (${response.data.id})`)
-      return response.data.id
+      const calendarId = response.data.id
+
+      // Make the calendar public so others can subscribe
+      await this.makeCalendarPublic(calendarId)
+
+      console.log(`✅ Created dedicated calendar: ${calendarName} (${calendarId})`)
+      return calendarId
     } catch (error) {
       console.error('Error creating dedicated calendar:', error)
       throw new Error(`Failed to create calendar for ${churchName}`)
     }
+  }
+
+  /**
+   * Make a calendar public so others can subscribe to it
+   */
+  async makeCalendarPublic(calendarId: string): Promise<void> {
+    try {
+      // Add a public ACL rule so anyone can read the calendar
+      await this.calendar.acl.insert({
+        calendarId: calendarId,
+        requestBody: {
+          role: 'reader',
+          scope: {
+            type: 'default' // This means "public"
+          }
+        }
+      })
+
+      console.log(`✅ Made calendar public: ${calendarId}`)
+    } catch (error) {
+      console.error('Error making calendar public:', error)
+      // Don't throw here, as the calendar is still usable even if not public
+      console.warn('Calendar created but could not be made public - users may need manual sharing')
+    }
+  }
+
+  /**
+   * Get the shareable URL for a Google Calendar
+   */
+  getShareableCalendarUrl(calendarId: string): string {
+    // Encode the calendar ID for URL
+    const encodedCalendarId = encodeURIComponent(calendarId)
+    return `https://calendar.google.com/calendar/embed?src=${encodedCalendarId}`
+  }
+
+  /**
+   * Get the subscription URL for adding to other calendar apps
+   */
+  getCalendarSubscriptionUrl(calendarId: string): string {
+    // Encode the calendar ID for URL
+    const encodedCalendarId = encodeURIComponent(calendarId)
+    return `https://calendar.google.com/calendar/ical/${encodedCalendarId}/public/basic.ics`
   }
 
   /**
@@ -189,7 +236,7 @@ export class GoogleCalendarService {
   /**
    * Update an existing event in Google Calendar
    */
-  async updateEvent(googleEventId: string, event: CalendarEvent): Promise<void> {
+  async updateEvent(googleEventId: string, event: CalendarEvent, calendarId: string = 'primary'): Promise<void> {
     try {
       // Use the event's timezone or default to America/Chicago
       const eventTimezone = event.timezone || 'America/Chicago'
@@ -199,7 +246,7 @@ export class GoogleCalendarService {
       const endDateTime = this.formatDateTimeForTimezone(event.end, eventTimezone)
       
       await this.calendar.events.update({
-        calendarId: 'primary',
+        calendarId: calendarId,
         eventId: googleEventId,
         requestBody: {
           summary: event.summary,

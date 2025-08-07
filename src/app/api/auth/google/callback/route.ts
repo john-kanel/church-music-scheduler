@@ -49,6 +49,19 @@ export async function GET(request: NextRequest) {
       throw new Error(`Connection test failed: ${connectionTest.error}`)
     }
 
+    // Get church information for calendar creation
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      include: { church: true }
+    })
+
+    if (!user?.church) {
+      throw new Error('User church not found')
+    }
+
+    // Create dedicated calendar for the church
+    const calendarId = await googleCalendar.createDedicatedCalendar(user.church.name)
+
     // Save integration to database
     await prisma.googleCalendarIntegration.upsert({
       where: { userId: session.user.id },
@@ -59,6 +72,7 @@ export async function GET(request: NextRequest) {
         tokenType: tokens.token_type,
         expiryDate: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
         userEmail: connectionTest.userEmail,
+        calendarId: calendarId,
         isActive: true,
         updatedAt: new Date()
       },
@@ -70,6 +84,7 @@ export async function GET(request: NextRequest) {
         tokenType: tokens.token_type,
         expiryDate: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
         userEmail: connectionTest.userEmail,
+        calendarId: calendarId,
         isActive: true
       }
     })

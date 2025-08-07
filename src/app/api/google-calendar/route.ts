@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { GoogleCalendarService } from '@/lib/google-calendar'
 
 /**
  * Get user's Google Calendar integration status
@@ -21,6 +22,7 @@ export async function GET() {
         id: true,
         isActive: true,
         userEmail: true,
+        calendarId: true,
         createdAt: true,
         updatedAt: true,
         _count: {
@@ -38,10 +40,17 @@ export async function GET() {
       })
     }
 
+    // Create Google Calendar service to get sharing URLs
+    const googleCalendar = new GoogleCalendarService()
+    const calendarId = integration.calendarId || 'primary'
+    
     return NextResponse.json({
       connected: true,
       isActive: integration.isActive,
       userEmail: integration.userEmail,
+      calendarId: calendarId,
+      shareableUrl: googleCalendar.getShareableCalendarUrl(calendarId),
+      subscriptionUrl: googleCalendar.getCalendarSubscriptionUrl(calendarId),
       connectedAt: integration.createdAt,
       lastUpdated: integration.updatedAt,
       syncedEventsCount: integration._count.syncedEvents

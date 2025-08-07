@@ -513,6 +513,78 @@ export default function CalendarSubscribePage() {
                   </button>
                 </div>
 
+                {/* Sharing Links */}
+                {googleCalendar.shareableUrl && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <h4 className="text-sm font-medium text-green-900 mb-3">📤 Share Calendar with Others</h4>
+                    <p className="text-sm text-green-800 mb-3">
+                      Send these links to musicians and team members so they can access the calendar:
+                    </p>
+                    
+                    <div className="space-y-3">
+                      {/* Google Calendar View Link */}
+                      <div>
+                        <label className="block text-xs font-medium text-green-800 mb-1">
+                          🌐 View in Google Calendar (Works in any browser)
+                        </label>
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="text"
+                            value={googleCalendar.shareableUrl}
+                            readOnly
+                            className="flex-1 text-xs px-3 py-2 border border-green-300 rounded bg-white text-gray-700"
+                          />
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(googleCalendar.shareableUrl)
+                              alert('📋 Link copied to clipboard!')
+                            }}
+                            className="px-3 py-2 bg-green-600 text-white text-xs rounded hover:bg-green-700"
+                          >
+                            Copy
+                          </button>
+                          <button
+                            onClick={() => window.open(googleCalendar.shareableUrl, '_blank')}
+                            className="px-3 py-2 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                          >
+                            Open
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Subscription Link */}
+                      {googleCalendar.subscriptionUrl && (
+                        <div>
+                          <label className="block text-xs font-medium text-green-800 mb-1">
+                            📅 Subscribe in Calendar Apps (Apple Calendar, Outlook, etc.)
+                          </label>
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="text"
+                              value={googleCalendar.subscriptionUrl}
+                              readOnly
+                              className="flex-1 text-xs px-3 py-2 border border-green-300 rounded bg-white text-gray-700"
+                            />
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(googleCalendar.subscriptionUrl)
+                                alert('📋 Subscription link copied to clipboard!')
+                              }}
+                              className="px-3 py-2 bg-green-600 text-white text-xs rounded hover:bg-green-700"
+                            >
+                              Copy
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-3 text-xs text-green-700">
+                      💡 <strong>Tip:</strong> Anyone with these links can view the calendar - no Google account needed for the web view!
+                    </div>
+                  </div>
+                )}
+
                 {/* Benefits */}
                 <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <h4 className="text-sm font-medium text-blue-900 mb-2">Benefits of Google Calendar Integration:</h4>
