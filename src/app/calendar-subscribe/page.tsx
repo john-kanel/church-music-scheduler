@@ -673,9 +673,9 @@ function CalendarSubscribePageContent() {
 
                 {/* Public Calendar Page for Sharing */}
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <h4 className="text-sm font-medium text-green-900 mb-3">📤 Share Calendar with Team Members</h4>
+                  <h4 className="text-sm font-medium text-green-900 mb-3">📤 Share Calendar Page with Team Members</h4>
                   <p className="text-sm text-green-800 mb-3">
-                    Send this link to musicians and team members. They can subscribe to the calendar without needing an account:
+                    Send this link to musicians and team members. They'll see a beautiful page with all subscription options (Google Calendar, Apple Calendar, etc.) - no account needed:
                   </p>
                   
                   <div className="flex items-center space-x-2">
@@ -689,7 +689,7 @@ function CalendarSubscribePageContent() {
                       onClick={() => {
                         const url = `${window.location.origin}/calendar-subscribe?church=${(session?.user as any)?.churchId}`
                         navigator.clipboard.writeText(url)
-                        alert('📋 Share link copied to clipboard!')
+                        alert('📋 Calendar page link copied to clipboard!')
                       }}
                       className="px-3 py-2 bg-green-600 text-white text-xs rounded hover:bg-green-700"
                     >
@@ -706,8 +706,13 @@ function CalendarSubscribePageContent() {
                     </button>
                   </div>
 
-                  <div className="mt-3 text-xs text-green-700">
-                    💡 <strong>Perfect for:</strong> Sending to musicians, choir members, and team members who need calendar access
+                  <div className="mt-3 space-y-2 text-xs text-green-700">
+                    <div>
+                      💡 <strong>What they'll see:</strong> A beautiful page showing your church name with buttons for Google Calendar, Apple Calendar, Outlook, and step-by-step setup instructions for all devices.
+                    </div>
+                    <div className="bg-green-100 border border-green-300 rounded px-3 py-2">
+                      <strong>📋 Perfect for:</strong> Email signatures, church bulletins, group texts, social media posts - anywhere you need to share your calendar!
+                    </div>
                   </div>
                 </div>
 
