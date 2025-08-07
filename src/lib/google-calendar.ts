@@ -113,9 +113,36 @@ export class GoogleCalendarService {
   }
 
   /**
-   * Create an event in Google Calendar
+   * Create a dedicated calendar for the church music ministry
    */
-  async createEvent(event: CalendarEvent): Promise<string> {
+  async createDedicatedCalendar(churchName: string): Promise<string> {
+    try {
+      const calendarName = `${churchName} Music Ministry`
+      
+      const response = await this.calendar.calendars.insert({
+        requestBody: {
+          summary: calendarName,
+          description: `Music ministry calendar for ${churchName}. Automatically managed by Church Music Scheduler.`,
+          timeZone: 'America/Chicago' // Default timezone, will be overridden by event timezones
+        }
+      })
+
+      if (!response.data.id) {
+        throw new Error('Calendar created but no ID returned')
+      }
+
+      console.log(`✅ Created dedicated calendar: ${calendarName} (${response.data.id})`)
+      return response.data.id
+    } catch (error) {
+      console.error('Error creating dedicated calendar:', error)
+      throw new Error(`Failed to create calendar for ${churchName}`)
+    }
+  }
+
+  /**
+   * Create an event in Google Calendar (using dedicated calendar)
+   */
+  async createEvent(event: CalendarEvent, calendarId: string = 'primary'): Promise<string> {
     try {
       // Use the event's timezone or default to America/Chicago
       const eventTimezone = event.timezone || 'America/Chicago'
@@ -125,7 +152,7 @@ export class GoogleCalendarService {
       const endDateTime = this.formatDateTimeForTimezone(event.end, eventTimezone)
       
       const response = await this.calendar.events.insert({
-        calendarId: 'primary',
+        calendarId: calendarId,
         requestBody: {
           summary: event.summary,
           description: event.description,
@@ -286,10 +313,14 @@ export function convertToGoogleCalendarEvent(event: any, churchTimezone?: string
     descriptionParts.push('')
   }
 
-  // Add musician assignments
-  const acceptedAssignments = event.assignments?.filter((a: any) => a.user && a.status === 'ACCEPTED') || []
-  if (acceptedAssignments.length > 0) {
+  // Add musician assignments (both assigned and open positions)
+  const acceptedAssignments = event.assignments?.filter((a: any) => a.user && (a.status === 'ACCEPTED' || a.status === 'PENDING')) || []
+  const pendingAssignments = event.assignments?.filter((a: any) => !a.user && a.status === 'PENDING') || []
+  
+  if (acceptedAssignments.length > 0 || pendingAssignments.length > 0) {
     descriptionParts.push('MUSICIANS:')
+    
+    // Show assigned musicians
     acceptedAssignments.forEach((assignment: any) => {
       if (assignment.user) {
         const role = assignment.roleName || 'Musician'
@@ -297,8 +328,33 @@ export function convertToGoogleCalendarEvent(event: any, churchTimezone?: string
         descriptionParts.push(`${role}: ${name}`)
       }
     })
+    
+    // Show open positions
+    pendingAssignments.forEach((assignment: any) => {
+      const role = assignment.roleName || 'Musician'
+      descriptionParts.push(`${role}: (Open)`)
+    })
+    
     descriptionParts.push('')
   }
+
+  // Add group information
+  const eventGroups = event.assignments?.filter((a: any) => a.group).map((a: any) => a.group) || []
+  const uniqueGroups = Array.from(new Set(eventGroups.map((g: any) => g?.id))).map((id: string) => 
+    eventGroups.find((g: any) => g?.id === id)
+  ).filter(Boolean)
+  
+  descriptionParts.push('Group:')
+  if (uniqueGroups.length > 0) {
+    uniqueGroups.forEach((group: any) => {
+      if (group) {
+        descriptionParts.push(group.name)
+      }
+    })
+  } else {
+    descriptionParts.push('(None assigned)')
+  }
+  descriptionParts.push('')
 
   // Add music/hymns
   const hymns = event.hymns?.filter((h: any) => h.title && h.title.trim()) || []
