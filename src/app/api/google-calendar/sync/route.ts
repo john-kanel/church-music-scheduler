@@ -87,6 +87,13 @@ export async function POST(request: NextRequest) {
 
     console.log(`🔄 Starting Google Calendar sync for ${events.length} events (user: ${session.user.id})`)
 
+    // Get user's timezone for proper event time handling
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { timezone: true }
+    })
+    const userTimezone = user?.timezone || 'America/Chicago'
+
     const results = {
       created: 0,
       updated: 0,
@@ -97,7 +104,7 @@ export async function POST(request: NextRequest) {
     // Process each event
     for (const event of events) {
       try {
-        const googleEvent = convertToGoogleCalendarEvent(event)
+        const googleEvent = convertToGoogleCalendarEvent(event, userTimezone)
         const existingSync = event.googleCalendarEvents[0] // Should only be one per integration
 
         if (existingSync) {

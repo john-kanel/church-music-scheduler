@@ -18,6 +18,7 @@ export interface CalendarEvent {
   start: Date
   end: Date
   status?: 'confirmed' | 'tentative' | 'cancelled'
+  timezone?: string
 }
 
 /**
@@ -116,6 +117,13 @@ export class GoogleCalendarService {
    */
   async createEvent(event: CalendarEvent): Promise<string> {
     try {
+      // Use the event's timezone or default to America/Chicago
+      const eventTimezone = event.timezone || 'America/Chicago'
+      
+      // Format datetime for the specific timezone
+      const startDateTime = this.formatDateTimeForTimezone(event.start, eventTimezone)
+      const endDateTime = this.formatDateTimeForTimezone(event.end, eventTimezone)
+      
       const response = await this.calendar.events.insert({
         calendarId: 'primary',
         requestBody: {
@@ -123,12 +131,12 @@ export class GoogleCalendarService {
           description: event.description,
           location: event.location,
           start: {
-            dateTime: event.start.toISOString(),
-            timeZone: 'UTC'
+            dateTime: startDateTime,
+            timeZone: eventTimezone
           },
           end: {
-            dateTime: event.end.toISOString(),
-            timeZone: 'UTC'
+            dateTime: endDateTime,
+            timeZone: eventTimezone
           },
           status: event.status || 'confirmed',
           // Add source to identify events created by our app
@@ -156,6 +164,13 @@ export class GoogleCalendarService {
    */
   async updateEvent(googleEventId: string, event: CalendarEvent): Promise<void> {
     try {
+      // Use the event's timezone or default to America/Chicago
+      const eventTimezone = event.timezone || 'America/Chicago'
+      
+      // Format datetime for the specific timezone
+      const startDateTime = this.formatDateTimeForTimezone(event.start, eventTimezone)
+      const endDateTime = this.formatDateTimeForTimezone(event.end, eventTimezone)
+      
       await this.calendar.events.update({
         calendarId: 'primary',
         eventId: googleEventId,
@@ -164,12 +179,12 @@ export class GoogleCalendarService {
           description: event.description,
           location: event.location,
           start: {
-            dateTime: event.start.toISOString(),
-            timeZone: 'UTC'
+            dateTime: startDateTime,
+            timeZone: eventTimezone
           },
           end: {
-            dateTime: event.end.toISOString(),
-            timeZone: 'UTC'
+            dateTime: endDateTime,
+            timeZone: eventTimezone
           },
           status: event.status || 'confirmed',
           source: {
@@ -229,14 +244,38 @@ export class GoogleCalendarService {
       }
     }
   }
+
+  /**
+   * Format a Date object for Google Calendar in the specified timezone
+   * This converts the UTC date from our database to the proper local time
+   */
+  private formatDateTimeForTimezone(utcDate: Date, timezone: string): string {
+    // The date from our database is stored in UTC, but represents the local time
+    // We need to format it as if it's in the specified timezone
+    
+    // Convert to local time format for the specified timezone
+    // Since our database stores the "intended" local time as UTC, we need to treat it as local
+    const year = utcDate.getUTCFullYear()
+    const month = String(utcDate.getUTCMonth() + 1).padStart(2, '0')
+    const day = String(utcDate.getUTCDate()).padStart(2, '0')
+    const hours = String(utcDate.getUTCHours()).padStart(2, '0')
+    const minutes = String(utcDate.getUTCMinutes()).padStart(2, '0')
+    const seconds = String(utcDate.getUTCSeconds()).padStart(2, '0')
+    
+    // Return in the format Google Calendar expects: YYYY-MM-DDTHH:MM:SS
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`
+  }
 }
 
 /**
  * Convert our database event to Google Calendar format
  */
-export function convertToGoogleCalendarEvent(event: any): CalendarEvent {
+export function convertToGoogleCalendarEvent(event: any, churchTimezone?: string): CalendarEvent {
   // Calculate end time - default to 1 hour if not specified
   const endTime = event.endTime || new Date(event.startTime.getTime() + 60 * 60 * 1000)
+
+  // Get timezone from church data or default
+  const timezone = churchTimezone || event.church?.timezone || 'America/Chicago'
 
   // Build description with assignments and music
   const descriptionParts: string[] = []
@@ -302,6 +341,7 @@ export function convertToGoogleCalendarEvent(event: any): CalendarEvent {
     location: event.location || undefined,
     start: new Date(event.startTime),
     end: endTime,
-    status: event.status === 'CANCELLED' ? 'cancelled' : 'confirmed'
+    status: event.status === 'CANCELLED' ? 'cancelled' : 'confirmed',
+    timezone: timezone
   }
 }
