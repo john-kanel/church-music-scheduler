@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Calendar, ExternalLink } from 'lucide-react'
+import { ArrowLeft, Calendar, ExternalLink, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react'
 
 interface CalendarSubscription {
   id: string
@@ -23,6 +23,16 @@ export default function CalendarSubscribePage() {
   const [saving, setSaving] = useState(false)
   const [subscription, setSubscription] = useState<CalendarSubscription | null>(null)
   const [showCopyToast, setShowCopyToast] = useState(false)
+  
+  // Google Calendar integration state
+  const [googleCalendar, setGoogleCalendar] = useState<{
+    connected: boolean
+    isActive?: boolean
+    userEmail?: string
+    connectedAt?: string
+    syncedEventsCount?: number
+  } | null>(null)
+  const [googleLoading, setGoogleLoading] = useState(false)
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -32,6 +42,23 @@ export default function CalendarSubscribePage() {
       return
     }
   }, [session, status, router])
+
+  // Handle URL parameters for success/error messages
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const success = urlParams.get('success')
+    const error = urlParams.get('error')
+    
+    if (success) {
+      alert(`✅ ${success}`)
+      // Clean URL
+      window.history.replaceState({}, document.title, window.location.pathname)
+    } else if (error) {
+      alert(`❌ ${error}`)
+      // Clean URL
+      window.history.replaceState({}, document.title, window.location.pathname)
+    }
+  }, [])
 
   // Load initial data
   useEffect(() => {
@@ -45,13 +72,22 @@ export default function CalendarSubscribePage() {
     
     const loadData = async () => {
       try {
-        const subscriptionRes = await fetch('/api/calendar-subscription')
+        // Load both calendar subscription and Google Calendar status
+        const [subscriptionRes, googleRes] = await Promise.all([
+          fetch('/api/calendar-subscription'),
+          fetch('/api/google-calendar')
+        ])
 
         if (subscriptionRes.ok) {
           const subData = await subscriptionRes.json()
           if (subData) {
             setSubscription(subData)
           }
+        }
+
+        if (googleRes.ok) {
+          const googleData = await googleRes.json()
+          setGoogleCalendar(googleData)
         }
       } catch (error) {
         console.error('Error loading data:', error)
@@ -186,6 +222,78 @@ export default function CalendarSubscribePage() {
         console.error('Error copying to clipboard:', error)
         alert('Failed to copy URL. Please try again.')
       }
+    }
+  }
+
+  // Google Calendar functions
+  const handleGoogleConnect = async () => {
+    setGoogleLoading(true)
+    try {
+      const response = await fetch('/api/auth/google')
+      if (response.ok) {
+        const { authUrl } = await response.json()
+        // Open Google OAuth in current tab
+        window.location.href = authUrl
+      } else {
+        alert('Failed to start Google Calendar connection')
+      }
+    } catch (error) {
+      console.error('Error connecting to Google Calendar:', error)
+      alert('Failed to connect to Google Calendar')
+    } finally {
+      setGoogleLoading(false)
+    }
+  }
+
+  const handleGoogleDisconnect = async () => {
+    if (!confirm('This will disconnect your Google Calendar and stop syncing events. Continue?')) {
+      return
+    }
+    
+    setGoogleLoading(true)
+    try {
+      const response = await fetch('/api/google-calendar', { method: 'DELETE' })
+      if (response.ok) {
+        setGoogleCalendar({ connected: false })
+        alert('Google Calendar disconnected successfully')
+      } else {
+        alert('Failed to disconnect Google Calendar')
+      }
+    } catch (error) {
+      console.error('Error disconnecting Google Calendar:', error)
+      alert('Failed to disconnect Google Calendar')
+    } finally {
+      setGoogleLoading(false)
+    }
+  }
+
+  const handleGoogleSync = async () => {
+    setGoogleLoading(true)
+    try {
+      const response = await fetch('/api/google-calendar/sync', { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ syncAll: true })
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        alert(`Sync completed: ${result.results.created} events created, ${result.results.updated} events updated`)
+        
+        // Reload Google Calendar status
+        const googleRes = await fetch('/api/google-calendar')
+        if (googleRes.ok) {
+          const googleData = await googleRes.json()
+          setGoogleCalendar(googleData)
+        }
+      } else {
+        alert('Failed to sync events to Google Calendar')
+      }
+    } catch (error) {
+      console.error('Error syncing to Google Calendar:', error)
+      alert('Failed to sync to Google Calendar')
+    } finally {
+      setGoogleLoading(false)
     }
   }
 
@@ -341,6 +449,127 @@ export default function CalendarSubscribePage() {
                 {saving ? 'Saving...' : 'Open in Calendar App'}
               </button>
             </div>
+          </div>
+        </div>
+
+        {/* Google Calendar Integration */}
+        <div className="mt-8 bg-white shadow rounded-lg">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-medium text-gray-900 flex items-center">
+              <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
+              </svg>
+              Google Calendar Integration
+            </h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Connect your Google Calendar for automatic event syncing (Recommended)
+            </p>
+          </div>
+
+          <div className="p-6">
+            {googleCalendar?.connected ? (
+              <div className="space-y-4">
+                {/* Connected Status */}
+                <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center">
+                    <CheckCircle className="h-5 w-5 text-green-600 mr-3" />
+                    <div>
+                      <p className="text-sm font-medium text-green-900">
+                        Connected to Google Calendar
+                      </p>
+                      {googleCalendar.userEmail && (
+                        <p className="text-xs text-green-700">
+                          {googleCalendar.userEmail}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    {googleCalendar.syncedEventsCount !== undefined && (
+                      <p className="text-xs text-green-700">
+                        {googleCalendar.syncedEventsCount} events synced
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex space-x-3">
+                  <button
+                    onClick={handleGoogleSync}
+                    disabled={googleLoading}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 inline-flex items-center"
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${googleLoading ? 'animate-spin' : ''}`} />
+                    {googleLoading ? 'Syncing...' : 'Sync Events Now'}
+                  </button>
+                  
+                  <button
+                    onClick={handleGoogleDisconnect}
+                    disabled={googleLoading}
+                    className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50"
+                  >
+                    Disconnect
+                  </button>
+                </div>
+
+                {/* Benefits */}
+                <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h4 className="text-sm font-medium text-blue-900 mb-2">Benefits of Google Calendar Integration:</h4>
+                  <ul className="text-sm text-blue-800 space-y-1">
+                    <li>• Events appear instantly in your Google Calendar</li>
+                    <li>• Changes sync automatically - no need to re-subscribe</li>
+                    <li>• Works on all devices connected to your Google account</li>
+                    <li>• No calendar subscription or caching issues</li>
+                  </ul>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Not Connected Status */}
+                <div className="flex items-center justify-between p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <div className="flex items-center">
+                    <AlertCircle className="h-5 w-5 text-yellow-600 mr-3" />
+                    <div>
+                      <p className="text-sm font-medium text-yellow-900">
+                        Google Calendar Not Connected
+                      </p>
+                      <p className="text-xs text-yellow-700">
+                        Connect for the best calendar experience
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Connect Button */}
+                <div className="flex justify-center">
+                  <button
+                    onClick={handleGoogleConnect}
+                    disabled={googleLoading}
+                    className="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 inline-flex items-center text-lg"
+                  >
+                    <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                    </svg>
+                    {googleLoading ? 'Connecting...' : 'Connect Google Calendar'}
+                  </button>
+                </div>
+
+                {/* Benefits */}
+                <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
+                  <h4 className="text-sm font-medium text-green-900 mb-2">Why Connect Google Calendar?</h4>
+                  <ul className="text-sm text-green-800 space-y-1">
+                    <li>• <strong>Instant Updates:</strong> Events appear immediately, no waiting for sync</li>
+                    <li>• <strong>No Subscription Issues:</strong> Bypasses all calendar feed problems</li>
+                    <li>• <strong>Works Everywhere:</strong> Phone, computer, web - all automatically synced</li>
+                    <li>• <strong>Set & Forget:</strong> Once connected, everything works automatically</li>
+                  </ul>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
