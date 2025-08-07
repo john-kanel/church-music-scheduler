@@ -31,6 +31,9 @@ export default function CalendarSubscribePage() {
     userEmail?: string
     connectedAt?: string
     syncedEventsCount?: number
+    shareableUrl?: string
+    subscriptionUrl?: string
+    calendarId?: string
   } | null>(null)
   const [googleLoading, setGoogleLoading] = useState(false)
 
