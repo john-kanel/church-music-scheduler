@@ -45,6 +45,10 @@ export async function POST(request: NextRequest) {
       churchId: session.user.churchId,
       startTime: {
         gte: new Date() // Only future events
+      },
+      // Only include confirmed and cancelled events, exclude tentative
+      status: {
+        in: ['CONFIRMED', 'CANCELLED']
       }
     }
 
@@ -86,6 +90,35 @@ export async function POST(request: NextRequest) {
     })
 
     console.log(`🔄 Starting Google Calendar sync for ${events.length} events (user: ${session.user.id})`)
+    
+    // Debug: If no events found, check what's available
+    if (events.length === 0) {
+      const debugEvents = await prisma.event.findMany({
+        where: {
+          churchId: session.user.churchId,
+          startTime: { gte: new Date() }
+        },
+        select: {
+          id: true,
+          name: true,
+          status: true,
+          startTime: true
+        },
+        take: 5
+      })
+      console.log(`🔍 DEBUG: Found ${debugEvents.length} total future events (any status):`)
+      debugEvents.forEach(e => console.log(`  - ${e.name} (${e.status}) - ${e.startTime}`))
+      
+      const statusCount = await prisma.event.groupBy({
+        by: ['status'],
+        where: {
+          churchId: session.user.churchId,
+          startTime: { gte: new Date() }
+        },
+        _count: true
+      })
+      console.log(`🔍 DEBUG: Event status breakdown:`, statusCount)
+    }
 
     // Get user's timezone for proper event time handling
     const user = await prisma.user.findUnique({
