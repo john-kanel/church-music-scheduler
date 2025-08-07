@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { generateICalFeed } from '@/lib/ical-generator'
+import { generateSimpleICalFeed } from '@/lib/ical-generator-simple'
 
 // GET - Serve calendar feed as .ics file
 export async function GET(
@@ -109,8 +110,44 @@ export async function GET(
       take: 1000 // Limit to prevent huge feeds
     })
 
-    // Generate iCal content with current timestamp for live updates
-    const icalContent = generateICalFeed(events, church.name, timezone)
+    // TEMPORARY: Test the simplified generator that mimics Google's approach
+    // Change back to generateICalFeed() if this doesn't work
+    console.log('🔧 CALENDAR DEBUG: Generating simplified calendar feed')
+    console.log(`🔧 Events count: ${events.length}`)
+    console.log(`🔧 Church: ${church.name}`)
+    console.log(`🔧 Timezone: ${timezone}`)
+    console.log(`🔧 First event:`, events[0] ? {
+      id: events[0].id,
+      name: events[0].name,
+      startTime: events[0].startTime,
+      endTime: events[0].endTime,
+      assignmentCount: events[0].assignments?.length || 0,
+      hymnCount: events[0].hymns?.length || 0
+    } : 'No events')
+    
+    const icalContent = generateSimpleICalFeed(events, church.name, timezone)
+    
+    // Log the generated content for debugging
+    console.log('🔧 CALENDAR DEBUG: Generated iCal content:')
+    console.log('🔧 Content length:', icalContent.length, 'bytes')
+    console.log('🔧 First 500 characters:')
+    console.log(icalContent.substring(0, 500))
+    console.log('🔧 Last 200 characters:')
+    console.log(icalContent.substring(icalContent.length - 200))
+    
+    // Validate the content
+    const lines = icalContent.split('\r\n')
+    const longLines = lines.filter(line => Buffer.from(line, 'utf8').length > 75)
+    if (longLines.length > 0) {
+      console.log('🔧 WARNING: Found lines exceeding 75 bytes:', longLines.length)
+      longLines.slice(0, 3).forEach((line, i) => {
+        console.log(`🔧 Long line ${i + 1}: ${Buffer.from(line, 'utf8').length} bytes - ${line.substring(0, 50)}...`)
+      })
+    } else {
+      console.log('🔧 ✅ All lines are within 75 bytes')
+    }
+    
+    console.log('🔧 CALENDAR DEBUG: Feed generation complete')
 
     // LIVE SYNC: Mark all events as no longer needing updates (since we're serving fresh data)
     if (events.length > 0) {
