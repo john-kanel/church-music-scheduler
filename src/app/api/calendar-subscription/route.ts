@@ -175,4 +175,49 @@ export async function DELETE() {
       { status: 500 }
     )
   }
+}
+
+// PATCH - Regenerate subscription token (for fixing Google Calendar cache issues)
+export async function PATCH() {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const existingSubscription = await prisma.calendarSubscription.findUnique({
+      where: { userId: session.user.id },
+    })
+
+    if (!existingSubscription) {
+      return NextResponse.json({ error: 'No subscription found' }, { status: 404 })
+    }
+
+    // Generate new token to force Google Calendar to re-fetch
+    const updatedSubscription = await prisma.calendarSubscription.update({
+      where: { userId: session.user.id },
+      data: {
+        subscriptionToken: `sub_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`,
+        needsUpdate: true,
+        lastUpdated: new Date(),
+      },
+    })
+
+    // Generate new webcal URL with the new token
+    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
+    const webcalFeedUrl = `webcal://${baseUrl.replace(/^https?:\/\//, '')}/api/calendar-feed/${updatedSubscription.subscriptionToken}.ics`
+    
+    const finalSubscription = await prisma.calendarSubscription.update({
+      where: { id: updatedSubscription.id },
+      data: { feedUrl: webcalFeedUrl }
+    })
+
+    return NextResponse.json(finalSubscription)
+  } catch (error) {
+    console.error('Error regenerating subscription token:', error)
+    return NextResponse.json(
+      { error: 'Failed to regenerate token' },
+      { status: 500 }
+    )
+  }
 } 

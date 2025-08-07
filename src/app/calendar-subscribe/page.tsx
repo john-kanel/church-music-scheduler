@@ -267,6 +267,36 @@ export default function CalendarSubscribePage() {
                           </svg>
                           <span className="ml-1">Copy URL</span>
                         </button>
+                        <button
+                          onClick={async () => {
+                            if (confirm('This will generate a new subscription URL. You will need to update your Google Calendar subscription with the new URL. Continue?')) {
+                              setSaving(true)
+                              try {
+                                const response = await fetch('/api/calendar-subscription', { method: 'PATCH' })
+                                if (response.ok) {
+                                  const newSubscription = await response.json()
+                                  setSubscription(newSubscription)
+                                  alert('New subscription URL generated! Please unsubscribe from the old calendar in Google Calendar and subscribe to the new URL.')
+                                } else {
+                                  alert('Failed to regenerate URL')
+                                }
+                              } catch (error) {
+                                console.error('Error regenerating URL:', error)
+                                alert('Failed to regenerate URL')
+                              } finally {
+                                setSaving(false)
+                              }
+                            }
+                          }}
+                          className="inline-flex items-center text-orange-600 hover:text-orange-800"
+                          title="Generate new URL to fix Google Calendar cache issues"
+                          disabled={saving}
+                        >
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          <span className="ml-1">Regenerate URL</span>
+                        </button>
                       </div>
                     )}
                 </div>
