@@ -199,7 +199,7 @@ function SortableHymnItem({
               <button
                 onClick={(e) => handleSongHistoryClick(hymn.id, hymn.title, eventId, e)}
                 className={`p-1 transition-all ${
-                  songHistoryData[hymn.id] && songHistoryData[hymn.id].length > 0
+                  songHistoryData[`${hymn.id}-${eventId}`] && songHistoryData[`${hymn.id}-${eventId}`].length > 0
                     ? 'text-blue-600 hover:text-blue-800' // Blue when results exist - always visible
                     : 'text-gray-400 hover:text-blue-600' // Default gray
                 }`}
@@ -260,14 +260,14 @@ function SortableHymnItem({
         />
         
         {/* Song History Dropdown */}
-        {showingSongHistory === hymn.id && songHistoryData[hymn.id] && (
+        {showingSongHistory === hymn.id && songHistoryData[`${hymn.id}-${eventId}`] && (
           <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
             <div className="text-xs font-medium text-blue-800 mb-2">
               Last played history for "{hymn.title}":
             </div>
-            {songHistoryData[hymn.id].length > 0 ? (
+            {songHistoryData[`${hymn.id}-${eventId}`].length > 0 ? (
               <div className="space-y-2">
-                {songHistoryData[hymn.id].map((history, index) => (
+                {songHistoryData[`${hymn.id}-${eventId}`].map((history, index) => (
                   <div key={index} className="text-xs text-blue-700 bg-white p-2 rounded border">
                     <div className="font-medium">{history.title}</div>
                     <div className="text-blue-600 mt-1">
@@ -569,7 +569,7 @@ export default function EventPlannerPage() {
 
   // Song History functionality
   const [showingSongHistory, setShowingSongHistory] = useState<string | null>(null) // hymn ID whose history is being shown
-  const [songHistoryData, setSongHistoryData] = useState<{[hymnId: string]: any[]}>({}) // cache for song history
+  const [songHistoryData, setSongHistoryData] = useState<{[key: string]: any[]}>({}) // cache for song history (key: hymnId-eventId)
   const [loadingSongHistory, setLoadingSongHistory] = useState<string | null>(null) // hymn ID currently loading
 
   // Drag and drop sensors
@@ -2777,8 +2777,11 @@ export default function EventPlannerPage() {
       return
     }
 
-    // If we already have the data cached, just show it
-    if (songHistoryData[hymnId]) {
+    // Create a cache key that includes the event ID for proper event-specific caching
+    const cacheKey = `${hymnId}-${currentEventId}`
+
+    // If we already have the data cached for this specific event, just show it
+    if (songHistoryData[cacheKey]) {
       setShowingSongHistory(hymnId)
       return
     }
@@ -2792,12 +2795,12 @@ export default function EventPlannerPage() {
       }
       
       const data = await response.json()
-      console.log('🎵 Song history fetched:', { songTitle, results: data.songHistory })
+      console.log('🎵 Song history fetched:', { songTitle, eventId: currentEventId, results: data.songHistory })
       
-      // Cache the results
+      // Cache the results with event-specific key
       setSongHistoryData(prev => ({
         ...prev,
-        [hymnId]: data.songHistory || []
+        [cacheKey]: data.songHistory || []
       }))
       
       // Show the dropdown
