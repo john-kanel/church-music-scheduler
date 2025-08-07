@@ -84,12 +84,57 @@ model User {
   uploadedFiles             MusicFile[]
   unavailabilities          MusicianUnavailability[]
   pastorSettings            PastorSettings?
+  googleCalendarIntegration GoogleCalendarIntegration?
   church                    Church                     @relation(fields: [churchId], references: [id], onDelete: Cascade)
 
   @@index([churchId])
   @@index([role])
   @@index([email])
   @@map("users")
+}
+
+model GoogleCalendarIntegration {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  accessToken   String
+  refreshToken  String
+  scope         String
+  tokenType     String   @default("Bearer")
+  expiryDate    DateTime?
+  isActive      Boolean  @default(true)
+  userEmail     String?  // Google account email
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relation to user
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Track synced events
+  syncedEvents  GoogleCalendarEvent[]
+  
+  @@index([userId])
+  @@index([isActive])
+  @@map("google_calendar_integrations")
+}
+
+model GoogleCalendarEvent {
+  id                      String                    @id @default(cuid())
+  eventId                 String                    // Our internal event ID
+  googleEventId           String                    // Google Calendar event ID
+  integrationId           String                    // Which integration this belongs to
+  lastSyncedAt            DateTime                  @default(now())
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  
+  // Relations
+  event                   Event                     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  integration             GoogleCalendarIntegration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  
+  @@unique([eventId, integrationId]) // One sync per event per integration
+  @@index([eventId])
+  @@index([integrationId])
+  @@index([googleEventId])
+  @@map("google_calendar_events")
 }
 
 model CustomRole {
@@ -147,6 +192,7 @@ model Event {
   eventType                 EventType                  @relation(fields: [eventTypeId], references: [id])
   musicFiles                MusicFile[]
   notificationLogs          NotificationLog[]
+  googleCalendarEvents      GoogleCalendarEvent[]
 
   @@index([churchId])
   @@index([startTime])

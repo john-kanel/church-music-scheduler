@@ -1,0 +1,21 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Church Music Pro//Church Music Scheduler v1.0//EN
+CALSCALE:GREGORIAN
+BEGIN:VEVENT
+UID:event-123@churchmusicpro.com
+DTSTAMP:20250805T154056Z
+DTSTART;TZID="America/Chicago":20240320T100000
+DTEND;TZID="America/Chicago":20240320T113000
+SUMMARY:Sunday Service Test 🎵
+CREATED:20240315T170000Z
+LAST-MODIFIED:20240315T170000Z
+SEQUENCE:0
+STATUS:CONFIRMED
+TRANSP:OPAQUE
+DESCRIPTION:Location: 123 Main St\, Chicago\, IL 60601\n\nTest event with s
+ pecial characters: áéíóú & "quotes" and line\nbreaks\n\nGroup:\n(None
+  assigned)\n\nEvent Type: Sunday Service
+LOCATION:123 Main St\, Chicago\, IL 60601
+END:VEVENT
+END:VCALENDAR

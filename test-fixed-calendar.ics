@@ -1,0 +1,25 @@
+BEGIN:VCALENDAR
+PRODID:-//Church Music Pro//Church Music Scheduler 1.0//EN
+VERSION:2.0
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:Test Church Music Ministry
+X-WR-TIMEZONE:UTC
+X-WR-CALDESC:Test Church Music Ministry Calendar
+BEGIN:VEVENT
+DTSTART:20240320T150000Z
+DTEND:20240320T163000Z
+DTSTAMP:20250807T022316Z
+UID:123_1710522000000@churchmusicpro.com
+CLASS:PUBLIC
+CREATED:20240315T170000Z
+LAST-MODIFIED:20240315T170000Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Sunday Service with Very Long Name That Should Test Line Folding
+DESCRIPTION:Musicians:\\nPianist: John Doe\\n\\nMusic:\\n- Amazing Grace (H
+ ow Sweet the Sound)
+LOCATION:123 Church Street\, Chicago\, Illinois 60601\, United States of Am
+ erica
+END:VEVENT
+END:VCALENDAR
