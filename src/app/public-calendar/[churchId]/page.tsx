@@ -7,9 +7,6 @@ import { Calendar, Download, ExternalLink } from 'lucide-react'
 interface Church {
   id: string
   name: string
-  address?: string
-  city?: string
-  state?: string
 }
 
 interface CalendarData {

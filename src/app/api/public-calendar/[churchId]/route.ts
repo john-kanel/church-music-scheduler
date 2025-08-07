@@ -17,10 +17,7 @@ export async function GET(
       where: { id: churchId },
       select: {
         id: true,
-        name: true,
-        address: true,
-        city: true,
-        state: true
+        name: true
       }
     })
 
