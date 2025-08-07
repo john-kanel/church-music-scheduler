@@ -89,42 +89,47 @@ export function generateSingleEventICalFile(event: EventWithDetails, churchName:
  * Returns array of ICS lines for the event
  */
 function convertEventToMinimalICal(event: EventWithDetails, timezone: string): string[] {
-  // Generate unique identifier (required by Google)
-  const uid = `event-${event.id}@churchmusicpro.com`
+  // Generate unique identifier (required by Google) - MUST be globally unique
+  const uid = `event-${event.id}-${event.updatedAt.getTime()}@churchmusicpro.com`
   
   // Calculate end time - default to 1 hour if not specified
   const endDate = event.endTime || new Date(event.startTime.getTime() + 60 * 60 * 1000)
 
-  // Format timestamps - use unquoted TZID for event times (Google Calendar prefers this), UTC for metadata
+  // Format timestamps - use proper TZID format for Google Calendar compatibility
+  // Note: Some validators suggest quoting TZID, but Google Calendar actually prefers unquoted
   const dtstart = `TZID=${timezone}:${formatLocalDateTime(event.startTime)}`
   const dtend = `TZID=${timezone}:${formatLocalDateTime(endDate)}`
-  const dtstamp = formatUTCDateTime(new Date()) // Metadata timestamps stay in UTC
+  const dtstamp = formatUTCDateTime(new Date()) // Required creation timestamp in UTC
   const created = formatUTCDateTime(event.createdAt)
   const lastModified = formatUTCDateTime(event.updatedAt)
 
-  // Build clean event title
-  let summary = cleanText(event.name)
+  // Calculate sequence number based on event modifications (critical for Google Calendar sync)
+  // This ensures Google Calendar recognizes event updates
+  const sequence = calculateSequenceNumber(event)
+
+  // Build clean event title - ensure single line format
+  let summary = cleanTextSingleLine(event.name)
   if ((event as any).status === 'CANCELLED') {
     summary = `CANCELLED: ${summary}`
   }
 
-  // Build description with assignments and music
-  const description = cleanText(buildEventDescription(event))
-  const location = cleanText(event.location || '')
+  // Build description with assignments and music - ensure proper line folding
+  const description = cleanTextMultiLine(buildEventDescription(event))
+  const location = cleanTextSingleLine(event.location || '')
 
-  // Return minimal event lines - only required fields
+  // Return event lines with all required fields for Google Calendar compatibility
   const eventLines = [
     'BEGIN:VEVENT',
     `UID:${uid}`,
-    `DTSTAMP:${dtstamp}`, // Required by Google
-    `DTSTART;${dtstart}`, // Use TZID format for event times
-    `DTEND;${dtend}`,     // Use TZID format for event times
+    `DTSTAMP:${dtstamp}`, // Required by RFC 5545 and Google Calendar
+    `DTSTART;${dtstart}`, // Event start time with timezone
+    `DTEND;${dtend}`,     // Event end time with timezone  
     `SUMMARY:${summary}`,
     `CREATED:${created}`,
     `LAST-MODIFIED:${lastModified}`,
-    'SEQUENCE:0',
-    'STATUS:CONFIRMED', // Keep simple - Google prefers CONFIRMED
-    'TRANSP:OPAQUE',
+    `SEQUENCE:${sequence}`, // Critical for Google Calendar update tracking
+    'STATUS:CONFIRMED', // Google Calendar prefers CONFIRMED over other statuses
+    'TRANSP:OPAQUE',    // Show as busy time
   ]
 
   // Add optional fields only if they have content
@@ -272,58 +277,108 @@ function formatLocalDateTime(date: Date): string {
 }
 
 /**
- * Cleans text for ICS format - minimal escaping for maximum compatibility
+ * Calculates the sequence number for an event based on its update history
+ * This is critical for Google Calendar to recognize event updates
  */
-function cleanText(text: string): string {
+function calculateSequenceNumber(event: EventWithDetails): number {
+  // For now, use a simple hash of the updatedAt timestamp
+  // This ensures the sequence changes whenever the event is modified
+  // In production, you might want to store the actual sequence in the database
+  const updateTime = event.updatedAt.getTime()
+  return Math.floor(updateTime / 1000) % 999999 // Keep it reasonably sized
+}
+
+/**
+ * Cleans text for single-line ICS fields (SUMMARY, LOCATION)
+ * Google Calendar is very strict about line breaks in these fields
+ */
+function cleanTextSingleLine(text: string): string {
   if (!text) return ''
   
   return text
     .replace(/\\/g, '\\\\')   // Escape backslashes first
-    .replace(/\r\n/g, '\\n')  // Handle CRLF
-    .replace(/\r/g, '\\n')    // Handle CR
-    .replace(/\n/g, '\\n')    // Handle LF
+    .replace(/\r\n/g, ' ')    // Replace CRLF with space
+    .replace(/\r/g, ' ')      // Replace CR with space  
+    .replace(/\n/g, ' ')      // Replace LF with space
+    .replace(/\t/g, ' ')      // Replace tabs with space
     .replace(/;/g, '\\;')     // Escape semicolons
     .replace(/,/g, '\\,')     // Escape commas
-    .trim()                   // Remove whitespace
-    .substring(0, 1000)       // Prevent extremely long fields
+    .replace(/\s+/g, ' ')     // Collapse multiple spaces
+    .trim()                   // Remove leading/trailing whitespace
+    .substring(0, 500)        // Limit length for compatibility
 }
 
 /**
- * Improved line folding for ICS - handles UTF-8 characters correctly
- * Ensures each line is no more than 75 bytes when encoded as UTF-8
+ * Cleans text for multi-line ICS fields (DESCRIPTION)
+ * Uses proper line folding instead of embedded newlines
+ */
+function cleanTextMultiLine(text: string): string {
+  if (!text) return ''
+  
+  return text
+    .replace(/\\/g, '\\\\')   // Escape backslashes first
+    .replace(/\r\n/g, '\\n')  // Properly escape CRLF
+    .replace(/\r/g, '\\n')    // Properly escape CR
+    .replace(/\n/g, '\\n')    // Properly escape LF
+    .replace(/;/g, '\\;')     // Escape semicolons
+    .replace(/,/g, '\\,')     // Escape commas
+    .trim()                   // Remove whitespace
+    .substring(0, 2000)       // Prevent extremely long fields
+}
+
+/**
+ * Legacy function for backward compatibility
+ * @deprecated Use cleanTextSingleLine or cleanTextMultiLine instead
+ */
+function cleanText(text: string): string {
+  return cleanTextSingleLine(text)
+}
+
+/**
+ * RFC 5545 compliant line folding for maximum Google Calendar compatibility
+ * Ensures each line is no more than 75 bytes (octets) when encoded as UTF-8
+ * This is critical for Google Calendar to properly parse the ICS feed
  */
 function foldLine(line: string): string {
   if (!line) return line
 
+  // For very short lines, no folding needed
+  const lineBytes = Buffer.from(line, 'utf8').length
+  if (lineBytes <= 75) {
+    return line
+  }
+
   const result: string[] = []
   let currentLine = ''
   let currentBytes = 0
-  let chars = Array.from(line) // Split into Unicode characters
-
-  for (let i = 0; i < chars.length; i++) {
-    const char = chars[i]
+  
+  // Process character by character to respect UTF-8 boundaries
+  for (const char of line) {
     const charBytes = Buffer.from(char, 'utf8').length
-
-    // If adding this character would exceed 75 bytes
-    if (currentBytes + charBytes > 75) {
-      result.push(currentLine)
-      currentLine = ' ' + char // Start new line with continuation space
-      currentBytes = 1 + charBytes // Count the space
+    
+    // Check if adding this character would exceed 75 bytes
+    if (currentBytes + charBytes > 75 && currentLine.length > 0) {
+      // Find the best break point (avoid breaking in the middle of words or escape sequences)
+      let breakPoint = currentLine.length
+      
+      // Don't break escape sequences (\\, \n, \;, \,)
+      if (currentLine.endsWith('\\')) {
+        breakPoint = currentLine.length - 1
+      }
+      
+      // Add current line to result
+      result.push(currentLine.substring(0, breakPoint))
+      
+      // Start new line with continuation space and remaining content
+      currentLine = ' ' + currentLine.substring(breakPoint) + char
+      currentBytes = Buffer.from(currentLine, 'utf8').length
     } else {
       currentLine += char
       currentBytes += charBytes
     }
-
-    // Special handling for escape sequences
-    if (char === '\\' && i < chars.length - 1) {
-      const nextChar = chars[i + 1]
-      // Keep escape sequence together
-      currentLine += nextChar
-      currentBytes += Buffer.from(nextChar, 'utf8').length
-      i++ // Skip next character
-    }
   }
 
+  // Add any remaining content
   if (currentLine) {
     result.push(currentLine)
   }
@@ -334,10 +389,10 @@ function foldLine(line: string): string {
 /**
  * Generates VTIMEZONE definition for proper Google Calendar compatibility
  * This is essential for Google Calendar to understand timezone references
+ * Covers the most common timezones used by churches in North America
  */
 function generateVTimezone(timezone: string): string[] {
-  // For now, we'll support the most common US timezones
-  // This could be expanded to support more timezones as needed
+  // Support major US timezones with proper DST rules for Google Calendar
   
   if (timezone === 'America/Chicago') {
     return [
@@ -399,12 +454,79 @@ function generateVTimezone(timezone: string): string[] {
       'END:STANDARD',
       'END:VTIMEZONE'
     ]
-  } else {
-    // Fallback: For unsupported timezones, use UTC
-    console.warn(`Timezone ${timezone} not supported in VTIMEZONE generation, falling back to UTC`)
+  } else if (timezone === 'America/Denver') {
     return [
       'BEGIN:VTIMEZONE',
-      'TZID:UTC',
+      'TZID:America/Denver',
+      'BEGIN:DAYLIGHT',
+      'TZOFFSETFROM:-0700',
+      'TZOFFSETTO:-0600',
+      'TZNAME:MDT',
+      'DTSTART:19700308T020000',
+      'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU',
+      'END:DAYLIGHT',
+      'BEGIN:STANDARD',
+      'TZOFFSETFROM:-0600',
+      'TZOFFSETTO:-0700',
+      'TZNAME:MST',
+      'DTSTART:19701101T020000',
+      'RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU',
+      'END:STANDARD',
+      'END:VTIMEZONE'
+    ]
+  } else if (timezone === 'America/Phoenix') {
+    // Arizona doesn't observe DST
+    return [
+      'BEGIN:VTIMEZONE',
+      'TZID:America/Phoenix',
+      'BEGIN:STANDARD',
+      'TZOFFSETFROM:-0700',
+      'TZOFFSETTO:-0700',
+      'TZNAME:MST',
+      'DTSTART:19700101T000000',
+      'END:STANDARD',
+      'END:VTIMEZONE'
+    ]
+  } else if (timezone === 'Pacific/Honolulu') {
+    // Hawaii doesn't observe DST
+    return [
+      'BEGIN:VTIMEZONE',
+      'TZID:Pacific/Honolulu',
+      'BEGIN:STANDARD',
+      'TZOFFSETFROM:-1000',
+      'TZOFFSETTO:-1000',
+      'TZNAME:HST',
+      'DTSTART:19700101T000000',
+      'END:STANDARD',
+      'END:VTIMEZONE'
+    ]
+  } else if (timezone === 'America/Anchorage') {
+    return [
+      'BEGIN:VTIMEZONE',
+      'TZID:America/Anchorage',
+      'BEGIN:DAYLIGHT',
+      'TZOFFSETFROM:-0900',
+      'TZOFFSETTO:-0800',
+      'TZNAME:AKDT',
+      'DTSTART:19700308T020000',
+      'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU',
+      'END:DAYLIGHT',
+      'BEGIN:STANDARD',
+      'TZOFFSETFROM:-0800',
+      'TZOFFSETTO:-0900',
+      'TZNAME:AKST',
+      'DTSTART:19701101T020000',
+      'RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU',
+      'END:STANDARD',
+      'END:VTIMEZONE'
+    ]
+  } else {
+    // Fallback: For unsupported timezones, use the original timezone name but with UTC rules
+    // This prevents Google Calendar from rejecting the feed entirely
+    console.warn(`Timezone ${timezone} not fully supported in VTIMEZONE generation, using UTC rules`)
+    return [
+      'BEGIN:VTIMEZONE',
+      `TZID:${timezone}`,
       'BEGIN:STANDARD',
       'TZOFFSETFROM:+0000',
       'TZOFFSETTO:+0000',
