@@ -18,31 +18,36 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Song title is required' }, { status: 400 })
     }
 
-    // Calculate date 60 days ago
-    const sixtyDaysAgo = new Date()
-    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60)
-
-    console.log('🎵 Song history search:', {
-      songTitle,
-      churchId: session.user.churchId,
-      searchFrom: sixtyDaysAgo.toISOString(),
-      excludeEventId
-    })
-
-    // Get the excluded event's date if provided (to exclude same-day events)
+    // Get the excluded event's date first (needed for proper 60-day calculation)
     let excludeDate: Date | null = null
+    let referenceDate = new Date() // Default to today
+    
     if (excludeEventId) {
       const excludedEvent = await prisma.event.findUnique({
         where: { id: excludeEventId },
         select: { startTime: true }
       })
       if (excludedEvent?.startTime) {
+        referenceDate = new Date(excludedEvent.startTime) // Use event's date as reference
         excludeDate = new Date(excludedEvent.startTime)
         // Set to start of day for comparison
         excludeDate.setHours(0, 0, 0, 0)
+        console.log('🎵 Using event date as reference:', referenceDate.toISOString().split('T')[0])
         console.log('🎵 Excluding events from date:', excludeDate.toISOString().split('T')[0])
       }
     }
+
+    // Calculate date 60 days before the reference date (event date or today)
+    const sixtyDaysAgo = new Date(referenceDate)
+    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60)
+
+    console.log('🎵 Song history search:', {
+      songTitle,
+      churchId: session.user.churchId,
+      referenceDate: referenceDate.toISOString().split('T')[0],
+      searchFrom: sixtyDaysAgo.toISOString().split('T')[0],
+      excludeEventId
+    })
 
     // Search for similar song titles in the last 60 days
     // Use fuzzy matching by searching for songs that contain similar words
