@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
         tokenType: tokens.token_type,
         expiryDate: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
         userEmail: connectionTest.userEmail,
-        // calendarId: calendarId,  // TODO: Enable after Prisma client regeneration
+        calendarId: calendarId,
         isActive: true,
         updatedAt: new Date()
       },
@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
         tokenType: tokens.token_type,
         expiryDate: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
         userEmail: connectionTest.userEmail,
-        // calendarId: calendarId,  // TODO: Enable after Prisma client regeneration
+        calendarId: calendarId,
         isActive: true
       }
     })

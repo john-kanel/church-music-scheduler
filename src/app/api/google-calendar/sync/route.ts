@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
 
         if (existingSync) {
           // Update existing event
-          await googleCalendar.updateEvent(existingSync.googleEventId, googleEvent, 'primary')
+          await googleCalendar.updateEvent(existingSync.googleEventId, googleEvent, integration.calendarId || 'primary')
           
           // Update sync record
           await prisma.googleCalendarEvent.update({
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
           console.log(`📝 Updated Google Calendar event: ${event.name}`)
         } else {
           // Create new event
-          const googleEventId = await googleCalendar.createEvent(googleEvent, 'primary')
+          const googleEventId = await googleCalendar.createEvent(googleEvent, integration.calendarId || 'primary')
           
           // Create sync record
           await prisma.googleCalendarEvent.create({

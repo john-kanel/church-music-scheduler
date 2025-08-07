@@ -36,12 +36,13 @@ export function generateICalFeed(events: EventWithDetails[], churchName: string,
   const calendarLines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Church Music Pro//Church Music Scheduler v1.0//EN',
+    'PRODID:-//Church Music Scheduler//Church Music Pro v2.0//EN',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH', // Required for subscription feeds
     `X-WR-CALNAME:${cleanText(churchName)} Music Ministry`, // Calendar name in Google Calendar
     `X-WR-CALDESC:${cleanText(churchName)} Music Ministry - Live calendar subscription`, // Calendar description
     `X-WR-TIMEZONE:${timezone}`, // Default timezone for the calendar
+    'X-PUBLISHED-TTL:PT1H', // Google Calendar refresh interval
   ]
 
   // Add VTIMEZONE definition for proper Google Calendar compatibility
@@ -70,11 +71,12 @@ export function generateSingleEventICalFile(event: EventWithDetails, churchName:
   const calendarLines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Church Music Pro//Church Music Scheduler v1.0//EN',
+    'PRODID:-//Church Music Scheduler//Church Music Pro v2.0//EN',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     `X-WR-CALNAME:${cleanText(churchName)} Music Ministry`,
     `X-WR-TIMEZONE:${timezone}`,
+    'X-PUBLISHED-TTL:PT1H',
     ...generateVTimezone(timezone),
     ...eventLines,
     'END:VCALENDAR'
@@ -348,39 +350,43 @@ function foldLine(line: string): string {
     return line
   }
 
+  // Google Calendar friendly: more conservative folding at word boundaries
   const result: string[] = []
-  let currentLine = ''
-  let currentBytes = 0
+  let remaining = line
   
-  // Process character by character to respect UTF-8 boundaries
-  for (const char of line) {
-    const charBytes = Buffer.from(char, 'utf8').length
+  while (remaining.length > 0) {
+    // Find the maximum safe chunk size (conservative approach)
+    let chunkSize = 73 // Leave room for CRLF and continuation space
+    let chunk = remaining.substring(0, chunkSize)
     
-    // Check if adding this character would exceed 75 bytes
-    if (currentBytes + charBytes > 75 && currentLine.length > 0) {
-      // Find the best break point (avoid breaking in the middle of words or escape sequences)
-      let breakPoint = currentLine.length
-      
-      // Don't break escape sequences (\\, \n, \;, \,)
-      if (currentLine.endsWith('\\')) {
-        breakPoint = currentLine.length - 1
-      }
-      
-      // Add current line to result
-      result.push(currentLine.substring(0, breakPoint))
-      
-      // Start new line with continuation space and remaining content
-      currentLine = ' ' + currentLine.substring(breakPoint) + char
-      currentBytes = Buffer.from(currentLine, 'utf8').length
-    } else {
-      currentLine += char
-      currentBytes += charBytes
+    // Make sure we don't exceed 75 bytes in UTF-8
+    while (Buffer.from(chunk, 'utf8').length > 73 && chunk.length > 1) {
+      chunkSize--
+      chunk = remaining.substring(0, chunkSize)
     }
-  }
-
-  // Add any remaining content
-  if (currentLine) {
-    result.push(currentLine)
+    
+    // For continuation lines, try to break at word boundaries
+    if (result.length > 0 && chunk.length < remaining.length) {
+      // Look for good break points
+      const spaceIndex = chunk.lastIndexOf(' ')
+      const commaIndex = chunk.lastIndexOf(',')
+      const semicolonIndex = chunk.lastIndexOf(';')
+      
+      const bestBreak = Math.max(spaceIndex, commaIndex, semicolonIndex)
+      if (bestBreak > chunkSize * 0.6) { // Only use if reasonably close to end
+        chunkSize = bestBreak + 1
+        chunk = remaining.substring(0, chunkSize).trim()
+      }
+    }
+    
+    // Add chunk to result
+    if (result.length === 0) {
+      result.push(chunk)
+    } else {
+      result.push(' ' + chunk) // Continuation line starts with space
+    }
+    
+    remaining = remaining.substring(chunkSize)
   }
 
   return result.join('\r\n')
@@ -393,6 +399,7 @@ function foldLine(line: string): string {
  */
 function generateVTimezone(timezone: string): string[] {
   // Support major US timezones with proper DST rules for Google Calendar
+  // Using current DST rules (2007+) that Google Calendar expects
   
   if (timezone === 'America/Chicago') {
     return [
@@ -402,14 +409,14 @@ function generateVTimezone(timezone: string): string[] {
       'TZOFFSETFROM:-0600',
       'TZOFFSETTO:-0500',
       'TZNAME:CDT',
-      'DTSTART:19700308T020000',
+      'DTSTART:20070311T020000',
       'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU',
       'END:DAYLIGHT',
       'BEGIN:STANDARD',
       'TZOFFSETFROM:-0500',
       'TZOFFSETTO:-0600',
       'TZNAME:CST',
-      'DTSTART:19701101T020000',
+      'DTSTART:20071104T020000',
       'RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU',
       'END:STANDARD',
       'END:VTIMEZONE'
@@ -422,14 +429,14 @@ function generateVTimezone(timezone: string): string[] {
       'TZOFFSETFROM:-0500',
       'TZOFFSETTO:-0400',
       'TZNAME:EDT',
-      'DTSTART:19700308T020000',
+      'DTSTART:20070311T020000',
       'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU',
       'END:DAYLIGHT',
       'BEGIN:STANDARD',
       'TZOFFSETFROM:-0400',
       'TZOFFSETTO:-0500',
       'TZNAME:EST',
-      'DTSTART:19701101T020000',
+      'DTSTART:20071104T020000',
       'RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU',
       'END:STANDARD',
       'END:VTIMEZONE'
@@ -442,14 +449,14 @@ function generateVTimezone(timezone: string): string[] {
       'TZOFFSETFROM:-0800',
       'TZOFFSETTO:-0700',
       'TZNAME:PDT',
-      'DTSTART:19700308T020000',
+      'DTSTART:20070311T020000',
       'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU',
       'END:DAYLIGHT',
       'BEGIN:STANDARD',
       'TZOFFSETFROM:-0700',
       'TZOFFSETTO:-0800',
       'TZNAME:PST',
-      'DTSTART:19701101T020000',
+      'DTSTART:20071104T020000',
       'RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU',
       'END:STANDARD',
       'END:VTIMEZONE'
@@ -462,14 +469,14 @@ function generateVTimezone(timezone: string): string[] {
       'TZOFFSETFROM:-0700',
       'TZOFFSETTO:-0600',
       'TZNAME:MDT',
-      'DTSTART:19700308T020000',
+      'DTSTART:20070311T020000',
       'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU',
       'END:DAYLIGHT',
       'BEGIN:STANDARD',
       'TZOFFSETFROM:-0600',
       'TZOFFSETTO:-0700',
       'TZNAME:MST',
-      'DTSTART:19701101T020000',
+      'DTSTART:20071104T020000',
       'RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU',
       'END:STANDARD',
       'END:VTIMEZONE'
@@ -508,14 +515,14 @@ function generateVTimezone(timezone: string): string[] {
       'TZOFFSETFROM:-0900',
       'TZOFFSETTO:-0800',
       'TZNAME:AKDT',
-      'DTSTART:19700308T020000',
+      'DTSTART:20070311T020000',
       'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU',
       'END:DAYLIGHT',
       'BEGIN:STANDARD',
       'TZOFFSETFROM:-0800',
       'TZOFFSETTO:-0900',
       'TZNAME:AKST',
-      'DTSTART:19701101T020000',
+      'DTSTART:20071104T020000',
       'RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU',
       'END:STANDARD',
       'END:VTIMEZONE'
