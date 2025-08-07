@@ -203,7 +203,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: `Sync completed: ${results.created} created, ${results.updated} updated`,
-      results
+      results,
+      debug: {
+        eventsFound: events.length,
+        churchId: session.user.churchId,
+        syncAll,
+        eventIds: eventIds?.length || 0,
+        integrationId: integration.id
+      }
     })
 
   } catch (error) {

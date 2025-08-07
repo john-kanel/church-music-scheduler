@@ -317,7 +317,13 @@ function CalendarSubscribePageContent() {
       
       if (response.ok) {
         const result = await response.json()
-        alert(`Sync completed: ${result.results.created} events created, ${result.results.updated} events updated`)
+        console.log('🔍 SYNC DEBUG RESULT:', result)
+        
+        let message = `Sync completed: ${result.results.created} events created, ${result.results.updated} events updated`
+        if (result.debug) {
+          message += `\n\nDEBUG INFO:\n- Events found: ${result.debug.eventsFound}\n- Church ID: ${result.debug.churchId}\n- Sync All: ${result.debug.syncAll}\n- Integration ID: ${result.debug.integrationId}`
+        }
+        alert(message)
         
         // Reload Google Calendar status
         const googleRes = await fetch('/api/google-calendar')
@@ -326,7 +332,9 @@ function CalendarSubscribePageContent() {
           setGoogleCalendar(googleData)
         }
       } else {
-        alert('Failed to sync events to Google Calendar')
+        const errorData = await response.json()
+        console.error('❌ SYNC ERROR:', errorData)
+        alert('Failed to sync events to Google Calendar: ' + (errorData.error || 'Unknown error'))
       }
     } catch (error) {
       console.error('Error syncing to Google Calendar:', error)
