@@ -22,7 +22,7 @@ export async function GET() {
         id: true,
         isActive: true,
         userEmail: true,
-        calendarId: true,
+        // calendarId: true,  // TODO: Enable after Prisma client regeneration
         createdAt: true,
         updatedAt: true,
         _count: {
@@ -40,17 +40,17 @@ export async function GET() {
       })
     }
 
-    // Create Google Calendar service to get sharing URLs
-    const googleCalendar = new GoogleCalendarService()
-    const calendarId = integration.calendarId || 'primary'
+    // TODO: Enable calendar sharing after Prisma client regeneration
+    // const googleCalendar = new GoogleCalendarService()
+    // const calendarId = integration.calendarId || 'primary'
     
     return NextResponse.json({
       connected: true,
       isActive: integration.isActive,
       userEmail: integration.userEmail,
-      calendarId: calendarId,
-      shareableUrl: googleCalendar.getShareableCalendarUrl(calendarId),
-      subscriptionUrl: googleCalendar.getCalendarSubscriptionUrl(calendarId),
+      // calendarId: calendarId,
+      // shareableUrl: googleCalendar.getShareableCalendarUrl(calendarId),
+      // subscriptionUrl: googleCalendar.getCalendarSubscriptionUrl(calendarId),
       connectedAt: integration.createdAt,
       lastUpdated: integration.updatedAt,
       syncedEventsCount: integration._count.syncedEvents

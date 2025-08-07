@@ -49,18 +49,32 @@ export async function GET(request: NextRequest) {
       throw new Error(`Connection test failed: ${connectionTest.error}`)
     }
 
-    // Get church information for calendar creation
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      include: { church: true }
+    // Check if user already has an integration with a calendar
+    const existingIntegration = await prisma.googleCalendarIntegration.findUnique({
+      where: { userId: session.user.id }
     })
 
-    if (!user?.church) {
-      throw new Error('User church not found')
-    }
+    let calendarId: string | null = null
 
-    // Create dedicated calendar for the church
-    const calendarId = await googleCalendar.createDedicatedCalendar(user.church.name)
+    // Only create a new calendar if we don't have one yet
+    if (!existingIntegration?.calendarId) {
+      // Get church information for calendar creation
+      const user = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        include: { church: true }
+      })
+
+      if (!user?.church) {
+        throw new Error('User church not found')
+      }
+
+      // Create dedicated calendar for the church
+      calendarId = await googleCalendar.createDedicatedCalendar(user.church.name)
+      console.log('📅 Created new dedicated calendar:', calendarId)
+    } else {
+      calendarId = existingIntegration.calendarId
+      console.log('📅 Using existing calendar:', calendarId)
+    }
 
     // Save integration to database
     await prisma.googleCalendarIntegration.upsert({
@@ -72,7 +86,7 @@ export async function GET(request: NextRequest) {
         tokenType: tokens.token_type,
         expiryDate: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
         userEmail: connectionTest.userEmail,
-        calendarId: calendarId,
+        // calendarId: calendarId,  // TODO: Enable after Prisma client regeneration
         isActive: true,
         updatedAt: new Date()
       },
@@ -84,7 +98,7 @@ export async function GET(request: NextRequest) {
         tokenType: tokens.token_type,
         expiryDate: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
         userEmail: connectionTest.userEmail,
-        calendarId: calendarId,
+        // calendarId: calendarId,  // TODO: Enable after Prisma client regeneration
         isActive: true
       }
     })
