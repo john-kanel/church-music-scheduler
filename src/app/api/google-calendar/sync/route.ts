@@ -18,6 +18,16 @@ export async function POST(request: NextRequest) {
     // Get sync options from request body
     const { eventIds, syncAll = false } = await request.json()
 
+    // Fetch authoritative user info from DB (server session may not include churchId reliably)
+    const dbUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { churchId: true, timezone: true }
+    })
+
+    if (!dbUser?.churchId) {
+      return NextResponse.json({ error: 'User churchId not found' }, { status: 400 })
+    }
+
     // Get user's Google Calendar integration
     const integration = await prisma.googleCalendarIntegration.findUnique({
       where: { userId: session.user.id }
@@ -42,7 +52,7 @@ export async function POST(request: NextRequest) {
 
     // Build query for events to sync
     let eventQuery: any = {
-      churchId: session.user.churchId,
+      churchId: dbUser.churchId,
       startTime: {
         gte: new Date() // Only future events
       },
@@ -91,7 +101,7 @@ export async function POST(request: NextRequest) {
 
     console.log(`🔄 Starting Google Calendar sync for ${events.length} events (user: ${session.user.id})`)
     console.log(`🔍 DEBUG: Query parameters:`, {
-      churchId: session.user.churchId,
+      churchId: dbUser.churchId,
       syncAll,
       eventIds: eventIds?.length || 0,
       integrationId: integration.id
@@ -101,7 +111,7 @@ export async function POST(request: NextRequest) {
     if (events.length === 0) {
       const debugEvents = await prisma.event.findMany({
         where: {
-          churchId: session.user.churchId,
+          churchId: dbUser.churchId,
           startTime: { gte: new Date() }
         },
         select: {
@@ -117,14 +127,14 @@ export async function POST(request: NextRequest) {
       
       // Check if there are ANY events for this church
       const totalChurchEvents = await prisma.event.count({
-        where: { churchId: session.user.churchId }
+        where: { churchId: dbUser.churchId }
       })
-      console.log(`🔍 DEBUG: Total events for church ${session.user.churchId}: ${totalChurchEvents}`)
+      console.log(`🔍 DEBUG: Total events for church ${dbUser.churchId}: ${totalChurchEvents}`)
       
       const statusCount = await prisma.event.groupBy({
         by: ['status'],
         where: {
-          churchId: session.user.churchId,
+          churchId: dbUser.churchId,
           startTime: { gte: new Date() }
         },
         _count: true
@@ -133,11 +143,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user's timezone for proper event time handling
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { timezone: true }
-    })
-    const userTimezone = user?.timezone || 'America/Chicago'
+    const userTimezone = dbUser.timezone || 'America/Chicago'
 
     const results = {
       created: 0,
@@ -206,7 +212,7 @@ export async function POST(request: NextRequest) {
       results,
       debug: {
         eventsFound: events.length,
-        churchId: session.user.churchId,
+        churchId: dbUser.churchId,
         syncAll,
         eventIds: eventIds?.length || 0,
         integrationId: integration.id
