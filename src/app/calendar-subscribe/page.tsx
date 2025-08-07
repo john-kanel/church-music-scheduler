@@ -477,7 +477,7 @@ export default function CalendarSubscribePage() {
                       <p className="text-sm font-medium text-green-900">
                         Connected to Google Calendar
                       </p>
-                      {googleCalendar.userEmail && (
+                      {googleCalendar?.userEmail && (
                         <p className="text-xs text-green-700">
                           {googleCalendar.userEmail}
                         </p>
@@ -485,7 +485,7 @@ export default function CalendarSubscribePage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    {googleCalendar.syncedEventsCount !== undefined && (
+                    {googleCalendar?.syncedEventsCount !== undefined && (
                       <p className="text-xs text-green-700">
                         {googleCalendar.syncedEventsCount} events synced
                       </p>
@@ -554,7 +554,7 @@ export default function CalendarSubscribePage() {
                 </div>
 
                 {/* Sharing Links - Temporarily disabled */}
-                {false && googleCalendar.shareableUrl && (
+                {false && googleCalendar?.shareableUrl && (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                     <h4 className="text-sm font-medium text-green-900 mb-3">📤 Share Calendar with Others</h4>
                     <p className="text-sm text-green-800 mb-3">
@@ -570,13 +570,13 @@ export default function CalendarSubscribePage() {
                         <div className="flex items-center space-x-2">
                           <input
                             type="text"
-                            value={googleCalendar.shareableUrl}
+                            value={googleCalendar?.shareableUrl || ''}
                             readOnly
                             className="flex-1 text-xs px-3 py-2 border border-green-300 rounded bg-white text-gray-700"
                           />
                           <button
                             onClick={() => {
-                              navigator.clipboard.writeText(googleCalendar.shareableUrl)
+                              navigator.clipboard.writeText(googleCalendar?.shareableUrl || '')
                               alert('📋 Link copied to clipboard!')
                             }}
                             className="px-3 py-2 bg-green-600 text-white text-xs rounded hover:bg-green-700"
@@ -584,7 +584,7 @@ export default function CalendarSubscribePage() {
                             Copy
                           </button>
                           <button
-                            onClick={() => window.open(googleCalendar.shareableUrl, '_blank')}
+                            onClick={() => window.open(googleCalendar?.shareableUrl || '', '_blank')}
                             className="px-3 py-2 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
                           >
                             Open
@@ -593,7 +593,7 @@ export default function CalendarSubscribePage() {
                       </div>
 
                       {/* Subscription Link */}
-                      {googleCalendar.subscriptionUrl && (
+                      {googleCalendar?.subscriptionUrl && (
                         <div>
                           <label className="block text-xs font-medium text-green-800 mb-1">
                             📅 Subscribe in Calendar Apps (Apple Calendar, Outlook, etc.)
@@ -601,13 +601,13 @@ export default function CalendarSubscribePage() {
                           <div className="flex items-center space-x-2">
                             <input
                               type="text"
-                              value={googleCalendar.subscriptionUrl}
+                              value={googleCalendar?.subscriptionUrl || ''}
                               readOnly
                               className="flex-1 text-xs px-3 py-2 border border-green-300 rounded bg-white text-gray-700"
                             />
                             <button
                               onClick={() => {
-                                navigator.clipboard.writeText(googleCalendar.subscriptionUrl)
+                                navigator.clipboard.writeText(googleCalendar?.subscriptionUrl || '')
                                 alert('📋 Subscription link copied to clipboard!')
                               }}
                               className="px-3 py-2 bg-green-600 text-white text-xs rounded hover:bg-green-700"
