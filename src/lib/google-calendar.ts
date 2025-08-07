@@ -59,9 +59,7 @@ export class GoogleCalendarService {
    */
   async getTokensFromCode(code: string): Promise<GoogleCalendarTokens> {
     try {
-      const { tokens } = await this.oauth2Client.getAccessToken({
-        code: code
-      })
+      const { tokens } = await this.oauth2Client.getToken(code)
       
       if (!tokens.access_token || !tokens.refresh_token) {
         throw new Error('Failed to get required tokens from Google')
@@ -72,7 +70,7 @@ export class GoogleCalendarService {
         refresh_token: tokens.refresh_token!,
         scope: tokens.scope || '',
         token_type: tokens.token_type || 'Bearer',
-        expiry_date: tokens.expiry_date
+        expiry_date: tokens.expiry_date || undefined
       }
     } catch (error) {
       console.error('Error exchanging code for tokens:', error)
@@ -98,15 +96,14 @@ export class GoogleCalendarService {
    */
   async refreshTokens(): Promise<GoogleCalendarTokens> {
     try {
-      const response = await this.oauth2Client.refreshAccessToken()
-      const credentials = response.credentials
+      const { credentials } = await this.oauth2Client.refreshAccessToken()
       
       return {
         access_token: credentials.access_token!,
         refresh_token: credentials.refresh_token!,
         scope: credentials.scope || '',
         token_type: credentials.token_type || 'Bearer',
-        expiry_date: credentials.expiry_date
+        expiry_date: credentials.expiry_date || undefined
       }
     } catch (error) {
       console.error('Error refreshing tokens:', error)
