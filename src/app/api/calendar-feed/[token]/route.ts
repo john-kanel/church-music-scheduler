@@ -110,9 +110,8 @@ export async function GET(
       take: 1000 // Limit to prevent huge feeds
     })
 
-    // TEMPORARY: Test the simplified generator that mimics Google's approach
-    // Change back to generateICalFeed() if this doesn't work
-    console.log('🔧 CALENDAR DEBUG: Generating simplified calendar feed')
+    // Use the full iCal generator for proper timezone support (Apple Calendar, etc.)
+    console.log('🔧 CALENDAR DEBUG: Generating iCal feed with proper timezone support')
     console.log(`🔧 Events count: ${events.length}`)
     console.log(`🔧 Church: ${church.name}`)
     console.log(`🔧 Timezone: ${timezone}`)
@@ -125,7 +124,7 @@ export async function GET(
       hymnCount: events[0].hymns?.length || 0
     } : 'No events')
     
-    const icalContent = generateSimpleICalFeed(events, church.name, timezone)
+    const icalContent = generateICalFeed(events, church.name, timezone)
     
     // Log the generated content for debugging
     console.log('🔧 CALENDAR DEBUG: Generated iCal content:')
