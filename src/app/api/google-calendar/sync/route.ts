@@ -90,6 +90,12 @@ export async function POST(request: NextRequest) {
     })
 
     console.log(`🔄 Starting Google Calendar sync for ${events.length} events (user: ${session.user.id})`)
+    console.log(`🔍 DEBUG: Query parameters:`, {
+      churchId: session.user.churchId,
+      syncAll,
+      eventIds: eventIds?.length || 0,
+      integrationId: integration.id
+    })
     
     // Debug: If no events found, check what's available
     if (events.length === 0) {
@@ -108,6 +114,12 @@ export async function POST(request: NextRequest) {
       })
       console.log(`🔍 DEBUG: Found ${debugEvents.length} total future events (any status):`)
       debugEvents.forEach(e => console.log(`  - ${e.name} (${e.status}) - ${e.startTime}`))
+      
+      // Check if there are ANY events for this church
+      const totalChurchEvents = await prisma.event.count({
+        where: { churchId: session.user.churchId }
+      })
+      console.log(`🔍 DEBUG: Total events for church ${session.user.churchId}: ${totalChurchEvents}`)
       
       const statusCount = await prisma.event.groupBy({
         by: ['status'],
