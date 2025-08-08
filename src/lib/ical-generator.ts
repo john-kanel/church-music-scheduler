@@ -210,33 +210,32 @@ function buildEventDescription(event: EventWithDetails): string {
   lines.push('')
 
   // Add service parts and music with simplified formatting
-  // Include ALL hymns, even those without titles (empty service part placeholders)
+  // Skip empty or placeholder hymn titles (e.g., "New Song")
   const allHymns = event.hymns
   if (allHymns.length > 0) {
-    lines.push('MUSIC:')
-    
-    // Process hymns in the order they come from the database
-    // (they're already ordered by servicePart.order ASC, createdAt ASC)
-    const processedParts = new Set<string>()
-    
-    allHymns.forEach(hymn => {
+    const isRealTitle = (t?: string) => !!t && t.trim().length > 0 && t.trim().toLowerCase() !== 'new song'
+
+    // Group real hymns by service part, only keeping those with real titles
+    const grouped = new Map<string, { title: string; notes?: string }[]>()
+    for (const hymn of allHymns) {
+      if (!isRealTitle(hymn.title)) continue
       const partName = hymn.servicePart?.name || 'General Music'
-      const songTitle = hymn.title || ''
-      
-      // Add service part line only once per part
-      if (!processedParts.has(partName)) {
-        processedParts.add(partName)
+      if (!grouped.has(partName)) grouped.set(partName, [])
+      grouped.get(partName)!.push({ title: hymn.title!, notes: hymn.notes || undefined })
+    }
+
+    if (grouped.size > 0) {
+      lines.push('MUSIC:')
+      grouped.forEach((hymns, partName) => {
         lines.push(`${partName}:`)
-      }
-      
-      // Add the song for this service part
-      let musicLine = `- ${songTitle}`
-      if (hymn.notes) {
-        musicLine += ` (${hymn.notes})`
-      }
-      lines.push(musicLine)
-    })
-    lines.push('')
+        hymns.forEach(h => {
+          let musicLine = `- ${h.title}`
+          if (h.notes) musicLine += ` (${h.notes})`
+          lines.push(musicLine)
+        })
+      })
+      lines.push('')
+    }
   }
 
   // Add event type

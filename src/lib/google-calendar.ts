@@ -467,8 +467,11 @@ export function convertToGoogleCalendarEvent(event: any, churchTimezone?: string
   }
   descriptionParts.push('')
 
-  // Add music/hymns
-  const hymns = event.hymns?.filter((h: any) => h.title && h.title.trim()) || []
+  // Add music/hymns (skip placeholders like "New Song")
+  const hymns = event.hymns?.filter((h: any) => {
+    const t = (h.title || '').trim()
+    return t.length > 0 && t.toLowerCase() !== 'new song'
+  }) || []
   if (hymns.length > 0) {
     descriptionParts.push('MUSIC:')
     
