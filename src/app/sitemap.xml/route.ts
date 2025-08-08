@@ -10,6 +10,10 @@ export async function GET() {
     '/login',
     '/privacy-policy',
     '/terms-of-service',
+    '/blog',
+    '/blog/google-calendar-connection-guide',
+    '/blog/music-scheduling-best-practices',
+    '/blog/sharing-your-calendar-with-the-team',
   ]
 
   const lastmod = new Date().toISOString()

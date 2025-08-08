@@ -77,6 +77,9 @@ export default function HomePage() {
               <a href="#pricing" className="text-gray-700 hover:text-brand-600 transition-colors">
                 Pricing
               </a>
+              <a href="/blog" className="text-gray-700 hover:text-brand-600 transition-colors">
+                Blog
+              </a>
               <a 
                 href="/auth/signin" 
                 className="bg-brand-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-brand-700 transition-colors"
@@ -112,12 +115,19 @@ export default function HomePage() {
                 >
                   Features
                 </a>
-                                  <a 
+                  <a 
                     href="#pricing"
                     className="text-gray-700 hover:text-brand-600 transition-colors px-2 py-1"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Pricing
+                </a>
+                <a 
+                  href="/blog"
+                  className="text-gray-700 hover:text-brand-600 transition-colors px-2 py-1"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Blog
                 </a>
                 <a 
                   href="/auth/signin" 

@@ -193,6 +193,40 @@ export default function PublicSchedulePage({ params }: { params: Promise<{ token
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Events JSON-LD for SEO */}
+      {data && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'ItemList',
+              name: `${data.church.name} Music Ministry Events`,
+              itemListElement: data.events.map((ev, index) => ({
+                '@type': 'ListItem',
+                position: index + 1,
+                item: {
+                  '@type': 'Event',
+                  name: ev.name,
+                  description: ev.description || 'Music ministry event',
+                  startDate: new Date(ev.startTime).toISOString(),
+                  eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+                  eventStatus: 'https://schema.org/EventScheduled',
+                  location: {
+                    '@type': 'Place',
+                    name: ev.location || data.church.name,
+                    address: ev.location || data.church.name,
+                  },
+                  organizer: {
+                    '@type': 'Organization',
+                    name: data.church.name,
+                  },
+                },
+              })),
+            }),
+          }}
+        />
+      )}
       {/* Header */}
       <div className="bg-white shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-6">
