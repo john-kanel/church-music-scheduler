@@ -14,6 +14,8 @@ export async function GET() {
     '/blog/google-calendar-connection-guide',
     '/blog/music-scheduling-best-practices',
     '/blog/sharing-your-calendar-with-the-team',
+    '/blog/rehearsal-planning-that-actually-works',
+    '/blog/transitioning-from-spreadsheets-to-church-music-pro',
   ]
 
   const lastmod = new Date().toISOString()
