@@ -40,6 +40,37 @@ export class GoogleCalendarService {
   }
 
   /**
+   * Ensure we have a writable calendar for the current authorized user.
+   * If the provided calendarId is not writable or missing, try to find an
+   * existing dedicated calendar by summary. Otherwise create a new one.
+   */
+  async ensureWritableCalendar(churchName: string, calendarId?: string): Promise<string> {
+    // Try to list calendars and check access role
+    const list = await this.calendar.calendarList.list({ maxResults: 250 })
+    const items = list.data.items || []
+
+    const isWritable = (accessRole?: string) => accessRole === 'owner' || accessRole === 'writer'
+
+    // If we have a calendarId, verify it's writable
+    if (calendarId) {
+      const match = items.find(c => c.id === calendarId)
+      if (match && isWritable(match.accessRole || undefined)) {
+        return calendarId
+      }
+    }
+
+    // Try to find an existing dedicated calendar by summary
+    const expectedName = `${churchName} Music Ministry`
+    const existing = items.find(c => c.summary === expectedName && isWritable(c.accessRole || undefined))
+    if (existing?.id) {
+      return existing.id
+    }
+
+    // Fallback: create a new dedicated calendar
+    return await this.createDedicatedCalendar(churchName)
+  }
+
+  /**
    * Get the authorization URL for OAuth flow
    */
   getAuthUrl(): string {

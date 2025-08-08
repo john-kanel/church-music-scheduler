@@ -51,27 +51,19 @@ export async function POST(request: NextRequest) {
     })
 
     // Ensure we have a dedicated calendar to write to
-    let targetCalendarId = integration.calendarId || 'primary'
-    if (!integration.calendarId) {
-      try {
-        const userWithChurch = await prisma.user.findUnique({
-          where: { id: session.user.id },
-          include: { church: true }
-        })
-        if (userWithChurch?.church?.name) {
-          const createdCalendarId = await googleCalendar.createDedicatedCalendar(userWithChurch.church.name)
-          await prisma.googleCalendarIntegration.update({
-            where: { id: integration.id },
-            data: { calendarId: createdCalendarId }
-          })
-          targetCalendarId = createdCalendarId
-          console.log('📅 Created and set dedicated Google Calendar for sync:', createdCalendarId)
-        } else {
-          console.warn('⚠️ Could not determine church name; falling back to primary calendar')
-        }
-      } catch (e) {
-        console.error('Failed to ensure dedicated calendar; will use primary:', e)
-      }
+    // Ensure calendar is writable; repair if needed
+    const userWithChurch = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      include: { church: true }
+    })
+    const churchName = userWithChurch?.church?.name || 'Church'
+    let targetCalendarId = await googleCalendar.ensureWritableCalendar(churchName, integration.calendarId || undefined)
+    if (targetCalendarId !== integration.calendarId) {
+      await prisma.googleCalendarIntegration.update({
+        where: { id: integration.id },
+        data: { calendarId: targetCalendarId }
+      })
+      console.log('🔧 Updated integration calendarId to writable calendar:', targetCalendarId)
     }
 
     // Build query for events to sync
@@ -229,7 +221,8 @@ export async function POST(request: NextRequest) {
         }
 
         // Small delay to avoid rate limits
-        await new Promise(resolve => setTimeout(resolve, 100))
+        // Respect Google Calendar rate limits
+        await new Promise(resolve => setTimeout(resolve, 400))
 
       } catch (error) {
         const errorMsg = `Failed to sync "${event.name}": ${error instanceof Error ? error.message : 'Unknown error'}`
