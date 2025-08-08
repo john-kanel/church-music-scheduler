@@ -50,6 +50,30 @@ export async function POST(request: NextRequest) {
       expiry_date: integration.expiryDate?.getTime()
     })
 
+    // Ensure we have a dedicated calendar to write to
+    let targetCalendarId = integration.calendarId || 'primary'
+    if (!integration.calendarId) {
+      try {
+        const userWithChurch = await prisma.user.findUnique({
+          where: { id: session.user.id },
+          include: { church: true }
+        })
+        if (userWithChurch?.church?.name) {
+          const createdCalendarId = await googleCalendar.createDedicatedCalendar(userWithChurch.church.name)
+          await prisma.googleCalendarIntegration.update({
+            where: { id: integration.id },
+            data: { calendarId: createdCalendarId }
+          })
+          targetCalendarId = createdCalendarId
+          console.log('📅 Created and set dedicated Google Calendar for sync:', createdCalendarId)
+        } else {
+          console.warn('⚠️ Could not determine church name; falling back to primary calendar')
+        }
+      } catch (e) {
+        console.error('Failed to ensure dedicated calendar; will use primary:', e)
+      }
+    }
+
     // Build query for events to sync
     let eventQuery: any = {
       churchId: dbUser.churchId,
@@ -104,7 +128,8 @@ export async function POST(request: NextRequest) {
       churchId: dbUser.churchId,
       syncAll,
       eventIds: eventIds?.length || 0,
-      integrationId: integration.id
+      integrationId: integration.id,
+      calendarId: targetCalendarId
     })
     
     // Debug: If no events found, check what's available
@@ -160,7 +185,7 @@ export async function POST(request: NextRequest) {
 
         if (existingSync) {
           // Update existing event
-          await googleCalendar.updateEvent(existingSync.googleEventId, googleEvent, integration.calendarId || 'primary')
+          await googleCalendar.updateEvent(existingSync.googleEventId, googleEvent, targetCalendarId)
           
           // Update sync record
           await prisma.googleCalendarEvent.update({
@@ -172,7 +197,7 @@ export async function POST(request: NextRequest) {
           console.log(`📝 Updated Google Calendar event: ${event.name}`)
         } else {
           // Create new event
-          const googleEventId = await googleCalendar.createEvent(googleEvent, integration.calendarId || 'primary')
+          const googleEventId = await googleCalendar.createEvent(googleEvent, targetCalendarId)
           
           // Create sync record
           await prisma.googleCalendarEvent.create({
@@ -208,14 +233,16 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `Sync completed: ${results.created} created, ${results.updated} updated`,
+      message: `Sync completed: ${results.created} created, ${results.updated} updated` + (results.errors.length ? `, ${results.errors.length} errors` : ''),
       results,
+      errors: results.errors,
       debug: {
         eventsFound: events.length,
         churchId: dbUser.churchId,
         syncAll,
         eventIds: eventIds?.length || 0,
-        integrationId: integration.id
+        integrationId: integration.id,
+        calendarId: integration.calendarId || 'primary'
       }
     })
 

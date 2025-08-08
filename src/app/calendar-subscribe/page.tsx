@@ -320,8 +320,11 @@ function CalendarSubscribePageContent() {
         console.log('🔍 SYNC DEBUG RESULT:', result)
         
         let message = `Sync completed: ${result.results.created} events created, ${result.results.updated} events updated`
+        if (result.errors && result.errors.length) {
+          message += `\nErrors: ${result.errors.length}`
+        }
         if (result.debug) {
-          message += `\n\nDEBUG INFO:\n- Events found: ${result.debug.eventsFound}\n- Church ID: ${result.debug.churchId}\n- Sync All: ${result.debug.syncAll}\n- Integration ID: ${result.debug.integrationId}`
+          message += `\n\nDEBUG INFO:\n- Events found: ${result.debug.eventsFound}\n- Church ID: ${result.debug.churchId}\n- Sync All: ${result.debug.syncAll}\n- Integration ID: ${result.debug.integrationId}\n- Calendar ID: ${result.debug.calendarId}`
         }
         alert(message)
         
