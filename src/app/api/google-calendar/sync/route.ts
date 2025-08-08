@@ -183,6 +183,13 @@ export async function POST(request: NextRequest) {
     for (const event of events) {
       try {
         const googleEvent = convertToGoogleCalendarEvent(event, userTimezone)
+        // Validate dates
+        if (!(googleEvent.start instanceof Date) || isNaN(googleEvent.start.getTime())) {
+          throw new Error(`Invalid start date for event ${event.id}`)
+        }
+        if (!(googleEvent.end instanceof Date) || isNaN(googleEvent.end.getTime())) {
+          throw new Error(`Invalid end date for event ${event.id}`)
+        }
         const existingSync = event.googleCalendarEvents[0] // Should only be one per integration
 
         if (existingSync) {

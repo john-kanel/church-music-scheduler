@@ -328,20 +328,50 @@ export class GoogleCalendarService {
    * This converts the UTC date from our database to the proper local time
    */
   private formatDateTimeForTimezone(utcDate: Date, timezone: string): string {
-    // The date from our database is stored in UTC, but represents the local time
-    // We need to format it as if it's in the specified timezone
-    
-    // Convert to local time format for the specified timezone
-    // Since our database stores the "intended" local time as UTC, we need to treat it as local
-    const year = utcDate.getUTCFullYear()
-    const month = String(utcDate.getUTCMonth() + 1).padStart(2, '0')
-    const day = String(utcDate.getUTCDate()).padStart(2, '0')
-    const hours = String(utcDate.getUTCHours()).padStart(2, '0')
-    const minutes = String(utcDate.getUTCMinutes()).padStart(2, '0')
-    const seconds = String(utcDate.getUTCSeconds()).padStart(2, '0')
-    
-    // Return in the format Google Calendar expects: YYYY-MM-DDTHH:MM:SS
-    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`
+    // Build local date-time parts for the requested IANA timezone
+    const dtf = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      hour12: false,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    })
+
+    const parts = dtf.formatToParts(utcDate).reduce<Record<string, string>>((acc, p) => {
+      if (p.type !== 'literal') acc[p.type] = p.value
+      return acc
+    }, {})
+
+    const year = parts.year
+    const month = parts.month
+    const day = parts.day
+    const hours = parts.hour
+    const minutes = parts.minute
+    const seconds = parts.second
+
+    // Compute numeric offset for the given timezone at this instant
+    // Compare the UTC ms of the local components vs the actual UTC ms
+    const localAsUTC = Date.UTC(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hours),
+      Number(minutes),
+      Number(seconds)
+    )
+    const actualUTC = utcDate.getTime()
+    const offsetMs = localAsUTC - actualUTC // negative for zones behind UTC
+    const offsetTotalMinutes = Math.round(-offsetMs / 60000) // positive for zones behind UTC
+    const sign = offsetTotalMinutes <= 0 ? '+' : '-'
+    const absMinutes = Math.abs(offsetTotalMinutes)
+    const offH = String(Math.floor(absMinutes / 60)).padStart(2, '0')
+    const offM = String(absMinutes % 60).padStart(2, '0')
+
+    // RFC3339 with numeric timezone offset
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${sign}${offH}:${offM}`
   }
 }
 
