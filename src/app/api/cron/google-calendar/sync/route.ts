@@ -13,20 +13,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Find all active integrations
+    // Batching controls from query params
+    const url = new URL(request.url)
+    const maxIntegrations = Math.max(
+      1,
+      Math.min(5, Number(url.searchParams.get('integrations') || '1'))
+    )
+    const maxEvents = Math.max(
+      10,
+      Math.min(200, Number(url.searchParams.get('events') || '60'))
+    )
+    const delayMs = Math.max(0, Math.min(1000, Number(url.searchParams.get('delayMs') || '400')))
+
+    // Find a small batch of active integrations to avoid timeouts
     const integrations = await prisma.googleCalendarIntegration.findMany({
       where: { isActive: true },
       include: {
         user: {
           include: { church: true }
         }
-      }
+      },
+      orderBy: { updatedAt: 'asc' },
+      take: maxIntegrations
     })
 
     let totalCreated = 0
     let totalUpdated = 0
     const errors: string[] = []
 
+    const startTime = Date.now()
     for (const integration of integrations) {
       try {
         const google = new GoogleCalendarService()
@@ -64,7 +79,7 @@ export async function POST(request: NextRequest) {
             }
           },
           orderBy: { startTime: 'asc' },
-          take: 150
+          take: maxEvents
         })
 
         const userTimezone = integration.user.timezone || 'America/Chicago'
@@ -96,10 +111,17 @@ export async function POST(request: NextRequest) {
             }
 
             // Rate limit
-            await new Promise(r => setTimeout(r, 400))
+            if (delayMs > 0) {
+              await new Promise(r => setTimeout(r, delayMs))
+            }
           } catch (err) {
             const msg = err instanceof Error ? err.message : 'Unknown Google error'
             errors.push(`Event ${e.name}: ${msg}`)
+          }
+
+          // Safety guard to avoid provider timeouts
+          if (Date.now() - startTime > 45000) {
+            break
           }
         }
       } catch (err) {
@@ -113,7 +135,14 @@ export async function POST(request: NextRequest) {
       created: totalCreated,
       updated: totalUpdated,
       errorsCount: errors.length,
-      errors: errors.slice(0, 5)
+      errors: errors.slice(0, 5),
+      meta: {
+        processedIntegrations: integrations.length,
+        maxIntegrations,
+        maxEvents,
+        delayMs,
+        durationMs: Date.now() - startTime
+      }
     })
   } catch (error) {
     console.error('Cron Google sync failed:', error)
