@@ -3,9 +3,48 @@ import "./globals.css";
 import { SessionProvider } from '@/components/providers/session-provider'
 import { SubscriptionWarning } from '@/components/subscription-guard'
 
+const baseUrl = process.env.NEXTAUTH_URL || 'https://churchmusicpro.com'
+
 export const metadata: Metadata = {
-  title: "Church Music Pro",
+  metadataBase: new URL(baseUrl),
+  title: {
+    default: "Church Music Pro",
+    template: "%s | Church Music Pro",
+  },
   description: "Simple, intuitive scheduling for church music directors",
+  alternates: {
+    canonical: baseUrl,
+  },
+  openGraph: {
+    type: 'website',
+    url: baseUrl,
+    title: 'Church Music Pro',
+    description: 'Simple, intuitive scheduling for church music directors',
+    siteName: 'Church Music Pro',
+    images: [
+      {
+        url: '/android-chrome-512x512.png',
+        width: 512,
+        height: 512,
+        alt: 'Church Music Pro Logo'
+      }
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Church Music Pro',
+    description: 'Simple, intuitive scheduling for church music directors',
+    images: ['/android-chrome-512x512.png'],
+  },
+  icons: {
+    icon: [
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon.ico', type: 'image/x-icon' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180' }],
+  },
+  manifest: '/site.webmanifest',
 };
 
 export default function RootLayout({
@@ -32,6 +71,35 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Church Music Pro" />
+        {/* Organization & WebSite JSON-LD */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'Organization',
+              name: 'Church Music Pro',
+              url: baseUrl,
+              logo: `${baseUrl}/android-chrome-512x512.png`,
+            }),
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'WebSite',
+              name: 'Church Music Pro',
+              url: baseUrl,
+              potentialAction: {
+                '@type': 'SearchAction',
+                target: `${baseUrl}/search?q={search_term_string}`,
+                'query-input': 'required name=search_term_string',
+              },
+            }),
+          }}
+        />
       </head>
       <body suppressHydrationWarning={true}>
         <SessionProvider>
