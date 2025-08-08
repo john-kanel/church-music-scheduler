@@ -467,30 +467,27 @@ export function convertToGoogleCalendarEvent(event: any, churchTimezone?: string
   }
   descriptionParts.push('')
 
-  // Add music/hymns (skip placeholders like "New Song")
-  const hymns = event.hymns?.filter((h: any) => {
-    const t = (h.title || '').trim()
-    return t.length > 0 && t.toLowerCase() !== 'new song'
-  }) || []
-  if (hymns.length > 0) {
+  // Add music/hymns: include all service parts; treat 'New Song' as blank and render '- '
+  const allHymns = event.hymns || []
+  if (allHymns.length > 0) {
     descriptionParts.push('MUSIC:')
-    
-    // Group by service part
+
     const partGroups = new Map<string, any[]>()
-    hymns.forEach((hymn: any) => {
+    allHymns.forEach((hymn: any) => {
       const partName = hymn.servicePart?.name || 'General Music'
-      if (!partGroups.has(partName)) {
-        partGroups.set(partName, [])
-      }
+      if (!partGroups.has(partName)) partGroups.set(partName, [])
       partGroups.get(partName)!.push(hymn)
     })
 
-    // Output each service part
     partGroups.forEach((partHymns, partName) => {
       descriptionParts.push(`${partName}:`)
       partHymns.forEach((hymn: any) => {
-        let musicLine = `- ${hymn.title}`
-        if (hymn.notes) {
+        const rawTitle = (hymn.title || '').trim()
+        const title = rawTitle.toLowerCase() === 'new song' ? '' : rawTitle
+        let musicLine = `- ${title}`
+        if (!title) {
+          musicLine = '- '
+        } else if (hymn.notes) {
           musicLine += ` (${hymn.notes})`
         }
         descriptionParts.push(musicLine)

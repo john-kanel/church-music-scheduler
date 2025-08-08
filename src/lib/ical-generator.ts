@@ -210,32 +210,35 @@ function buildEventDescription(event: EventWithDetails): string {
   lines.push('')
 
   // Add service parts and music with simplified formatting
-  // Skip empty or placeholder hymn titles (e.g., "New Song")
+  // Include ALL hymns. Treat 'New Song' as blank title and render '- ' for blanks.
   const allHymns = event.hymns
   if (allHymns.length > 0) {
-    const isRealTitle = (t?: string) => !!t && t.trim().length > 0 && t.trim().toLowerCase() !== 'new song'
+    lines.push('MUSIC:')
+    const printedParts = new Set<string>()
 
-    // Group real hymns by service part, only keeping those with real titles
-    const grouped = new Map<string, { title: string; notes?: string }[]>()
-    for (const hymn of allHymns) {
-      if (!isRealTitle(hymn.title)) continue
+    allHymns.forEach(hymn => {
       const partName = hymn.servicePart?.name || 'General Music'
-      if (!grouped.has(partName)) grouped.set(partName, [])
-      grouped.get(partName)!.push({ title: hymn.title!, notes: hymn.notes || undefined })
-    }
+      const rawTitle = (hymn.title || '').trim()
+      const title = rawTitle.toLowerCase() === 'new song' ? '' : rawTitle
 
-    if (grouped.size > 0) {
-      lines.push('MUSIC:')
-      grouped.forEach((hymns, partName) => {
+      // Print the service part header once
+      if (!printedParts.has(partName)) {
+        printedParts.add(partName)
         lines.push(`${partName}:`)
-        hymns.forEach(h => {
-          let musicLine = `- ${h.title}`
-          if (h.notes) musicLine += ` (${h.notes})`
-          lines.push(musicLine)
-        })
-      })
-      lines.push('')
-    }
+      }
+
+      // Build the music line; for blank titles, render just '- '
+      let musicLine = `- ${title}`
+      if (title && hymn.notes) {
+        musicLine += ` (${hymn.notes})`
+      }
+      if (!title && hymn.notes) {
+        // For blanks, do not append notes to match requested output style
+        musicLine = '- '
+      }
+      lines.push(musicLine)
+    })
+    lines.push('')
   }
 
   // Add event type
