@@ -1877,7 +1877,7 @@ export default function EventPlannerPage() {
     // Convert to API format and save
     try {
       const hymnsForAPI = reorderedHymns.map((hymn, index) => ({
-        title: hymn.title || 'New Song',
+        title: hymn.title || '',
         notes: hymn.notes || '',
         servicePartId: hymn.servicePartId || null,
         orderIndex: index
