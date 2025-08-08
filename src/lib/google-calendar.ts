@@ -246,7 +246,7 @@ export class GoogleCalendarService {
           status: event.status || 'confirmed',
           // Add source to identify events created by our app
           source: {
-            title: 'Church Music Scheduler',
+            title: 'Church Music Pro',
             url: process.env.NEXTAUTH_URL
           }
         }
@@ -295,7 +295,7 @@ export class GoogleCalendarService {
           },
           status: event.status || 'confirmed',
           source: {
-            title: 'Church Music Scheduler',
+            title: 'Church Music Pro',
             url: process.env.NEXTAUTH_URL
           }
         }
