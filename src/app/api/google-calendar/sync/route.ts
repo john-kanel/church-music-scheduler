@@ -227,7 +227,7 @@ export async function POST(request: NextRequest) {
       } catch (error) {
         const errorMsg = `Failed to sync "${event.name}": ${error instanceof Error ? error.message : 'Unknown error'}`
         results.errors.push(errorMsg)
-        console.error('❌ Google Calendar sync error:', errorMsg)
+        console.error('❌ Google Calendar sync error:', errorMsg, error)
       }
     }
 

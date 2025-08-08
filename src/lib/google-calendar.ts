@@ -228,8 +228,10 @@ export class GoogleCalendarService {
       console.log(`✅ Created Google Calendar event: ${response.data.id}`)
       return response.data.id
     } catch (error) {
-      console.error('Error creating Google Calendar event:', error)
-      throw new Error(`Failed to create calendar event: ${event.summary}`)
+      const err = error as any
+      const apiMsg = err?.errors?.[0]?.message || err?.response?.data?.error?.message || err?.message || 'Unknown error'
+      console.error('Error creating Google Calendar event:', apiMsg)
+      throw new Error(`Failed to create calendar event: ${event.summary} - ${apiMsg}`)
     }
   }
 
@@ -270,8 +272,10 @@ export class GoogleCalendarService {
 
       console.log(`✅ Updated Google Calendar event: ${googleEventId}`)
     } catch (error) {
-      console.error('Error updating Google Calendar event:', error)
-      throw new Error(`Failed to update calendar event: ${event.summary}`)
+      const err = error as any
+      const apiMsg = err?.errors?.[0]?.message || err?.response?.data?.error?.message || err?.message || 'Unknown error'
+      console.error('Error updating Google Calendar event:', apiMsg)
+      throw new Error(`Failed to update calendar event: ${event.summary} - ${apiMsg}`)
     }
   }
 
