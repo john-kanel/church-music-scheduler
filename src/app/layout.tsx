@@ -100,6 +100,42 @@ export default function RootLayout({
             }),
           }}
         />
+        {/* FAQ JSON-LD (Quick Wins) */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'FAQPage',
+              mainEntity: [
+                {
+                  '@type': 'Question',
+                  name: 'What is Church Music Pro?',
+                  acceptedAnswer: {
+                    '@type': 'Answer',
+                    text: 'Church Music Pro is scheduling software for church music directors to plan services, coordinate musicians, and share live calendars.'
+                  }
+                },
+                {
+                  '@type': 'Question',
+                  name: 'Does it integrate with Google Calendar?',
+                  acceptedAnswer: {
+                    '@type': 'Answer',
+                    text: 'Yes. You can connect a dedicated Google Calendar for instant sync, or share a live iCal feed for Apple/Outlook.'
+                  }
+                },
+                {
+                  '@type': 'Question',
+                  name: 'Is there a free trial?',
+                  acceptedAnswer: {
+                    '@type': 'Answer',
+                    text: 'Yes. New churches get a free trial and can cancel anytime.'
+                  }
+                }
+              ]
+            }),
+          }}
+        />
       </head>
       <body suppressHydrationWarning={true}>
         <SessionProvider>
