@@ -582,22 +582,7 @@ function CalendarSubscribePageContent() {
           </div>
         )}
 
-        {/* Open in Calendar App */}
-        <div className="bg-white shadow rounded-lg p-6">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-600">
-              Click below to open and subscribe to the live music ministry calendar in your calendar app.
-            </p>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center"
-            >
-              <Calendar className="h-4 w-4 mr-2" />
-              {saving ? 'Saving...' : 'Open in Calendar App'}
-            </button>
-          </div>
-        </div>
+        {/* (Removed) Open in Calendar App box per request */}
 
         {/* Google Calendar Integration */}
         <div className="mt-8 bg-white shadow rounded-lg">
