@@ -160,6 +160,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user's timezone for proper event time handling
+    // Use the director's timezone (db user) so wall times match what was entered
     const userTimezone = dbUser.timezone || 'America/Chicago'
 
     const results = {

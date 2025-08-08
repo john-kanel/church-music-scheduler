@@ -359,7 +359,16 @@ export class GoogleCalendarService {
    * This converts the UTC date from our database to the proper local time
    */
   private formatDateTimeForTimezone(utcDate: Date, timezone: string): string {
-    // Build local date-time parts for the requested IANA timezone
+    // 1) Use the UTC components as the intended "wall time" (how events are stored)
+    const year = String(utcDate.getUTCFullYear())
+    const month = String(utcDate.getUTCMonth() + 1).padStart(2, '0')
+    const day = String(utcDate.getUTCDate()).padStart(2, '0')
+    const hours = String(utcDate.getUTCHours()).padStart(2, '0')
+    const minutes = String(utcDate.getUTCMinutes()).padStart(2, '0')
+    const seconds = String(utcDate.getUTCSeconds()).padStart(2, '0')
+
+    // 2) Compute the timezone offset at this date for the target IANA timezone
+    // Get what the local-time parts would be for this UTC instant in the target timezone
     const dtf = new Intl.DateTimeFormat('en-US', {
       timeZone: timezone,
       hour12: false,
@@ -370,38 +379,27 @@ export class GoogleCalendarService {
       minute: '2-digit',
       second: '2-digit',
     })
-
-    const parts = dtf.formatToParts(utcDate).reduce<Record<string, string>>((acc, p) => {
+    const tzParts = dtf.formatToParts(utcDate).reduce<Record<string, string>>((acc, p) => {
       if (p.type !== 'literal') acc[p.type] = p.value
       return acc
     }, {})
-
-    const year = parts.year
-    const month = parts.month
-    const day = parts.day
-    const hours = parts.hour
-    const minutes = parts.minute
-    const seconds = parts.second
-
-    // Compute numeric offset for the given timezone at this instant
-    // Compare the UTC ms of the local components vs the actual UTC ms
     const localAsUTC = Date.UTC(
-      Number(year),
-      Number(month) - 1,
-      Number(day),
-      Number(hours),
-      Number(minutes),
-      Number(seconds)
+      Number(tzParts.year),
+      Number(tzParts.month) - 1,
+      Number(tzParts.day),
+      Number(tzParts.hour),
+      Number(tzParts.minute),
+      Number(tzParts.second)
     )
     const actualUTC = utcDate.getTime()
-    const offsetMs = localAsUTC - actualUTC // negative for zones behind UTC
-    const offsetTotalMinutes = Math.round(-offsetMs / 60000) // positive for zones behind UTC
-    const sign = offsetTotalMinutes <= 0 ? '+' : '-'
+    const offsetMs = actualUTC - localAsUTC // positive when tz is behind UTC
+    const offsetTotalMinutes = Math.round(offsetMs / 60000)
+    const sign = offsetTotalMinutes >= 0 ? '-' : '+' // behind UTC => negative offset in string
     const absMinutes = Math.abs(offsetTotalMinutes)
     const offH = String(Math.floor(absMinutes / 60)).padStart(2, '0')
     const offM = String(absMinutes % 60).padStart(2, '0')
 
-    // RFC3339 with numeric timezone offset
+    // 3) Build RFC3339 string using the intended wall time and the zone's offset
     return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${sign}${offH}:${offM}`
   }
 }
