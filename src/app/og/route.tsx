@@ -9,7 +9,6 @@ export async function GET(request: Request) {
 
   return new ImageResponse(
     (
-      // eslint-disable-next-line @next/next/no-img-element
       <div
         style={{
           height: '100%',
@@ -24,6 +23,7 @@ export async function GET(request: Request) {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: 24 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="https://churchmusicpro.com/apple-touch-icon.png" alt="Logo" width={64} height={64} />
           <span style={{ fontSize: 28, fontWeight: 700, marginLeft: 12, color: '#072A5D' }}>Church Music Pro</span>
         </div>
