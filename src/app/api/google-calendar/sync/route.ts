@@ -174,7 +174,9 @@ export async function POST(request: NextRequest) {
       created: 0,
       updated: 0,
       errors: [] as string[],
-      total: events.length
+      total: events.length,
+      createdSamples: [] as string[],
+      updatedSamples: [] as string[]
     }
 
     // Process each event
@@ -194,6 +196,9 @@ export async function POST(request: NextRequest) {
           })
           
           results.updated++
+          if (results.updatedSamples.length < 5) {
+            results.updatedSamples.push(event.name)
+          }
           console.log(`📝 Updated Google Calendar event: ${event.name}`)
         } else {
           // Create new event
@@ -210,6 +215,9 @@ export async function POST(request: NextRequest) {
           })
           
           results.created++
+          if (results.createdSamples.length < 5) {
+            results.createdSamples.push(event.name)
+          }
           console.log(`➕ Created Google Calendar event: ${event.name}`)
         }
 
@@ -230,6 +238,14 @@ export async function POST(request: NextRequest) {
     })
 
     console.log('✅ Google Calendar sync completed:', results)
+    if (results.created || results.updated) {
+      console.log('📋 Sync summary:', {
+        created: results.created,
+        updated: results.updated,
+        createdSamples: results.createdSamples,
+        updatedSamples: results.updatedSamples
+      })
+    }
 
     return NextResponse.json({
       success: true,
@@ -242,7 +258,11 @@ export async function POST(request: NextRequest) {
         syncAll,
         eventIds: eventIds?.length || 0,
         integrationId: integration.id,
-        calendarId: integration.calendarId || 'primary'
+        calendarId: targetCalendarId,
+        created: results.created,
+        updated: results.updated,
+        createdSamples: results.createdSamples,
+        updatedSamples: results.updatedSamples
       }
     })
 
