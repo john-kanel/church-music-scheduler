@@ -72,11 +72,15 @@ export async function GET(
             servicePart: {
               select: {
                 id: true,
-                name: true
+                name: true,
+                order: true
               }
             }
           },
-          orderBy: { createdAt: 'asc' }
+          orderBy: [
+            { servicePart: { order: 'asc' } },
+            { createdAt: 'asc' }
+          ]
         }
       },
       orderBy: { startTime: 'asc' }

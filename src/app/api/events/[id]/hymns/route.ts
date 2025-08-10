@@ -19,13 +19,16 @@ export async function GET(
     const resolvedParams = await params
     const eventId = resolvedParams.id
 
-    // Fetch event hymns ordered by creation time
+    // Fetch event hymns ordered by service part order (then creation time)
     const hymns = await prisma.eventHymn.findMany({
       where: { eventId },
       include: {
-        servicePart: true
+        servicePart: { select: { id: true, name: true, order: true } }
       },
-      orderBy: { createdAt: 'asc' }
+      orderBy: [
+        { servicePart: { order: 'asc' } },
+        { createdAt: 'asc' }
+      ]
     })
 
     return NextResponse.json({ hymns })

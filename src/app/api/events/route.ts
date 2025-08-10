@@ -115,9 +115,12 @@ export async function GET(request: NextRequest) {
         },
         hymns: {
           include: {
-            servicePart: true
+            servicePart: { select: { id: true, name: true, order: true } }
           },
-          orderBy: { createdAt: 'asc' } // Ensure hymns are in correct order
+          orderBy: [
+            { servicePart: { order: 'asc' } },
+            { createdAt: 'asc' }
+          ]
         },
         musicFiles: true
       },
@@ -348,10 +351,15 @@ export async function POST(request: NextRequest) {
         await tx.eventAssignment.createMany({ data: allAssignments })
       }
 
-      // Create hymns for the main event
+      // Create hymns for the main event with deterministic createdAt to preserve order
       if (hymnsToCreate.length > 0) {
+        const baseTime = new Date()
         await tx.eventHymn.createMany({
-          data: hymnsToCreate.map((h: any) => ({ ...h, eventId: event.id }))
+          data: hymnsToCreate.map((h: any, index: number) => ({
+            ...h,
+            eventId: event.id,
+            createdAt: new Date(baseTime.getTime() + index * 1000)
+          }))
         })
       }
 
