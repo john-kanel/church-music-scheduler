@@ -975,6 +975,14 @@ export default function EventPlannerPage() {
     try {
       console.log('🎵 Saving hymn title:', { eventId, newTitle, servicePartId, hymnId })
       
+      // Store original title for revert if needed
+      let originalTitle = ''
+      if (hymnId) {
+        const event = data?.events.find(e => e.id === eventId)
+        const hymn = event?.hymns.find(h => h.id === hymnId)
+        originalTitle = hymn?.title || ''
+      }
+      
       // First update local state immediately for responsiveness
       let currentHymns: any[] = []
       setData(prev => {
@@ -1033,18 +1041,51 @@ export default function EventPlannerPage() {
         const errorData = await response.json()
         console.error('❌ Failed to save hymn:', errorData)
         showToast('error', errorData.error || 'Failed to save hymn title')
-        // Revert local state if server update failed
-        await fetchPlannerData()
+        // Revert local state without refetching all data
+        setData(prev => {
+          if (!prev) return prev
+          return {
+            ...prev,
+            events: prev.events.map(e => 
+              e.id === eventId 
+                ? {
+                    ...e,
+                    hymns: e.hymns.map(h => 
+                      h.id === hymnId ? { ...h, title: originalTitle } : h
+                    )
+                  }
+                : e
+            )
+          }
+        })
       } else {
         const result = await response.json()
         console.log('✅ Hymn title saved successfully:', result)
-        showToast('success', 'Hymn title saved!')
+        // Don't show toast for hymn number additions - they have their own success message
+        if (!newTitle.includes('#')) {
+          showToast('success', 'Hymn title saved!')
+        }
       }
     } catch (error) {
       console.error('❌ Error updating hymn:', error)
       showToast('error', 'Failed to save hymn title. Please try again.')
-      // Revert local state if there was an error
-      await fetchPlannerData()
+      // Revert local state without refetching all data
+      setData(prev => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          events: prev.events.map(e => 
+            e.id === eventId 
+              ? {
+                  ...e,
+                  hymns: e.hymns.map(h => 
+                    h.id === hymnId ? { ...h, title: originalTitle } : h
+                  )
+                }
+              : e
+          )
+        }
+      })
     }
   }
 
@@ -1588,8 +1629,8 @@ export default function EventPlannerPage() {
         const hymnNumber = searchResults[0].number
         const newTitle = `${hymn.title.trim()} #${hymnNumber}`
         
-        // Update the hymn title with the number
-        await updateHymnTitle(hymn.id, newTitle, eventId)
+        // Update the hymn title with the number - fix parameter order
+        await updateHymnTitle(eventId, newTitle, hymn.servicePartId || null, hymn.id)
         showToast('success', `Added hymn number #${hymnNumber} to "${hymn.title}"`)
       } else {
         // Multiple results - show selection modal (future enhancement)

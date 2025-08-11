@@ -101,51 +101,56 @@ export async function POST(request: NextRequest) {
     // Run the assistant
     const run = await openai.beta.threads.runs.create(thread.id, {
       assistant_id: process.env.OPENAI_ASSISTANT_ID!,
-      instructions: `You are a Hymnal Index Parser with EXTREME ATTENTION TO DETAIL. Your job is to extract EVERY SINGLE hymn from a hymnal index PDF.
+      instructions: `You are a Professional Hymnal Index Parser. Your SOLE PURPOSE is to extract EVERY SINGLE hymn entry from a hymnal index PDF.
 
-CRITICAL MISSION: Extract ALL hymn titles and numbers. A typical hymnal has 200-800+ hymns. If you extract fewer than 100, you are FAILING.
+⚠️ CRITICAL REQUIREMENT: Most hymnals contain 200-800+ hymns. If you extract fewer than 150 hymns, you have FAILED and must re-examine the document.
 
-SYSTEMATIC EXTRACTION PROCESS:
-1. EXAMINE EVERY PAGE INDIVIDUALLY - Don't skip any pages
-2. SCAN EACH COLUMN SEPARATELY - Many indexes have 2-3 columns
-3. READ EVERY LINE - Some titles span multiple lines
-4. CHECK ALL SECTIONS - Alphabetical, seasonal, topical groupings
-5. LOOK FOR CONTINUATION PAGES - "Continued on next page"
-6. VERIFY NUMBERING SEQUENCES - Numbers should go 1, 2, 3... or A-1, A-2...
+🔍 SYSTEMATIC SCANNING PROTOCOL:
+1. SCAN EVERY PAGE METICULOUSLY - Skip nothing
+2. PROCESS EACH COLUMN INDEPENDENTLY - Don't merge columns mentally
+3. READ EVERY LINE CHARACTER BY CHARACTER - Some entries span multiple lines
+4. FOLLOW ALL PAGE SEQUENCES - Look for "continued", "page X of Y"
+5. PROCESS ALL SECTIONS: Alphabetical A-Z, Seasonal (Advent, Christmas, Easter), Topical, Appendices
+6. VERIFY COMPLETE NUMBER SEQUENCES - If you see hymn 1 and 500, there should be hundreds in between
 
-PATTERN RECOGNITION (be flexible with formatting):
-✓ "123. Amazing Grace"
-✓ "Amazing Grace .................. 123"
-✓ "Amazing Grace - 123" 
-✓ "Amazing Grace    123"
-✓ "123    Amazing Grace"
-✓ "Amazing Grace (Traditional) ........ 123"
-✓ Multi-line titles:
-   "Come, Thou Long Expected
-   Jesus .......................... 64"
+📋 FORMATTING PATTERNS TO RECOGNIZE:
 
-COMMON VARIATIONS TO HANDLE:
-- Different punctuation: periods, dashes, spaces, dots
-- Parenthetical info: (Traditional), (New), (Alternate)
-- Multi-word numbering: A-1, 123a, 123b, W&P 45
-- Page references mixed with hymn numbers
-- Section headers: "ADVENT", "CHRISTMAS", "EASTER"
-- Cross-references: "See also #456"
+Standard Formats:
+• "123. Amazing Grace"
+• "Amazing Grace .................. 123"  
+• "Amazing Grace - 123"
+• "Amazing Grace     123" (tab spacing)
+• "123     Amazing Grace"
 
-TITLE CLEANING RULES:
-- Remove leading/trailing dots and dashes
-- Keep apostrophes and internal punctuation
-- Preserve capitalization properly
-- Remove formatting artifacts
-- Keep parenthetical tune names: "Amazing Grace (New Britain)"
+Complex Formats:
+• "Amazing Grace (New Britain) ........ 123"
+• "Come, Thou Long Expected
+   Jesus .......................... 64" (multi-line)
+• "A-1. Opening Hymn"
+• "123a Amazing Grace (Alternate)"
+• "W&P 45 Worship & Praise Selection"
 
-QUALITY CONTROL:
-- If you find < 100 hymns, STOP and re-examine the entire document
-- Check for missing sections (A-C, D-F, etc.)
-- Verify number sequences make sense
-- Look for "Index continues..." or similar text
+🧹 TEXT CLEANING PROTOCOL:
+- Remove dots/dashes that are just formatting: "Amazing Grace....123" → title="Amazing Grace", number="123"
+- Preserve meaningful punctuation: "Lord, I Want to Be a Christian" (keep comma)
+- Keep tune names in parentheses: "Amazing Grace (New Britain)"
+- Remove line artifacts and column separators
+- Normalize excessive whitespace
 
-RESPONSE FORMAT (JSON ONLY):
+⚠️ COMMON PITFALLS TO AVOID:
+- Mistaking page headers for hymn titles
+- Skipping sections that look different
+- Missing hymns in footnotes or appendices  
+- Ignoring hymns with letter prefixes (A-1, B-12, etc.)
+- Stopping at first major section break
+
+🎯 MULTI-PASS VERIFICATION:
+Pass 1: Extract all obvious entries
+Pass 2: Look for missed sections, unusual formatting
+Pass 3: Verify number sequences make logical sense
+Pass 4: Final count - must be 150+ hymns minimum
+
+📊 RESPONSE FORMAT (JSON ONLY):
 {
   "hymns": [
     {
@@ -154,10 +159,16 @@ RESPONSE FORMAT (JSON ONLY):
       "pageNumber": null
     }
   ],
-  "notes": "Extracted X hymns from Y pages. Layout: [detailed description]. Sections found: [list]. Potential issues: [any concerns]"
+  "extractionStats": {
+    "totalHymns": 456,
+    "pagesProcessed": 12,
+    "sectionsFound": ["A-Z Alphabetical", "Christmas", "Easter", "Appendix"],
+    "numberRanges": ["1-450", "A-1 to A-12", "W&P 1-25"]
+  },
+  "notes": "Processed all pages thoroughly. Found typical 2-column layout with seasonal sections. All number sequences verified complete."
 }
 
-FINAL CHECK: Before responding, count your extracted hymns. If fewer than 100, re-examine the document for missing content.`
+🚨 FINAL VALIDATION: Count your results. If < 150 hymns, re-examine the ENTIRE document. Most hymnal indexes contain 300-600 entries.`
     })
 
     // Poll for completion
@@ -231,6 +242,28 @@ FINAL CHECK: Before responding, count your extracted hymns. If fewer than 100, r
       throw new Error('Invalid response structure from PDF processor')
     }
 
+    // Enhanced validation with detailed feedback
+    const extractedCount = parsedResponse.hymns.length
+    const stats = parsedResponse.extractionStats || {}
+    
+    console.log('📊 Extraction Analysis:', {
+      totalExtracted: extractedCount,
+      stats,
+      firstFewTitles: parsedResponse.hymns.slice(0, 5).map((h: any) => h.title),
+      lastFewTitles: parsedResponse.hymns.slice(-5).map((h: any) => h.title)
+    })
+
+    // Quality warnings
+    if (extractedCount < 50) {
+      console.warn(`🚨 CRITICAL: Only ${extractedCount} hymns extracted. This is severely low for a hymnal index.`)
+    } else if (extractedCount < 150) {
+      console.warn(`⚠️ Warning: Only ${extractedCount} hymns extracted. Most hymnals have 200-800+ hymns.`)
+    } else if (extractedCount < 200) {
+      console.warn(`⚠️ Caution: ${extractedCount} hymns extracted. This might be complete for smaller hymnals.`)
+    } else {
+      console.log(`✅ Good extraction: ${extractedCount} hymns found. This looks more realistic.`)
+    }
+
     // Create the hymnal in the database
     const hymnal = await prisma.hymnal.create({
       data: {
@@ -280,7 +313,9 @@ FINAL CHECK: Before responding, count your extracted hymns. If fewer than 100, r
       hymnal,
       hymnCount: successfulHymns.length,
       notes: parsedResponse.notes,
-      extractedSample: successfulHymns.slice(0, 5).map(h => ({ title: h?.title, number: h?.number })) // First 5 for debugging
+      extractionStats: stats,
+      extractedSample: successfulHymns.slice(0, 5).map(h => ({ title: h?.title, number: h?.number })), // First 5 for debugging
+      qualityIndicator: extractedCount >= 200 ? 'excellent' : extractedCount >= 150 ? 'good' : extractedCount >= 50 ? 'low' : 'critical'
     })
 
   } catch (error) {

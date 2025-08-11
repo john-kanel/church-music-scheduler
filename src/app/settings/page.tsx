@@ -595,7 +595,25 @@ export default function SettingsPage() {
 
       if (response.ok) {
         const result = await response.json()
-        setSuccess(`Hymnal "${hymnalUploadData.name}" uploaded successfully with ${result.hymnCount} hymns!`)
+        
+        // Create more detailed feedback based on quality
+        let message = `Hymnal "${hymnalUploadData.name}" uploaded with ${result.hymnCount} hymns`
+        
+        if (result.qualityIndicator === 'critical') {
+          message += ` ⚠️ Warning: Very low hymn count detected. This may indicate a scanning issue. Please check if your PDF contains a complete hymnal index.`
+        } else if (result.qualityIndicator === 'low') {
+          message += ` ⚠️ Note: Lower than expected hymn count. Most hymnals contain 200-800 hymns.`
+        } else if (result.qualityIndicator === 'good') {
+          message += ` ✅ Good extraction results!`
+        } else if (result.qualityIndicator === 'excellent') {
+          message += ` 🎵 Excellent! Comprehensive extraction completed.`
+        }
+        
+        if (result.extractionStats?.sectionsFound?.length) {
+          message += ` Sections processed: ${result.extractionStats.sectionsFound.join(', ')}.`
+        }
+        
+        setSuccess(message)
         setShowUploadHymnalModal(false)
         setHymnalUploadData({ name: '', description: '', file: null })
         await fetchHymnals()
