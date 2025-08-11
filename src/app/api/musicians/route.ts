@@ -61,6 +61,7 @@ export async function GET(request: NextRequest) {
           instruments: true,
           pin: true,
           createdAt: true,
+          // privateNotes: true,
           groupMemberships: {
             select: {
               group: {

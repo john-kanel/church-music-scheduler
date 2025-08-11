@@ -23,6 +23,7 @@ interface Musician {
     name: string
   }>
   pin?: string
+  privateNotes?: string
 }
 
 interface EditingMusician {
@@ -37,6 +38,7 @@ interface EditingMusician {
     id: string
     name: string
   }>
+  privateNotes: string
 }
 
 interface Group {
@@ -179,6 +181,8 @@ export default function MusiciansPage() {
   const [editingData, setEditingData] = useState<EditingMusician | null>(null)
   const [saving, setSaving] = useState(false)
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending' | 'inactive'>('all')
+  const [instrumentFilter, setInstrumentFilter] = useState<string>('all')
+  const [groupFilter, setGroupFilter] = useState<string>('all')
   const [exporting, setExporting] = useState(false)
   const [availableGroups, setAvailableGroups] = useState<Group[]>([])
   const [loadingGroups, setLoadingGroups] = useState(false)
@@ -187,10 +191,11 @@ export default function MusiciansPage() {
   const [musicianToDelete, setMusicianToDelete] = useState<Musician | null>(null)
   const [deleting, setDeleting] = useState(false)
 
-  // Fetch musicians
+  // Fetch musicians and groups
   useEffect(() => {
     if (session?.user?.churchId) {
       fetchMusicians()
+      fetchGroups()
     }
   }, [session])
 
@@ -259,7 +264,8 @@ export default function MusiciansPage() {
       phone: musician.phone || '',
       status: musician.status || (musician.isVerified ? 'active' : 'pending'),
       instruments: matchedInstruments,
-      groups: musician.groups || []
+      groups: musician.groups || [],
+      privateNotes: musician.privateNotes || ''
     })
     // Fetch available groups when editing starts
     fetchGroups()
@@ -291,7 +297,8 @@ export default function MusiciansPage() {
           email: editingData.email,
           phone: editingData.phone || null,
           status: editingData.status,
-          instruments: editingData.instruments
+          instruments: editingData.instruments,
+          privateNotes: editingData.privateNotes
         }),
       })
 
@@ -371,7 +378,8 @@ export default function MusiciansPage() {
               status: editingData.status,
               isVerified: editingData.status === 'active',
               instruments: editingData.instruments,
-              groups: editingData.groups
+              groups: editingData.groups,
+              privateNotes: editingData.privateNotes
             }
           : musician
       ))
@@ -524,7 +532,7 @@ export default function MusiciansPage() {
   // Available instrument/role options (shared with join page)
   const availableInstruments = COMMON_INSTRUMENTS
 
-  // Filter musicians based on search term and status
+  // Filter musicians based on search term, status, instruments, and groups
   const filteredMusicians = musicians.filter(musician => {
     const matchesSearch = `${musician.firstName} ${musician.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
       musician.email.toLowerCase().includes(searchTerm.toLowerCase())
@@ -541,7 +549,17 @@ export default function MusiciansPage() {
     
     const matchesStatus = statusFilter === 'all' || musicianStatus === statusFilter
     
-    return matchesSearch && matchesStatus
+    // Filter by instrument
+    const matchesInstrument = instrumentFilter === 'all' || 
+      (musician.instruments && musician.instruments.some(inst => 
+        inst.toLowerCase() === instrumentFilter.toLowerCase()
+      ))
+    
+    // Filter by group
+    const matchesGroup = groupFilter === 'all' || 
+      (musician.groups && musician.groups.some(group => group.id === groupFilter))
+    
+    return matchesSearch && matchesStatus && matchesInstrument && matchesGroup
   })
 
   if (!session) {
@@ -685,7 +703,45 @@ export default function MusiciansPage() {
                       Contact
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Instruments/Roles
+                      <div className="flex items-center space-x-2">
+                        <span>Instruments/Roles</span>
+                        <div className="relative">
+                          <button
+                            onClick={() => {
+                              const filterElement = document.getElementById('instrument-filter')
+                              if (filterElement) {
+                                filterElement.classList.toggle('hidden')
+                              }
+                            }}
+                            className="p-1 hover:bg-gray-100 rounded"
+                          >
+                            <Filter className="h-4 w-4" />
+                          </button>
+                          <div id="instrument-filter" className="hidden absolute top-6 left-0 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[140px] max-h-48 overflow-y-auto">
+                            <button
+                              onClick={() => {
+                                setInstrumentFilter('all')
+                                document.getElementById('instrument-filter')?.classList.add('hidden')
+                              }}
+                              className={`block w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${instrumentFilter === 'all' ? 'bg-blue-50 text-blue-700' : ''}`}
+                            >
+                              All
+                            </button>
+                            {availableInstruments.map((instrument) => (
+                              <button
+                                key={instrument}
+                                onClick={() => {
+                                  setInstrumentFilter(instrument)
+                                  document.getElementById('instrument-filter')?.classList.add('hidden')
+                                }}
+                                className={`block w-full text-left px-3 py-2 text-sm hover:bg-gray-50 capitalize ${instrumentFilter === instrument ? 'bg-blue-50 text-blue-700' : ''}`}
+                              >
+                                {instrument}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       <div className="flex items-center space-x-2">
@@ -762,11 +818,54 @@ export default function MusiciansPage() {
                       </th>
                     )}
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Groups
+                      <div className="flex items-center space-x-2">
+                        <span>Groups</span>
+                        <div className="relative">
+                          <button
+                            onClick={() => {
+                              const filterElement = document.getElementById('group-filter')
+                              if (filterElement) {
+                                filterElement.classList.toggle('hidden')
+                              }
+                            }}
+                            className="p-1 hover:bg-gray-100 rounded"
+                          >
+                            <Filter className="h-4 w-4" />
+                          </button>
+                          <div id="group-filter" className="hidden absolute top-6 left-0 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[120px] max-h-48 overflow-y-auto">
+                            <button
+                              onClick={() => {
+                                setGroupFilter('all')
+                                document.getElementById('group-filter')?.classList.add('hidden')
+                              }}
+                              className={`block w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${groupFilter === 'all' ? 'bg-blue-50 text-blue-700' : ''}`}
+                            >
+                              All
+                            </button>
+                            {availableGroups.map((group) => (
+                              <button
+                                key={group.id}
+                                onClick={() => {
+                                  setGroupFilter(group.id)
+                                  document.getElementById('group-filter')?.classList.add('hidden')
+                                }}
+                                className={`block w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${groupFilter === group.id ? 'bg-blue-50 text-blue-700' : ''}`}
+                              >
+                                {group.name}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Joined
                     </th>
+                    {canEditMusicians && (
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Private Notes
+                      </th>
+                    )}
                     {canEditMusicians && (
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Actions
@@ -778,7 +877,7 @@ export default function MusiciansPage() {
                   {filteredMusicians.length === 0 ? (
                     /* No results message */
                     <tr>
-                      <td colSpan={canEditMusicians ? 8 : 6} className="px-6 py-12 text-center">
+                      <td colSpan={canEditMusicians ? 9 : 6} className="px-6 py-12 text-center">
                         <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
                         <h3 className="text-lg font-medium text-gray-900 mb-2">
                           No musicians match this filter
@@ -1020,6 +1119,29 @@ export default function MusiciansPage() {
                           {new Date(musician.createdAt).toLocaleDateString()}
                         </div>
                       </td>
+                      {canEditMusicians && (
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {editingId === musician.id && editingData ? (
+                            <textarea
+                              value={editingData.privateNotes}
+                              onChange={(e) => handleEditingChange('privateNotes', e.target.value)}
+                              placeholder="Private notes..."
+                              className="w-full px-2 py-1 text-xs border border-gray-300 rounded resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              rows={2}
+                            />
+                          ) : (
+                            <div className="max-w-xs">
+                              {musician.privateNotes ? (
+                                <div className="text-xs text-gray-600 line-clamp-2">
+                                  {musician.privateNotes}
+                                </div>
+                              ) : (
+                                <span className="text-xs text-gray-400 italic">No notes</span>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                      )}
                       {canEditMusicians && (
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           {editingId === musician.id ? (
