@@ -43,6 +43,11 @@ interface PublicScheduleData {
         name: string
       }
     }>
+    documents: Array<{
+      id: string
+      originalFilename: string
+      url: string
+    }>
   }>
   musicians: Array<{
     id: string
@@ -465,6 +470,31 @@ export default function PublicSchedulePage({ params }: { params: Promise<{ token
                               {hymn.notes && (
                                 <span className="ml-2 text-gray-600 text-sm">({hymn.notes})</span>
                               )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Music Files/Documents */}
+                    {event.documents && event.documents.length > 0 && (
+                      <div className="mt-4">
+                        <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
+                          <FileText className="w-4 h-4" />
+                          Music Files
+                        </h4>
+                        <div className="bg-white p-3 rounded-lg">
+                          {event.documents.map((doc, index) => (
+                            <div key={doc.id} className="mb-2 last:mb-0">
+                              <a
+                                href={doc.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 hover:underline text-sm"
+                              >
+                                <Download className="w-4 h-4" />
+                                {doc.originalFilename}
+                              </a>
                             </div>
                           ))}
                         </div>
