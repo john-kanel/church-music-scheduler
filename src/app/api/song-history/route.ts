@@ -43,17 +43,18 @@ export async function GET(request: NextRequest) {
     const windowEnd = new Date(referenceDate)
     windowEnd.setDate(windowEnd.getDate() + 60)
 
+    // Search for similar song titles within ±60 days of the event
+    // Use fuzzy matching by searching for songs that contain similar words
+    const words = songTitle.toLowerCase().split(' ').filter(word => word.length > 2)
+
     console.log('🎵 Song history search:', {
       songTitle,
       churchId: session.user.churchId,
       referenceDate: referenceDate.toISOString().split('T')[0],
       searchWindow: `${windowStart.toISOString().split('T')[0]} to ${windowEnd.toISOString().split('T')[0]}`,
-      excludeEventId
+      excludeEventId,
+      searchWords: words
     })
-
-    // Search for similar song titles within ±60 days of the event
-    // Use fuzzy matching by searching for songs that contain similar words
-    const words = songTitle.toLowerCase().split(' ').filter(word => word.length > 2)
     
     let songHistory: any[] = []
     
@@ -98,8 +99,10 @@ export async function GET(request: NextRequest) {
             startTime: 'desc'
           }
         },
-        take: 10 // Limit to most recent 10 matches
+        take: 50 // Increase limit to catch more potential matches before filtering
       })
+
+      console.log(`🎵 Initial database search found ${songHistory.length} potential matches`)
 
       // Filter out same-day events if we have an exclude date
       if (excludeDate) {
@@ -108,9 +111,13 @@ export async function GET(request: NextRequest) {
           if (!hymn.event?.startTime) return true
           const eventDate = new Date(hymn.event.startTime)
           eventDate.setHours(0, 0, 0, 0)
-          return eventDate.getTime() !== excludeDate!.getTime()
+          const isSameDay = eventDate.getTime() === excludeDate!.getTime()
+          if (isSameDay) {
+            console.log(`🎵 Excluding same-day event: "${hymn.title}" from ${eventDate.toISOString().split('T')[0]}`)
+          }
+          return !isSameDay
         })
-        console.log(`🎵 Filtered out same-day events: ${beforeFilter} -> ${songHistory.length}`)
+        console.log(`🎵 After filtering same-day events: ${beforeFilter} -> ${songHistory.length}`)
       }
 
       // Filter results by similarity score
@@ -123,10 +130,27 @@ export async function GET(request: NextRequest) {
         }
       })
 
-      // Only return results with similarity > 0.6 (60% similar)
+      // Filter results by similarity - be more lenient for song matching
+      // Use a lower threshold (40%) and also check if significant words match
+      const beforeSimilarityFilter = scoredResults.length
       songHistory = scoredResults
-        .filter(result => result.similarityScore > 0.6)
+        .filter(result => {
+          // Allow if similarity is decent OR if all major words are present
+          const hasMajorWords = words.every(word => 
+            result.title?.toLowerCase().includes(word.toLowerCase())
+          )
+          const hasDecentSimilarity = result.similarityScore > 0.4
+          const hasGoodSimilarity = result.similarityScore > 0.6
+          
+          const shouldInclude = hasGoodSimilarity || (hasDecentSimilarity && hasMajorWords) || hasMajorWords
+          
+          console.log(`🎵 Similarity check for "${result.title}": score=${result.similarityScore.toFixed(2)}, majorWords=${hasMajorWords}, include=${shouldInclude}`)
+          
+          return shouldInclude
+        })
         .sort((a, b) => b.similarityScore - a.similarityScore) // Sort by similarity
+
+      console.log(`🎵 After similarity filtering: ${beforeSimilarityFilter} -> ${songHistory.length}`)
     }
 
     console.log('🎵 Song history results:', {
