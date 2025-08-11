@@ -71,7 +71,22 @@ export async function scheduleEventNotifications(eventId: string, churchId: stri
 
       // If notification time is in the past or very soon (within 30 minutes), send immediately
       if (notificationTime <= new Date(now.getTime() + 30 * 60 * 1000)) {
-        await sendImmediateNotifications(event, notificationSetting.hoursBeforeEvent, churchId)
+        // Attach a public token for emails when available covering the event date
+        let publicToken: string | null = null
+        try {
+          const link = await prisma.publicScheduleLink.findFirst({
+            where: {
+              churchId,
+              startDate: { lte: event.startTime },
+              endDate: { gte: event.startTime }
+            }
+          })
+          publicToken = link?.token || null
+        } catch (_) {
+          publicToken = null
+        }
+        const eventWithToken = publicToken ? { ...event, publicToken } : event
+        await sendImmediateNotifications(eventWithToken, notificationSetting.hoursBeforeEvent, churchId)
       }
       // Otherwise, the cron job will handle it later
     }

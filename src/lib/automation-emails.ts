@@ -98,11 +98,14 @@ export async function sendMusicianEventNotification(
     // Generate document links if any
     let documentsSection = ''
     if (eventDocuments.length > 0) {
+      const publicToken: string | null = (event as any)?.publicToken || null
       const documentLinks = eventDocuments.map((doc: any) => {
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://churchmusicpro.com'
-        const viewUrl = event.id 
-          ? `${baseUrl}/api/events/${event.id}/documents/${doc.id}/view`
-          : `${baseUrl}/sample-music-files` // Test link for sample documents
+        const viewUrl = publicToken && event.id
+          ? `${baseUrl}/api/public-schedule/${publicToken}/events/${event.id}/documents/${doc.id}/view`
+          : event.id
+            ? `${baseUrl}/api/events/${event.id}/documents/${doc.id}/view`
+            : `${baseUrl}/sample-music-files`
         return `• <a href="${viewUrl}" style="color: #660033; text-decoration: none;">${doc.originalFilename}</a>`
       }).join('\n')
 
