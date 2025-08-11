@@ -2098,9 +2098,32 @@ export default function EventPlannerPage() {
   }
 
   const handleRemoveMusician = async (assignmentId: string) => {
+    // Optimistic update: clear the assigned musician immediately
+    const eventId = findEventIdByAssignmentId(assignmentId)
+    if (!eventId || !data) return
+
+    let previousData = data
+    setData(prev => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        events: prev.events.map(ev =>
+          ev.id === eventId
+            ? {
+                ...ev,
+                assignments: ev.assignments.map(a =>
+                  a.id === assignmentId
+                    ? { ...a, user: undefined, status: 'PENDING' }
+                    : a
+                )
+              }
+            : ev
+        )
+      }
+    })
+
     try {
       console.log('🗑️ Removing musician assignment:', { assignmentId })
-      
       const response = await fetch(`/api/assignments/${assignmentId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -2108,27 +2131,19 @@ export default function EventPlannerPage() {
       })
 
       if (response.ok) {
-        const result = await response.json()
-        console.log('✅ Musician removed successfully:', result)
         showToast('success', 'Musician removed successfully!')
-        
-        // Update local state with position preservation
-        const eventId = findEventIdByAssignmentId(assignmentId)
-        if (eventId) {
-          setLastEditedEventId(eventId)
-          setPreserveLoadedCount(data?.events.length || 20)
-          await fetchPlannerData(false, true)
-        } else {
-          await fetchPlannerData()
-        }
       } else {
         const errorData = await response.json()
         console.error('❌ Failed to remove musician:', errorData)
         showToast('error', errorData.error || 'Failed to remove musician')
+        // Revert on error
+        setData(previousData)
       }
     } catch (error) {
       console.error('❌ Error removing musician:', error)
       showToast('error', 'Error removing musician. Please try again.')
+      // Revert on error
+      setData(previousData)
     }
   }
 
@@ -3655,6 +3670,15 @@ export default function EventPlannerPage() {
                         
                         {event.assignments?.map((assignment) => (
                           <div key={assignment.id} className="border-b border-gray-100 p-3 min-h-[60px] bg-white group hover:bg-gray-50 transition-colors relative">
+                            <button
+                              onClick={() => handleRemoveMusician(assignment.id)}
+                              aria-label="Remove musician"
+                              disabled={!assignment.user}
+                              className="absolute top-2 right-2 p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-600 disabled:opacity-50"
+                              title={assignment.user ? 'Remove musician' : 'No musician assigned'}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
                             <div className="text-xs text-gray-500 mb-1 font-normal">{assignment.roleName}</div>
                             
                             {assignment.user ? (
