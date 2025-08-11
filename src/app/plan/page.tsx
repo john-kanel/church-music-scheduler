@@ -1531,6 +1531,18 @@ export default function EventPlannerPage() {
   const handleAddHymnNumber = async (hymn: any, eventId: string, event: React.MouseEvent) => {
     event.stopPropagation()
     
+    // Check if title is blank or empty
+    if (!hymn.title || hymn.title.trim() === '') {
+      showToast('error', 'Please add a song title first before looking up hymn numbers')
+      return
+    }
+    
+    // Check if hymn number already exists in title
+    if (hymn.title.match(/#\d+/)) {
+      showToast('error', 'This song already has a hymn number')
+      return
+    }
+    
     try {
       // Fetch available hymnals for this church
       const response = await fetch('/api/hymnals')
@@ -1548,7 +1560,7 @@ export default function EventPlannerPage() {
       }
       
       // Search for hymn number by title
-      const searchResponse = await fetch(`/api/hymnals/search?title=${encodeURIComponent(hymn.title)}`)
+      const searchResponse = await fetch(`/api/hymnals/search?title=${encodeURIComponent(hymn.title.trim())}`)
       if (!searchResponse.ok) {
         showToast('error', 'Failed to search for hymn number')
         return
@@ -1564,7 +1576,7 @@ export default function EventPlannerPage() {
       // If single result, add it automatically
       if (searchResults.length === 1) {
         const hymnNumber = searchResults[0].number
-        const newTitle = `${hymn.title} #${hymnNumber}`
+        const newTitle = `${hymn.title.trim()} #${hymnNumber}`
         
         // Update the hymn title with the number
         await updateHymnTitle(hymn.id, newTitle, eventId)
