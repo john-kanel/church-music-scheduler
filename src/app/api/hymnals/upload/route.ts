@@ -101,59 +101,63 @@ export async function POST(request: NextRequest) {
     // Run the assistant
     const run = await openai.beta.threads.runs.create(thread.id, {
       assistant_id: process.env.OPENAI_ASSISTANT_ID!,
-      instructions: `You are a Hymnal Index Parser specialized in reading hymnal indexes and table of contents from PDF files. You must extract ALL hymn entries, even if there are hundreds.
+      instructions: `You are a Hymnal Index Parser with EXTREME ATTENTION TO DETAIL. Your job is to extract EVERY SINGLE hymn from a hymnal index PDF.
 
-TASK: Extract ALL hymn titles and their corresponding numbers from a hymnal index PDF. This is likely a multi-page index with hundreds of entries.
+CRITICAL MISSION: Extract ALL hymn titles and numbers. A typical hymnal has 200-800+ hymns. If you extract fewer than 100, you are FAILING.
 
-EXTRACTION RULES:
-1. SCAN ALL PAGES thoroughly - hymnals typically have 200-800+ hymns
-2. Look for these common patterns:
-   - "123. Title of Hymn"
-   - "Title of Hymn .................. 123"
-   - "Title of Hymn - 123"
-   - "Title of Hymn    123" (tabs/spaces)
-   - Multi-column layouts (2-3 columns per page)
-3. Handle sectioned indexes (alphabetical, topical, seasonal)
-4. Extract from ALL sections: Christmas, Easter, General, etc.
-5. Numbers can be: 123, A-1, 123a, 123b, etc.
-6. Handle multi-line titles that wrap to next line
-7. Ignore headers like "HYMNS", "INDEX", page numbers, alphabet dividers
-8. Clean titles: remove extra dots, dashes, formatting
+SYSTEMATIC EXTRACTION PROCESS:
+1. EXAMINE EVERY PAGE INDIVIDUALLY - Don't skip any pages
+2. SCAN EACH COLUMN SEPARATELY - Many indexes have 2-3 columns
+3. READ EVERY LINE - Some titles span multiple lines
+4. CHECK ALL SECTIONS - Alphabetical, seasonal, topical groupings
+5. LOOK FOR CONTINUATION PAGES - "Continued on next page"
+6. VERIFY NUMBERING SEQUENCES - Numbers should go 1, 2, 3... or A-1, A-2...
 
-COMMON HYMNAL FORMATS:
-- Two-column layout with numbers on left, titles on right
-- Three-column layout: Number | Title | Page
-- Alphabetical sections with subsections
-- Seasonal/topical groupings
-- Mix of numbered and lettered hymns
+PATTERN RECOGNITION (be flexible with formatting):
+✓ "123. Amazing Grace"
+✓ "Amazing Grace .................. 123"
+✓ "Amazing Grace - 123" 
+✓ "Amazing Grace    123"
+✓ "123    Amazing Grace"
+✓ "Amazing Grace (Traditional) ........ 123"
+✓ Multi-line titles:
+   "Come, Thou Long Expected
+   Jesus .......................... 64"
 
-CRITICAL: If you only find 8-10 hymns in a hymnal index, you're missing content. 
-Most hymnals have 200-800+ hymns. Re-examine the document more thoroughly.
+COMMON VARIATIONS TO HANDLE:
+- Different punctuation: periods, dashes, spaces, dots
+- Parenthetical info: (Traditional), (New), (Alternate)
+- Multi-word numbering: A-1, 123a, 123b, W&P 45
+- Page references mixed with hymn numbers
+- Section headers: "ADVENT", "CHRISTMAS", "EASTER"
+- Cross-references: "See also #456"
 
-RESPONSE FORMAT:
-Return ONLY a JSON object with this exact structure:
+TITLE CLEANING RULES:
+- Remove leading/trailing dots and dashes
+- Keep apostrophes and internal punctuation
+- Preserve capitalization properly
+- Remove formatting artifacts
+- Keep parenthetical tune names: "Amazing Grace (New Britain)"
+
+QUALITY CONTROL:
+- If you find < 100 hymns, STOP and re-examine the entire document
+- Check for missing sections (A-C, D-F, etc.)
+- Verify number sequences make sense
+- Look for "Index continues..." or similar text
+
+RESPONSE FORMAT (JSON ONLY):
 {
   "hymns": [
     {
       "title": "A Mighty Fortress Is Our God",
       "number": "1",
       "pageNumber": null
-    },
-    {
-      "title": "Amazing Grace",
-      "number": "378", 
-      "pageNumber": null
     }
   ],
-  "notes": "Found X hymns across Y pages. Format: [describe the layout you found]"
+  "notes": "Extracted X hymns from Y pages. Layout: [detailed description]. Sections found: [list]. Potential issues: [any concerns]"
 }
 
-IMPORTANT: 
-- Extract EVERY hymn entry you can find
-- If you find fewer than 50 hymns, re-examine the document
-- Clean up titles (remove dots, extra spaces)
-- Skip entries missing either title or number
-- Be thorough - check every page and column`
+FINAL CHECK: Before responding, count your extracted hymns. If fewer than 100, re-examine the document for missing content.`
     })
 
     // Poll for completion

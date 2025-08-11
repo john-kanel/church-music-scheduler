@@ -22,38 +22,53 @@ export async function GET(request: NextRequest) {
       .replace(/^(the|a|an)\s+/i, '') // Remove articles
       .replace(/\s*#\d+\s*$/, '') // Remove existing hymn numbers
       .replace(/\s*\(.*?\)\s*$/, '') // Remove parenthetical info
+      .replace(/['"''""]/g, '') // Remove quotes
+      .replace(/[,;:]/g, '') // Remove punctuation
+      .replace(/\s+/g, ' ') // Normalize spaces
       .trim()
       .toLowerCase()
 
-    // Search for hymns in this church's hymnals
+    // Create multiple search variations
+    const searchVariations = [
+      cleanTitle, // Original cleaned
+      cleanTitle.replace(/^(the|a|an)\s+/i, ''), // Without articles
+      cleanTitle.replace(/\s+(and|&)\s+/g, ' '), // Normalize "and"
+      cleanTitle.replace(/\s+/g, ''), // No spaces (for matching issues)
+      cleanTitle.split(' ').slice(0, 3).join(' '), // First 3 words
+      cleanTitle.split(' ').slice(0, 2).join(' '), // First 2 words
+    ].filter(v => v.length > 2) // Only meaningful variations
+
+    console.log('🔍 Searching for hymn with variations:', searchVariations)
+
+    // Search for hymns in this church's hymnals with comprehensive matching
     const hymns = await prisma.hymnalHymn.findMany({
       where: {
         hymnal: {
           churchId: session.user.churchId
         },
-        OR: [
+        OR: searchVariations.flatMap(variation => [
           // Exact match
           {
             title: {
-              equals: cleanTitle,
+              equals: variation,
               mode: 'insensitive'
             }
           },
-          // Partial match
+          // Contains match
           {
             title: {
-              contains: cleanTitle,
+              contains: variation,
               mode: 'insensitive'
             }
           },
-          // Match without articles
+          // Reverse contains (variation contains part of stored title)
           {
             title: {
-              contains: cleanTitle.replace(/^(the|a|an)\s+/i, ''),
+              contains: variation.split(' ')[0], // First word
               mode: 'insensitive'
             }
           }
-        ]
+        ])
       },
       include: {
         hymnal: {
@@ -70,27 +85,60 @@ export async function GET(request: NextRequest) {
       ]
     })
 
-    // Score the results to prioritize better matches
+    console.log(`🎵 Found ${hymns.length} potential matches from database`)
+
+    // Enhanced scoring algorithm
     const scoredResults = hymns.map(hymn => {
       const hymnTitle = hymn.title.toLowerCase()
+        .replace(/['"''""]/g, '') // Remove quotes
+        .replace(/[,;:]/g, '') // Remove punctuation
+        .replace(/\s+/g, ' ') // Normalize spaces
+        .trim()
+      
       let score = 0
       
-      // Exact match gets highest score
+      // Perfect exact match
       if (hymnTitle === cleanTitle) {
         score = 100
       }
-      // Starts with gets high score
+      // Perfect match without articles
+      else if (hymnTitle === cleanTitle.replace(/^(the|a|an)\s+/i, '')) {
+        score = 95
+      }
+      // Exact match of first few words
       else if (hymnTitle.startsWith(cleanTitle)) {
-        score = 80
+        score = 85
       }
-      // Contains gets medium score
+      // Title contains all the search words
+      else if (cleanTitle.split(' ').every(word => hymnTitle.includes(word))) {
+        score = 75
+      }
+      // Title contains most search words
+      else if (cleanTitle.split(' ').filter(word => hymnTitle.includes(word)).length >= Math.ceil(cleanTitle.split(' ').length * 0.7)) {
+        score = 65
+      }
+      // General contains
       else if (hymnTitle.includes(cleanTitle)) {
-        score = 60
+        score = 55
       }
-      // Partial word match gets lower score
+      // Contains first word
+      else if (hymnTitle.includes(cleanTitle.split(' ')[0])) {
+        score = 45
+      }
+      // Fuzzy match for similar length
+      else if (Math.abs(hymnTitle.length - cleanTitle.length) <= 5) {
+        score = 35
+      }
       else {
-        score = 30
+        score = 20
       }
+
+      // Bonus points for exact word count match
+      if (hymnTitle.split(' ').length === cleanTitle.split(' ').length) {
+        score += 10
+      }
+
+      console.log(`🎼 "${hymn.title}" scored ${score} (searched: "${cleanTitle}")`)
 
       return {
         ...hymn,
