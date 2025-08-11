@@ -508,12 +508,12 @@ export async function PUT(
       console.log('✅ Cancellation check completed')
     }
 
-    // Schedule automated notifications for updated event (skip for past events)
+    // Queue an end-of-day digest for updates (skip for past events)
     if (!isPastEvent) {
-      console.log('📧 Scheduling notifications...')
-      const { scheduleEventNotifications } = await import('@/lib/automation-helpers')
-      await scheduleEventNotifications(params.id, session.user.churchId)
-      console.log('✅ Notifications scheduled')
+      console.log('📧 Queueing daily digest for updates...')
+      const { queueEventUpdateDigest } = await import('@/lib/event-update-digest')
+      await queueEventUpdateDigest(params.id, session.user.churchId)
+      console.log('✅ Digest queued')
     }
 
     console.log('🎉 Event update completed successfully:', { 

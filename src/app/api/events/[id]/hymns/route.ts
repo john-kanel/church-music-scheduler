@@ -151,44 +151,19 @@ export async function PUT(
       hymnsChanged = JSON.stringify(originalData) !== JSON.stringify(newData)
     }
 
-    // Send notifications only for manual changes (not auto-populate) to future events
+    // Queue an end-of-day digest for manual changes (not auto-populate) to future events
     if (!isAutoPopulate && hymnsChanged && createdHymns.length > 0) {
       try {
-        // Get event details
-        const event = await prisma.event.findUnique({
-          where: { id: eventId },
-          include: {
-            eventType: true,
-            assignments: {
-              include: {
-                user: true
-              }
-            }
-          }
-        })
-
-        if (event) {
-          // Get all assigned musicians
-          const assignedMusicians = event.assignments
-            .filter((assignment: any) => assignment.user)
-            .map((assignment: any) => assignment.user!)
-
-          // Check if this is a past event
-          const eventDateTime = new Date(event.startTime)
-          const now = new Date()
-          const isPastEvent = eventDateTime < now
-
-          // Only send notifications for future events with assigned musicians
-          if (!isPastEvent && assignedMusicians.length > 0) {
-            // Send notifications in background to avoid blocking the response
-            setImmediate(() => {
-              sendMusicChangeNotifications(event, assignedMusicians, createdHymns)
-                .catch(error => console.error('Failed to send notification emails:', error))
-            })
-          }
+        // Only queue for future events
+        const eventDateTime = new Date((await prisma.event.findUnique({ where: { id: eventId }, select: { startTime: true } }))!.startTime)
+        const now = new Date()
+        const isPastEvent = eventDateTime < now
+        if (!isPastEvent) {
+          const { queueEventUpdateDigest } = await import('@/lib/event-update-digest')
+          await queueEventUpdateDigest(eventId, session.user.churchId)
         }
       } catch (error) {
-        console.error('Error preparing notifications:', error)
+        console.error('Error queuing daily digest:', error)
         // Don't fail the request if notification preparation fails
       }
     }
