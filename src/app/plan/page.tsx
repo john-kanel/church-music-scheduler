@@ -187,10 +187,12 @@ function SortableHymnItem({
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
+                    console.log('🎵 Hash button clicked for hymn:', hymn.title)
                     handleAddHymnNumber(hymn, eventId, e)
                   }}
                   className="p-1 text-gray-400 hover:text-blue-600 transition-all"
                   title="Add hymn number from hymnal"
+                  style={{ backgroundColor: 'red', opacity: 1 }} // Temporary: make it always visible and red for debugging
                 >
                   <Hash className="h-3 w-3" />
                 </button>
