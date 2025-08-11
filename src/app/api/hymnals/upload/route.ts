@@ -101,44 +101,59 @@ export async function POST(request: NextRequest) {
     // Run the assistant
     const run = await openai.beta.threads.runs.create(thread.id, {
       assistant_id: process.env.OPENAI_ASSISTANT_ID!,
-      instructions: `You are a Hymnal Index Parser specialized in reading hymnal indexes and table of contents from PDF files.
+      instructions: `You are a Hymnal Index Parser specialized in reading hymnal indexes and table of contents from PDF files. You must extract ALL hymn entries, even if there are hundreds.
 
-TASK: Extract hymn titles and their corresponding numbers from a hymnal index PDF.
+TASK: Extract ALL hymn titles and their corresponding numbers from a hymnal index PDF. This is likely a multi-page index with hundreds of entries.
 
 EXTRACTION RULES:
-1. Look for patterns like "Title - Number", "Number. Title", "Title ........ Number"
-2. Extract both the hymn title and its number
-3. Handle various formatting styles (dots, dashes, tabs, etc.)
-4. Be very careful to match each title with its correct number
-5. Ignore page headers, footers, and section titles
-6. Handle multi-line titles carefully
-7. Numbers can be numeric (123) or alphanumeric (A-1, 123a)
-8. Clean up titles (remove extra spaces, formatting artifacts)
+1. SCAN ALL PAGES thoroughly - hymnals typically have 200-800+ hymns
+2. Look for these common patterns:
+   - "123. Title of Hymn"
+   - "Title of Hymn .................. 123"
+   - "Title of Hymn - 123"
+   - "Title of Hymn    123" (tabs/spaces)
+   - Multi-column layouts (2-3 columns per page)
+3. Handle sectioned indexes (alphabetical, topical, seasonal)
+4. Extract from ALL sections: Christmas, Easter, General, etc.
+5. Numbers can be: 123, A-1, 123a, 123b, etc.
+6. Handle multi-line titles that wrap to next line
+7. Ignore headers like "HYMNS", "INDEX", page numbers, alphabet dividers
+8. Clean titles: remove extra dots, dashes, formatting
+
+COMMON HYMNAL FORMATS:
+- Two-column layout with numbers on left, titles on right
+- Three-column layout: Number | Title | Page
+- Alphabetical sections with subsections
+- Seasonal/topical groupings
+- Mix of numbered and lettered hymns
+
+CRITICAL: If you only find 8-10 hymns in a hymnal index, you're missing content. 
+Most hymnals have 200-800+ hymns. Re-examine the document more thoroughly.
 
 RESPONSE FORMAT:
 Return ONLY a JSON object with this exact structure:
 {
   "hymns": [
     {
-      "title": "Amazing Grace",
-      "number": "378",
+      "title": "A Mighty Fortress Is Our God",
+      "number": "1",
       "pageNumber": null
     },
     {
-      "title": "How Great Thou Art", 
-      "number": "A-45",
-      "pageNumber": 125
+      "title": "Amazing Grace",
+      "number": "378", 
+      "pageNumber": null
     }
   ],
-  "notes": "Found X hymns in the index. Format appears to be [description of format found]"
+  "notes": "Found X hymns across Y pages. Format: [describe the layout you found]"
 }
 
 IMPORTANT: 
-- Include pageNumber if you can identify the page where the hymn appears
-- Clean up titles to remove formatting artifacts
-- Ensure each hymn has both title and number
-- If you find a title without a number or vice versa, skip that entry
-- Be precise with number extraction - don't guess or approximate`
+- Extract EVERY hymn entry you can find
+- If you find fewer than 50 hymns, re-examine the document
+- Clean up titles (remove dots, extra spaces)
+- Skip entries missing either title or number
+- Be thorough - check every page and column`
     })
 
     // Poll for completion
@@ -249,11 +264,19 @@ IMPORTANT:
     const successfulHymns = hymns.filter(h => h !== null)
 
     console.log(`Successfully processed hymnal: ${successfulHymns.length} hymns created`)
+    console.log('AI extraction notes:', parsedResponse.notes)
+    
+    // Log warning if extraction count seems low
+    if (successfulHymns.length < 50) {
+      console.warn('⚠️  Low hymn count detected! Only extracted', successfulHymns.length, 'hymns. This may indicate a parsing issue.')
+      console.warn('AI notes:', parsedResponse.notes)
+    }
 
     return NextResponse.json({
       hymnal,
       hymnCount: successfulHymns.length,
-      notes: parsedResponse.notes
+      notes: parsedResponse.notes,
+      extractedSample: successfulHymns.slice(0, 5).map(h => ({ title: h?.title, number: h?.number })) // First 5 for debugging
     })
 
   } catch (error) {
