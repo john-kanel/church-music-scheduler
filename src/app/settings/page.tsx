@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { 
   ArrowLeft, User, MapPin, Bell, Lock, CreditCard, Save, Edit3, Zap, Users,
   FileText, ExternalLink, Upload, X, Trash2, Plus, GripVertical, Clock,
-  Mail, Calendar, Settings as SettingsIcon, Globe, UserPlus
+  Mail, Calendar, Settings as SettingsIcon, Globe, UserPlus, Book
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -60,6 +60,20 @@ interface AutomationSettings {
   pastorWeeklyReportDay: number
   pastorDailyDigestEnabled: boolean
   pastorDailyDigestTime: string
+}
+
+interface Hymnal {
+  id: string
+  name: string
+  description?: string
+  createdAt: string
+  uploader: {
+    firstName: string
+    lastName: string
+  }
+  _count: {
+    hymns: number
+  }
 }
 
 export default function SettingsPage() {
@@ -119,6 +133,17 @@ export default function SettingsPage() {
   })
   const [loadingAutomation, setLoadingAutomation] = useState(false)
 
+  // Hymnal Management
+  const [hymnals, setHymnals] = useState<Hymnal[]>([])
+  const [loadingHymnals, setLoadingHymnals] = useState(false)
+  const [showUploadHymnalModal, setShowUploadHymnalModal] = useState(false)
+  const [hymnalUploadData, setHymnalUploadData] = useState({
+    name: '',
+    description: '',
+    file: null as File | null
+  })
+  const [uploadingHymnal, setUploadingHymnal] = useState(false)
+
   // Pastor Invitations Log
   const [pastorInvitations, setPastorInvitations] = useState<any[]>([])
   const [existingPastors, setExistingPastors] = useState<any[]>([])
@@ -147,6 +172,7 @@ export default function SettingsPage() {
       fetchServiceParts()
       fetchAutomationSettings()
       fetchPastorInvitations()
+      fetchHymnals()
     }
     if (session?.user?.role === 'MUSICIAN') {
       fetchAvailability()
@@ -389,6 +415,7 @@ export default function SettingsPage() {
     ...(session?.user?.role === 'DIRECTOR' || session?.user?.role === 'ASSOCIATE_DIRECTOR' 
       ? [
           { id: 'documents-links', name: 'Documents & Links', icon: FileText },
+          { id: 'hymnals', name: 'Hymnals', icon: Book },
           { id: 'automations', name: 'Automations', icon: Zap },
           { id: 'service-parts', name: 'Service Parts', icon: Users }
         ] 
@@ -527,6 +554,81 @@ export default function SettingsPage() {
       }
     } catch (error) {
       console.error('Error deleting link:', error)
+    }
+  }
+
+  // Hymnal Management Functions
+  const fetchHymnals = async () => {
+    try {
+      setLoadingHymnals(true)
+      const response = await fetch('/api/hymnals')
+      if (response.ok) {
+        const data = await response.json()
+        setHymnals(data)
+      }
+    } catch (error) {
+      console.error('Error fetching hymnals:', error)
+    } finally {
+      setLoadingHymnals(false)
+    }
+  }
+
+  const uploadHymnal = async () => {
+    if (!hymnalUploadData.name || !hymnalUploadData.file) {
+      alert('Please fill in hymnal name and select a PDF file')
+      return
+    }
+
+    try {
+      setUploadingHymnal(true)
+      const formData = new FormData()
+      formData.append('pdf', hymnalUploadData.file)
+      formData.append('hymnalName', hymnalUploadData.name)
+      if (hymnalUploadData.description) {
+        formData.append('description', hymnalUploadData.description)
+      }
+
+      const response = await fetch('/api/hymnals/upload', {
+        method: 'POST',
+        body: formData
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        setSuccess(`Hymnal "${hymnalUploadData.name}" uploaded successfully with ${result.hymnCount} hymns!`)
+        setShowUploadHymnalModal(false)
+        setHymnalUploadData({ name: '', description: '', file: null })
+        await fetchHymnals()
+      } else {
+        const error = await response.json()
+        alert(error.error || 'Failed to upload hymnal')
+      }
+    } catch (error) {
+      console.error('Error uploading hymnal:', error)
+      alert('Failed to upload hymnal')
+    } finally {
+      setUploadingHymnal(false)
+    }
+  }
+
+  const removeHymnal = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this hymnal? This will remove all its hymn numbers.')) return
+
+    try {
+      const response = await fetch(`/api/hymnals/${id}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        setHymnals(hymnals.filter(h => h.id !== id))
+        setSuccess('Hymnal deleted successfully!')
+      } else {
+        const error = await response.json()
+        alert(error.error || 'Failed to delete hymnal')
+      }
+    } catch (error) {
+      console.error('Error deleting hymnal:', error)
+      alert('Failed to delete hymnal')
     }
   }
 
@@ -1525,6 +1627,81 @@ export default function SettingsPage() {
               </div>
             )}
 
+            {/* Hymnals Tab */}
+            {activeTab === 'hymnals' && (
+              <div className="bg-white rounded-xl shadow-sm border p-6">
+                <div className="mb-6">
+                  <h2 className="text-xl font-bold text-gray-900 flex items-center">
+                    <Book className="h-5 w-5 mr-2 text-blue-600" />
+                    Hymnal Management
+                  </h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Upload hymnal indexes to automatically add hymn numbers to your service plans. The system will scan your hymnal index PDFs to extract hymn titles and numbers.
+                  </p>
+                </div>
+
+                <div className="space-y-6">
+                  {/* Upload New Hymnal Button */}
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-lg font-semibold text-gray-900">Your Hymnals</h3>
+                    <button
+                      onClick={() => setShowUploadHymnalModal(true)}
+                      className="flex items-center px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload Hymnal Index
+                    </button>
+                  </div>
+
+                  {/* Hymnals List */}
+                  {loadingHymnals ? (
+                    <div className="text-center py-8">
+                      <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                      <p className="text-gray-500 mt-2">Loading hymnals...</p>
+                    </div>
+                  ) : hymnals.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <Book className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                      <p className="text-lg font-medium">No hymnals uploaded yet</p>
+                      <p className="text-sm">Upload a hymnal index PDF to get started with automatic hymn numbering.</p>
+                    </div>
+                  ) : (
+                    <div className="grid gap-4">
+                      {hymnals.map((hymnal) => (
+                        <div key={hymnal.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-3">
+                              <Book className="h-5 w-5 text-blue-600" />
+                              <div>
+                                <h4 className="font-medium text-gray-900">{hymnal.name}</h4>
+                                {hymnal.description && (
+                                  <p className="text-sm text-gray-500">{hymnal.description}</p>
+                                )}
+                                <div className="flex items-center space-x-4 mt-1 text-xs text-gray-500">
+                                  <span>{hymnal._count.hymns} hymns</span>
+                                  <span>•</span>
+                                  <span>Uploaded by {hymnal.uploader.firstName} {hymnal.uploader.lastName}</span>
+                                  <span>•</span>
+                                  <span>{new Date(hymnal.createdAt).toLocaleDateString()}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => removeHymnal(hymnal.id)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete hymnal"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Service Parts Tab */}
             {activeTab === 'service-parts' && (
               <div className="bg-white rounded-xl shadow-sm border p-6">
@@ -2222,6 +2399,88 @@ export default function SettingsPage() {
             </form>
 
 
+          </div>
+        </div>
+      )}
+
+      {/* Upload Hymnal Modal */}
+      {showUploadHymnalModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50">
+          <div className="relative p-8 border w-96 mx-auto rounded-lg shadow-lg bg-white">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Upload Hymnal Index</h3>
+              <button 
+                onClick={() => {
+                  setShowUploadHymnalModal(false)
+                  setHymnalUploadData({ name: '', description: '', file: null })
+                }} 
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Hymnal Name
+                </label>
+                <input
+                  type="text"
+                  value={hymnalUploadData.name}
+                  onChange={(e) => setHymnalUploadData(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="e.g., The Methodist Hymnal, Lutheran Book of Worship"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Description (Optional)
+                </label>
+                <textarea
+                  value={hymnalUploadData.description}
+                  onChange={(e) => setHymnalUploadData(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Additional notes about this hymnal..."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Hymnal Index PDF
+                </label>
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    setHymnalUploadData(prev => ({ ...prev, file: file || null }))
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Upload a PDF of your hymnal's index or table of contents. The system will extract hymn titles and numbers.
+                </p>
+              </div>
+              <div className="flex space-x-3 pt-4">
+                <button
+                  onClick={() => {
+                    setShowUploadHymnalModal(false)
+                    setHymnalUploadData({ name: '', description: '', file: null })
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  disabled={uploadingHymnal}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={uploadHymnal}
+                  disabled={!hymnalUploadData.name || !hymnalUploadData.file || uploadingHymnal}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 transition-colors"
+                >
+                  {uploadingHymnal ? 'Processing...' : 'Upload & Process'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

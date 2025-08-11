@@ -7,7 +7,7 @@ import {
   Plus, Calendar, Clock, MapPin, User, Music, Users, Trash2, 
   Edit, Save, X, Search, Filter, ChevronDown, Download, 
   FileText, ArrowLeft, Settings, Eye, EyeOff, Palette, Share2,
-  ChevronLeft, ChevronRight, Check, ExternalLink, ChevronUp, Zap, Copy
+  ChevronLeft, ChevronRight, Check, ExternalLink, ChevronUp, Zap, Copy, Hash
 } from 'lucide-react'
 import Link from 'next/link'
 import { CreateEventModal } from '@/components/events/create-event-modal'
@@ -65,6 +65,7 @@ interface SortableHymnItemProps {
   handleEditServicePart: (servicePart: ServicePart, eventId: string, e: React.MouseEvent) => void
   handleEditIndividualHymn: (hymn: any, eventId: string, e: React.MouseEvent) => void
   handleDeleteIndividualHymn: (hymnId: string, eventId: string) => void
+  handleAddHymnNumber: (hymn: any, eventId: string, e: React.MouseEvent) => void
   handleSongHistoryClick: (hymnId: string, songTitle: string, currentEventId: string, e: React.MouseEvent) => void
   showingSongHistory: string | null
   songHistoryData: {[hymnId: string]: any[]}
@@ -84,6 +85,7 @@ function SortableHymnItem({
   handleEditServicePart,
   handleEditIndividualHymn,
   handleDeleteIndividualHymn,
+  handleAddHymnNumber,
   handleSongHistoryClick,
   showingSongHistory,
   songHistoryData,
@@ -181,6 +183,16 @@ function SortableHymnItem({
                   title="Edit song notes"
                 >
                   <Edit className="h-3 w-3" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleAddHymnNumber(hymn, eventId, e)
+                  }}
+                  className="p-1 text-gray-400 hover:text-blue-600 transition-all"
+                  title="Add hymn number from hymnal"
+                >
+                  <Hash className="h-3 w-3" />
                 </button>
                 <button
                   onClick={(e) => {
@@ -1514,6 +1526,58 @@ export default function EventPlannerPage() {
     setEditingEventId(eventId)
     setClickPosition({ x: event.clientX, y: event.clientY })
     setShowIndividualHymnEditModal(true)
+  }
+
+  const handleAddHymnNumber = async (hymn: any, eventId: string, event: React.MouseEvent) => {
+    event.stopPropagation()
+    
+    try {
+      // Fetch available hymnals for this church
+      const response = await fetch('/api/hymnals')
+      if (!response.ok) {
+        showToast('error', 'Failed to load hymnals')
+        return
+      }
+      
+      const hymnals = await response.json()
+      
+      if (!hymnals || hymnals.length === 0) {
+        // No hymnals uploaded yet - prompt user to upload
+        showToast('error', 'No hymnals found. Please upload a hymnal index first in Settings.')
+        return
+      }
+      
+      // Search for hymn number by title
+      const searchResponse = await fetch(`/api/hymnals/search?title=${encodeURIComponent(hymn.title)}`)
+      if (!searchResponse.ok) {
+        showToast('error', 'Failed to search for hymn number')
+        return
+      }
+      
+      const searchResults = await searchResponse.json()
+      
+      if (searchResults.length === 0) {
+        showToast('error', `No hymn number found for "${hymn.title}" in your hymnal`)
+        return
+      }
+      
+      // If single result, add it automatically
+      if (searchResults.length === 1) {
+        const hymnNumber = searchResults[0].number
+        const newTitle = `${hymn.title} #${hymnNumber}`
+        
+        // Update the hymn title with the number
+        await updateHymnTitle(hymn.id, newTitle, eventId)
+        showToast('success', `Added hymn number #${hymnNumber} to "${hymn.title}"`)
+      } else {
+        // Multiple results - show selection modal (future enhancement)
+        showToast('success', `Found ${searchResults.length} possible matches for "${hymn.title}". Manual selection coming soon.`)
+      }
+      
+    } catch (error) {
+      console.error('Error adding hymn number:', error)
+      showToast('error', 'Failed to add hymn number')
+    }
   }
 
   const handleSaveServicePart = async (servicePartId: string, name: string, notes: string) => {
@@ -3466,6 +3530,7 @@ export default function EventPlannerPage() {
                                   handleEditServicePart={handleEditServicePart}
                                   handleEditIndividualHymn={handleEditIndividualHymn}
                                   handleDeleteIndividualHymn={handleDeleteIndividualHymn}
+                                  handleAddHymnNumber={handleAddHymnNumber}
                                   handleSongHistoryClick={handleSongHistoryClick}
                                   showingSongHistory={showingSongHistory}
                                   songHistoryData={songHistoryData}
@@ -4100,6 +4165,7 @@ export default function EventPlannerPage() {
                                       handleEditServicePart={handleEditServicePart}
                                       handleEditIndividualHymn={handleEditIndividualHymn}
                                       handleDeleteIndividualHymn={handleDeleteIndividualHymn}
+                                      handleAddHymnNumber={handleAddHymnNumber}
                                       handleSongHistoryClick={handleSongHistoryClick}
                                       showingSongHistory={showingSongHistory}
                                       songHistoryData={songHistoryData}

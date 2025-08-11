@@ -36,6 +36,7 @@ model Church {
   eventTypes            EventType[]
   events                Event[]
   groups                Group[]
+  hymnals               Hymnal[]
   invitations           Invitation[]
   musicianInviteLink    MusicianInviteLink?
   notificationLogs      NotificationLog[]
@@ -83,6 +84,7 @@ model User {
   uploadedDocuments         EventDocument[]
   groupMemberships          GroupMember[]
   uploadedFiles             MusicFile[]
+  uploadedHymnals           Hymnal[]
   unavailabilities          MusicianUnavailability[]
   pastorSettings            PastorSettings?
   googleCalendarIntegration GoogleCalendarIntegration?
@@ -595,6 +597,37 @@ model ChurchLink {
   creator     User     @relation(fields: [createdBy], references: [id])
 
   @@map("church_links")
+}
+
+model Hymnal {
+  id          String     @id @default(cuid())
+  name        String
+  description String?
+  churchId    String
+  uploadedBy  String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  church      Church     @relation(fields: [churchId], references: [id], onDelete: Cascade)
+  uploader    User       @relation(fields: [uploadedBy], references: [id])
+  hymns       HymnalHymn[]
+
+  @@map("hymnals")
+}
+
+model HymnalHymn {
+  id        String   @id @default(cuid())
+  hymnalId  String
+  title     String
+  number    String?  // Could be number or alpha-numeric (e.g., "659", "A-1")
+  pageNumber Int?
+  composer  String?
+  createdAt DateTime @default(now())
+  hymnal    Hymnal   @relation(fields: [hymnalId], references: [id], onDelete: Cascade)
+
+  @@unique([hymnalId, number]) // Prevent duplicate numbers in same hymnal
+  @@index([hymnalId, title])
+  @@index([hymnalId, number])
+  @@map("hymnal_hymns")
 }
 
 model MusicianUnavailability {
