@@ -2097,11 +2097,11 @@ export default function EventPlannerPage() {
     }
   }
 
-  const handleRemoveMusician = async (assignmentId: string) => {
-    // Optimistic update: clear the assigned musician immediately
+  const handleDeleteAssignment = async (assignmentId: string) => {
     const eventId = findEventIdByAssignmentId(assignmentId)
     if (!eventId || !data) return
 
+    // Optimistic update: remove the assignment from local state immediately
     let previousData = data
     setData(prev => {
       if (!prev) return prev
@@ -2111,11 +2111,7 @@ export default function EventPlannerPage() {
           ev.id === eventId
             ? {
                 ...ev,
-                assignments: ev.assignments.map(a =>
-                  a.id === assignmentId
-                    ? { ...a, user: undefined, status: 'PENDING' }
-                    : a
-                )
+                assignments: ev.assignments.filter(a => a.id !== assignmentId)
               }
             : ev
         )
@@ -2123,26 +2119,30 @@ export default function EventPlannerPage() {
     })
 
     try {
-      console.log('🗑️ Removing musician assignment:', { assignmentId })
+      console.log('🗑️ Deleting assignment:', { assignmentId })
       const response = await fetch(`/api/assignments/${assignmentId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ musicianId: null })
+        method: 'DELETE'
       })
 
       if (response.ok) {
-        showToast('success', 'Musician removed successfully!')
+        showToast('success', 'Role deleted successfully!')
+        
+        // Update local state with position preservation
+        setLastEditedEventId(eventId)
+        setPreserveLoadedCount(data?.events.length || 10)
       } else {
         const errorData = await response.json()
-        console.error('❌ Failed to remove musician:', errorData)
-        showToast('error', errorData.error || 'Failed to remove musician')
-        // Revert on error
+        console.error('❌ Failed to delete assignment:', errorData)
+        showToast('error', errorData.error || 'Failed to delete role')
+        
+        // Revert optimistic update on error
         setData(previousData)
       }
     } catch (error) {
-      console.error('❌ Error removing musician:', error)
-      showToast('error', 'Error removing musician. Please try again.')
-      // Revert on error
+      console.error('❌ Error deleting assignment:', error)
+      showToast('error', 'Error deleting role. Please try again.')
+      
+      // Revert optimistic update on error
       setData(previousData)
     }
   }
@@ -3671,11 +3671,10 @@ export default function EventPlannerPage() {
                         {event.assignments?.map((assignment) => (
                           <div key={assignment.id} className="border-b border-gray-100 p-3 min-h-[60px] bg-white group hover:bg-gray-50 transition-colors relative">
                             <button
-                              onClick={() => handleRemoveMusician(assignment.id)}
-                              aria-label="Remove musician"
-                              disabled={!assignment.user}
-                              className="absolute top-2 right-2 p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-600 disabled:opacity-50"
-                              title={assignment.user ? 'Remove musician' : 'No musician assigned'}
+                              onClick={() => handleDeleteAssignment(assignment.id)}
+                              aria-label="Delete role"
+                              className="absolute top-2 right-2 p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-600"
+                              title="Delete role"
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
@@ -3713,10 +3712,10 @@ export default function EventPlannerPage() {
                                     </div>
                                     <div className="max-h-48 overflow-y-auto">
                                       <button
-                                        onClick={() => handleRemoveMusician(assignment.id)}
+                                        onClick={() => handleDeleteAssignment(assignment.id)}
                                         className="w-full text-left px-3 py-2 hover:bg-red-50 text-red-600 border-b border-gray-100 text-sm"
                                       >
-                                        Remove assignment
+                                        Delete role
                                       </button>
                                       {getFilteredMusicians(assignment.id).map((musician) => (
                                         <button
@@ -4339,10 +4338,10 @@ export default function EventPlannerPage() {
                                         </div>
                                         <div className="max-h-48 overflow-y-auto">
                                           <button
-                                            onClick={() => handleRemoveMusician(assignment.id)}
+                                            onClick={() => handleDeleteAssignment(assignment.id)}
                                             className="w-full text-left px-3 py-2 hover:bg-red-50 text-red-600 border-b border-gray-100 text-sm"
                                           >
-                                            Remove assignment
+                                            Delete role
                                           </button>
                                           {getFilteredMusicians(assignment.id).map((musician) => (
                                             <button
