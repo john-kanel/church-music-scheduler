@@ -81,6 +81,14 @@ export async function GET(
             { servicePart: { order: 'asc' } },
             { createdAt: 'asc' }
           ]
+        },
+        documents: {
+          select: {
+            id: true,
+            originalFilename: true,
+            uploadedAt: true
+          },
+          orderBy: { uploadedAt: 'asc' }
         }
       },
       orderBy: { startTime: 'asc' }
@@ -127,6 +135,11 @@ export async function GET(
           title: hymn.title,
           notes: hymn.notes,
           servicePart: hymn.servicePart
+        })),
+        documents: event.documents.map(doc => ({
+          id: doc.id,
+          originalFilename: doc.originalFilename,
+          url: `/api/public-schedule/${token}/events/${event.id}/documents/${doc.id}/view`
         }))
       })),
       musicians,
