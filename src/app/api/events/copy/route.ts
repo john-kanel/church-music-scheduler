@@ -59,44 +59,69 @@ export async function POST(request: NextRequest) {
 
     // Copy service parts (hymns)
     if (parts.includes('serviceParts') && sourceEvent.hymns?.length > 0) {
-      // Get unique service part IDs from source hymns
-      const servicePartIds = sourceEvent.hymns
-        .filter(h => h.servicePartId)
-        .map(h => h.servicePartId)
-        .filter((id): id is string => id !== null)
-      const sourceServicePartIds = Array.from(new Set(servicePartIds))
+      // Determine source composition
+      const sourceServicePartIds = Array.from(new Set(
+        sourceEvent.hymns
+          .filter(h => h.servicePartId)
+          .map(h => h.servicePartId as string)
+      ))
+      const sourceHasStandalone = sourceEvent.hymns.some(h => !h.servicePartId)
 
-      // Remove any existing hymns in target event that have the same service part IDs
-      // This ensures no duplicates - preference given to the ones being copied
-      if (sourceServicePartIds.length > 0) {
+      // Determine target composition (what currently exists) so we ONLY replace existing parts
+      const targetHymns = await prisma.eventHymn.findMany({
+        where: { eventId: targetEventId },
+        select: { servicePartId: true }
+      })
+      const targetServicePartIds = new Set(
+        targetHymns
+          .filter(h => h.servicePartId)
+          .map(h => h.servicePartId as string)
+      )
+      const targetHasStandalone = targetHymns.some(h => !h.servicePartId)
+
+      // Only operate on INTERSECTION of parts to avoid adding new/unexpected parts
+      const intersectServicePartIds = sourceServicePartIds.filter(id => targetServicePartIds.has(id))
+
+      const deleteOrConditions: any[] = []
+      if (intersectServicePartIds.length > 0) {
+        deleteOrConditions.push({ servicePartId: { in: intersectServicePartIds } })
+      }
+      if (sourceHasStandalone && targetHasStandalone) {
+        deleteOrConditions.push({ servicePartId: null })
+      }
+
+      if (deleteOrConditions.length > 0) {
         await prisma.eventHymn.deleteMany({
           where: {
             eventId: targetEventId,
-            servicePartId: {
-              in: sourceServicePartIds
-            }
+            OR: deleteOrConditions
           }
         })
       }
 
-      // Now add the new hymns from source, preserving exact order
+      // Now add the new hymns from source, preserving exact order, but ONLY for allowed parts
       const baseTime = new Date()
-      console.log(`📋 COPY: Copying ${sourceEvent.hymns.length} hymns from ${sourceEventId} to ${targetEventId}`)
-      
-      for (let i = 0; i < sourceEvent.hymns.length; i++) {
-        const hymn = sourceEvent.hymns[i]
-        const newCreatedAt = new Date(baseTime.getTime() + i * 1000)
-        
-        console.log(`📋 COPY: [${i}] "${hymn.title}" (${hymn.servicePartId}) -> createdAt: ${newCreatedAt.toISOString()}`)
-        
+      console.log(
+        `📋 COPY: Preparing to copy hymns from ${sourceEventId} to ${targetEventId}. ` +
+        `Allowed parts: ${intersectServicePartIds.length}, includeStandalone: ${sourceHasStandalone && targetHasStandalone}`
+      )
+
+      let createIndex = 0
+      for (const hymn of sourceEvent.hymns) {
+        const isStandalone = !hymn.servicePartId
+        const isAllowedServicePart = hymn.servicePartId ? intersectServicePartIds.includes(hymn.servicePartId) : false
+        const canCreate = (isStandalone && sourceHasStandalone && targetHasStandalone) || isAllowedServicePart
+        if (!canCreate) continue
+
+        const newCreatedAt = new Date(baseTime.getTime() + createIndex * 1000)
+        createIndex++
         try {
           await prisma.eventHymn.create({
             data: {
               eventId: targetEventId,
               title: hymn.title,
               notes: hymn.notes || null,
-              servicePartId: hymn.servicePartId,
-              // Use same second-based interval system as hymn creation API
+              servicePartId: hymn.servicePartId ?? null,
               createdAt: newCreatedAt
             }
           })
@@ -105,7 +130,7 @@ export async function POST(request: NextRequest) {
           console.error('Error copying hymn:', error)
         }
       }
-      
+
       console.log(`📋 COPY: Successfully copied ${copyResults.serviceParts} hymns`)
     }
 
