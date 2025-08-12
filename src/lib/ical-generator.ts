@@ -377,7 +377,8 @@ function foldLine(line: string): string {
       const bestBreak = Math.max(spaceIndex, commaIndex, semicolonIndex)
       if (bestBreak > chunkSize * 0.6) { // Only use if reasonably close to end
         chunkSize = bestBreak + 1
-        chunk = remaining.substring(0, chunkSize).trim()
+        // Preserve trailing space at the fold boundary to avoid concatenating words when unfolded
+        chunk = remaining.substring(0, chunkSize)
       }
     }
     
