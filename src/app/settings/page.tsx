@@ -415,7 +415,7 @@ export default function SettingsPage() {
     ...(session?.user?.role === 'DIRECTOR' || session?.user?.role === 'ASSOCIATE_DIRECTOR' 
       ? [
           { id: 'documents-links', name: 'Documents & Links', icon: FileText },
-          { id: 'hymnals', name: 'Hymnals', icon: Book },
+          // { id: 'hymnals', name: 'Hymnals', icon: Book }, // Temporarily hidden
           { id: 'automations', name: 'Automations', icon: Zap },
           { id: 'service-parts', name: 'Service Parts', icon: Users }
         ] 
@@ -1645,7 +1645,7 @@ export default function SettingsPage() {
               </div>
             )}
 
-            {/* Hymnals Tab */}
+            {/* Temporarily hidden - Hymnals Tab
             {activeTab === 'hymnals' && (
               <div className="bg-white rounded-xl shadow-sm border p-6">
                 <div className="mb-6">
@@ -1719,6 +1719,7 @@ export default function SettingsPage() {
                 </div>
               </div>
             )}
+            */}
 
             {/* Service Parts Tab */}
             {activeTab === 'service-parts' && (
@@ -2422,6 +2423,7 @@ export default function SettingsPage() {
       )}
 
       {/* Upload Hymnal Modal */}
+      {/* Temporarily hidden - Upload Hymnal Modal
       {showUploadHymnalModal && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50">
           <div className="relative p-8 border w-96 mx-auto rounded-lg shadow-lg bg-white">
@@ -2502,6 +2504,7 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
+      */}
 
 
     </div>

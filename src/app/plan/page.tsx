@@ -161,6 +161,7 @@ function SortableHymnItem({
                 >
                   <Edit className="h-3 w-3" />
                 </button>
+{/* Temporarily hidden - Hash button for adding hymn numbers
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
@@ -171,6 +172,7 @@ function SortableHymnItem({
                 >
                   <Hash className="h-3 w-3" />
                 </button>
+                */}
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
@@ -194,6 +196,7 @@ function SortableHymnItem({
                 >
                   <Edit className="h-3 w-3" />
                 </button>
+{/* Temporarily hidden - Hash button for adding hymn numbers
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
@@ -204,6 +207,7 @@ function SortableHymnItem({
                 >
                   <Hash className="h-3 w-3" />
                 </button>
+                */}
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
