@@ -245,6 +245,20 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       console.error('Error sending welcome email:', emailError)
     }
 
+    // Resolve selected group names for email display
+    let selectedGroupNames: string[] = []
+    if (groupIds.length > 0) {
+      try {
+        const groups = await prisma.group.findMany({
+          where: { id: { in: groupIds } },
+          select: { name: true }
+        })
+        selectedGroupNames = groups.map(g => g.name).filter(Boolean)
+      } catch (e) {
+        console.error('Error loading selected group names for email:', e)
+      }
+    }
+
     // Send notification email to directors/pastors
     try {
       const directors = inviteLink.church.users
@@ -269,7 +283,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                 <p><strong>Instruments:</strong> ${instruments.join(', ') || 'Not specified'}</p>
                 <p><strong>Skill Level:</strong> ${skillLevel}</p>
                 ${yearsExperience ? `<p><strong>Years Experience:</strong> ${yearsExperience}</p>` : ''}
-                ${groupIds.length > 0 ? `<p><strong>Groups Joined:</strong> ${groupIds.length} group(s)</p>` : ''}
+                ${groupIds.length > 0
+                  ? `<p><strong>Groups Joined:</strong> ${selectedGroupNames.length > 0 ? selectedGroupNames.join(', ') : `${groupIds.length} group(s)`}</p>`
+                  : ''}
               </div>
               
               <div style="text-align: center; margin: 30px 0;">
@@ -287,7 +303,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       } else if (directors.length > 0 && !resend) {
         console.log('Email simulation (no RESEND_API_KEY):', { 
           to: directors.map((d: any) => d.email), 
-          subject: `New Musician Joined: ${firstName} ${lastName}` 
+          subject: `New Musician Joined: ${firstName} ${lastName}`,
+          groups: selectedGroupNames
         })
       }
     } catch (emailError) {
