@@ -976,16 +976,16 @@ export default function EventPlannerPage() {
   }
 
   const updateHymnTitle = async (eventId: string, newTitle: string, servicePartId: string | null, hymnId?: string) => {
+    // Store original title for revert if needed (outside try-catch for scope)
+    let originalTitle = ''
+    if (hymnId) {
+      const event = data?.events.find(e => e.id === eventId)
+      const hymn = event?.hymns.find(h => h.id === hymnId)
+      originalTitle = hymn?.title || ''
+    }
+
     try {
       console.log('🎵 Saving hymn title:', { eventId, newTitle, servicePartId, hymnId })
-      
-      // Store original title for revert if needed
-      let originalTitle = ''
-      if (hymnId) {
-        const event = data?.events.find(e => e.id === eventId)
-        const hymn = event?.hymns.find(h => h.id === hymnId)
-        originalTitle = hymn?.title || ''
-      }
       
       // First update local state immediately for responsiveness
       let currentHymns: any[] = []
