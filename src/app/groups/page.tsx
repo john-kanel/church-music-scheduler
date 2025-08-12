@@ -259,7 +259,9 @@ function EditGroupModal({ isOpen, onClose, group, onGroupUpdated, onMessageGroup
   const [musicians, setMusicians] = useState<any[]>([])
   const [loadingMusicians, setLoadingMusicians] = useState(false)
   const [selectedMusicianId, setSelectedMusicianId] = useState('')
+  const [selectedLeaderId, setSelectedLeaderId] = useState('')
   const [currentMembers, setCurrentMembers] = useState<any[]>([])
+  const [currentLeaders, setCurrentLeaders] = useState<any[]>([])
 
   useEffect(() => {
     if (group) {
@@ -277,6 +279,19 @@ function EditGroupModal({ isOpen, onClose, group, onGroupUpdated, onMessageGroup
       setReadOnly(true)
     }
   }, [group, isOpen])
+
+  // When musicians or leaderIds change, derive currentLeaders list
+  useEffect(() => {
+    const leaderList = (formData.leaderIds || [])
+      .map(id => musicians.find(m => m.id === id))
+      .filter(Boolean)
+      .map((m: any) => ({
+        id: m.id,
+        name: `${m.firstName} ${m.lastName}`,
+        email: m.email
+      }))
+    setCurrentLeaders(leaderList as any[])
+  }, [musicians, formData.leaderIds])
 
   const fetchMusicians = async () => {
     setLoadingMusicians(true)
@@ -302,8 +317,18 @@ function EditGroupModal({ isOpen, onClose, group, onGroupUpdated, onMessageGroup
   }
 
   const handleLeaderChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selected = Array.from(e.target.selectedOptions).map(opt => opt.value)
-    setFormData(prev => ({ ...prev, leaderIds: selected }))
+    setSelectedLeaderId(e.target.value)
+  }
+
+  const handleAddLeader = () => {
+    if (!selectedLeaderId) return
+    if (formData.leaderIds.includes(selectedLeaderId)) return
+    setFormData(prev => ({ ...prev, leaderIds: [...prev.leaderIds, selectedLeaderId] }))
+    setSelectedLeaderId('')
+  }
+
+  const handleRemoveLeader = (leaderId: string) => {
+    setFormData(prev => ({ ...prev, leaderIds: prev.leaderIds.filter(id => id !== leaderId) }))
   }
 
   const handleAddMusician = async () => {
@@ -517,26 +542,72 @@ function EditGroupModal({ isOpen, onClose, group, onGroupUpdated, onMessageGroup
           </section>
 
           {/* Leaders Section */}
-          <section className="space-y-3">
-            <h3 className="text-lg font-semibold text-gray-900">Leaders</h3>
-            <div className="space-y-1">
-              <select
-                multiple
-                value={formData.leaderIds}
-                onChange={handleLeaderChange}
-                disabled={readOnly || loadingMusicians || membershipLoading}
-                className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 disabled:opacity-50 ${readOnly ? 'bg-gray-50' : ''}`}
-              >
-                {/* Match musician dropdown: only Active musicians */}
-                {musicians
-                  .filter(m => m.status === 'active')
-                  .map(m => (
-                    <option key={m.id} value={m.id}>
-                      {m.firstName} {m.lastName} ({m.email})
-                    </option>
+          <section className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Leaders ({currentLeaders.length})</h3>
+            {/* Add Leader (mimic musician add UX) */}
+            <div className="space-y-3">
+              <label className="block text-sm font-medium text-gray-700">Add Leader</label>
+              <div className="flex gap-3">
+                <select
+                  value={selectedLeaderId}
+                  onChange={handleLeaderChange}
+                  disabled={readOnly || loadingMusicians || membershipLoading}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 disabled:opacity-50"
+                >
+                  <option value="">{loadingMusicians ? 'Loading musicians...' : 'Select a leader to add'}</option>
+                  {musicians
+                    .filter(m => m.status === 'active' && !formData.leaderIds.includes(m.id))
+                    .map(m => (
+                      <option key={m.id} value={m.id}>
+                        {m.firstName} {m.lastName} ({m.email})
+                      </option>
+                    ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={handleAddLeader}
+                  disabled={readOnly || !selectedLeaderId || membershipLoading}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                >
+                  {membershipLoading ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  ) : (
+                    <UserPlus className="h-4 w-4 mr-2" />
+                  )}
+                  Add
+                </button>
+              </div>
+            </div>
+
+            {/* Current Leaders list */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">Current Leaders</label>
+              {currentLeaders.length === 0 ? (
+                <div className="text-center py-6 text-gray-500 border-2 border-dashed border-gray-200 rounded-lg">
+                  <Users className="h-6 w-6 mx-auto mb-2 text-gray-300" />
+                  <p>No leaders assigned yet</p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-3">
+                  {currentLeaders.map(leader => (
+                    <div key={leader.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div>
+                        <div className="font-medium text-gray-900">{leader.name}</div>
+                        <div className="text-sm text-gray-600">{leader.email}</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveLeader(leader.id)}
+                        disabled={readOnly || membershipLoading}
+                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                        title="Remove leader"
+                      >
+                        <UserMinus className="h-4 w-4" />
+                      </button>
+                    </div>
                   ))}
-              </select>
-              <p className="text-xs text-gray-500">Hold Ctrl/Command to select multiple.</p>
+                </div>
+              )}
             </div>
           </section>
 
