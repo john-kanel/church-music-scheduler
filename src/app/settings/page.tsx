@@ -1645,8 +1645,8 @@ export default function SettingsPage() {
               </div>
             )}
 
-            {/* Temporarily hidden - Hymnals Tab
-            {activeTab === 'hymnals' && (
+            {/* Temporarily hidden - Hymnals Tab */}
+            {false && activeTab === 'hymnals' && (
               <div className="bg-white rounded-xl shadow-sm border p-6">
                 <div className="mb-6">
                   <h2 className="text-xl font-bold text-gray-900 flex items-center">
@@ -1719,7 +1719,6 @@ export default function SettingsPage() {
                 </div>
               </div>
             )}
-            */}
 
             {/* Service Parts Tab */}
             {activeTab === 'service-parts' && (
@@ -2423,8 +2422,8 @@ export default function SettingsPage() {
       )}
 
       {/* Upload Hymnal Modal */}
-      {/* Temporarily hidden - Upload Hymnal Modal
-      {showUploadHymnalModal && (
+      {/* Temporarily hidden - Upload Hymnal Modal */}
+      {false && showUploadHymnalModal && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50">
           <div className="relative p-8 border w-96 mx-auto rounded-lg shadow-lg bg-white">
             <div className="flex justify-between items-center mb-4">
@@ -2504,7 +2503,6 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
-      */}
 
 
     </div>
