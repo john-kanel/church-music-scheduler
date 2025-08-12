@@ -216,6 +216,8 @@ model Group {
   description String?
   churchId    String
   createdAt   DateTime          @default(now())
+  // New: multiple leaders for a group
+  leaderIds   String[]          @default([])
   assignments EventAssignment[]
   members     GroupMember[]
   church      Church            @relation(fields: [churchId], references: [id], onDelete: Cascade)

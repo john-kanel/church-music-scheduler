@@ -145,7 +145,15 @@ export default function GroupsPage() {
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {groups.map((group: any) => (
-                  <div key={group.id} className="border border-gray-200 rounded-lg p-6 hover:border-success-300 hover:shadow-md transition-all relative group">
+                  <div
+                    key={group.id}
+                    className="border border-gray-200 rounded-lg p-6 hover:border-success-300 hover:shadow-md transition-all relative group cursor-pointer"
+                    onClick={() => {
+                      // Open read-only modal by reusing edit modal with a readOnly flag
+                      setEditingGroup(group)
+                      setShowEditModal(true)
+                    }}
+                  >
                     {/* Edit button - only show for directors/pastors */}
                     {canCreateGroups && (
                       <div className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -241,8 +249,10 @@ function EditGroupModal({ isOpen, onClose, group, onGroupUpdated, onMessageGroup
   const [membershipLoading, setMembershipLoading] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
-    description: ''
+    description: '',
+    leaderIds: [] as string[]
   })
+  const [readOnly, setReadOnly] = useState(true)
 
   // Musicians management state
   const [musicians, setMusicians] = useState<any[]>([])
@@ -254,7 +264,8 @@ function EditGroupModal({ isOpen, onClose, group, onGroupUpdated, onMessageGroup
     if (group) {
       setFormData({
         name: group.name || '',
-        description: group.description || ''
+        description: group.description || '',
+        leaderIds: Array.isArray(group.leaderIds) ? group.leaderIds : []
       })
       setCurrentMembers(group.members || [])
       
@@ -262,6 +273,7 @@ function EditGroupModal({ isOpen, onClose, group, onGroupUpdated, onMessageGroup
       if (isOpen) {
         fetchMusicians()
       }
+      setReadOnly(true)
     }
   }, [group, isOpen])
 
@@ -286,6 +298,11 @@ function EditGroupModal({ isOpen, onClose, group, onGroupUpdated, onMessageGroup
       ...prev,
       [name]: value
     }))
+  }
+
+  const handleLeaderChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selected = Array.from(e.target.selectedOptions).map(opt => opt.value)
+    setFormData(prev => ({ ...prev, leaderIds: selected }))
   }
 
   const handleAddMusician = async () => {
@@ -385,7 +402,8 @@ function EditGroupModal({ isOpen, onClose, group, onGroupUpdated, onMessageGroup
           groupId: group.id,
           updates: {
             name: formData.name,
-            description: formData.description
+            description: formData.description,
+            leaderIds: formData.leaderIds
           }
         })
       })
@@ -420,8 +438,11 @@ function EditGroupModal({ isOpen, onClose, group, onGroupUpdated, onMessageGroup
       <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b">
           <h2 className="text-2xl font-bold text-gray-900 flex items-center">
-            <Edit2 className="h-6 w-6 mr-2 text-blue-600" />
-            Edit Group
+            {readOnly ? 'Group Details' : (
+              <>
+                <Edit2 className="h-6 w-6 mr-2 text-blue-600" /> Edit Group
+              </>
+            )}
           </h2>
           <button
             onClick={onClose}
@@ -461,7 +482,8 @@ function EditGroupModal({ isOpen, onClose, group, onGroupUpdated, onMessageGroup
                 value={formData.name}
                 onChange={handleInputChange}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                disabled={readOnly}
+                className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 ${readOnly ? 'bg-gray-50' : ''}`}
                 placeholder="e.g., Adult Choir, Youth Band, Praise Team"
               />
             </div>
@@ -473,10 +495,31 @@ function EditGroupModal({ isOpen, onClose, group, onGroupUpdated, onMessageGroup
                 value={formData.description}
                 onChange={handleInputChange}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                disabled={readOnly}
+                className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 ${readOnly ? 'bg-gray-50' : ''}`}
                 placeholder="Brief description of the group's purpose, role, and any special requirements..."
               />
             </div>
+          </section>
+
+          {/* Leaders Section */}
+          <section className="space-y-3">
+            <h3 className="text-lg font-semibold text-gray-900">Leaders</h3>
+            <select
+              multiple
+              value={formData.leaderIds}
+              onChange={handleLeaderChange}
+              disabled={readOnly}
+              className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 ${readOnly ? 'bg-gray-50' : ''}`}
+            >
+              {musicians
+                .filter(m => (m.status === 'active'))
+                .map(m => (
+                  <option key={m.id} value={m.id}>
+                    {m.firstName} {m.lastName} ({m.email})
+                  </option>
+                ))}
+            </select>
           </section>
 
           {/* Musicians Management Section */}
@@ -559,7 +602,7 @@ function EditGroupModal({ isOpen, onClose, group, onGroupUpdated, onMessageGroup
             </div>
           </section>
 
-          <div className="flex justify-between items-center pt-6 border-t">
+            <div className="flex justify-between items-center pt-6 border-t">
             {/* Message Button - Bottom Left */}
             <button
               type="button"
@@ -574,6 +617,25 @@ function EditGroupModal({ isOpen, onClose, group, onGroupUpdated, onMessageGroup
 
             {/* Form Actions - Bottom Right */}
             <div className="flex space-x-4">
+              {/* PDF Button */}
+              <a
+                href={`/api/groups/${group.id}/assignments/pdf`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Download Upcoming Assignments (PDF)
+              </a>
+
+              {/* Toggle Edit */}
+              <button
+                type="button"
+                onClick={() => setReadOnly(r => !r)}
+                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                {readOnly ? 'Edit' : 'View'}
+              </button>
+
               <button
                 type="button"
                 onClick={onClose}

@@ -48,6 +48,7 @@ export async function GET(request: NextRequest) {
       name: group.name,
       description: group.description,
       createdAt: group.createdAt,
+      leaderIds: group.leaderIds || [],
       members: group.members.map((member: any) => ({
         id: member.user.id,
         name: `${member.user.firstName} ${member.user.lastName}`,
@@ -84,7 +85,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, description } = body
+    const { name, description, leaderIds } = body
 
     // Validation
     if (!name || name.trim().length === 0) {
@@ -114,7 +115,8 @@ export async function POST(request: NextRequest) {
       data: {
         name: name.trim(),
         description: description?.trim() || null,
-        churchId: session.user.churchId
+        churchId: session.user.churchId,
+        leaderIds: Array.isArray(leaderIds) ? leaderIds : []
       },
       include: {
         _count: {
@@ -185,12 +187,13 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Group not found' }, { status: 404 })
     }
 
-    // Update the group (only allow updating name and description)
+    // Update the group (allow updating name, description, leaders)
     const updatedGroup = await prisma.group.update({
       where: { id: groupId },
       data: {
         name: updates.name || existingGroup.name,
-        description: updates.description !== undefined ? updates.description : existingGroup.description
+        description: updates.description !== undefined ? updates.description : existingGroup.description,
+        leaderIds: Array.isArray(updates.leaderIds) ? updates.leaderIds : existingGroup.leaderIds
       },
       include: {
         members: {
@@ -228,6 +231,7 @@ export async function PUT(request: NextRequest) {
         role: member.user.role,
         joinedAt: member.joinedAt
       })),
+      leaderIds: updatedGroup.leaderIds || [],
       memberCount: updatedGroup._count.members,
       assignmentCount: updatedGroup._count.assignments
     }
