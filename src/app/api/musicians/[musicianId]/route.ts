@@ -112,8 +112,8 @@ export async function PUT(
       musician: {
         ...updatedMusician,
         instruments: updatedMusician.instruments || [],
-        status: status 
-          || (typeof (updatedMusician as any).isActive === 'boolean' && !(updatedMusician as any).isActive ? 'inactive' 
+        status: status || ((typeof (updatedMusician as any).isActive === 'boolean' && (updatedMusician as any).isActive === false)
+          ? 'inactive'
           : (updatedMusician.isVerified ? 'active' : 'pending'))
       }
     })

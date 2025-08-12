@@ -107,9 +107,10 @@ export async function GET(request: NextRequest) {
       // Find the invitation for this musician
       const invitation = invitations.find((inv: any) => inv.email === musician.email)
       
-      // Determine status based on invitation acceptance
+      // Determine status precedence: inactive > active > pending
+      const activeFlag = typeof musician.isActive === 'boolean' ? musician.isActive : true
       let status = 'pending'
-      if (!musician.isActive) {
+      if (!activeFlag) {
         status = 'inactive'
       } else if (invitation && invitation.status === 'ACCEPTED') {
         status = 'active'
@@ -128,6 +129,7 @@ export async function GET(request: NextRequest) {
         phone: musician.phone,
         pin: musician.pin,
          isVerified: musician.isVerified,
+         // expose active via derived status only; keep raw flag internal to API
         status: status,
         emailNotifications: musician.emailNotifications,
         smsNotifications: musician.smsNotifications,
