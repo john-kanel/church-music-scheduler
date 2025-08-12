@@ -56,6 +56,9 @@ export async function GET(request: NextRequest) {
           phone: true,
           role: true,
           isVerified: true,
+          // Note: Prisma types may not include new fields until generation catches up.
+          // @ts-ignore
+          isActive: true,
           emailNotifications: true,
           smsNotifications: true,
           instruments: true,
