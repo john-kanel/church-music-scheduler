@@ -243,6 +243,7 @@ function EditGroupModal({ isOpen, onClose, group, onGroupUpdated, onMessageGroup
   onGroupUpdated: () => void
   onMessageGroup: (group: any) => void
 }) {
+  const { data: session } = useSession()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -444,12 +445,25 @@ function EditGroupModal({ isOpen, onClose, group, onGroupUpdated, onMessageGroup
               </>
             )}
           </h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-700 hover:text-gray-900"
-          >
-            <X className="h-6 w-6" />
-          </button>
+          <div className="flex items-center gap-2">
+            {['DIRECTOR','ASSOCIATE_DIRECTOR','PASTOR'].includes(session?.user?.role || '') && readOnly && (
+              <button
+                type="button"
+                onClick={() => setReadOnly(false)}
+                title="Edit group"
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-700 hover:text-gray-900"
+              >
+                <Edit2 className="h-5 w-5" />
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-700 hover:text-gray-900"
+              title="Close"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
@@ -627,26 +641,10 @@ function EditGroupModal({ isOpen, onClose, group, onGroupUpdated, onMessageGroup
                 Download Upcoming Assignments (PDF)
               </a>
 
-              {/* Toggle Edit */}
-              <button
-                type="button"
-                onClick={() => setReadOnly(r => !r)}
-                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                {readOnly ? 'Edit' : 'View'}
-              </button>
-
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={loading}
-                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-              >
-                Cancel
-              </button>
+              {/* Bottom Edit/Cancel removed per request */}
               <button
                 type="submit"
-                disabled={loading || !!success}
+                disabled={loading || !!success || readOnly}
                 className="px-6 py-2 bg-success-600 text-white rounded-lg hover:bg-success-700 transition-colors disabled:opacity-50 flex items-center"
               >
                 {loading ? (
