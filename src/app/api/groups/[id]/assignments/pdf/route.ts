@@ -72,8 +72,8 @@ export async function GET(
     pdf.setFontSize(11)
     if (group.description) {
       const descLines = pdf.splitTextToSize(group.description, pageWidth - 40)
-      descLines.forEach(line => {
-        pdf.text(line as string, 20, y)
+      descLines.forEach((line: string) => {
+        pdf.text(line, 20, y)
         y += 5
       })
     }
