@@ -109,7 +109,9 @@ export async function GET(request: NextRequest) {
       
       // Determine status based on invitation acceptance
       let status = 'pending'
-      if (invitation && invitation.status === 'ACCEPTED') {
+      if (!musician.isActive) {
+        status = 'inactive'
+      } else if (invitation && invitation.status === 'ACCEPTED') {
         status = 'active'
       } else if (musician.isVerified) {
         // If no invitation found but user is verified, they're active
@@ -125,7 +127,7 @@ export async function GET(request: NextRequest) {
         email: musician.email,
         phone: musician.phone,
         pin: musician.pin,
-        isVerified: musician.isVerified,
+         isVerified: musician.isVerified,
         status: status,
         emailNotifications: musician.emailNotifications,
         smsNotifications: musician.smsNotifications,

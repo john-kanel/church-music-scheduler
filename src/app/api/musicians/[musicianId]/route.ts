@@ -73,8 +73,10 @@ export async function PUT(
         phone: phone ? phone.trim() : null,
         ...(Array.isArray(instruments) && { instruments }),
         ...(typeof isVerified === 'boolean' && { isVerified }),
+        // Map UI status to persistent fields
         ...(status && { 
-          isVerified: status === 'active'
+          isVerified: status === 'active',
+          isActive: status !== 'inactive'
         }),
         ...(typeof privateNotes === 'string' && { privateNotes: privateNotes.trim() })
       },
@@ -110,7 +112,9 @@ export async function PUT(
       musician: {
         ...updatedMusician,
         instruments: updatedMusician.instruments || [],
-        status: status || (updatedMusician.isVerified ? 'active' : 'pending')
+        status: status 
+          || (typeof (updatedMusician as any).isActive === 'boolean' && !(updatedMusician as any).isActive ? 'inactive' 
+          : (updatedMusician.isVerified ? 'active' : 'pending'))
       }
     })
 

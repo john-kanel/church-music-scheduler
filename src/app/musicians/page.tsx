@@ -8,13 +8,14 @@ import { InviteModal } from '../../components/musicians/invite-modal'
 import InvitationModal from '../../components/musicians/invitation-modal'
 import { COMMON_INSTRUMENTS } from '@/lib/constants'
 
-interface Musician {
+  interface Musician {
   id: string
   firstName: string
   lastName: string
   email: string
   phone?: string
   isVerified: boolean
+    isActive?: boolean
   createdAt: string
   status?: 'active' | 'pending' | 'inactive'
   instruments?: string[]
@@ -262,7 +263,7 @@ export default function MusiciansPage() {
       lastName: musician.lastName,
       email: musician.email,
       phone: musician.phone || '',
-      status: musician.status || (musician.isVerified ? 'active' : 'pending'),
+      status: musician.status || (!musician.isActive ? 'inactive' : (musician.isVerified ? 'active' : 'pending')),
       instruments: matchedInstruments,
       groups: musician.groups || [],
       privateNotes: musician.privateNotes || ''

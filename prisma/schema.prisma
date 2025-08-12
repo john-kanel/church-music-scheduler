@@ -59,6 +59,8 @@ model User {
   password                  String
   role                      UserRole                   @default(MUSICIAN)
   isVerified                Boolean                    @default(false)
+  // New: explicit active flag for musicians; independent of verification
+  isActive                  Boolean                    @default(true)
   emailNotifications        Boolean                    @default(true)
   smsNotifications          Boolean                    @default(false)
   createdAt                 DateTime                   @default(now())
