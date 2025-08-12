@@ -519,21 +519,25 @@ function EditGroupModal({ isOpen, onClose, group, onGroupUpdated, onMessageGroup
           {/* Leaders Section */}
           <section className="space-y-3">
             <h3 className="text-lg font-semibold text-gray-900">Leaders</h3>
-            <select
-              multiple
-              value={formData.leaderIds}
-              onChange={handleLeaderChange}
-              disabled={readOnly}
-              className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 ${readOnly ? 'bg-gray-50' : ''}`}
-            >
-              {musicians
-                .filter(m => (m.status === 'active'))
-                .map(m => (
-                  <option key={m.id} value={m.id}>
-                    {m.firstName} {m.lastName} ({m.email})
-                  </option>
-                ))}
-            </select>
+            <div className="space-y-1">
+              <select
+                multiple
+                value={formData.leaderIds}
+                onChange={handleLeaderChange}
+                disabled={readOnly || loadingMusicians || membershipLoading}
+                className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 disabled:opacity-50 ${readOnly ? 'bg-gray-50' : ''}`}
+              >
+                {/* Match musician dropdown: only Active musicians */}
+                {musicians
+                  .filter(m => m.status === 'active')
+                  .map(m => (
+                    <option key={m.id} value={m.id}>
+                      {m.firstName} {m.lastName} ({m.email})
+                    </option>
+                  ))}
+              </select>
+              <p className="text-xs text-gray-500">Hold Ctrl/Command to select multiple.</p>
+            </div>
           </section>
 
           {/* Musicians Management Section */}
@@ -550,7 +554,7 @@ function EditGroupModal({ isOpen, onClose, group, onGroupUpdated, onMessageGroup
                 <select
                   value={selectedMusicianId}
                   onChange={(e) => setSelectedMusicianId(e.target.value)}
-                  disabled={loadingMusicians || membershipLoading}
+                  disabled={readOnly || loadingMusicians || membershipLoading}
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 disabled:opacity-50"
                 >
                   <option value="">
@@ -565,7 +569,7 @@ function EditGroupModal({ isOpen, onClose, group, onGroupUpdated, onMessageGroup
                 <button
                   type="button"
                   onClick={handleAddMusician}
-                  disabled={!selectedMusicianId || membershipLoading}
+                  disabled={readOnly || !selectedMusicianId || membershipLoading}
                   className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                 >
                   {membershipLoading ? (
@@ -603,7 +607,7 @@ function EditGroupModal({ isOpen, onClose, group, onGroupUpdated, onMessageGroup
                       <button
                         type="button"
                         onClick={() => handleRemoveMusician(member.id)}
-                        disabled={membershipLoading}
+                        disabled={readOnly || membershipLoading}
                         className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
                         title="Remove from group"
                       >
@@ -638,7 +642,7 @@ function EditGroupModal({ isOpen, onClose, group, onGroupUpdated, onMessageGroup
                 rel="noopener noreferrer"
                 className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                Download Upcoming Assignments (PDF)
+                Download Assignments
               </a>
 
               {/* Bottom Edit/Cancel removed per request */}
@@ -657,12 +661,12 @@ function EditGroupModal({ isOpen, onClose, group, onGroupUpdated, onMessageGroup
                     <svg className="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
-                    Updated!
+                    Saved!
                   </>
                 ) : (
                   <>
                     <Edit2 className="h-4 w-4 mr-2" />
-                    Update Group
+                    Save
                   </>
                 )}
               </button>
