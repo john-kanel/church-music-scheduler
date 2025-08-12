@@ -80,11 +80,14 @@ export async function GET(request: NextRequest) {
           take: 5
         }),
         
-        // Total musicians count
+        // Total active musicians count (exclude inactive)
         prisma.user.count({
           where: {
             churchId,
-            role: 'MUSICIAN'
+            role: 'MUSICIAN',
+            // Only count musicians not marked inactive
+            // @ts-ignore - ensure new field is used for filtering
+            isActive: true
           }
         }),
         
