@@ -38,6 +38,15 @@ export async function GET(
       orderBy: { uploadedAt: 'asc' }
     })
 
+    // If exactly one document, redirect straight to file
+    if (documents.length === 1) {
+      const single = documents[0]
+      const presigned = await getPresignedUrl(single.filename, 3600)
+      if (presigned.success && presigned.url) {
+        return NextResponse.redirect(presigned.url)
+      }
+    }
+
     // Build HTML with presigned links
     let listHtml = ''
     if (documents.length === 0) {
@@ -65,7 +74,7 @@ export async function GET(
 </head>
 <body>
   <h1 style="margin:0 0 12px 0; font-size:20px">Event Documents</h1>
-  <p style="margin:0 0 16px 0; color:#374151">Links expire in about an hour for security.</p>
+  <p style="margin:0 0 16px 0; color:#374151">Click a file to open.</p>
   ${listHtml}
 </body>
 </html>`
