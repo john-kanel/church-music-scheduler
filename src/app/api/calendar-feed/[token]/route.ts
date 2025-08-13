@@ -102,6 +102,13 @@ export async function GET(
             { servicePart: { order: 'asc' } },
             { createdAt: 'asc' }
           ]
+        },
+        documents: {
+          select: {
+            id: true,
+            originalFilename: true
+          },
+          orderBy: { uploadedAt: 'asc' }
         }
       },
       orderBy: {
@@ -124,7 +131,16 @@ export async function GET(
       hymnCount: events[0].hymns?.length || 0
     } : 'No events')
     
-    const icalContent = generateICalFeed(events, church.name, timezone)
+    // Precompute a documents URL for each event to include in ICS description if documents exist
+    const baseUrl = process.env.NEXTAUTH_URL || 'https://churchmusicpro.com'
+    const eventsWithDocLinks = events.map((ev: any) => ({
+      ...ev,
+      documentsUrl: ev.documents && ev.documents.length > 0
+        ? `${baseUrl}/api/events/${ev.id}/documents` // Endpoint can list or redirect to docs
+        : undefined
+    }))
+
+    const icalContent = generateICalFeed(eventsWithDocLinks as any, church.name, timezone)
     
     // Log the generated content for debugging
     console.log('🔧 CALENDAR DEBUG: Generated iCal content:')

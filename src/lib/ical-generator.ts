@@ -1,4 +1,4 @@
-import { Event, EventAssignment, EventHymn, User, Group, EventType, ServicePart } from '@prisma/client'
+import { Event, EventAssignment, EventHymn, User, Group, EventType, ServicePart, EventDocument } from '@prisma/client'
 
 // Extended types for the data we need
 type EventWithDetails = Event & {
@@ -10,6 +10,10 @@ type EventWithDetails = Event & {
   hymns: (EventHymn & {
     servicePart: ServicePart | null
   })[]
+  // Optional: included by callers (subscription feed) to allow document link in ICS
+  documents?: Pick<EventDocument, 'id' | 'originalFilename'>[]
+  // Optional: a precomputed URL that lists or redirects to event documents for this feed context
+  documentsUrl?: string
 }
 
 interface ICalEvent {
@@ -243,6 +247,14 @@ function buildEventDescription(event: EventWithDetails): string {
 
   // Add event type
   lines.push(`Event Type: ${event.eventType.name}`)
+
+  // If this event has documents and a documentsUrl, add a link line at the bottom
+  const docsCount = (event as any).documents?.length || 0
+  const docsUrl: string | undefined = (event as any).documentsUrl
+  if (docsCount > 0 && docsUrl) {
+    lines.push('')
+    lines.push(`Documents: ${docsUrl}`)
+  }
   
   return lines.join('\n')
 }
