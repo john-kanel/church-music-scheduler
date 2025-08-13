@@ -10,6 +10,10 @@ interface PublicLink {
   startDate: string
   endDate: string
   createdAt: string
+  name?: string | null
+  filterType?: 'ALL' | 'GROUPS' | 'EVENT_TYPES'
+  groupIds?: string[]
+  eventTypeIds?: string[]
 }
 
 interface GeneratePublicLinkModalProps {
@@ -20,6 +24,12 @@ interface GeneratePublicLinkModalProps {
 export function GeneratePublicLinkModal({ isOpen, onClose }: GeneratePublicLinkModalProps) {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [name, setName] = useState('')
+  const [filterType, setFilterType] = useState<'ALL' | 'GROUPS' | 'EVENT_TYPES'>('ALL')
+  const [availableGroups, setAvailableGroups] = useState<Array<{ id: string; name: string }>>([])
+  const [availableEventTypes, setAvailableEventTypes] = useState<Array<{ id: string; name: string }>>([])
+  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([])
+  const [selectedEventTypeIds, setSelectedEventTypeIds] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [generatedLink, setGeneratedLink] = useState<PublicLink | null>(null)
   const [existingLinks, setExistingLinks] = useState<PublicLink[]>([])
@@ -30,6 +40,16 @@ export function GeneratePublicLinkModal({ isOpen, onClose }: GeneratePublicLinkM
   useEffect(() => {
     if (isOpen) {
       loadExistingLinks()
+      // Load filters sources
+      Promise.all([
+        fetch('/api/groups').then(r => r.ok ? r.json() : Promise.resolve({ groups: [] })),
+        fetch('/api/event-types').then(r => r.ok ? r.json() : Promise.resolve([]))
+      ]).then(([groupsRes, eventTypesRes]) => {
+        const groups = (groupsRes.groups || []).map((g: any) => ({ id: g.id, name: g.name }))
+        const eventTypes = (eventTypesRes || []).map((et: any) => ({ id: et.id, name: et.name }))
+        setAvailableGroups(groups)
+        setAvailableEventTypes(eventTypes)
+      }).catch(() => {})
     }
   }, [isOpen])
 
@@ -54,7 +74,14 @@ export function GeneratePublicLinkModal({ isOpen, onClose }: GeneratePublicLinkM
       const response = await fetch('/api/public-schedule-links', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ startDate, endDate })
+        body: JSON.stringify({
+          startDate,
+          endDate,
+          name: name.trim() || undefined,
+          filterType,
+          groupIds: filterType === 'GROUPS' ? selectedGroupIds : [],
+          eventTypeIds: filterType === 'EVENT_TYPES' ? selectedEventTypeIds : []
+        })
       })
 
       if (response.ok) {
@@ -62,6 +89,10 @@ export function GeneratePublicLinkModal({ isOpen, onClose }: GeneratePublicLinkM
         setGeneratedLink(data.link)
         setStartDate('')
         setEndDate('')
+        setName('')
+        setFilterType('ALL')
+        setSelectedGroupIds([])
+        setSelectedEventTypeIds([])
         // Refresh existing links
         await loadExistingLinks()
       } else {
@@ -118,6 +149,10 @@ export function GeneratePublicLinkModal({ isOpen, onClose }: GeneratePublicLinkM
     setGeneratedLink(null)
     setStartDate('')
     setEndDate('')
+    setName('')
+    setFilterType('ALL')
+    setSelectedGroupIds([])
+    setSelectedEventTypeIds([])
     setShowExistingLinks(false)
     onClose()
   }
@@ -187,6 +222,18 @@ export function GeneratePublicLinkModal({ isOpen, onClose }: GeneratePublicLinkM
         {/* Generate New Link Form */}
         <form onSubmit={handleGenerate} className="space-y-4 mb-6">
           <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Link name (optional)</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g., Choir only – Advent"
+              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              maxLength={80}
+            />
+            <p className="text-xs text-gray-500 mt-1">Helps you find this link later.</p>
+          </div>
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               <Calendar className="w-4 h-4 inline mr-1" />
               Schedule Time Period
@@ -220,9 +267,73 @@ export function GeneratePublicLinkModal({ isOpen, onClose }: GeneratePublicLinkM
             </p>
           </div>
 
+          {/* Filters */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Filter events</label>
+            <div className="grid grid-cols-1 gap-3">
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value as any)}
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="ALL">All events</option>
+                <option value="GROUPS">Only events involving selected groups</option>
+                <option value="EVENT_TYPES">Only selected event types</option>
+              </select>
+
+              {filterType === 'GROUPS' && (
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Select groups</label>
+                  <div className="max-h-40 overflow-y-auto border border-gray-200 rounded">
+                    {availableGroups.map(g => (
+                      <label key={g.id} className="flex items-center gap-2 p-2 border-b last:border-b-0">
+                        <input
+                          type="checkbox"
+                          checked={selectedGroupIds.includes(g.id)}
+                          onChange={(e) => {
+                            setSelectedGroupIds(prev => e.target.checked ? [...prev, g.id] : prev.filter(id => id !== g.id))
+                          }}
+                        />
+                        <span className="text-sm">{g.name}</span>
+                      </label>
+                    ))}
+                    {availableGroups.length === 0 && (
+                      <div className="p-2 text-xs text-gray-500">No groups found.</div>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Only events with assignments for these groups will show.</p>
+                </div>
+              )}
+
+              {filterType === 'EVENT_TYPES' && (
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Select event types</label>
+                  <div className="max-h-40 overflow-y-auto border border-gray-200 rounded">
+                    {availableEventTypes.map(et => (
+                      <label key={et.id} className="flex items-center gap-2 p-2 border-b last:border-b-0">
+                        <input
+                          type="checkbox"
+                          checked={selectedEventTypeIds.includes(et.id)}
+                          onChange={(e) => {
+                            setSelectedEventTypeIds(prev => e.target.checked ? [...prev, et.id] : prev.filter(id => id !== et.id))
+                          }}
+                        />
+                        <span className="text-sm">{et.name}</span>
+                      </label>
+                    ))}
+                    {availableEventTypes.length === 0 && (
+                      <div className="p-2 text-xs text-gray-500">No event types found.</div>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Works with recurring event types and one-off types.</p>
+                </div>
+              )}
+            </div>
+          </div>
+
           <button
             type="submit"
-            disabled={!startDate || !endDate || isLoading}
+            disabled={!startDate || !endDate || isLoading || (filterType === 'GROUPS' && selectedGroupIds.length === 0) || (filterType === 'EVENT_TYPES' && selectedEventTypeIds.length === 0)}
             className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {isLoading ? 'Generating...' : 'Generate Public Link'}
@@ -248,7 +359,7 @@ export function GeneratePublicLinkModal({ isOpen, onClose }: GeneratePublicLinkM
                   <div key={link.id} className="p-3 border border-gray-200 rounded-lg">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium text-gray-700">
-                        {new Date(link.startDate).toLocaleDateString()} - {new Date(link.endDate).toLocaleDateString()}
+                        {link.name ? `${link.name} • ` : ''}{new Date(link.startDate).toLocaleDateString()} - {new Date(link.endDate).toLocaleDateString()}
                       </span>
                       <div className="flex items-center gap-1">
                         <button
@@ -280,6 +391,9 @@ export function GeneratePublicLinkModal({ isOpen, onClose }: GeneratePublicLinkM
                         </button>
                       </div>
                     </div>
+                    <p className="text-xs text-gray-500">
+                      Filter: {(link.filterType || 'ALL').replace('_', ' ').toLowerCase()}
+                    </p>
                     <p className="text-xs text-gray-500">
                       Created {new Date(link.createdAt).toLocaleDateString()}
                     </p>

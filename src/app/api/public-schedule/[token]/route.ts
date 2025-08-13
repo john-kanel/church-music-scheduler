@@ -29,19 +29,47 @@ export async function GET(
     // Links should stay active forever as per user requirements
     // No expiration check needed
 
-    // Fetch events within the date range, excluding tentative events
-    const events = await prisma.event.findMany({
-      where: {
-        churchId: publicLink.churchId,
-        startTime: {
-          gte: publicLink.startDate,
-          lte: publicLink.endDate
-        },
-        // Exclude tentative events as specified in requirements
-        NOT: {
-          status: 'TENTATIVE'
-        }
+    // Build event query using link filters, excluding tentative events
+    const baseWhere: any = {
+      churchId: publicLink.churchId,
+      startTime: {
+        gte: publicLink.startDate,
+        lte: publicLink.endDate
       },
+      // Exclude tentative events as specified in requirements
+      NOT: {
+        status: 'TENTATIVE'
+      }
+    }
+
+    if ((publicLink as any).filterType === 'GROUPS') {
+      const gids: string[] = ((publicLink as any).groupIds || []) as any
+      if (gids.length > 0) {
+        baseWhere.assignments = {
+          some: {
+            groupId: {
+              in: gids
+            }
+          }
+        }
+      } else {
+        // Ensure no events when no groups selected
+        baseWhere.id = 'no-events'
+      }
+    } else if ((publicLink as any).filterType === 'EVENT_TYPES') {
+      const eids: string[] = ((publicLink as any).eventTypeIds || []) as any
+      if (eids.length > 0) {
+        baseWhere.eventTypeId = {
+          in: eids
+        }
+      } else {
+        baseWhere.id = 'no-events'
+      }
+    }
+
+    // Fetch events within the date range using filters
+    const events = await prisma.event.findMany({
+      where: baseWhere,
       include: {
         eventType: {
           select: {
@@ -146,6 +174,12 @@ export async function GET(
       timeRange: {
         startDate: publicLink.startDate.toISOString(),
         endDate: publicLink.endDate.toISOString()
+      },
+      name: (publicLink as any).name || null,
+      filter: {
+        filterType: (publicLink as any).filterType || 'ALL',
+        groupIds: (publicLink as any).groupIds || [],
+        eventTypeIds: (publicLink as any).eventTypeIds || []
       }
     }
 

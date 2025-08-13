@@ -12,6 +12,12 @@ interface PublicScheduleData {
     startDate: string
     endDate: string
   }
+  name?: string | null
+  filter?: {
+    filterType: 'ALL' | 'GROUPS' | 'EVENT_TYPES'
+    groupIds: string[]
+    eventTypeIds: string[]
+  }
   events: Array<{
     id: string
     name: string
@@ -236,7 +242,7 @@ export default function PublicSchedulePage({ params }: { params: Promise<{ token
       <div className="bg-white shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-6">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            🎵 {data.church.name} - Music Ministry Schedule
+            🎵 {data.church.name} - Music Ministry Schedule{data.name ? ` (${data.name})` : ''}
           </h1>
           <p className="text-gray-600">
             {new Date(data.timeRange.startDate).toLocaleDateString()} - {new Date(data.timeRange.endDate).toLocaleDateString()}

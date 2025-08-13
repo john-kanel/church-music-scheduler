@@ -26,14 +26,21 @@ export async function GET(request: NextRequest) {
     const baseUrl = process.env.NEXTAUTH_URL || 'https://churchmusicpro.com'
     
     // Add the full URL to each link
-    const linksWithUrls = links.map(link => ({
-      id: link.id,
-      token: link.token,
-      url: `${baseUrl}/public-schedule/${link.token}`,
-      startDate: link.startDate,
-      endDate: link.endDate,
-      createdAt: link.createdAt
-    }))
+    const linksWithUrls = (links as any[]).map((link) => {
+      const l = link as any
+      return {
+        id: l.id,
+        token: l.token,
+        url: `${baseUrl}/public-schedule/${l.token}`,
+        startDate: l.startDate,
+        endDate: l.endDate,
+        createdAt: l.createdAt,
+        name: l.name || null,
+        filterType: l.filterType || 'ALL',
+        groupIds: l.groupIds || [],
+        eventTypeIds: l.eventTypeIds || []
+      }
+    })
 
     return NextResponse.json({ links: linksWithUrls })
   } catch (error) {
@@ -56,7 +63,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
-    const { startDate, endDate } = await request.json()
+    const { startDate, endDate, name, filterType = 'ALL', groupIds = [], eventTypeIds = [] } = await request.json()
 
     if (!startDate || !endDate) {
       return NextResponse.json({ error: 'Start date and end date are required' }, { status: 400 })
@@ -69,13 +76,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'End date must be after start date' }, { status: 400 })
     }
 
+    // Validate filters
+    const validFilterTypes = ['ALL', 'GROUPS', 'EVENT_TYPES']
+    if (!validFilterTypes.includes(filterType)) {
+      return NextResponse.json({ error: 'Invalid filter type' }, { status: 400 })
+    }
+
+    if (filterType === 'GROUPS' && (!Array.isArray(groupIds) || groupIds.length === 0)) {
+      return NextResponse.json({ error: 'At least one group must be selected' }, { status: 400 })
+    }
+
+    if (filterType === 'EVENT_TYPES' && (!Array.isArray(eventTypeIds) || eventTypeIds.length === 0)) {
+      return NextResponse.json({ error: 'At least one event type must be selected' }, { status: 400 })
+    }
+
+    const sanitizedName = typeof name === 'string' && name.trim().length > 0 ? name.trim() : null
+    const sanitizedGroupIds: string[] = Array.isArray(groupIds) ? groupIds.filter((id: any) => typeof id === 'string' && id.trim().length > 0) : []
+    const sanitizedEventTypeIds: string[] = Array.isArray(eventTypeIds) ? eventTypeIds.filter((id: any) => typeof id === 'string' && id.trim().length > 0) : []
+
     // Create the public schedule link
     const publicLink = await prisma.publicScheduleLink.create({
       data: {
         churchId: session.user.churchId,
         startDate: start,
-        endDate: end
-      }
+        endDate: end,
+        name: sanitizedName,
+        filterType: filterType as any,
+        groupIds: filterType === 'GROUPS' ? sanitizedGroupIds : [],
+        eventTypeIds: filterType === 'EVENT_TYPES' ? sanitizedEventTypeIds : []
+      } as any
     })
 
     const baseUrl = process.env.NEXTAUTH_URL || 'https://churchmusicpro.com'
@@ -89,7 +118,11 @@ export async function POST(request: NextRequest) {
         url: fullUrl,
         startDate: publicLink.startDate,
         endDate: publicLink.endDate,
-        createdAt: publicLink.createdAt
+        createdAt: publicLink.createdAt,
+        name: (publicLink as any).name,
+        filterType: (publicLink as any).filterType,
+        groupIds: (publicLink as any).groupIds,
+        eventTypeIds: (publicLink as any).eventTypeIds
       }
     }, { status: 201 })
 
