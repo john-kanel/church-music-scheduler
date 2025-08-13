@@ -27,7 +27,7 @@ export function GeneratePublicLinkModal({ isOpen, onClose }: GeneratePublicLinkM
   const [name, setName] = useState('')
   const [filterType, setFilterType] = useState<'ALL' | 'GROUPS' | 'EVENT_TYPES'>('ALL')
   const [availableGroups, setAvailableGroups] = useState<Array<{ id: string; name: string }>>([])
-  const [availableEventTypes, setAvailableEventTypes] = useState<Array<{ id: string; name: string }>>([])
+  const [availableEventTypes, setAvailableEventTypes] = useState<Array<{ id: string; name: string; color: string }>>([])
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([])
   const [selectedEventTypeIds, setSelectedEventTypeIds] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -46,7 +46,7 @@ export function GeneratePublicLinkModal({ isOpen, onClose }: GeneratePublicLinkM
         fetch('/api/event-types').then(r => r.ok ? r.json() : Promise.resolve([]))
       ]).then(([groupsRes, eventTypesRes]) => {
         const groups = (groupsRes.groups || []).map((g: any) => ({ id: g.id, name: g.name }))
-        const eventTypes = (eventTypesRes || []).map((et: any) => ({ id: et.id, name: et.name }))
+        const eventTypes = (eventTypesRes || []).map((et: any) => ({ id: et.id, name: et.name, color: et.color }))
         setAvailableGroups(groups)
         setAvailableEventTypes(eventTypes)
       }).catch(() => {})
@@ -310,7 +310,7 @@ export function GeneratePublicLinkModal({ isOpen, onClose }: GeneratePublicLinkM
                   <label className="block text-xs text-gray-500 mb-1">Select event types</label>
                   <div className="max-h-40 overflow-y-auto border border-gray-200 rounded">
                     {availableEventTypes.map(et => (
-                      <label key={et.id} className="flex items-center gap-2 p-2 border-b last:border-b-0">
+                      <label key={et.id} className="flex items-center justify-between p-2 border-b last:border-b-0 gap-2">
                         <input
                           type="checkbox"
                           checked={selectedEventTypeIds.includes(et.id)}
@@ -318,7 +318,13 @@ export function GeneratePublicLinkModal({ isOpen, onClose }: GeneratePublicLinkM
                             setSelectedEventTypeIds(prev => e.target.checked ? [...prev, et.id] : prev.filter(id => id !== et.id))
                           }}
                         />
-                        <span className="text-sm">{et.name}</span>
+                        <div className="flex items-center gap-2 flex-1">
+                          <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: et.color }} />
+                          <span className="text-sm">
+                            {et.name}
+                            <span className="text-xs text-gray-500 ml-2">{et.color}</span>
+                          </span>
+                        </div>
                       </label>
                     ))}
                     {availableEventTypes.length === 0 && (
