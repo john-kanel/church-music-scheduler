@@ -9,6 +9,18 @@ export default function Post() {
   return (
     <div className="min-h-screen">
       <article className="max-w-3xl mx-auto px-4 py-12 bg-white rounded-lg shadow-sm border">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'Article',
+              headline: 'Google Calendar Connection Guide | Church Music Pro',
+              datePublished: '2024-01-01',
+              author: [{ '@type': 'Organization', name: 'Church Music Pro' }],
+            }),
+          }}
+        />
         <h1 className="text-3xl font-bold text-gray-900 mb-4">Google Calendar Connection Guide</h1>
         <p className="text-gray-800 mb-6">
           Connect a dedicated Google Calendar so events sync automatically. Then share a read-only link

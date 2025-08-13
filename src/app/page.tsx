@@ -71,12 +71,12 @@ export default function HomePage() {
             
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-6">
-              <a href="#features" className="text-gray-700 hover:text-brand-600 transition-colors">
+               <a href="/features" className="text-gray-700 hover:text-brand-600 transition-colors">
                 Features
-              </a>
-              <a href="#pricing" className="text-gray-700 hover:text-brand-600 transition-colors">
+               </a>
+               <a href="/pricing" className="text-gray-700 hover:text-brand-600 transition-colors">
                 Pricing
-              </a>
+               </a>
               <a href="/blog" className="text-gray-700 hover:text-brand-600 transition-colors">
                 Blog
               </a>
@@ -109,14 +109,14 @@ export default function HomePage() {
             <div className="md:hidden border-t border-gray-200 py-4">
               <div className="flex flex-col space-y-4">
                                   <a 
-                    href="#features"
+                    href="/features"
                     className="text-gray-700 hover:text-brand-600 transition-colors px-2 py-1"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Features
                 </a>
                   <a 
-                    href="#pricing"
+                    href="/pricing"
                     className="text-gray-700 hover:text-brand-600 transition-colors px-2 py-1"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
