@@ -136,7 +136,7 @@ export async function GET(
     const eventsWithDocLinks = events.map((ev: any) => ({
       ...ev,
       documentsUrl: ev.documents && ev.documents.length > 0
-        ? `${baseUrl}/api/events/${ev.id}/documents` // Endpoint can list or redirect to docs
+        ? `${baseUrl}/api/calendar-feed/${subscription.subscriptionToken}/events/${ev.id}/documents`
         : undefined
     }))
 
