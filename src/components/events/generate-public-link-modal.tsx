@@ -43,10 +43,23 @@ export function GeneratePublicLinkModal({ isOpen, onClose }: GeneratePublicLinkM
       // Load filters sources
       Promise.all([
         fetch('/api/groups').then(r => r.ok ? r.json() : Promise.resolve({ groups: [] })),
-        fetch('/api/event-types').then(r => r.ok ? r.json() : Promise.resolve([]))
-      ]).then(([groupsRes, eventTypesRes]) => {
+        fetch('/api/event-types').then(r => r.ok ? r.json() : Promise.resolve([])),
+        fetch('/api/events?rootOnly=true').then(r => r.ok ? r.json() : Promise.resolve({ events: [] }))
+      ]).then(([groupsRes, eventTypesRes, rootEventsRes]) => {
         const groups = (groupsRes.groups || []).map((g: any) => ({ id: g.id, name: g.name }))
-        const eventTypes = (eventTypesRes || []).map((et: any) => ({ id: et.id, name: et.name, color: et.color }))
+        const rawTypes: Array<{ id: string; name: string; color: string }> = (eventTypesRes || []).map((et: any) => ({ id: et.id, name: et.name, color: et.color }))
+        const rootEvents = (rootEventsRes.events || []) as Array<any>
+        // Map eventTypeId -> preferred display name from its recurring root event
+        const preferredNameByTypeId = new Map<string, string>()
+        for (const ev of rootEvents) {
+          if (ev?.isRecurring && ev?.isRootEvent && ev?.eventType?.id) {
+            preferredNameByTypeId.set(ev.eventType.id, ev.name)
+          }
+        }
+        const eventTypes: Array<{ id: string; name: string; color: string }> = rawTypes
+          .map((t: { id: string; name: string; color: string }) => ({ id: t.id, name: preferredNameByTypeId.get(t.id) || t.name, color: t.color }))
+          .sort((a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name))
+
         setAvailableGroups(groups)
         setAvailableEventTypes(eventTypes)
       }).catch(() => {})
