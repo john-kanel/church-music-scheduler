@@ -482,8 +482,8 @@ async function sendPastorDailyDigests(church: any) {
     const pastors = await prisma.user.findMany({
       where: {
         churchId: church.id,
-        role: { in: ['PASTOR', 'ASSOCIATE_PASTOR'] },
-        isVerified: true
+        role: { in: ['PASTOR', 'ASSOCIATE_PASTOR'] }
+        // Removed isVerified requirement to send notifications to unverified pastors
       },
       include: {
         pastorSettings: true

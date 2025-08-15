@@ -88,7 +88,7 @@ async function processBatch(notifications: any[]) {
       role: {
         in: ['MUSICIAN', 'DIRECTOR', 'ASSOCIATE_DIRECTOR']
       },
-      isVerified: true,
+      // Removed isVerified requirement to send notifications to unverified musicians
       emailNotifications: true // Respect email preferences
     },
     select: {

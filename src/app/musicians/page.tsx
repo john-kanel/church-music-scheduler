@@ -25,6 +25,8 @@ import { COMMON_INSTRUMENTS } from '@/lib/constants'
   }>
   pin?: string
   privateNotes?: string
+  emailNotifications?: boolean
+  smsNotifications?: boolean
 }
 
 interface EditingMusician {
@@ -40,6 +42,8 @@ interface EditingMusician {
     name: string
   }>
   privateNotes: string
+  emailNotifications: boolean
+  smsNotifications: boolean
 }
 
 interface Group {
@@ -266,7 +270,9 @@ export default function MusiciansPage() {
       status: musician.status || (!musician.isActive ? 'inactive' : (musician.isVerified ? 'active' : 'pending')),
       instruments: matchedInstruments,
       groups: musician.groups || [],
-      privateNotes: musician.privateNotes || ''
+      privateNotes: musician.privateNotes || '',
+      emailNotifications: musician.emailNotifications !== false, // Default to true if undefined
+      smsNotifications: musician.smsNotifications === true // Default to false if undefined
     })
     // Fetch available groups when editing starts
     fetchGroups()
@@ -299,7 +305,9 @@ export default function MusiciansPage() {
           phone: editingData.phone || null,
           status: editingData.status,
           instruments: editingData.instruments,
-          privateNotes: editingData.privateNotes
+          privateNotes: editingData.privateNotes,
+          emailNotifications: editingData.emailNotifications,
+          smsNotifications: editingData.smsNotifications
         }),
       })
 
@@ -802,6 +810,11 @@ export default function MusiciansPage() {
                     </th>
                     {canEditMusicians && (
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Notifications
+                      </th>
+                    )}
+                    {canEditMusicians && (
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         <div className="flex items-center space-x-2">
                           <span>PIN</span>
                           <button
@@ -878,7 +891,7 @@ export default function MusiciansPage() {
                   {filteredMusicians.length === 0 ? (
                     /* No results message */
                     <tr>
-                      <td colSpan={canEditMusicians ? 9 : 6} className="px-6 py-12 text-center">
+                      <td colSpan={canEditMusicians ? 10 : 6} className="px-6 py-12 text-center">
                         <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
                         <h3 className="text-lg font-medium text-gray-900 mb-2">
                           No musicians match this filter
@@ -1056,6 +1069,59 @@ export default function MusiciansPage() {
                           </span>
                         )}
                       </td>
+                      {canEditMusicians && (
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {editingId === musician.id && editingData ? (
+                            <div className="space-y-2">
+                              <label className="flex items-center space-x-2">
+                                <input
+                                  type="checkbox"
+                                  checked={editingData.emailNotifications}
+                                  onChange={(e) => setEditingData({
+                                    ...editingData,
+                                    emailNotifications: e.target.checked
+                                  })}
+                                  className="h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                />
+                                <span className="text-xs text-gray-700">📧 Email</span>
+                              </label>
+                              <label className="flex items-center space-x-2">
+                                <input
+                                  type="checkbox"
+                                  checked={editingData.smsNotifications}
+                                  onChange={(e) => setEditingData({
+                                    ...editingData,
+                                    smsNotifications: e.target.checked
+                                  })}
+                                  className="h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                />
+                                <span className="text-xs text-gray-700">💬 SMS</span>
+                              </label>
+                            </div>
+                          ) : (
+                            <div className="flex items-center space-x-3">
+                              <div className="flex items-center">
+                                <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                                  musician.emailNotifications !== false 
+                                    ? 'bg-green-100 text-green-800' 
+                                    : 'bg-red-100 text-red-800'
+                                }`}>
+                                  📧 {musician.emailNotifications !== false ? 'On' : 'Off'}
+                                </span>
+                              </div>
+                              <div className="flex items-center">
+                                <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                                  musician.smsNotifications === true
+                                    ? 'bg-green-100 text-green-800' 
+                                    : 'bg-gray-100 text-gray-800'
+                                }`}>
+                                  💬 {musician.smsNotifications === true ? 'On' : 'Off'}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </td>
+                      )}
                       {canEditMusicians && (
                         <td className="px-6 py-4 whitespace-nowrap">
                           <PinCell 

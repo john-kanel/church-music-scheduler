@@ -30,6 +30,7 @@ export async function scheduleEventNotifications(eventId: string, churchId: stri
             userId: { not: null },
             user: {
               emailNotifications: true
+              // Removed isVerified requirement to send notifications to unverified musicians
             }
           },
           include: {

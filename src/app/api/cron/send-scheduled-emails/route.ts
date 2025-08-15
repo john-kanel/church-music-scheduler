@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
             continue
           }
 
-          // Collect changes since last send (simplified: fetch current hymns and basic event info)
+          // Collect changes since last send (simplified: fetch current hymns, documents and basic event info)
           const event = await prisma.event.findUnique({
             where: { id: eventId },
             include: {
@@ -47,7 +47,37 @@ export async function POST(request: NextRequest) {
             continue
           }
 
+          // Fetch event documents
+          const eventDocuments = await prisma.eventDocument.findMany({
+            where: { eventId: event.id },
+            orderBy: { uploadedAt: 'asc' }
+          })
+
           const musicList = event.hymns.map((h, i) => `${i + 1}. ${h.servicePart?.name || 'Other'}: ${h.title}${h.notes ? ` (${h.notes})` : ''}`).join('\n')
+
+          // Generate document links if any
+          let documentsSection = ''
+          if (eventDocuments.length > 0) {
+            const publicToken: string | null = (event as any)?.publicToken || null
+            const documentLinks = eventDocuments.map((doc: any) => {
+              const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://churchmusicpro.com'
+              const viewUrl = publicToken && event.id
+                ? `${baseUrl}/api/public-schedule/${publicToken}/events/${event.id}/documents/${doc.id}/view`
+                : event.id
+                  ? `${baseUrl}/api/events/${event.id}/documents/${doc.id}/view`
+                  : `${baseUrl}/sample-music-files`
+              return `• <a href="${viewUrl}" style="color: #660033; text-decoration: none;">${doc.originalFilename}</a>`
+            }).join('\n')
+
+            documentsSection = `
+              <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+                <h4 style="margin: 0 0 8px 0; color: #1f2937; font-size: 14px;">📁 Music Files (${eventDocuments.length}):</h4>
+                <div style="font-size: 14px; line-height: 1.6; color: #4b5563;">
+${documentLinks}
+                </div>
+              </div>
+            `
+          }
 
           const html = `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -58,9 +88,10 @@ export async function POST(request: NextRequest) {
               <div style="background: white; padding: 24px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
                 <p>Hi ${user.firstName || ''},</p>
                 <p>There were updates to the event <strong>${event.name}</strong> scheduled for ${new Date(event.startTime).toLocaleString()}.</p>
-                <div style="background-color:#f8fafc; padding:16px; border-radius:8px; margin-top:12px;">
-                  <h3 style="margin:0 0 8px 0;">Music & Service Parts</h3>
-                  <div style="white-space: pre-line; font-family: monospace; color:#374151;">${musicList}</div>
+                <div style="background-color:#f8fafc; padding:20px; border-radius:8px; margin:20px 0;">
+                  <h3 style="margin:0 0 15px 0; color:#1f2937;">🎵 Music for this Service</h3>
+                  <div style="white-space: pre-line; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; color: #4b5563; line-height: 1.6; font-size: 14px;">${musicList}</div>
+                  ${documentsSection}
                 </div>
               </div>
             </div>
