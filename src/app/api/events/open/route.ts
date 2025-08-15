@@ -152,8 +152,8 @@ export async function POST(request: NextRequest) {
     // Build musician query with optional group filtering
     const musicianWhere: any = {
       churchId: session.user.churchId,
-      role: 'MUSICIAN',
-      isVerified: true
+      role: 'MUSICIAN'
+      // Removed isVerified requirement to include unverified musicians in auto-assignment
     }
 
     // Add group filter if specified

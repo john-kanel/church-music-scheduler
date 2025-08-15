@@ -203,8 +203,8 @@ export async function PUT(
       where: {
         id: musicianId,
         churchId: session.user.churchId,
-        role: 'MUSICIAN',
-        isVerified: true
+        role: 'MUSICIAN'
+        // Removed isVerified requirement to allow assignment of unverified musicians
       }
     })
 
