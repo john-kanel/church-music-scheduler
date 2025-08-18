@@ -1220,25 +1220,25 @@ export function EventDetailsModal({
       pdf.setFillColor(255, 255, 255)
       pdf.rect(0, 0, pageWidth, pageHeight, 'F')
       
-      // Header section with event color background
-      const headerHeight = 35
+      // Header section with event color background (smaller)
+      const headerHeight = 25
       pdf.setFillColor(eventColor.r, eventColor.g, eventColor.b)
       pdf.rect(10, 10, pageWidth - 20, headerHeight, 'F')
       
-      // Event title in header with white text
+      // Event title in header with white text (smaller)
       pdf.setTextColor(255, 255, 255)
       pdf.setFont('Montserrat', 'bold')
-      pdf.setFontSize(20)
-      pdf.text(currentEvent.name, pageWidth / 2, 32, { align: 'center' })
+      pdf.setFontSize(16)
+      pdf.text(currentEvent.name, pageWidth / 2, 27, { align: 'center' })
       
       // Reset colors for rest of document
       pdf.setTextColor(0, 0, 0)
       pdf.setFillColor(255, 255, 255)
       pdf.setDrawColor(0, 0, 0)
-      yPosition = 60  // Increased from 50 to add more space after header
+      yPosition = 50  // Adjusted for smaller header
       
       // More aggressive and accurate content estimation and scaling
-      let estimatedContentHeight = 60 // Starting position after header
+      let estimatedContentHeight = 50 // Starting position after smaller header
       
       // More detailed estimation for event details section
       estimatedContentHeight += 20 // Event Details header
@@ -1308,12 +1308,12 @@ export function EventDetailsModal({
       // Apply more aggressive scaling with better minimums
       const scaleFactor = rawScaleFactor < 1 ? Math.max(0.5, rawScaleFactor) : 1
       
-      // More aggressive font scaling
+      // Improved font scaling with larger base sizes
       const scaledFontSizes = {
-        header: Math.max(12, 20 * scaleFactor),
-        sectionTitle: Math.max(10, 16 * scaleFactor),
-        normal: Math.max(8, 12 * scaleFactor),
-        small: Math.max(7, 10 * scaleFactor)
+        header: Math.max(14, 22 * scaleFactor),
+        sectionTitle: Math.max(12, 18 * scaleFactor),
+        normal: Math.max(10, 14 * scaleFactor),
+        small: Math.max(9, 12 * scaleFactor)
       }
       
       const lineSpacing = Math.max(3, 6 * scaleFactor)
@@ -1387,11 +1387,15 @@ export function EventDetailsModal({
         yPosition += lineSpacing
 
         currentEvent.assignments.forEach((assignment) => {
-          const assigneeText = assignment.user 
-            ? `${assignment.user.firstName} ${assignment.user.lastName}`
-            : assignment.group?.name || 'Open Position'
-          
-          pdf.text(`• ${assignment.roleName}: ${assigneeText}`, 30, yPosition)
+          if (assignment.user) {
+            const assigneeText = `${assignment.user.firstName} ${assignment.user.lastName}`
+            pdf.text(`• ${assignment.roleName}: ${assigneeText}`, 30, yPosition)
+          } else if (assignment.group?.name) {
+            pdf.text(`• ${assignment.roleName}: ${assignment.group.name}`, 30, yPosition)
+          } else {
+            // Leave blank for unassigned positions - just show the role name
+            pdf.text(`• ${assignment.roleName}:`, 30, yPosition)
+          }
           yPosition += lineSpacing
         })
         yPosition += sectionSpacing
@@ -1406,7 +1410,7 @@ export function EventDetailsModal({
       pdf.setFont('Montserrat', 'normal')
       pdf.setFontSize(scaledFontSizes.normal)
       pdf.text(`${eventHymns?.length || 0} songs/pieces planned`, 25, yPosition)
-      yPosition += lineSpacing
+      yPosition += lineSpacing + sectionSpacing // Add extra space before service parts
 
       // Show all service parts, even if empty
       if (serviceParts && serviceParts.length > 0) {
