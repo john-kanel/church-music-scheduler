@@ -1183,9 +1183,8 @@ export function EventDetailsModal({
       const pageHeight = pdf.internal.pageSize.getHeight()
       let yPosition = 20
       
-      // Ensure only one event per page - start fresh page for each event
-      // Reserve space for footer and ensure event doesn't get cut off
-      const maxContentHeight = pageHeight - 60 // Leave margin for footer
+      // Scale content to fit on single page - calculate content dynamically
+      const maxContentHeight = pageHeight - 80 // Leave margin for footer
 
       // Load and add Montserrat fonts (same pattern as calendar page)
       try {
@@ -1236,31 +1235,79 @@ export function EventDetailsModal({
       pdf.setTextColor(0, 0, 0)
       pdf.setFillColor(255, 255, 255)
       pdf.setDrawColor(0, 0, 0)
-      yPosition = 50
+      yPosition = 60  // Increased from 50 to add more space after header
       
-      // Helper function to ensure new pages have white background
-      const addNewPageWithWhiteBackground = () => {
-        pdf.addPage()
-        // Ensure white background for new page
-        pdf.setFillColor(255, 255, 255)
-        pdf.rect(0, 0, pageWidth, pageHeight, 'F')
-        // Reset colors
-        pdf.setTextColor(0, 0, 0)
-        pdf.setFillColor(255, 255, 255)
-        pdf.setDrawColor(0, 0, 0)
+      // Calculate total content height first to determine scaling
+      let estimatedContentHeight = 60 // Starting position after header
+      
+      // Estimate height for event details section
+      estimatedContentHeight += 25 // Event Details header
+      estimatedContentHeight += 35 // Date, time, location, event type
+      if (currentEvent.description && currentEvent.description.trim()) {
+        const descLines = Math.ceil(currentEvent.description.length / 80) // Rough estimate
+        estimatedContentHeight += descLines * 6 + 15
       }
+      
+      // Estimate height for musicians section
+      if (currentEvent.assignments && currentEvent.assignments.length > 0) {
+        estimatedContentHeight += 25 // Header
+        estimatedContentHeight += currentEvent.assignments.length * 7 + 10
+      }
+      
+      // Estimate height for music section
+      estimatedContentHeight += 25 // Music header
+      if (eventHymns && eventHymns.length > 0) {
+        const servicePartsWithHymns = serviceParts?.filter(sp => 
+          eventHymns.some(hymn => hymn.servicePartId === sp.id)
+        ) || []
+        estimatedContentHeight += servicePartsWithHymns.length * 10 // Service part headers
+        estimatedContentHeight += eventHymns.length * 8 // Hymn lines
+        
+        const unassignedHymns = eventHymns?.filter(hymn => !hymn.servicePartId) || []
+        if (unassignedHymns.length > 0) {
+          estimatedContentHeight += 15 + unassignedHymns.length * 8
+        }
+      }
+      
+      // Documents section
+      if (eventDocuments && eventDocuments.length > 0) {
+        estimatedContentHeight += 25 + eventDocuments.length * 7
+      }
+      
+      // Calculate scale factor to fit content on one page
+      const availableHeight = maxContentHeight - 60 // Leave space for footer
+      const scaleFactor = estimatedContentHeight > availableHeight 
+        ? availableHeight / estimatedContentHeight 
+        : 1
+      
+      // Apply scaling if needed
+      const originalFontSizes = {
+        header: 20,
+        sectionTitle: 16,
+        normal: 12,
+        small: 11
+      }
+      
+      const scaledFontSizes = {
+        header: Math.max(14, originalFontSizes.header * scaleFactor),
+        sectionTitle: Math.max(12, originalFontSizes.sectionTitle * scaleFactor),
+        normal: Math.max(9, originalFontSizes.normal * scaleFactor),
+        small: Math.max(8, originalFontSizes.small * scaleFactor)
+      }
+      
+      const lineSpacing = Math.max(4, 6 * scaleFactor)
 
       // Event details section
       pdf.setFont('Montserrat', 'bold')
-      pdf.setFontSize(16)
+      pdf.setFontSize(scaledFontSizes.sectionTitle)
       pdf.text('Event Details', 20, yPosition)
-      yPosition += 15
+      yPosition += Math.max(10, 15 * scaleFactor)
 
       const eventDate = new Date(currentEvent.startTime)
       const eventEndDate = currentEvent.endTime ? new Date(currentEvent.endTime) : null
       
       pdf.setFont('Montserrat', 'normal')
-      pdf.setFontSize(12)
+      pdf.setFontSize(scaledFontSizes.normal)
 
       // Date and time
       const dateStr = eventDate.toLocaleDateString('en-US', {
@@ -1273,49 +1320,49 @@ export function EventDetailsModal({
         (currentEvent.endTime ? ` - ${formatEventTimeForDisplay(currentEvent.endTime)}` : '')
       
       pdf.text(`Date: ${dateStr}`, 25, yPosition)
-      yPosition += 7
+      yPosition += lineSpacing
       pdf.text(`Time: ${timeStr}`, 25, yPosition)
-      yPosition += 7
+      yPosition += lineSpacing
 
       // Location
       if (currentEvent.location) {
         pdf.text(`Location: ${currentEvent.location}`, 25, yPosition)
-        yPosition += 7
+        yPosition += lineSpacing
       }
 
       // Event type
       pdf.text(`Event Type: ${currentEvent.eventType.name}`, 25, yPosition)
-      yPosition += 7
+      yPosition += lineSpacing
 
       // Description
       if (currentEvent.description && currentEvent.description.trim()) {
-        yPosition += 5
+        yPosition += Math.max(3, 5 * scaleFactor)
         pdf.text('Description:', 25, yPosition)
-        yPosition += 7
+        yPosition += lineSpacing
         const lines = pdf.splitTextToSize(currentEvent.description, pageWidth - 50)
         lines.forEach((line: string) => {
           pdf.text(line, 25, yPosition)
-          yPosition += 6
+          yPosition += Math.max(4, 6 * scaleFactor)
         })
       }
 
-      yPosition += 10
+      yPosition += Math.max(6, 10 * scaleFactor)
 
       // Musicians & Assignments section
       if (currentEvent.assignments && currentEvent.assignments.length > 0) {
         pdf.setFont('Montserrat', 'bold')
-        pdf.setFontSize(16)
+        pdf.setFontSize(scaledFontSizes.sectionTitle)
         pdf.text('Musicians & Assignments', 20, yPosition)
-        yPosition += 15
+        yPosition += Math.max(10, 15 * scaleFactor)
 
         const assignedCount = currentEvent.assignments.filter(a => a.user).length
         const openCount = currentEvent.assignments.filter(a => !a.user).length
         const totalSpots = currentEvent.assignments.length
         
         pdf.setFont('Montserrat', 'normal')
-        pdf.setFontSize(12)
+        pdf.setFontSize(scaledFontSizes.normal)
         pdf.text(`${assignedCount}/${totalSpots} positions filled (${openCount} open)`, 25, yPosition)
-        yPosition += 10
+        yPosition += Math.max(6, 10 * scaleFactor)
 
         currentEvent.assignments.forEach((assignment) => {
           const assigneeText = assignment.user 
@@ -1323,21 +1370,21 @@ export function EventDetailsModal({
             : assignment.group?.name || 'Open Position'
           
           pdf.text(`• ${assignment.roleName}: ${assigneeText}`, 30, yPosition)
-          yPosition += 7
+          yPosition += lineSpacing
         })
-        yPosition += 10
+        yPosition += Math.max(6, 10 * scaleFactor)
       }
 
       // Music & Service Parts section - always show
       pdf.setFont('Montserrat', 'bold')
-      pdf.setFontSize(16)
+      pdf.setFontSize(scaledFontSizes.sectionTitle)
       pdf.text('Music & Service Parts', 20, yPosition)
-      yPosition += 15
+      yPosition += Math.max(10, 15 * scaleFactor)
 
       pdf.setFont('Montserrat', 'normal')
-      pdf.setFontSize(12)
+      pdf.setFontSize(scaledFontSizes.normal)
       pdf.text(`${eventHymns?.length || 0} songs/pieces planned`, 25, yPosition)
-      yPosition += 10
+      yPosition += Math.max(6, 10 * scaleFactor)
 
       // Show all service parts, even if empty
       if (serviceParts && serviceParts.length > 0) {
@@ -1345,122 +1392,94 @@ export function EventDetailsModal({
         const sortedServiceParts = [...serviceParts].sort((a, b) => a.order - b.order)
         
         sortedServiceParts.forEach((servicePart: ServicePart) => {
-          // Check if we have enough space for this service part (minimum 50px)
-          if (yPosition > maxContentHeight - 50) {
-            addNewPageWithWhiteBackground()
-            yPosition = 30
-          }
-          
-          // Show service part name
-          pdf.setFont('Montserrat', 'bold')
-          pdf.text(`${servicePart.name}:`, 30, yPosition)
-          yPosition += 7
-          
           // Find hymns for this service part
           const servicePartHymns = eventHymns?.filter(hymn => hymn.servicePartId === servicePart.id) || []
           
+          // Only show service parts that have assigned hymns
           if (servicePartHymns.length > 0) {
+            // Show service part name
+            pdf.setFont('Montserrat', 'bold')
+            pdf.setFontSize(scaledFontSizes.normal)
+            pdf.text(`${servicePart.name}:`, 30, yPosition)
+            yPosition += lineSpacing
+            
             pdf.setFont('Montserrat', 'normal')
+            pdf.setFontSize(scaledFontSizes.small)
             servicePartHymns.forEach((hymn: EventHymn) => {
               const hymnText = `  • ${hymn.title}${hymn.notes ? ` (${hymn.notes})` : ''}`
               const lines = pdf.splitTextToSize(hymnText, pageWidth - 70)
               lines.forEach((line: string) => {
                 pdf.text(line, 35, yPosition)
-                yPosition += 6
+                yPosition += Math.max(4, 6 * scaleFactor)
               })
             })
-          } else {
-            pdf.setFont('Montserrat', 'normal')
-            pdf.setTextColor(128, 128, 128)
-            pdf.text('  (None assigned)', 35, yPosition)
-            pdf.setTextColor(0, 0, 0)
-            yPosition += 6
+            yPosition += Math.max(2, 3 * scaleFactor)
           }
-          yPosition += 3
         })
         
         // Show hymns not assigned to any service part
         const unassignedHymns = eventHymns?.filter(hymn => !hymn.servicePartId) || []
         if (unassignedHymns.length > 0) {
-          // Check if we have enough space for unassigned hymns section
-          if (yPosition > maxContentHeight - 40) {
-            addNewPageWithWhiteBackground()
-            yPosition = 30
-          }
-          
           pdf.setFont('Montserrat', 'bold')
+          pdf.setFontSize(scaledFontSizes.normal)
           pdf.text('Other/Unassigned:', 30, yPosition)
-          yPosition += 7
+          yPosition += lineSpacing
           
           pdf.setFont('Montserrat', 'normal')
+          pdf.setFontSize(scaledFontSizes.small)
           unassignedHymns.forEach((hymn: EventHymn) => {
             const hymnText = `  • ${hymn.title}${hymn.notes ? ` (${hymn.notes})` : ''}`
             const lines = pdf.splitTextToSize(hymnText, pageWidth - 70)
             lines.forEach((line: string) => {
               pdf.text(line, 35, yPosition)
-              yPosition += 6
+              yPosition += Math.max(4, 6 * scaleFactor)
             })
           })
         }
       } else if (eventHymns && eventHymns.length > 0) {
         // Fallback: if no service parts defined, just list all hymns
         pdf.setFont('Montserrat', 'normal')
+        pdf.setFontSize(scaledFontSizes.small)
         eventHymns.forEach((hymn: EventHymn, index: number) => {
-          // Check if we have enough space for this hymn
-          if (yPosition > maxContentHeight - 20) {
-            addNewPageWithWhiteBackground()
-            yPosition = 30
-          }
-          
           const hymnText = `${index + 1}. ${hymn.title}${hymn.notes ? ` (${hymn.notes})` : ''}`
           const lines = pdf.splitTextToSize(hymnText, pageWidth - 60)
           lines.forEach((line: string) => {
             pdf.text(line, 30, yPosition)
-            yPosition += 6
+            yPosition += Math.max(4, 6 * scaleFactor)
           })
         })
       } else {
         // No service parts and no hymns
         pdf.setFont('Montserrat', 'normal')
+        pdf.setFontSize(scaledFontSizes.small)
         pdf.setTextColor(128, 128, 128)
         pdf.text('No service parts or music configured for this event.', 30, yPosition)
         pdf.setTextColor(0, 0, 0)
-        yPosition += 6
+        yPosition += Math.max(4, 6 * scaleFactor)
       }
-      yPosition += 10
+      yPosition += Math.max(6, 10 * scaleFactor)
 
       // Documents section
       if (eventDocuments && eventDocuments.length > 0) {
-        if (yPosition > pageHeight - 40) {
-          addNewPageWithWhiteBackground()
-          yPosition = 30
-        }
-
         pdf.setFont('Montserrat', 'bold')
-        pdf.setFontSize(16)
+        pdf.setFontSize(scaledFontSizes.sectionTitle)
         pdf.text('Attached Documents', 20, yPosition)
-        yPosition += 15
+        yPosition += Math.max(10, 15 * scaleFactor)
 
         pdf.setFont('Montserrat', 'normal')
-        pdf.setFontSize(12)
+        pdf.setFontSize(scaledFontSizes.normal)
         eventDocuments.forEach((doc: EventDocument) => {
           pdf.text(`• ${doc.originalFilename}`, 30, yPosition)
-          yPosition += 7
+          yPosition += lineSpacing
         })
       }
 
-      // Add page numbers and consistent footer on all pages
-      const pageCount = (pdf as any).internal.getNumberOfPages()
-      for (let i = 1; i <= pageCount; i++) {
-        pdf.setPage(i)
-        
-        // Footer with page numbers
-        const footerY = pageHeight - 15
-        pdf.setFontSize(8)
-        pdf.setTextColor(128, 128, 128)
-        pdf.text(`Generated by Church Music Pro - ${new Date().toLocaleDateString()}`, 20, footerY)
-        pdf.text(`Page ${i} of ${pageCount}`, pageWidth - 30, footerY, { align: 'right' })
-      }
+      // Add footer (single page only)
+      const footerY = pageHeight - 15
+      pdf.setFontSize(Math.max(6, 8 * scaleFactor))
+      pdf.setTextColor(128, 128, 128)
+      pdf.text(`Generated by Church Music Pro - ${new Date().toLocaleDateString()}`, 20, footerY)
+      pdf.text(`Page 1 of 1`, pageWidth - 30, footerY, { align: 'right' })
 
       // Save the PDF
       const filename = `${currentEvent.name.replace(/[^a-zA-Z0-9]/g, '_')}_Event_Details_${new Date().toISOString().split('T')[0]}.pdf`
