@@ -1316,7 +1316,7 @@ export function EventDetailsModal({
         small: Math.max(9, 12 * scaleFactor)
       }
       
-      const lineSpacing = Math.max(3, 6 * scaleFactor)
+      const lineSpacing = Math.max(4, 8 * scaleFactor)
       const sectionSpacing = Math.max(4, 10 * scaleFactor)
 
       // Event details section
