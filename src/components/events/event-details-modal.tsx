@@ -1217,20 +1217,38 @@ export function EventDetailsModal({
       
       const eventColor = hexToRgb(currentEvent.eventType.color)
       
-      // Header with minimal ink usage - just a border
-      pdf.setDrawColor(eventColor.r, eventColor.g, eventColor.b)
-      pdf.setLineWidth(0.5)
-      pdf.rect(10, 10, pageWidth - 20, 25, 'D')
+      // Ensure white background for entire page - reset any default colors
+      pdf.setFillColor(255, 255, 255)
+      pdf.rect(0, 0, pageWidth, pageHeight, 'F')
       
-      // Event title in header
-      pdf.setTextColor(eventColor.r, eventColor.g, eventColor.b)
+      // Header section with event color background
+      const headerHeight = 35
+      pdf.setFillColor(eventColor.r, eventColor.g, eventColor.b)
+      pdf.rect(10, 10, pageWidth - 20, headerHeight, 'F')
+      
+      // Event title in header with white text
+      pdf.setTextColor(255, 255, 255)
       pdf.setFont('Montserrat', 'bold')
       pdf.setFontSize(20)
-      pdf.text(currentEvent.name, pageWidth / 2, 28, { align: 'center' })
+      pdf.text(currentEvent.name, pageWidth / 2, 32, { align: 'center' })
       
-      // Reset text color
+      // Reset colors for rest of document
       pdf.setTextColor(0, 0, 0)
+      pdf.setFillColor(255, 255, 255)
+      pdf.setDrawColor(0, 0, 0)
       yPosition = 50
+      
+      // Helper function to ensure new pages have white background
+      const addNewPageWithWhiteBackground = () => {
+        pdf.addPage()
+        // Ensure white background for new page
+        pdf.setFillColor(255, 255, 255)
+        pdf.rect(0, 0, pageWidth, pageHeight, 'F')
+        // Reset colors
+        pdf.setTextColor(0, 0, 0)
+        pdf.setFillColor(255, 255, 255)
+        pdf.setDrawColor(0, 0, 0)
+      }
 
       // Event details section
       pdf.setFont('Montserrat', 'bold')
@@ -1329,7 +1347,7 @@ export function EventDetailsModal({
         sortedServiceParts.forEach((servicePart: ServicePart) => {
           // Check if we have enough space for this service part (minimum 50px)
           if (yPosition > maxContentHeight - 50) {
-            pdf.addPage()
+            addNewPageWithWhiteBackground()
             yPosition = 30
           }
           
@@ -1366,7 +1384,7 @@ export function EventDetailsModal({
         if (unassignedHymns.length > 0) {
           // Check if we have enough space for unassigned hymns section
           if (yPosition > maxContentHeight - 40) {
-            pdf.addPage()
+            addNewPageWithWhiteBackground()
             yPosition = 30
           }
           
@@ -1390,7 +1408,7 @@ export function EventDetailsModal({
         eventHymns.forEach((hymn: EventHymn, index: number) => {
           // Check if we have enough space for this hymn
           if (yPosition > maxContentHeight - 20) {
-            pdf.addPage()
+            addNewPageWithWhiteBackground()
             yPosition = 30
           }
           
@@ -1414,7 +1432,7 @@ export function EventDetailsModal({
       // Documents section
       if (eventDocuments && eventDocuments.length > 0) {
         if (yPosition > pageHeight - 40) {
-          pdf.addPage()
+          addNewPageWithWhiteBackground()
           yPosition = 30
         }
 
