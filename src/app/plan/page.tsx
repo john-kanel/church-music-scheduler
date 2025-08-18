@@ -334,6 +334,23 @@ interface ToastMessage {
   message: string
 }
 
+interface Assignment {
+  id: string
+  roleName: string
+  status: string
+  isAutoAssigned?: boolean
+  user?: {
+    id: string
+    firstName: string
+    lastName: string
+    email: string
+  }
+  group?: {
+    id: string
+    name: string
+  }
+}
+
 interface Event {
   id: string
   name: string
@@ -353,22 +370,7 @@ interface Event {
     servicePartId?: string
     notes?: string
   }>
-  assignments: Array<{
-    id: string
-    roleName: string
-    status: string
-    isAutoAssigned?: boolean
-    user?: {
-      id: string
-      firstName: string
-      lastName: string
-      email: string
-    }
-    group?: {
-      id: string
-      name: string
-    }
-  }>
+  assignments: Assignment[]
   documents?: Array<{
     id: string
     filename: string
@@ -532,6 +534,9 @@ export default function EventPlannerPage() {
   const [groups, setGroups] = useState<Array<{id: string, name: string, description?: string, members: Array<{id: string, firstName: string, lastName: string}>}>>([])
   const [openGroupDropdown, setOpenGroupDropdown] = useState<string | null>(null)
   const [selectedGroups, setSelectedGroups] = useState<Record<string, string[]>>({})
+  
+  // Group collapse/expand state - tracks which groups are expanded for each event
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, Set<string>>>({})
 
   // Auto-assignment state
   const [selectedEvents, setSelectedEvents] = useState<Set<string>>(new Set())
@@ -2399,6 +2404,60 @@ export default function EventPlannerPage() {
       await fetchPlannerData(false, true)
       showToast('error', 'Error updating group assignments')
     }
+  }
+
+  // Group collapse/expand utilities
+  const toggleGroupExpansion = (eventId: string, groupId: string) => {
+    setExpandedGroups(prev => {
+      const eventGroups = prev[eventId] || new Set()
+      const newEventGroups = new Set(eventGroups)
+      
+      if (newEventGroups.has(groupId)) {
+        newEventGroups.delete(groupId)
+      } else {
+        newEventGroups.add(groupId)
+      }
+      
+      return {
+        ...prev,
+        [eventId]: newEventGroups
+      }
+    })
+  }
+
+  const isGroupExpanded = (eventId: string, groupId: string): boolean => {
+    return expandedGroups[eventId]?.has(groupId) || false
+  }
+
+  // Group assignments by group and return structured data
+  const groupAssignments = (assignments: Assignment[]) => {
+    const grouped: {
+      groups: Record<string, {
+        groupInfo: { id: string; name: string }
+        assignments: Assignment[]
+      }>
+      individual: Assignment[]
+    } = {
+      groups: {},
+      individual: []
+    }
+
+    assignments.forEach(assignment => {
+      if (assignment.group) {
+        const groupId = assignment.group.id
+        if (!grouped.groups[groupId]) {
+          grouped.groups[groupId] = {
+            groupInfo: assignment.group,
+            assignments: []
+          }
+        }
+        grouped.groups[groupId].assignments.push(assignment)
+      } else {
+        grouped.individual.push(assignment)
+      }
+    })
+
+    return grouped
   }
 
   const toggleRoleCreation = (eventId: string) => {
@@ -4435,106 +4494,254 @@ export default function EventPlannerPage() {
                               </div>
                             )}
                             
-                            {event.assignments?.map((assignment) => (
-                              <div key={assignment.id} className="border-b border-gray-100 p-3 min-h-[60px] bg-white group hover:bg-gray-50 transition-colors relative">
-                                <div className="text-xs text-gray-500 mb-1 font-normal">{assignment.roleName}</div>
-                                
-                                {assignment.user ? (
-                                  // Show assigned musician name (clickable to change)
-                                  <div className="relative">
-                                    <button
-                                      onClick={() => toggleDropdown(assignment.id)}
-                                      className="w-full text-sm text-gray-900 text-left hover:bg-gray-100 rounded-sm px-2 py-1 font-normal flex items-center gap-2"
-                                    >
-                                      <span className="flex-1 truncate">
-                                        {assignment.user.firstName} {assignment.user.lastName}
-                                      </span>
-                                      {assignment.isAutoAssigned && (
-                                        <span className="px-1.5 py-0.5 text-xs bg-green-100 text-green-700 rounded font-medium flex-shrink-0">
-                                          AUTO
-                                        </span>
-                                      )}
-                                    </button>
+                            {(() => {
+                              const grouped = groupAssignments(event.assignments || [])
+                              
+                              return (
+                                <>
+                                  {/* Render Group Assignments */}
+                                  {Object.entries(grouped.groups).map(([groupId, groupData]) => {
+                                    const isExpanded = isGroupExpanded(event.id, groupId)
+                                    const memberCount = groupData.assignments.length
                                     
-                                    {/* Dropdown for changing assignment */}
-                                    {openDropdowns[assignment.id] && (
-                                      <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                                        <div className="p-2 border-b border-gray-200">
-                                          <input
-                                            type="text"
-                                            placeholder="Search musicians..."
-                                            value={searchTexts[assignment.id] || ''}
-                                            onChange={(e) => handleSearchChange(assignment.id, e.target.value)}
-                                            className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                                            autoFocus
-                                          />
+                                    return (
+                                      <div key={`group-${groupId}`}>
+                                        {/* Group Header Row */}
+                                        <div 
+                                          className="border-b border-gray-100 p-3 min-h-[60px] bg-blue-50 hover:bg-blue-100 transition-colors cursor-pointer"
+                                          onClick={() => toggleGroupExpansion(event.id, groupId)}
+                                        >
+                                          <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                              <Users className="w-4 h-4 text-blue-600" />
+                                              <div>
+                                                <div className="text-sm font-medium text-blue-900">
+                                                  {groupData.groupInfo.name}
+                                                </div>
+                                                <div className="text-xs text-blue-700">
+                                                  {memberCount} member{memberCount !== 1 ? 's' : ''}
+                                                </div>
+                                              </div>
+                                            </div>
+                                            <div className="text-blue-600">
+                                              {isExpanded ? (
+                                                <ChevronUp className="w-4 h-4" />
+                                              ) : (
+                                                <ChevronDown className="w-4 h-4" />
+                                              )}
+                                            </div>
+                                          </div>
                                         </div>
-                                        <div className="max-h-48 overflow-y-auto">
+                                        
+                                        {/* Group Members (when expanded) */}
+                                        {isExpanded && groupData.assignments.map((assignment) => (
+                                          <div key={assignment.id} className="border-b border-gray-100 p-3 min-h-[60px] bg-white group hover:bg-gray-50 transition-colors relative ml-4">
+                                            <div className="text-xs text-gray-500 mb-1 font-normal">{assignment.roleName}</div>
+                                            
+                                            {assignment.user ? (
+                                              // Show assigned musician name (clickable to change)
+                                              <div className="relative">
+                                                <button
+                                                  onClick={() => toggleDropdown(assignment.id)}
+                                                  className="w-full text-sm text-gray-900 text-left hover:bg-gray-100 rounded-sm px-2 py-1 font-normal flex items-center gap-2"
+                                                >
+                                                  <span className="flex-1 truncate">
+                                                    {assignment.user.firstName} {assignment.user.lastName}
+                                                  </span>
+                                                  {assignment.isAutoAssigned && (
+                                                    <span className="px-1.5 py-0.5 text-xs bg-green-100 text-green-700 rounded font-medium flex-shrink-0">
+                                                      AUTO
+                                                    </span>
+                                                  )}
+                                                </button>
+                                                
+                                                {/* Dropdown for changing assignment */}
+                                                {openDropdowns[assignment.id] && (
+                                                  <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                                                    <div className="p-2 border-b border-gray-200">
+                                                      <input
+                                                        type="text"
+                                                        placeholder="Search musicians..."
+                                                        value={searchTexts[assignment.id] || ''}
+                                                        onChange={(e) => handleSearchChange(assignment.id, e.target.value)}
+                                                        className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                                        autoFocus
+                                                      />
+                                                    </div>
+                                                    <div className="max-h-48 overflow-y-auto">
+                                                      <button
+                                                        onClick={() => handleDeleteAssignment(assignment.id)}
+                                                        className="w-full text-left px-3 py-2 hover:bg-red-50 text-red-600 border-b border-gray-100 text-sm"
+                                                      >
+                                                        Delete role
+                                                      </button>
+                                                      {getFilteredMusicians(assignment.id).map((musician) => (
+                                                        <button
+                                                          key={musician.id}
+                                                          onClick={() => handleAssignMusician(assignment.id, musician.id)}
+                                                          className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 text-sm"
+                                                        >
+                                                          <div className="font-medium text-gray-900">
+                                                            {musician.firstName} {musician.lastName}
+                                                          </div>
+                                                          <div className="text-xs text-gray-500">{musician.email}</div>
+                                                        </button>
+                                                      ))}
+                                                    </div>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            ) : (
+                                              // Show "Assign Musician" button for unassigned roles
+                                              <div className="relative">
+                                                <button
+                                                  onClick={() => toggleDropdown(assignment.id)}
+                                                  className="w-full text-sm text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-sm px-2 py-1 font-normal text-left transition-colors"
+                                                >
+                                                  Assign Musician
+                                                </button>
+                                                
+                                                {/* Dropdown for assignment */}
+                                                {openDropdowns[assignment.id] && (
+                                                  <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                                                    <div className="p-2 border-b border-gray-200">
+                                                      <input
+                                                        type="text"
+                                                        placeholder="Search musicians..."
+                                                        value={searchTexts[assignment.id] || ''}
+                                                        onChange={(e) => handleSearchChange(assignment.id, e.target.value)}
+                                                        className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                                        autoFocus
+                                                      />
+                                                    </div>
+                                                    <div className="max-h-48 overflow-y-auto">
+                                                      {getFilteredMusicians(assignment.id).map((musician) => (
+                                                        <button
+                                                          key={musician.id}
+                                                          onClick={() => handleAssignMusician(assignment.id, musician.id)}
+                                                          className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 text-sm"
+                                                        >
+                                                          <div className="font-medium text-gray-900">
+                                                            {musician.firstName} {musician.lastName}
+                                                          </div>
+                                                          <div className="text-xs text-gray-500">{musician.email}</div>
+                                                        </button>
+                                                      ))}
+                                                    </div>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            )}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )
+                                  })}
+                                  
+                                  {/* Render Individual Assignments */}
+                                  {grouped.individual.map((assignment) => (
+                                    <div key={assignment.id} className="border-b border-gray-100 p-3 min-h-[60px] bg-white group hover:bg-gray-50 transition-colors relative">
+                                      <div className="text-xs text-gray-500 mb-1 font-normal">{assignment.roleName}</div>
+                                      
+                                      {assignment.user ? (
+                                        // Show assigned musician name (clickable to change)
+                                        <div className="relative">
                                           <button
-                                            onClick={() => handleDeleteAssignment(assignment.id)}
-                                            className="w-full text-left px-3 py-2 hover:bg-red-50 text-red-600 border-b border-gray-100 text-sm"
+                                            onClick={() => toggleDropdown(assignment.id)}
+                                            className="w-full text-sm text-gray-900 text-left hover:bg-gray-100 rounded-sm px-2 py-1 font-normal flex items-center gap-2"
                                           >
-                                            Delete role
+                                            <span className="flex-1 truncate">
+                                              {assignment.user.firstName} {assignment.user.lastName}
+                                            </span>
+                                            {assignment.isAutoAssigned && (
+                                              <span className="px-1.5 py-0.5 text-xs bg-green-100 text-green-700 rounded font-medium flex-shrink-0">
+                                                AUTO
+                                              </span>
+                                            )}
                                           </button>
-                                          {getFilteredMusicians(assignment.id).map((musician) => (
-                                            <button
-                                              key={musician.id}
-                                              onClick={() => handleAssignMusician(assignment.id, musician.id)}
-                                              className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 text-sm"
-                                            >
-                                              <div className="font-medium text-gray-900">
-                                                {musician.firstName} {musician.lastName}
+                                          
+                                          {/* Dropdown for changing assignment */}
+                                          {openDropdowns[assignment.id] && (
+                                            <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                                              <div className="p-2 border-b border-gray-200">
+                                                <input
+                                                  type="text"
+                                                  placeholder="Search musicians..."
+                                                  value={searchTexts[assignment.id] || ''}
+                                                  onChange={(e) => handleSearchChange(assignment.id, e.target.value)}
+                                                  className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                                  autoFocus
+                                                />
                                               </div>
-                                              <div className="text-xs text-gray-500">{musician.email}</div>
-                                            </button>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                ) : (
-                                  // Show "Assign Musician" button for unassigned roles
-                                  <div className="relative">
-                                    <button
-                                      onClick={() => toggleDropdown(assignment.id)}
-                                      className="w-full text-sm text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-sm px-2 py-1 font-normal text-left transition-colors"
-                                    >
-                                      Assign Musician
-                                    </button>
-                                    
-                                    {/* Dropdown for assignment */}
-                                    {openDropdowns[assignment.id] && (
-                                      <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                                        <div className="p-2 border-b border-gray-200">
-                                          <input
-                                            type="text"
-                                            placeholder="Search musicians..."
-                                            value={searchTexts[assignment.id] || ''}
-                                            onChange={(e) => handleSearchChange(assignment.id, e.target.value)}
-                                            className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                                            autoFocus
-                                          />
-                                        </div>
-                                        <div className="max-h-48 overflow-y-auto">
-                                          {getFilteredMusicians(assignment.id).map((musician) => (
-                                            <button
-                                              key={musician.id}
-                                              onClick={() => handleAssignMusician(assignment.id, musician.id)}
-                                              className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 text-sm"
-                                            >
-                                              <div className="font-medium text-gray-900">
-                                                {musician.firstName} {musician.lastName}
+                                              <div className="max-h-48 overflow-y-auto">
+                                                <button
+                                                  onClick={() => handleDeleteAssignment(assignment.id)}
+                                                  className="w-full text-left px-3 py-2 hover:bg-red-50 text-red-600 border-b border-gray-100 text-sm"
+                                                >
+                                                  Delete role
+                                                </button>
+                                                {getFilteredMusicians(assignment.id).map((musician) => (
+                                                  <button
+                                                    key={musician.id}
+                                                    onClick={() => handleAssignMusician(assignment.id, musician.id)}
+                                                    className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 text-sm"
+                                                  >
+                                                    <div className="font-medium text-gray-900">
+                                                      {musician.firstName} {musician.lastName}
+                                                    </div>
+                                                    <div className="text-xs text-gray-500">{musician.email}</div>
+                                                  </button>
+                                                ))}
                                               </div>
-                                              <div className="text-xs text-gray-500">{musician.email}</div>
-                                            </button>
-                                          ))}
+                                            </div>
+                                          )}
                                         </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            ))}
+                                      ) : (
+                                        // Show "Assign Musician" button for unassigned roles
+                                        <div className="relative">
+                                          <button
+                                            onClick={() => toggleDropdown(assignment.id)}
+                                            className="w-full text-sm text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-sm px-2 py-1 font-normal text-left transition-colors"
+                                          >
+                                            Assign Musician
+                                          </button>
+                                          
+                                          {/* Dropdown for assignment */}
+                                          {openDropdowns[assignment.id] && (
+                                            <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                                              <div className="p-2 border-b border-gray-200">
+                                                <input
+                                                  type="text"
+                                                  placeholder="Search musicians..."
+                                                  value={searchTexts[assignment.id] || ''}
+                                                  onChange={(e) => handleSearchChange(assignment.id, e.target.value)}
+                                                  className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                                  autoFocus
+                                                />
+                                              </div>
+                                              <div className="max-h-48 overflow-y-auto">
+                                                {getFilteredMusicians(assignment.id).map((musician) => (
+                                                  <button
+                                                    key={musician.id}
+                                                    onClick={() => handleAssignMusician(assignment.id, musician.id)}
+                                                    className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 text-sm"
+                                                  >
+                                                    <div className="font-medium text-gray-900">
+                                                      {musician.firstName} {musician.lastName}
+                                                    </div>
+                                                    <div className="text-xs text-gray-500">{musician.email}</div>
+                                                  </button>
+                                                ))}
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </>
+                              )
+                            })()}
                           </div>
                         </>
                       )
