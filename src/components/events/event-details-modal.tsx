@@ -1302,22 +1302,30 @@ export function EventDetailsModal({
       estimatedContentHeight += 25
       
       // Calculate scale factor with more aggressive scaling
-      const availableHeight = maxContentHeight - 20 // Less conservative margin
+      const availableHeight = maxContentHeight - 40 // More conservative margin to prevent overflow
       const rawScaleFactor = availableHeight / estimatedContentHeight
       
-      // Apply more aggressive scaling with better minimums
-      const scaleFactor = rawScaleFactor < 1 ? Math.max(0.5, rawScaleFactor) : 1
+      // Apply much more aggressive scaling to ensure content fits
+      const scaleFactor = rawScaleFactor < 1 ? Math.max(0.35, rawScaleFactor) : 1
       
-      // Improved font scaling with larger base sizes
+      // Debug logging
+      console.log('PDF Scaling Debug:', {
+        estimatedHeight: estimatedContentHeight,
+        availableHeight,
+        rawScaleFactor,
+        finalScaleFactor: scaleFactor
+      })
+      
+      // More aggressive font scaling with lower minimums to ensure content fits
       const scaledFontSizes = {
-        header: Math.max(14, 22 * scaleFactor),
-        sectionTitle: Math.max(12, 18 * scaleFactor),
-        normal: Math.max(10, 14 * scaleFactor),
-        small: Math.max(9, 12 * scaleFactor)
+        header: Math.max(10, 22 * scaleFactor),
+        sectionTitle: Math.max(8, 18 * scaleFactor),
+        normal: Math.max(7, 14 * scaleFactor),
+        small: Math.max(6, 12 * scaleFactor)
       }
       
-      const lineSpacing = Math.max(4, 8 * scaleFactor)
-      const sectionSpacing = Math.max(4, 10 * scaleFactor)
+      const lineSpacing = Math.max(3, 8 * scaleFactor)
+      const sectionSpacing = Math.max(3, 10 * scaleFactor)
 
       // Event details section
       pdf.setFont('Montserrat', 'bold')
