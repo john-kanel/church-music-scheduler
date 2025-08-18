@@ -1240,62 +1240,62 @@ export function EventDetailsModal({
       // More aggressive and accurate content estimation and scaling
       let estimatedContentHeight = 50 // Starting position after smaller header
       
-      // More detailed estimation for event details section
-      estimatedContentHeight += 20 // Event Details header
-      estimatedContentHeight += 30 // Date, time, location, event type (4 lines x 7.5px)
+      // More detailed estimation for event details section (account for larger line spacing)
+      estimatedContentHeight += 22 // Event Details header
+      estimatedContentHeight += 40 // Date, time, location, event type (4 lines x 10px with larger spacing)
       if (currentEvent.description && currentEvent.description.trim()) {
         // More accurate description line calculation
         const avgCharsPerLine = 85
         const descLines = Math.ceil(currentEvent.description.length / avgCharsPerLine)
-        estimatedContentHeight += Math.max(descLines * 6, 15) + 10
+        estimatedContentHeight += Math.max(descLines * 8, 18) + 12
       }
       
-      // Musicians section estimation
+      // Musicians section estimation (account for larger line spacing)
       if (currentEvent.assignments && currentEvent.assignments.length > 0) {
-        estimatedContentHeight += 20 // Header
-        estimatedContentHeight += 8 // Summary line
-        estimatedContentHeight += currentEvent.assignments.length * 6 + 8 // Assignments + spacing
+        estimatedContentHeight += 22 // Header
+        estimatedContentHeight += 10 // Summary line
+        estimatedContentHeight += currentEvent.assignments.length * 8 + 10 // Assignments + spacing
       }
       
-      // Music section estimation - more accurate
-      estimatedContentHeight += 20 // Music header
-      estimatedContentHeight += 8 // Count line
+      // Music section estimation - more accurate (account for larger line spacing)
+      estimatedContentHeight += 22 // Music header
+      estimatedContentHeight += 10 // Count line
       if (eventHymns && eventHymns.length > 0) {
         // Count service parts with hymns
         const servicePartsWithHymns = serviceParts?.filter(sp => 
           eventHymns.some(hymn => hymn.servicePartId === sp.id)
         ) || []
         
-        // Each service part header + hymns
+        // Each service part header + hymns (account for larger line spacing)
         servicePartsWithHymns.forEach(sp => {
-          estimatedContentHeight += 7 // Service part name
+          estimatedContentHeight += 8 // Service part name
           const partHymns = eventHymns.filter(hymn => hymn.servicePartId === sp.id)
           partHymns.forEach(hymn => {
             // Estimate hymn text wrapping more accurately
             const hymnText = `${hymn.title}${hymn.notes ? ` (${hymn.notes})` : ''}`
             const estimatedLines = Math.ceil(hymnText.length / 75) // Chars per line for indented text
-            estimatedContentHeight += estimatedLines * 5
+            estimatedContentHeight += estimatedLines * 8 // Increased for larger line spacing
           })
-          estimatedContentHeight += 3 // Spacing after service part
+          estimatedContentHeight += 4 // Spacing after service part
         })
         
-        // Unassigned hymns
+        // Unassigned hymns (account for larger line spacing)
         const unassignedHymns = eventHymns?.filter(hymn => !hymn.servicePartId) || []
         if (unassignedHymns.length > 0) {
-          estimatedContentHeight += 7 // "Other/Unassigned" header
+          estimatedContentHeight += 8 // "Other/Unassigned" header
           unassignedHymns.forEach(hymn => {
             const hymnText = `${hymn.title}${hymn.notes ? ` (${hymn.notes})` : ''}`
             const estimatedLines = Math.ceil(hymnText.length / 75)
-            estimatedContentHeight += estimatedLines * 5
+            estimatedContentHeight += estimatedLines * 8 // Increased for larger line spacing
           })
         }
       } else {
-        estimatedContentHeight += 8 // "No music" message
+        estimatedContentHeight += 10 // "No music" message
       }
       
-      // Documents section
+      // Documents section (account for larger line spacing)
       if (eventDocuments && eventDocuments.length > 0) {
-        estimatedContentHeight += 20 + eventDocuments.length * 6 + 5
+        estimatedContentHeight += 22 + eventDocuments.length * 8 + 6
       }
       
       // Add footer space
