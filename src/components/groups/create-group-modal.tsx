@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { X, Users, Plus, Trash2, User, UserPlus, UserMinus, MessageSquare } from 'lucide-react'
+import { X, Users, Plus, Trash2, User, UserPlus, UserMinus, MessageSquare, Lock, Unlock } from 'lucide-react'
 
 interface CreateGroupModalProps {
   isOpen: boolean
@@ -19,7 +19,8 @@ export function CreateGroupModal({ isOpen, onClose, onGroupCreated, onMessageGro
 
   const [formData, setFormData] = useState({
     name: '',
-    description: ''
+    description: '',
+    isLocked: false
   })
 
   // Musicians management state
@@ -50,10 +51,10 @@ export function CreateGroupModal({ isOpen, onClose, onGroupCreated, onMessageGro
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
+    const { name, value, type } = e.target
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
     }))
   }
 
@@ -85,7 +86,8 @@ export function CreateGroupModal({ isOpen, onClose, onGroupCreated, onMessageGro
     try {
       const groupData = {
         name: formData.name,
-        description: formData.description
+        description: formData.description,
+        isLocked: formData.isLocked
       }
 
       const response = await fetch('/api/groups', {
@@ -135,7 +137,8 @@ export function CreateGroupModal({ isOpen, onClose, onGroupCreated, onMessageGro
         // Reset form
         setFormData({
           name: '',
-          description: ''
+          description: '',
+          isLocked: false
         })
         setSelectedMembers([])
         setSelectedMusicianId('')
@@ -211,6 +214,68 @@ export function CreateGroupModal({ isOpen, onClose, onGroupCreated, onMessageGro
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                 placeholder="Brief description of the group's purpose, role, and any special requirements..."
               />
+            </div>
+
+            {/* Group Privacy Settings */}
+            <div className="space-y-3">
+              <label className="block text-sm font-medium text-gray-700">Group Privacy</label>
+              <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, isLocked: !prev.isLocked }))}
+                  className={`flex items-center justify-center w-10 h-6 rounded-full transition-colors ${
+                    formData.isLocked 
+                      ? 'bg-red-500' 
+                      : 'bg-green-500'
+                  }`}
+                >
+                  <div className={`w-4 h-4 bg-white rounded-full transform transition-transform ${
+                    formData.isLocked ? 'translate-x-2' : '-translate-x-2'
+                  }`} />
+                </button>
+                
+                <div className="flex items-center space-x-2">
+                  {formData.isLocked ? (
+                    <Lock className="h-5 w-5 text-red-500" />
+                  ) : (
+                    <Unlock className="h-5 w-5 text-green-500" />
+                  )}
+                  <div>
+                    <div className="font-medium text-gray-900">
+                      {formData.isLocked ? 'Private Group' : 'Open Group'}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      {formData.isLocked 
+                        ? 'Only visible to directors and pastors. Members must be invited.' 
+                        : 'Visible to all musicians. Anyone can join during signup.'
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    {formData.isLocked ? (
+                      <Lock className="h-5 w-5 text-amber-600" />
+                    ) : (
+                      <Unlock className="h-5 w-5 text-amber-600" />
+                    )}
+                  </div>
+                  <div className="ml-3">
+                    <h4 className="text-sm font-medium text-amber-800">
+                      {formData.isLocked ? 'Private Group Benefits' : 'Open Group Benefits'}
+                    </h4>
+                    <p className="text-sm text-amber-700 mt-1">
+                      {formData.isLocked 
+                        ? 'Perfect for auditioned groups like choirs or selective ensembles where membership is controlled.'
+                        : 'Great for general groups where anyone can participate, like praise teams or casual ensembles.'
+                      }
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </section>
 

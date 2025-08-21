@@ -49,6 +49,7 @@ export async function GET(request: NextRequest) {
       description: group.description,
       createdAt: group.createdAt,
       leaderIds: group.leaderIds || [],
+      isLocked: group.isLocked || false,
       members: group.members.map((member: any) => ({
         id: member.user.id,
         name: `${member.user.firstName} ${member.user.lastName}`,
@@ -85,7 +86,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, description, leaderIds } = body
+    const { name, description, leaderIds, isLocked } = body
 
     // Validation
     if (!name || name.trim().length === 0) {
@@ -116,7 +117,8 @@ export async function POST(request: NextRequest) {
         name: name.trim(),
         description: description?.trim() || null,
         churchId: session.user.churchId,
-        leaderIds: Array.isArray(leaderIds) ? leaderIds : []
+        leaderIds: Array.isArray(leaderIds) ? leaderIds : [],
+        isLocked: Boolean(isLocked)
       },
       include: {
         _count: {
@@ -135,6 +137,7 @@ export async function POST(request: NextRequest) {
         name: group.name,
         description: group.description,
         createdAt: group.createdAt,
+        isLocked: group.isLocked,
         members: [],
         memberCount: 0,
         assignmentCount: 0
@@ -187,13 +190,14 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Group not found' }, { status: 404 })
     }
 
-    // Update the group (allow updating name, description, leaders)
+    // Update the group (allow updating name, description, leaders, lock status)
     const updatedGroup = await prisma.group.update({
       where: { id: groupId },
       data: {
         name: updates.name || existingGroup.name,
         description: updates.description !== undefined ? updates.description : existingGroup.description,
-        leaderIds: Array.isArray(updates.leaderIds) ? updates.leaderIds : existingGroup.leaderIds
+        leaderIds: Array.isArray(updates.leaderIds) ? updates.leaderIds : existingGroup.leaderIds,
+        isLocked: updates.isLocked !== undefined ? Boolean(updates.isLocked) : existingGroup.isLocked
       },
       include: {
         members: {
@@ -224,6 +228,7 @@ export async function PUT(request: NextRequest) {
       name: updatedGroup.name,
       description: updatedGroup.description,
       createdAt: updatedGroup.createdAt,
+      isLocked: updatedGroup.isLocked,
       members: updatedGroup.members.map((member: any) => ({
         id: member.user.id,
         name: `${member.user.firstName} ${member.user.lastName}`,

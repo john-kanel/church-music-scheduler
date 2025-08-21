@@ -56,6 +56,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             id: true,
             name: true,
             groups: {
+              where: {
+                isLocked: false  // Only show unlocked groups for public signup
+              },
               select: {
                 id: true,
                 name: true,

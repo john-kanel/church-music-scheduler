@@ -218,6 +218,8 @@ model Group {
   createdAt   DateTime          @default(now())
   // New: multiple leaders for a group
   leaderIds   String[]          @default([])
+  // Lock/unlock groups from public signup
+  isLocked    Boolean           @default(false)
   assignments EventAssignment[]
   members     GroupMember[]
   church      Church            @relation(fields: [churchId], references: [id], onDelete: Cascade)

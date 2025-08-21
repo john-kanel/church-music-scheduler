@@ -3,7 +3,7 @@
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { Music, Users, Plus, ArrowLeft, Edit2, Trash2, X, UserPlus, UserMinus, MessageSquare } from 'lucide-react'
+import { Music, Users, Plus, ArrowLeft, Edit2, Trash2, X, UserPlus, UserMinus, MessageSquare, Lock, Unlock } from 'lucide-react'
 import Link from 'next/link'
 import { CreateGroupModal } from '@/components/groups/create-group-modal'
 import { SendMessageModal } from '@/components/messages/send-message-modal'
@@ -168,7 +168,14 @@ export default function GroupsPage() {
                     )}
                     
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-lg font-semibold text-gray-900 pr-8">{group.name}</h3>
+                      <div className="flex items-center">
+                        <h3 className="text-lg font-semibold text-gray-900 pr-2">{group.name}</h3>
+                        {group.isLocked && (
+                          <div title="Private group - invitation only">
+                            <Lock className="h-4 w-4 text-red-500" />
+                          </div>
+                        )}
+                      </div>
                       <span className="bg-success-100 text-success-800 text-xs px-2 py-1 rounded-lg">
                         {group.memberCount} {group.memberCount === 1 ? 'member' : 'members'}
                       </span>
@@ -251,7 +258,8 @@ function EditGroupModal({ isOpen, onClose, group, onGroupUpdated, onMessageGroup
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    leaderIds: [] as string[]
+    leaderIds: [] as string[],
+    isLocked: false
   })
   const [readOnly, setReadOnly] = useState(true)
 
@@ -268,7 +276,8 @@ function EditGroupModal({ isOpen, onClose, group, onGroupUpdated, onMessageGroup
       setFormData({
         name: group.name || '',
         description: group.description || '',
-        leaderIds: Array.isArray(group.leaderIds) ? group.leaderIds : []
+        leaderIds: Array.isArray(group.leaderIds) ? group.leaderIds : [],
+        isLocked: Boolean(group.isLocked)
       })
       setCurrentMembers(group.members || [])
       
@@ -429,7 +438,8 @@ function EditGroupModal({ isOpen, onClose, group, onGroupUpdated, onMessageGroup
           updates: {
             name: formData.name,
             description: formData.description,
-            leaderIds: formData.leaderIds
+            leaderIds: formData.leaderIds,
+            isLocked: formData.isLocked
           }
         })
       })
@@ -538,6 +548,46 @@ function EditGroupModal({ isOpen, onClose, group, onGroupUpdated, onMessageGroup
                 className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 ${readOnly ? 'bg-gray-50' : ''}`}
                 placeholder="Brief description of the group's purpose, role, and any special requirements..."
               />
+            </div>
+
+            {/* Group Privacy Settings */}
+            <div className="space-y-3">
+              <label className="block text-sm font-medium text-gray-700">Group Privacy</label>
+              <div className={`flex items-center space-x-3 p-3 border border-gray-200 rounded-lg ${readOnly ? 'bg-gray-50' : ''}`}>
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, isLocked: !prev.isLocked }))}
+                  disabled={readOnly}
+                  className={`flex items-center justify-center w-10 h-6 rounded-full transition-colors disabled:opacity-50 ${
+                    formData.isLocked 
+                      ? 'bg-red-500' 
+                      : 'bg-green-500'
+                  }`}
+                >
+                  <div className={`w-4 h-4 bg-white rounded-full transform transition-transform ${
+                    formData.isLocked ? 'translate-x-2' : '-translate-x-2'
+                  }`} />
+                </button>
+                
+                <div className="flex items-center space-x-2">
+                  {formData.isLocked ? (
+                    <Lock className="h-5 w-5 text-red-500" />
+                  ) : (
+                    <Unlock className="h-5 w-5 text-green-500" />
+                  )}
+                  <div>
+                    <div className="font-medium text-gray-900">
+                      {formData.isLocked ? 'Private Group' : 'Open Group'}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      {formData.isLocked 
+                        ? 'Only visible to directors and pastors. Members must be invited.' 
+                        : 'Visible to all musicians. Anyone can join during signup.'
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </section>
 
