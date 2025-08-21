@@ -13,7 +13,8 @@ import {
   CheckCircle, 
   AlertCircle,
   UserPlus,
-  Crown
+  Crown,
+  Trash2
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -38,6 +39,7 @@ export default function TransferOwnershipPage() {
   const [submitting, setSubmitting] = useState(false)
   const [existingTransfers, setExistingTransfers] = useState<OwnershipTransfer[]>([])
   const [showForm, setShowForm] = useState(false)
+  const [deletingTransfer, setDeletingTransfer] = useState<string | null>(null)
   
   // Form state
   const [email, setEmail] = useState('')
@@ -174,6 +176,33 @@ export default function TransferOwnershipPage() {
     const diffTime = expires.getTime() - now.getTime()
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
     return diffDays
+  }
+
+  const handleDeleteTransfer = async (transferId: string) => {
+    if (!confirm('Are you sure you want to delete this pending invitation? This action cannot be undone.')) {
+      return
+    }
+
+    setDeletingTransfer(transferId)
+    
+    try {
+      const response = await fetch(`/api/ownership-transfers?id=${transferId}`, {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        // Remove the transfer from the list
+        setExistingTransfers(prev => prev.filter(t => t.id !== transferId))
+      } else {
+        const error = await response.json()
+        alert(error.error || 'Failed to delete invitation')
+      }
+    } catch (error) {
+      console.error('Error deleting transfer:', error)
+      alert('Failed to delete invitation')
+    } finally {
+      setDeletingTransfer(null)
+    }
   }
 
   if (loading) {
@@ -462,6 +491,25 @@ export default function TransferOwnershipPage() {
                           </p>
                         )}
                       </div>
+                      {transfer.status === 'PENDING' && (
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => handleDeleteTransfer(transfer.id)}
+                            disabled={deletingTransfer === transfer.id}
+                            className="inline-flex items-center px-3 py-2 border border-red-300 shadow-sm text-sm leading-4 font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Delete pending invitation"
+                          >
+                            {deletingTransfer === transfer.id ? (
+                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-red-300 border-t-red-600"></div>
+                            ) : (
+                              <>
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                Delete
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}

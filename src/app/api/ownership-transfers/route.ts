@@ -209,4 +209,64 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Check if user is director or pastor
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      include: { church: true }
+    })
+
+    if (!user || (user.role !== 'DIRECTOR' && user.role !== 'ASSOCIATE_DIRECTOR' && user.role !== 'PASTOR')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const transferId = searchParams.get('id')
+
+    if (!transferId) {
+      return NextResponse.json({ error: 'Transfer ID is required' }, { status: 400 })
+    }
+
+    // Find the transfer and verify it belongs to this church
+    const transfer = await prisma.ownershipTransfer.findFirst({
+      where: {
+        id: transferId,
+        churchId: user.churchId
+      }
+    })
+
+    if (!transfer) {
+      return NextResponse.json({ error: 'Transfer not found' }, { status: 404 })
+    }
+
+    // Only allow deletion of pending transfers
+    if (transfer.status !== 'PENDING') {
+      return NextResponse.json(
+        { error: 'Only pending transfers can be deleted' }, 
+        { status: 400 }
+      )
+    }
+
+    // Delete the transfer
+    await prisma.ownershipTransfer.delete({
+      where: { id: transferId }
+    })
+
+    return NextResponse.json({ message: 'Transfer deleted successfully' })
+  } catch (error) {
+    console.error('Error deleting ownership transfer:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
 } 
