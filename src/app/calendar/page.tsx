@@ -429,16 +429,12 @@ export default function CalendarPage() {
   const handleEventClick = (event: CalendarEvent) => {
     console.log('🎯 Event clicked:', event.name, 'User role:', session?.user?.role)
     
-    // Role-based navigation: ONLY directors/pastors can access plan page
-    if (session?.user?.role === 'DIRECTOR' || session?.user?.role === 'PASTOR' || session?.user?.role === 'ASSOCIATE_DIRECTOR') {
-      // Directors get the plan page for full event management
-      router.push('/plan')
-    } else {
-      // Musicians get the event details modal (read-only view)
-      setSelectedEvent(event)
-      setShowEventDetails(true)
-      setIsEditingEvent(false) // Ensure musicians can't edit
-    }
+    // Open event details modal for all users
+    setSelectedEvent(event)
+    setShowEventDetails(true)
+    
+    // Set edit capability based on role - only directors/pastors/associate directors can edit
+    setIsEditingEvent(false) // Start in view mode, let the modal handle edit permissions
   }
 
   const handleDateClick = (day: number, e: React.MouseEvent) => {
