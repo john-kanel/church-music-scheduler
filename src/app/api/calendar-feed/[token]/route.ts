@@ -91,7 +91,11 @@ export async function GET(
         assignments: {
           include: {
             user: true,
-            group: true
+            group: {
+              include: {
+                members: true
+              }
+            }
           }
         },
         hymns: {

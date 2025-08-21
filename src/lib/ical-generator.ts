@@ -170,26 +170,17 @@ function buildEventDescription(event: EventWithDetails): string {
     lines.push('')
   }
 
-  // Add musician assignments with cleaner formatting
-  const acceptedAssignments = event.assignments.filter(a => a.user && (a.status === 'ACCEPTED' || a.status === 'PENDING'))
+  // Add only open musician positions - no longer show assigned musicians
   const pendingAssignments = event.assignments.filter(a => !a.user && a.status === 'PENDING')
   
-  if (acceptedAssignments.length > 0 || pendingAssignments.length > 0) {
+  if (pendingAssignments.length > 0) {
     lines.push('MUSICIANS:')
+    lines.push('')
     
-    // Show assigned musicians
-    acceptedAssignments.forEach(assignment => {
-      if (assignment.user) {
-        const role = assignment.roleName || 'Musician'
-        const name = `${assignment.user.firstName} ${assignment.user.lastName}`
-        lines.push(`${role}: ${name}`)
-      }
-    })
-    
-    // Show open positions (simplified format)
+    // Show open positions only
     pendingAssignments.forEach(assignment => {
       const role = assignment.roleName || 'Musician'
-      lines.push(`${role}: (Open)`)
+      lines.push(`${role}:`)
     })
     
     lines.push('')
@@ -205,7 +196,8 @@ function buildEventDescription(event: EventWithDetails): string {
   if (uniqueGroups.length > 0) {
     uniqueGroups.forEach(group => {
       if (group) {
-        lines.push(`${group.name}`)
+        const memberCount = (group as any).members?.length || 0
+        lines.push(`${group.name} (${memberCount})`)
       }
     })
   } else {

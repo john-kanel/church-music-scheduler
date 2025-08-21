@@ -423,26 +423,17 @@ export function convertToGoogleCalendarEvent(event: any, churchTimezone?: string
     descriptionParts.push('')
   }
 
-  // Add musician assignments (both assigned and open positions)
-  const acceptedAssignments = event.assignments?.filter((a: any) => a.user && (a.status === 'ACCEPTED' || a.status === 'PENDING')) || []
+  // Add only open musician positions - no longer show assigned musicians
   const pendingAssignments = event.assignments?.filter((a: any) => !a.user && a.status === 'PENDING') || []
   
-  if (acceptedAssignments.length > 0 || pendingAssignments.length > 0) {
+  if (pendingAssignments.length > 0) {
     descriptionParts.push('MUSICIANS:')
+    descriptionParts.push('')
     
-    // Show assigned musicians
-    acceptedAssignments.forEach((assignment: any) => {
-      if (assignment.user) {
-        const role = assignment.roleName || 'Musician'
-        const name = `${assignment.user.firstName} ${assignment.user.lastName}`
-        descriptionParts.push(`${role}: ${name}`)
-      }
-    })
-    
-    // Show open positions
+    // Show open positions only
     pendingAssignments.forEach((assignment: any) => {
       const role = assignment.roleName || 'Musician'
-      descriptionParts.push(`${role}: (Open)`)
+      descriptionParts.push(`${role}:`)
     })
     
     descriptionParts.push('')
@@ -459,7 +450,8 @@ export function convertToGoogleCalendarEvent(event: any, churchTimezone?: string
   if (uniqueGroups.length > 0) {
     uniqueGroups.forEach((group: any) => {
       if (group) {
-        descriptionParts.push(group.name)
+        const memberCount = group.members?.length || 0
+        descriptionParts.push(`${group.name} (${memberCount})`)
       }
     })
   } else {

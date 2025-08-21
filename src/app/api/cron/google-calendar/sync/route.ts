@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
           },
           include: {
             eventType: true,
-            assignments: { include: { user: true, group: true } },
+            assignments: { include: { user: true, group: { include: { members: true } } } },
             hymns: {
               include: { servicePart: true },
               orderBy: [{ servicePart: { order: 'asc' } }, { createdAt: 'asc' }]

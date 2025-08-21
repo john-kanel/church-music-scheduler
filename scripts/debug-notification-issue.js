@@ -124,7 +124,7 @@ async function debugNotificationIssue(eventId, musicianEmail) {
         eventId: eventId,
         recipientEmail: musicianEmail
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { sentAt: 'desc' }
     })
 
     console.log(`📝 Notification logs for this musician and event: ${notificationLogs.length}`)
@@ -142,7 +142,7 @@ async function debugNotificationIssue(eventId, musicianEmail) {
         eventId: eventId,
         type: 'MUSICIAN_EVENT_REMINDER'
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { sentAt: 'desc' }
     })
 
     console.log(`📊 All reminder notification logs for this event: ${eventNotificationLogs.length}`)
