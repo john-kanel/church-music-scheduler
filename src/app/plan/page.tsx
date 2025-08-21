@@ -2582,10 +2582,13 @@ export default function EventPlannerPage() {
         } else {
           const existing = colorMap.get(color)
           if (isBlue) {
-            // For blue events, ALWAYS keep the name as "General" - never override
+            // For blue events, ALWAYS keep the name as "General" - never override with one-off event names
             existing.name = 'General'
-          } else if (event.isRootEvent || event.generatedFrom) {
-            // For non-blue events, make sure we have the recurring series name (not just any event name)
+          } else if (event.isRootEvent) {
+            // For non-blue events, prioritize root event names (recurring series) over individual event names
+            existing.name = event.name
+          } else if (!existing.name || existing.name === 'General') {
+            // Only use regular event name if we don't have a root event name yet
             existing.name = event.name
           }
         }

@@ -221,8 +221,28 @@ export async function POST(request: NextRequest) {
     // Find or create event type based on color
     let finalEventTypeId = eventTypeId
     
-    if (!finalEventTypeId && eventTypeColor) {
-      // Try to find existing event type with this color
+    if (!isRecurring) {
+      // For one-off events, ALWAYS use blue color and "General" type
+      let generalEventType = await prisma.eventType.findFirst({
+        where: {
+          churchId: session.user.churchId,
+          color: '#3B82F6', // Force blue for one-off events
+          name: 'General'
+        }
+      })
+
+      if (!generalEventType) {
+        generalEventType = await prisma.eventType.create({
+          data: {
+            name: 'General',
+            color: '#3B82F6',
+            churchId: session.user.churchId
+          }
+        })
+      }
+      finalEventTypeId = generalEventType.id
+    } else if (!finalEventTypeId && eventTypeColor) {
+      // For recurring events, use the specified color
       let eventType = await prisma.eventType.findFirst({
         where: {
           churchId: session.user.churchId,

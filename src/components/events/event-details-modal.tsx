@@ -176,7 +176,7 @@ const RECURRENCE_PATTERNS = [
 ]
 
 const EVENT_COLORS = [
-  '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', 
+  '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', 
   '#F97316', '#06B6D4', '#84CC16', '#EC4899', '#6B7280'
 ]
 
@@ -608,10 +608,10 @@ export function EventDetailsModal({
     setSuccess('')
 
     try {
-      // Handle event type color change
+      // Handle event type color change (only for recurring events)
       let eventTypeId = currentEvent.eventType?.id
-      if (editData.eventTypeColor !== currentEvent.eventType?.color) {
-        console.log('🎨 Event type color changed, creating/finding new event type...')
+      if (editData.eventTypeColor !== currentEvent.eventType?.color && isRecurringEvent()) {
+        console.log('🎨 Event type color changed for recurring event, creating/finding new event type...')
         // Create or find event type with the new color
         const eventTypeResponse = await fetch('/api/event-types', {
           method: 'POST',
@@ -629,6 +629,10 @@ export function EventDetailsModal({
         } else {
           console.error('❌ Failed to update event type:', await eventTypeResponse.text())
         }
+      } else if (!isRecurringEvent()) {
+        // For one-off events, force blue color and ignore any color changes
+        console.log('🔒 Preventing color change for one-off event - forcing blue')
+        editData.eventTypeColor = '#3B82F6'
       }
 
       const requestData = {
@@ -1711,18 +1715,18 @@ export function EventDetailsModal({
           <div className="flex items-center">
             <div className="relative color-picker-container">
               <button
-                onClick={() => isDirector && isEditing && setShowColorPicker(!showColorPicker)}
+                onClick={() => isDirector && isEditing && isRecurringEvent() && setShowColorPicker(!showColorPicker)}
                 className={`w-4 h-4 rounded-full mr-3 ${
-                  isDirector && isEditing 
+                  isDirector && isEditing && isRecurringEvent()
                     ? 'hover:ring-2 hover:ring-gray-300 hover:ring-offset-1 cursor-pointer transition-all' 
                     : ''
                 }`}
                 style={{ backgroundColor: isEditing ? editData.eventTypeColor : currentEvent.eventType.color }}
-                title={isDirector && isEditing ? "Click to change event color" : undefined}
+                title={isDirector && isEditing && isRecurringEvent() ? "Click to change event color" : undefined}
               />
               
-              {/* Color Picker Popup */}
-              {showColorPicker && isEditing && (
+              {/* Color Picker Popup - Only show for recurring events */}
+              {showColorPicker && isEditing && isRecurringEvent() && (
                 <div className="absolute top-6 left-0 z-20 bg-white border border-gray-200 rounded-xl shadow-xl p-4 min-w-[240px]">
                   <div className="mb-3">
                     <h4 className="text-sm font-medium text-gray-700">Select Event Color</h4>

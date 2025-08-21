@@ -91,7 +91,8 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
     isRecurring: false,
     recurrencePattern: '',
     recurrenceEnd: '',
-    copyHymnsToRecurring: true // Whether to copy hymns to recurring events
+    copyHymnsToRecurring: true, // Whether to copy hymns to recurring events
+    eventTypeColor: '#3B82F6' // Force blue color for one-off events
   })
 
   const [roles, setRoles] = useState<Role[]>([
@@ -400,7 +401,8 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
         copyHymnsToRecurring: formData.copyHymnsToRecurring,
         roles: roles,
         hymns: hymns,
-        selectedGroups: selectedGroups
+        selectedGroups: selectedGroups,
+        eventTypeColor: formData.eventTypeColor // Force blue for one-off events
       }
 
       // Create the event first
@@ -485,7 +487,8 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
           isRecurring: false,
           recurrencePattern: '',
           recurrenceEnd: '',
-          copyHymnsToRecurring: true
+          copyHymnsToRecurring: true,
+          eventTypeColor: '#3B82F6' // Force blue color for one-off events
         })
         setRoles([
           { id: '1', name: 'Accompanist', maxCount: 1, isRequired: true, assignedMusicians: [] },
