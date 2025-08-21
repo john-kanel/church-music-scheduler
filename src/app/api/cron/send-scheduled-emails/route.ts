@@ -39,7 +39,25 @@ export async function POST(request: NextRequest) {
             where: { id: eventId },
             include: {
               eventType: true,
-              hymns: { include: { servicePart: true }, orderBy: [{ servicePart: { order: 'asc' } }, { createdAt: 'asc' }] }
+              hymns: { include: { servicePart: true }, orderBy: [{ servicePart: { order: 'asc' } }, { createdAt: 'asc' }] },
+              assignments: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      firstName: true,
+                      lastName: true,
+                      email: true
+                    }
+                  },
+                  group: {
+                    select: {
+                      id: true,
+                      name: true
+                    }
+                  }
+                }
+              }
             }
           })
           if (!event) {
@@ -54,6 +72,44 @@ export async function POST(request: NextRequest) {
           })
 
           const musicList = event.hymns.map((h, i) => `${i + 1}. ${h.servicePart?.name || 'Other'}: ${h.title}${h.notes ? ` (${h.notes})` : ''}`).join('\n')
+
+          // Generate musicians and groups section
+          let musiciansSection = ''
+          if (event.assignments && event.assignments.length > 0) {
+            const assignedUsers = event.assignments.filter(a => a.user).map(a => `${a.user!.firstName} ${a.user!.lastName} (${a.roleName})`).sort()
+            const assignedGroups = event.assignments.filter(a => a.group).map(a => `${a.group!.name} (${a.roleName})`).sort()
+            
+            if (assignedUsers.length > 0 || assignedGroups.length > 0) {
+              musiciansSection = `
+                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+                  <h4 style="margin: 0 0 8px 0; color: #1f2937; font-size: 14px;">👥 Musicians & Groups:</h4>
+                  <div style="font-size: 14px; line-height: 1.6; color: #4b5563;">
+              `
+              
+              if (assignedUsers.length > 0) {
+                musiciansSection += `
+                    <div style="margin-bottom: 8px;">
+                      <strong>Individual Musicians:</strong><br/>
+                      ${assignedUsers.map(u => `• ${u}`).join('<br/>')}
+                    </div>
+                `
+              }
+              
+              if (assignedGroups.length > 0) {
+                musiciansSection += `
+                    <div>
+                      <strong>Groups:</strong><br/>
+                      ${assignedGroups.map(g => `• ${g}`).join('<br/>')}
+                    </div>
+                `
+              }
+              
+              musiciansSection += `
+                  </div>
+                </div>
+              `
+            }
+          }
 
           // Generate document links if any
           let documentsSection = ''
@@ -91,6 +147,7 @@ ${documentLinks}
                 <div style="background-color:#f8fafc; padding:20px; border-radius:8px; margin:20px 0;">
                   <h3 style="margin:0 0 15px 0; color:#1f2937;">🎵 Music for this Service</h3>
                   <div style="white-space: pre-line; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; color: #4b5563; line-height: 1.6; font-size: 14px;">${musicList}</div>
+                  ${musiciansSection}
                   ${documentsSection}
                 </div>
               </div>
