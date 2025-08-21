@@ -159,7 +159,7 @@ function AcceptOwnershipClient({ token }: { token: string }) {
         }
       } else {
         const errorData = await response.json()
-        setError(errorData.message || 'Failed to create account')
+        setError(errorData.error || 'Failed to create account')
       }
     } catch (err) {
       setError('Failed to create account')
