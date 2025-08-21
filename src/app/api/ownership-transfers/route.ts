@@ -231,6 +231,27 @@ export async function DELETE(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const transferId = searchParams.get('id')
+    const email = searchParams.get('email')
+    const deleteAll = searchParams.get('deleteAll') === 'true'
+
+    // Handle bulk deletion by email
+    if (deleteAll && email) {
+      // Delete all non-completed transfers for this email in this church
+      const deletedTransfers = await prisma.ownershipTransfer.deleteMany({
+        where: {
+          inviteeEmail: email,
+          churchId: user.churchId,
+          status: {
+            not: 'COMPLETED' // Keep completed transfers for audit trail
+          }
+        }
+      })
+
+      return NextResponse.json({ 
+        message: `Deleted ${deletedTransfers.count} transfer(s) for ${email}`,
+        deletedCount: deletedTransfers.count
+      })
+    }
 
     if (!transferId) {
       return NextResponse.json({ error: 'Transfer ID is required' }, { status: 400 })
@@ -248,10 +269,11 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Transfer not found' }, { status: 404 })
     }
 
-    // Only allow deletion of pending transfers
-    if (transfer.status !== 'PENDING') {
+    // Allow deletion of PENDING, EXPIRED, and CANCELLED transfers
+    // Don't allow deletion of ACCEPTED or COMPLETED transfers as they represent actual ownership changes
+    if (transfer.status === 'ACCEPTED' || transfer.status === 'COMPLETED') {
       return NextResponse.json(
-        { error: 'Only pending transfers can be deleted' }, 
+        { error: 'Cannot delete accepted or completed transfers' }, 
         { status: 400 }
       )
     }

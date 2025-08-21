@@ -179,7 +179,7 @@ export default function TransferOwnershipPage() {
   }
 
   const handleDeleteTransfer = async (transferId: string) => {
-    if (!confirm('Are you sure you want to delete this pending invitation? This action cannot be undone.')) {
+    if (!confirm('Are you sure you want to delete this invitation? This action cannot be undone.')) {
       return
     }
 
@@ -200,6 +200,39 @@ export default function TransferOwnershipPage() {
     } catch (error) {
       console.error('Error deleting transfer:', error)
       alert('Failed to delete invitation')
+    } finally {
+      setDeletingTransfer(null)
+    }
+  }
+
+  const handleClearAllForEmail = async (email: string) => {
+    if (!confirm(`Are you sure you want to delete ALL past invitations for ${email}? This will allow you to send a new invitation to this email address.`)) {
+      return
+    }
+
+    setDeletingTransfer('clearing-all')
+    
+    try {
+      const response = await fetch(`/api/ownership-transfers?email=${encodeURIComponent(email)}&deleteAll=true`, {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        alert(result.message)
+        // Refresh the transfers list
+        const refreshResponse = await fetch('/api/ownership-transfers')
+        if (refreshResponse.ok) {
+          const data = await refreshResponse.json()
+          setExistingTransfers(data.transfers)
+        }
+      } else {
+        const error = await response.json()
+        alert(error.error || 'Failed to clear invitations')
+      }
+    } catch (error) {
+      console.error('Error clearing invitations:', error)
+      alert('Failed to clear invitations')
     } finally {
       setDeletingTransfer(null)
     }
@@ -491,13 +524,13 @@ export default function TransferOwnershipPage() {
                           </p>
                         )}
                       </div>
-                      {transfer.status === 'PENDING' && (
-                        <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-2">
+                        {transfer.status === 'PENDING' && (
                           <button
                             onClick={() => handleDeleteTransfer(transfer.id)}
-                            disabled={deletingTransfer === transfer.id}
+                            disabled={deletingTransfer === transfer.id || deletingTransfer === 'clearing-all'}
                             className="inline-flex items-center px-3 py-2 border border-red-300 shadow-sm text-sm leading-4 font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                            title="Delete pending invitation"
+                            title="Delete this invitation"
                           >
                             {deletingTransfer === transfer.id ? (
                               <div className="animate-spin rounded-full h-4 w-4 border-2 border-red-300 border-t-red-600"></div>
@@ -508,8 +541,26 @@ export default function TransferOwnershipPage() {
                               </>
                             )}
                           </button>
-                        </div>
-                      )}
+                        )}
+                        
+                        {transfer.status !== 'PENDING' && transfer.status !== 'COMPLETED' && (
+                          <button
+                            onClick={() => handleClearAllForEmail(transfer.inviteeEmail)}
+                            disabled={deletingTransfer === 'clearing-all'}
+                            className="inline-flex items-center px-3 py-2 border border-amber-300 shadow-sm text-sm leading-4 font-medium rounded-md text-amber-700 bg-white hover:bg-amber-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Clear all past invitations for this email to allow resending"
+                          >
+                            {deletingTransfer === 'clearing-all' ? (
+                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-amber-300 border-t-amber-600"></div>
+                            ) : (
+                              <>
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                Clear All
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
