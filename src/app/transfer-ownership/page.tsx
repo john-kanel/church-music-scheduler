@@ -128,7 +128,7 @@ export default function TransferOwnershipPage() {
         }
       } else {
         const error = await response.json()
-        alert(error.message || 'Failed to send invitation')
+        alert(error.error || 'Failed to send invitation')
       }
     } catch (error) {
       console.error('Error sending invitation:', error)
