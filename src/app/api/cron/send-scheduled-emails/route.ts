@@ -53,7 +53,8 @@ export async function POST(request: NextRequest) {
                   group: {
                     select: {
                       id: true,
-                      name: true
+                      name: true,
+                      members: true
                     }
                   }
                 }
@@ -76,35 +77,24 @@ export async function POST(request: NextRequest) {
           // Generate musicians and groups section
           let musiciansSection = ''
           if (event.assignments && event.assignments.length > 0) {
-            const assignedUsers = event.assignments.filter(a => a.user).map(a => `${a.user!.firstName} ${a.user!.lastName} (${a.roleName})`).sort()
-            const assignedGroups = event.assignments.filter(a => a.group).map(a => `${a.group!.name} (${a.roleName})`).sort()
+            // Get unique groups with member counts (no duplicates)
+            const eventGroups = event.assignments.filter(a => a.group).map(a => a.group)
+            const uniqueGroups = Array.from(new Set(eventGroups.map(g => g?.id))).map(id => 
+              eventGroups.find(g => g?.id === id)
+            ).filter(Boolean)
             
-            if (assignedUsers.length > 0 || assignedGroups.length > 0) {
+            if (uniqueGroups.length > 0) {
               musiciansSection = `
                 <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
                   <h4 style="margin: 0 0 8px 0; color: #1f2937; font-size: 14px;">👥 Musicians & Groups:</h4>
                   <div style="font-size: 14px; line-height: 1.6; color: #4b5563;">
-              `
-              
-              if (assignedUsers.length > 0) {
-                musiciansSection += `
-                    <div style="margin-bottom: 8px;">
-                      <strong>Individual Musicians:</strong><br/>
-                      ${assignedUsers.map(u => `• ${u}`).join('<br/>')}
-                    </div>
-                `
-              }
-              
-              if (assignedGroups.length > 0) {
-                musiciansSection += `
                     <div>
                       <strong>Groups:</strong><br/>
-                      ${assignedGroups.map(g => `• ${g}`).join('<br/>')}
+                      ${uniqueGroups.map(g => {
+                        const memberCount = (g as any).members?.length || 0
+                        return `• ${g!.name} (${memberCount} members)`
+                      }).join('<br/>')}
                     </div>
-                `
-              }
-              
-              musiciansSection += `
                   </div>
                 </div>
               `
