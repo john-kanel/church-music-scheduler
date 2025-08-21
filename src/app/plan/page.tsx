@@ -3259,23 +3259,23 @@ export default function EventPlannerPage() {
                     <div key={event.id} data-event-id={event.id} className="flex-shrink-0 w-80 border-r border-gray-200 bg-white relative">
                       {/* Event Header */}
                       <div className="p-4 border-b border-gray-200 bg-gray-50">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
+                        <div className="flex items-start justify-between mb-2 gap-2">
+                          <div className="flex items-start gap-2 min-w-0 flex-1">
                             <input
                               type="checkbox"
                               checked={selectedEvents.has(event.id)}
                               onChange={() => toggleEventSelection(event.id)}
-                              className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                              className="rounded border-gray-300 text-green-600 focus:ring-green-500 mt-0.5 flex-shrink-0"
                             />
                             <div 
-                              className="w-3 h-3 rounded-full"
+                              className="w-3 h-3 rounded-full mt-0.5 flex-shrink-0"
                               style={{ backgroundColor: event.eventType.color }}
                             />
-                            <h3 className="font-semibold text-gray-900 truncate">{event.name}</h3>
+                            <h3 className="font-semibold text-gray-900 leading-tight break-words">{event.name}</h3>
                           </div>
                           
                           {/* Edit and Delete buttons */}
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1 flex-shrink-0">
                             <button
                               onClick={() => handleCopyEvent(event)}
                               className="p-1 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-md transition-colors"
@@ -4175,23 +4175,23 @@ export default function EventPlannerPage() {
                         <>
                           {/* Event Header */}
                           <div className="p-4 border-b border-gray-200 bg-gray-50">
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
+                            <div className="flex items-start justify-between mb-2 gap-2">
+                              <div className="flex items-start gap-2 min-w-0 flex-1">
                                 <input
                                   type="checkbox"
                                   checked={selectedEvents.has(event.id)}
                                   onChange={() => toggleEventSelection(event.id)}
-                                  className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                                  className="rounded border-gray-300 text-green-600 focus:ring-green-500 mt-0.5 flex-shrink-0"
                                 />
                                 <div 
-                                  className="w-3 h-3 rounded-full"
+                                  className="w-3 h-3 rounded-full mt-0.5 flex-shrink-0"
                                   style={{ backgroundColor: event.eventType.color }}
                                 />
-                                <h3 className="font-semibold text-gray-900 truncate">{event.name}</h3>
+                                <h3 className="font-semibold text-gray-900 leading-tight break-words">{event.name}</h3>
                               </div>
                               
                                                              {/* Edit and Delete buttons */}
-                               <div className="flex items-center gap-1">
+                               <div className="flex items-center gap-1 flex-shrink-0">
                                  <button
                                    onClick={() => handleCopyEvent(event)}
                                    className="p-1 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-md transition-colors"
