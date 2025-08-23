@@ -170,17 +170,26 @@ function buildEventDescription(event: EventWithDetails): string {
     lines.push('')
   }
 
-  // Add only open musician positions - no longer show assigned musicians
-  const pendingAssignments = event.assignments.filter(a => !a.user && a.status === 'PENDING')
+  // Add musician assignments - both assigned and open positions
+  const allAssignments = event.assignments.filter(a => !a.group) // Individual assignments only
+  const assignedMusicians = allAssignments.filter(a => a.user && (a.status === 'ACCEPTED' || a.status === 'PENDING'))
+  const pendingAssignments = allAssignments.filter(a => !a.user && a.status === 'PENDING')
   
-  if (pendingAssignments.length > 0) {
+  if (assignedMusicians.length > 0 || pendingAssignments.length > 0) {
     lines.push('MUSICIANS:')
     lines.push('')
     
-    // Show open positions only
+    // Show assigned musicians first
+    assignedMusicians.forEach(assignment => {
+      const role = assignment.roleName || 'Musician'
+      const musicianName = assignment.user ? `${assignment.user.firstName} ${assignment.user.lastName}` : 'Unknown'
+      lines.push(`${role}: ${musicianName}`)
+    })
+    
+    // Show open positions
     pendingAssignments.forEach(assignment => {
       const role = assignment.roleName || 'Musician'
-      lines.push(`${role}:`)
+      lines.push(`${role}: (Open)`)
     })
     
     lines.push('')

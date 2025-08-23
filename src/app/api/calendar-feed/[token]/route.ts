@@ -49,39 +49,11 @@ export async function GET(
       }
     }
 
-    // Apply filters based on subscription preferences
-    switch (subscription.filterType) {
-      case 'GROUPS':
-        if (subscription.groupIds.length > 0) {
-          eventQuery.assignments = {
-            some: {
-              groupId: {
-                in: subscription.groupIds
-              }
-            }
-          }
-        } else {
-          // No groups selected, return empty calendar
-          eventQuery.id = 'impossible-id'
-        }
-        break
-
-      case 'EVENT_TYPES':
-        if (subscription.eventTypeIds.length > 0) {
-          eventQuery.eventTypeId = {
-            in: subscription.eventTypeIds
-          }
-        } else {
-          // No event types selected, return empty calendar
-          eventQuery.id = 'impossible-id'
-        }
-        break
-
-      case 'ALL':
-      default:
-        // No additional filters for ALL
-        break
-    }
+    // REMOVED: Apply filters based on subscription preferences
+    // Calendar feeds should show ALL events regardless of filter settings
+    // Filters were causing random events to not appear
+    
+    // No additional filters - show all confirmed/cancelled events
 
     // Fetch events with all related data
     const events = await prisma.event.findMany({
