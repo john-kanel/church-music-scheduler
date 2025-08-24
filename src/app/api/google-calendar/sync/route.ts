@@ -67,10 +67,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Build query for events to sync
+    // Include events from 30 days ago to avoid disappearing events
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+    
     let eventQuery: any = {
       churchId: dbUser.churchId,
       startTime: {
-        gte: new Date() // Only future events
+        gte: thirtyDaysAgo // Include events from last 30 days + all future events
       },
       // Only include confirmed and cancelled events, exclude tentative
       status: {

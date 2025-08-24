@@ -63,11 +63,14 @@ export async function POST(request: NextRequest) {
           })
         }
 
-        // Get events to sync (future, confirmed/cancelled)
+        // Get events to sync (confirmed/cancelled from last 30 days)
+        const thirtyDaysAgo = new Date()
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+        
         const events = await prisma.event.findMany({
           where: {
             churchId: integration.user.churchId,
-            startTime: { gte: new Date() },
+            startTime: { gte: thirtyDaysAgo },
             status: { in: ['CONFIRMED', 'CANCELLED'] }
           },
           include: {
