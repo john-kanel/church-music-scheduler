@@ -95,6 +95,63 @@ export async function GET(request: NextRequest) {
       }
     })
 
+    // Fetch root recurring events to ensure all recurring series appear in filters
+    // This includes recurring series that may only have past events
+    const rootRecurringEvents = await prisma.event.findMany({
+      where: {
+        churchId: user.church.id,
+        isRootEvent: true,
+        isRecurring: true
+      },
+      include: {
+        eventType: {
+          select: {
+            id: true,
+            name: true,
+            color: true
+          }
+        },
+        hymns: {
+          select: {
+            id: true,
+            title: true,
+            servicePartId: true,
+            notes: true,
+            servicePart: {
+              select: { id: true, name: true, order: true }
+            }
+          },
+          orderBy: [
+            { servicePart: { order: 'asc' } },
+            { createdAt: 'asc' }
+          ]
+        },
+        assignments: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true
+              }
+            },
+            group: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        }
+      }
+    })
+
+    // Merge events with root recurring events, avoiding duplicates
+    const eventIds = new Set(events.map(e => e.id))
+    const uniqueRootEvents = rootRecurringEvents.filter(rootEvent => !eventIds.has(rootEvent.id))
+    const allEvents = [...events, ...uniqueRootEvents]
+
     // Get total count for pagination
     const totalEvents = await prisma.event.count({
       where: {
@@ -108,7 +165,7 @@ export async function GET(request: NextRequest) {
     // Transform the data for the frontend
     const plannerData = {
       serviceParts,
-      events: events.map((event: any) => ({
+      events: allEvents.map((event: any) => ({
         id: event.id,
         name: event.name,
         description: event.description,
@@ -118,7 +175,8 @@ export async function GET(request: NextRequest) {
         status: (event.status || 'CONFIRMED').toLowerCase(), // Include status field in lowercase
         eventType: event.eventType,
         hymns: event.hymns,
-        assignments: event.assignments
+        assignments: event.assignments,
+        isRootEvent: event.isRootEvent || false // Include isRootEvent flag for filter logic
       })),
       pagination: {
         offset,
