@@ -107,8 +107,15 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
         
         setDashboardData(dashboardData as DashboardData)
         setActivities(activitiesData as Activity[])
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error loading dashboard data:', error)
+        
+        // If we get a 403 error (subscription expired), redirect to trial expired page
+        if (error?.status === 403 || error?.message?.includes('403')) {
+          console.log('🚨 Dashboard API returned 403, redirecting to trial-expired')
+          window.location.href = '/trial-expired'
+          return
+        }
       } finally {
         setLoading(false)
         setActivitiesLoading(false)

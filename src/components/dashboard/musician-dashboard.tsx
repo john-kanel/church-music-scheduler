@@ -100,6 +100,10 @@ export function MusicianDashboard({ user }: MusicianDashboardProps) {
         if (response.ok) {
           const data = await response.json()
           setDashboardData(data)
+        } else if (response.status === 403) {
+          console.log('🚨 Dashboard API returned 403, redirecting to trial-expired')
+          window.location.href = '/trial-expired'
+          return
         } else {
           console.error('Failed to fetch dashboard data')
         }

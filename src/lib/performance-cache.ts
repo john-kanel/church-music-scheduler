@@ -169,7 +169,9 @@ export async function fetchWithCache<T>(
     })
     
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      const error = new Error(`HTTP ${response.status}: ${response.statusText}`) as any
+      error.status = response.status
+      throw error
     }
     
     return response.json()

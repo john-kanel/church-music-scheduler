@@ -74,20 +74,30 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/auth/signin', request.url))
     }
 
-    // Check if subscription is expired
+    // Check if subscription is expired - align with API subscription check
     const now = new Date()
-    const isExpired = church.subscriptionEnds && now > church.subscriptionEnds
-    const isInactive = !['active', 'trialing'].includes(church.subscriptionStatus)
+    const isExpired = church.subscriptionEnds ? now > church.subscriptionEnds : false
+    const isInactive = !['active', 'trialing', 'trial'].includes(church.subscriptionStatus)
+    
+    console.log('🔍 Middleware subscription check:', {
+      churchId: token.churchId,
+      subscriptionStatus: church.subscriptionStatus,
+      subscriptionEnds: church.subscriptionEnds,
+      isExpired,
+      isInactive,
+      shouldRedirect: isExpired || isInactive
+    })
 
     if (isExpired || isInactive) {
+      console.log('🚨 Redirecting to trial-expired page')
       // Redirect to trial expired page
       return NextResponse.redirect(new URL('/trial-expired', request.url))
     }
 
   } catch (error) {
     console.error('Middleware subscription check error:', error)
-    // On error, allow access but log the issue
-    return NextResponse.next()
+    // On subscription check error, redirect to trial expired to be safe
+    return NextResponse.redirect(new URL('/trial-expired', request.url))
   }
 
   return NextResponse.next()
