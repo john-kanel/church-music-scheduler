@@ -38,13 +38,14 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Fetch upcoming events with pagination
+    // Fetch upcoming events with pagination (include events from today)
     const now = new Date()
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     const events = await prisma.event.findMany({
       where: {
         churchId: user.church.id,
         startTime: {
-          gte: now
+          gte: startOfToday
         }
       },
       orderBy: { startTime: 'asc' },
@@ -152,7 +153,7 @@ export async function GET(request: NextRequest) {
       where: {
         churchId: user.church.id,
         startTime: {
-          gte: now
+          gte: startOfToday
         }
       }
     })
