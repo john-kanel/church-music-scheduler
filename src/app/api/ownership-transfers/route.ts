@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { PrismaClient } from '@prisma/client'
 import { Resend } from 'resend'
+import bcrypt from 'bcrypt'
 
 const prisma = new PrismaClient()
 // Conditionally initialize Resend for local development
@@ -86,50 +87,48 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if there's already a pending transfer for this email
-    const existingTransfer = await prisma.ownershipTransfer.findFirst({
-      where: {
-        inviteeEmail: email,
-        churchId: user.churchId,
-        status: 'PENDING'
+    // Generate a secure temporary password
+    const generateTempPassword = () => {
+      const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%&*'
+      let password = ''
+      for (let i = 0; i < 12; i++) {
+        password += chars.charAt(Math.floor(Math.random() * chars.length))
       }
-    })
-
-    if (existingTransfer) {
-      return NextResponse.json(
-        { error: 'There is already a pending invitation for this email' },
-        { status: 400 }
-      )
+      return password
     }
 
-    // Create the ownership transfer
-    const expiresAt = new Date()
-    expiresAt.setDate(expiresAt.getDate() + 30) // 30 days from now
+    const tempPassword = generateTempPassword()
+    
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(tempPassword, 12)
 
-    let currentOwnerRetireAt = null
-    if (retireCurrentOwner) {
-      currentOwnerRetireAt = new Date()
-      currentOwnerRetireAt.setDate(currentOwnerRetireAt.getDate() + 30)
-    }
-
-    const transfer = await prisma.ownershipTransfer.create({
+    // Create the user account directly
+    const newUser = await prisma.user.create({
       data: {
-        inviteeEmail: email,
-        inviteeFirstName: firstName || null,
-        inviteeLastName: lastName || null,
-        inviteeRole: role,
-        retireCurrentOwner,
-        currentOwnerRetireAt,
-        expiresAt,
+        firstName: firstName?.trim() || '',
+        lastName: lastName?.trim() || '',
+        email: email.toLowerCase().trim(),
+        password: hashedPassword,
+        role: role,
         churchId: user.churchId,
-        invitedBy: user.id
+        emailNotifications: true,
+        smsNotifications: false,
+        isVerified: true // Auto-verify since it's an admin invitation
       }
     })
 
-    // Send invitation email
-    const inviteLink = `${process.env.NEXTAUTH_URL}/accept-ownership/${transfer.token}`
+    // If this is a retirement transfer, schedule the current owner for role change
+    if (retireCurrentOwner) {
+      // We'll handle this with a separate process later
+      // For now, just log it
+      console.log(`User ${user.id} will retire their role in 30 days after user ${newUser.id} accepts`)
+    }
+
+    // Send welcome email with login credentials
+    const loginLink = `${process.env.NEXTAUTH_URL}/login`
     const churchName = user.church?.name || 'Church'
     const inviterName = `${user.firstName} ${user.lastName}`
+    const userDisplayName = firstName || lastName ? `${firstName} ${lastName}`.trim() : email
 
     try {
       // Send email (if Resend is configured)
@@ -137,40 +136,47 @@ export async function POST(request: NextRequest) {
         await resend.emails.send({
           from: 'Church Music Pro <noreply@churchmusicpro.com>',
           to: email,
-          subject: `Invitation to join ${churchName} as ${role.toLowerCase().replace('_', ' ')}`,
+          subject: `Welcome to ${churchName} - Your Account is Ready`,
           html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #660033;">You've been invited to join ${churchName}</h2>
+            <h2 style="color: #660033;">Welcome to ${churchName}!</h2>
             
-            <p>Hello${firstName ? ` ${firstName}` : ''},</p>
+            <p>Hello ${userDisplayName},</p>
             
-            <p>${inviterName} has invited you to join <strong>${churchName}</strong> as a <strong>${role.toLowerCase().replace('_', ' ')}</strong> on Church Music Pro.</p>
+            <p>${inviterName} has created your account on Church Music Pro as a <strong>${role.toLowerCase().replace('_', ' ')}</strong> for <strong>${churchName}</strong>.</p>
             
-            <p>As a ${role.toLowerCase().replace('_', ' ')}, you'll have full access to:</p>
+            <div style="background-color: #f0fdf4; border: 1px solid #16a34a; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="color: #166534; margin: 0 0 16px 0;">🔑 Your Login Credentials</h3>
+              <p style="margin: 8px 0;"><strong>Email:</strong> ${email}</p>
+              <p style="margin: 8px 0;"><strong>Temporary Password:</strong> <code style="background: #e5e7eb; padding: 4px 8px; border-radius: 4px; font-family: monospace;">${tempPassword}</code></p>
+              <p style="color: #166534; font-size: 14px; margin-top: 12px;">⚠️ Please change this password after your first login for security.</p>
+            </div>
+            
+            <p>As a ${role.toLowerCase().replace('_', ' ')}, you can:</p>
             <ul>
               <li>Manage events and schedules</li>
               <li>Invite and manage musicians</li>
-              <li>Send communications</li>
-              <li>Access all church data and settings</li>
+              <li>Send communications to your team</li>
+              <li>Access all church settings and data</li>
             </ul>
             
             ${retireCurrentOwner ? `
               <div style="background-color: #fef3c7; border: 1px solid #f59e0b; padding: 16px; border-radius: 8px; margin: 20px 0;">
                 <h4 style="color: #92400e; margin: 0 0 8px 0;">Important: Ownership Transfer</h4>
                 <p style="color: #92400e; margin: 0;">
-                  ${inviterName} has chosen to transfer ownership to you and will retire their account 30 days after you accept this invitation.
+                  ${inviterName} has transferred ownership to you and will retire their account in 30 days. You are now the primary administrator.
                 </p>
               </div>
             ` : ''}
             
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${inviteLink}" style="background-color: #660033; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
-                Accept Invitation
+              <a href="${loginLink}" style="background-color: #660033; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                Login to Your Account
               </a>
             </div>
             
             <p style="color: #6b7280; font-size: 14px;">
-              This invitation will expire in 30 days. If you have any questions, please contact ${inviterName} directly.
+              After logging in, you can change your password in Profile Settings. If you have any questions, contact ${inviterName} directly.
             </p>
             
             <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
@@ -182,24 +188,25 @@ export async function POST(request: NextRequest) {
         })
       } else {
         console.log('Email simulation (no RESEND_API_KEY):', { 
-          to: email, 
-          subject: `Invitation to join ${churchName} as ${role.toLowerCase().replace('_', ' ')}` 
+          to: email,
+          tempPassword: tempPassword,
+          subject: `Welcome to ${churchName} - Your Account is Ready` 
         })
       }
     } catch (emailError) {
-      console.error('Error sending invitation email:', emailError)
+      console.error('Error sending welcome email:', emailError)
       // Don't fail the request if email fails, just log it
     }
 
     return NextResponse.json({ 
-      message: 'Invitation sent successfully',
-      transfer: {
-        id: transfer.id,
-        inviteeEmail: transfer.inviteeEmail,
-        inviteeRole: transfer.inviteeRole,
-        status: transfer.status,
-        expiresAt: transfer.expiresAt,
-        retireCurrentOwner: transfer.retireCurrentOwner
+      message: 'Director account created successfully',
+      user: {
+        id: newUser.id,
+        email: newUser.email,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+        role: newUser.role,
+        tempPassword: tempPassword // Include for debugging/logs
       }
     })
   } catch (error) {

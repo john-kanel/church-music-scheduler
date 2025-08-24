@@ -56,29 +56,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ events: rootEvents })
     }
 
-    // TEMPORARILY DISABLED: Auto-extension of recurring events
-    // This was causing issues - will re-enable after investigation
-    // if (!rootOnly) {
-    //   const targetDate = new Date()
-    //   targetDate.setMonth(targetDate.getMonth() + 6)
-    //   
-    //   const rootEvents = await prisma.event.findMany({
-    //     where: {
-    //       churchId: session.user.churchId,
-    //       isRootEvent: true,
-    //       isRecurring: true
-    //     },
-    //     select: { id: true }
-    //   })
-    //   
-    //   for (const rootEvent of rootEvents) {
-    //     try {
-    //       await extendRecurringEvents(rootEvent.id, targetDate, prisma)
-    //     } catch (error) {
-    //       console.error(`Error extending recurring events for ${rootEvent.id}:`, error)
-    //     }
-    //   }
-    // }
+    // Note: auto-extension moved to maintenance/backfill endpoint (called by cron)
 
     // Regular event fetching with month/year filtering
     let whereClause: any = {

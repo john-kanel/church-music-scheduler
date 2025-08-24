@@ -5,7 +5,7 @@ import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { logActivity } from '@/lib/activity'
 import { checkSubscriptionStatus, createSubscriptionErrorResponse } from '@/lib/subscription-check'
-import { generateRecurringEvents, parseRecurrencePattern, extendRecurringEvents } from '@/lib/recurrence'
+import { generateRecurringEvents, parseRecurrencePattern, extendRecurringEvents, generateRecurringDates } from '@/lib/recurrence'
 
 // Helper function to update service part structure while preserving individual hymn titles
 async function updateEventServicePartStructure(
@@ -186,6 +186,8 @@ export async function PATCH(
     }
 
     const { id: rootEventId } = await params
+    const url = new URL(request.url)
+    const dryRun = url.searchParams.get('dryRun') === 'true'
     const requestData = await request.json()
 
     const {
@@ -340,7 +342,7 @@ export async function PATCH(
     let eventsSkipped = 0
     const skippedEventDates: string[] = []
 
-    // Update in transaction
+    // Update in transaction (with safety checks and optional dry-run)
     const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const currentDate = new Date() // Current date for scope filtering
       
@@ -427,7 +429,7 @@ export async function PATCH(
         eventsToUpdate = existingEvents
       }
 
-      // Delete future events that will be regenerated (if pattern changed)
+      // Analyze recurrence change and prepare safe regeneration
       const pattern = parseRecurrencePattern(JSON.stringify(recurrencePattern))
       
       // Check if pattern actually changed by comparing to original
@@ -454,18 +456,41 @@ export async function PATCH(
       })
       
       if (patternChanged && editScope === 'future') {
-        // Delete future events so they can be regenerated with new pattern
-        const futureEvents = existingEvents.filter((event: any) => 
-          new Date(event.startTime) >= currentDate
-        )
-        
-        for (const event of futureEvents) {
-          await tx.eventAssignment.deleteMany({ where: { eventId: event.id } })
-          await tx.eventHymn.deleteMany({ where: { eventId: event.id } })
-          await tx.event.delete({ where: { id: event.id } })
+        // SAFETY: compute future dates first; if none, abort (no deletes)
+        const candidateDates = generateRecurringDates(updatedRootEvent.startTime, pattern)
+          .filter((d: Date) => d >= currentDate)
+
+        // Build existing future set (by ISO day+time) for diffing and dry-run
+        const futureEvents = existingEvents.filter((e: any) => new Date(e.startTime) >= currentDate)
+        const existingSet = new Set<string>(futureEvents.map((e: any) => new Date(e.startTime).toISOString()))
+        const toCreateDates = candidateDates.filter((d: Date) => !existingSet.has(d.toISOString()))
+
+        if (dryRun) {
+          // In dry-run, report would-create/would-delete but do not change anything
+          // Only consider deletes that are safe and exact-date replacements
+          const newDateSet = new Set<string>(candidateDates.map(d => d.toISOString()))
+          let safeDeletes = 0
+          for (const ev of futureEvents) {
+            const evIso = new Date(ev.startTime).toISOString()
+            if (!newDateSet.has(evIso)) continue
+            // We will only delete if not modified and no hymns/documents
+            const hymnsCount = await tx.eventHymn.count({ where: { eventId: ev.id } })
+            const docsCount = await tx.eventDocument.count({ where: { eventId: ev.id } }).catch(() => 0)
+            if (!ev.isModified && hymnsCount === 0 && docsCount === 0) {
+              safeDeletes++
+            }
+          }
+          throw new Prisma.PrismaClientKnownRequestError(`DRY_RUN: wouldCreate=${toCreateDates.length}; wouldDelete=${safeDeletes}`, {
+            code: 'P2000',
+            clientVersion: 'NA'
+          } as any)
         }
-        
-        // Generate new events
+
+        if (candidateDates.length === 0) {
+          throw new Error('New recurrence pattern yields no future dates; refusing to delete')
+        }
+
+        // Create new events first (additive)
         const newEvents = await generateRecurringEvents(
           updatedRootEvent,
           pattern,
@@ -473,28 +498,36 @@ export async function PATCH(
           session.user.churchId
         )
 
-        // Create assignments and service parts for new events (only if explicitly provided)
+        // Attach assignments/hymns to newly created events (optional)
         for (const event of newEvents) {
           if (hasRoleChanges && allAssignments.length > 0) {
-            const eventAssignments = allAssignments.map(a => ({
-              ...a,
-              eventId: event.id
-            }))
+            const eventAssignments = allAssignments.map(a => ({ ...a, eventId: event.id }))
             await tx.eventAssignment.createMany({ data: eventAssignments })
           }
-
-          // For new events, apply the default service part structure from root event
           if (hasHymnChanges && hymnsToCreate.length > 0) {
             await tx.eventHymn.createMany({
-              data: hymnsToCreate.map((h: any) => ({
-                ...h,
-                eventId: event.id
-              }))
+              data: hymnsToCreate.map((h: any) => ({ ...h, eventId: event.id }))
             })
           }
         }
-        
+
+        // Now prune only exact-date duplicates that are safe to remove
+        const newSet = new Set<string>(newEvents.map((e: any) => new Date(e.startTime).toISOString()))
+        let safeRemoved = 0
+        for (const ev of futureEvents) {
+          const evIso = new Date(ev.startTime).toISOString()
+          if (!newSet.has(evIso)) continue
+          const hymnsCount = await tx.eventHymn.count({ where: { eventId: ev.id } })
+          const docsCount = await tx.eventDocument.count({ where: { eventId: ev.id } }).catch(() => 0)
+          if (ev.isModified || hymnsCount > 0 || docsCount > 0) continue
+          await tx.eventAssignment.deleteMany({ where: { eventId: ev.id } })
+          await tx.eventHymn.deleteMany({ where: { eventId: ev.id } })
+          await tx.event.delete({ where: { id: ev.id } })
+          safeRemoved++
+        }
+
         eventsUpdated = newEvents.length
+        console.log('✅ Safe regeneration summary:', { created: newEvents.length, removed: safeRemoved })
       } else {
         // Update existing events (preserve modifications)
         for (const event of eventsToUpdate) {

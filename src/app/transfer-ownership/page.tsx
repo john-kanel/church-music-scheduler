@@ -128,11 +128,11 @@ export default function TransferOwnershipPage() {
         }
       } else {
         const error = await response.json()
-        alert(error.error || 'Failed to send invitation')
+        alert(error.error || 'Failed to create director account')
       }
     } catch (error) {
       console.error('Error sending invitation:', error)
-      alert('Failed to send invitation')
+      alert('Failed to create director account')
     } finally {
       setSubmitting(false)
     }
@@ -305,7 +305,7 @@ export default function TransferOwnershipPage() {
         {showForm && (
           <div className="bg-white rounded-lg shadow-sm border p-6 mb-8">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-900">Invite New Owner</h2>
+              <h2 className="text-xl font-semibold text-gray-900">Add Director</h2>
               <button
                 onClick={() => {
                   setShowForm(false)
@@ -398,6 +398,35 @@ export default function TransferOwnershipPage() {
                     />
                   </div>
                 </div>
+              </div>
+
+              {/* Role Selection */}
+              <div>
+                <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-2">
+                  Role *
+                </label>
+                <div className="relative">
+                  <Shield className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <select
+                    id="role"
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white"
+                    required
+                  >
+                    <option value="DIRECTOR">Director</option>
+                    <option value="ASSOCIATE_DIRECTOR">Associate Director</option>
+                    <option value="PASTOR">Pastor</option>
+                  </select>
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-600 mt-1">
+                  Select the role this person will have in your church management system.
+                </p>
               </div>
 
               {/* Transfer Ownership Option */}
