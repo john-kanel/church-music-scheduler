@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { extendRecurringEvents } from '@/lib/recurrence'
 
 export async function GET(request: NextRequest) {
   try {
@@ -37,6 +38,30 @@ export async function GET(request: NextRequest) {
         isRequired: true
       }
     })
+
+    // Extend recurring events to ensure we have future events (6 months ahead)
+    const targetDate = new Date()
+    targetDate.setMonth(targetDate.getMonth() + 6)
+    
+    // Get all root recurring events for this church
+    const rootEvents = await prisma.event.findMany({
+      where: {
+        churchId: user.church.id,
+        isRootEvent: true,
+        isRecurring: true
+      },
+      select: { id: true }
+    })
+    
+    // Extend each recurring series if needed
+    for (const rootEvent of rootEvents) {
+      try {
+        await extendRecurringEvents(rootEvent.id, targetDate, prisma)
+      } catch (error) {
+        console.error(`Error extending recurring events for ${rootEvent.id}:`, error)
+        // Continue with other series if one fails
+      }
+    }
 
     // Fetch upcoming events with pagination (include events from today)
     const now = new Date()

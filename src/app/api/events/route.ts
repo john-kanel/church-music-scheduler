@@ -56,6 +56,32 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ events: rootEvents })
     }
 
+    // Extend recurring events to ensure we have future events (if not rootOnly)
+    if (!rootOnly) {
+      const targetDate = new Date()
+      targetDate.setMonth(targetDate.getMonth() + 6)
+      
+      // Get all root recurring events for this church
+      const rootEvents = await prisma.event.findMany({
+        where: {
+          churchId: session.user.churchId,
+          isRootEvent: true,
+          isRecurring: true
+        },
+        select: { id: true }
+      })
+      
+      // Extend each recurring series if needed
+      for (const rootEvent of rootEvents) {
+        try {
+          await extendRecurringEvents(rootEvent.id, targetDate, prisma)
+        } catch (error) {
+          console.error(`Error extending recurring events for ${rootEvent.id}:`, error)
+          // Continue with other series if one fails
+        }
+      }
+    }
+
     // Regular event fetching with month/year filtering
     let whereClause: any = {
       churchId: session.user.churchId
