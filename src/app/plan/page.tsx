@@ -386,6 +386,16 @@ interface Event {
 interface EventPlannerData {
   serviceParts: ServicePart[]
   events: Event[]
+  allEventsForFilters?: Array<{
+    id: string
+    name: string
+    eventType: {
+      id: string
+      name: string
+      color: string
+    }
+    isRootEvent: boolean
+  }>
   pagination?: {
     offset: number
     limit: number
@@ -2568,7 +2578,10 @@ export default function EventPlannerPage() {
     (() => {
       const colorMap = new Map()
       
-      data.events.forEach(event => {
+      // Use allEventsForFilters if available (includes root events), otherwise fall back to events
+      const eventsForFilters = data.allEventsForFilters || data.events
+      
+      eventsForFilters.forEach(event => {
         const color = event.eventType.color
         const isBlue = color.toLowerCase() === '#3b82f6' || color.toLowerCase() === '#2563eb' || color.toLowerCase() === '#1d4ed8' // Various shades of blue (case-insensitive)
         

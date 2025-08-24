@@ -147,11 +147,6 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Merge events with root recurring events, avoiding duplicates
-    const eventIds = new Set(events.map(e => e.id))
-    const uniqueRootEvents = rootRecurringEvents.filter(rootEvent => !eventIds.has(rootEvent.id))
-    const allEvents = [...events, ...uniqueRootEvents]
-
     // Get total count for pagination
     const totalEvents = await prisma.event.count({
       where: {
@@ -163,21 +158,36 @@ export async function GET(request: NextRequest) {
     })
 
     // Transform the data for the frontend
+    // Only include future events in the main events list
+    // Root events are merged separately for filter options only
+    const mainEvents = events.map((event: any) => ({
+      id: event.id,
+      name: event.name,
+      description: event.description,
+      startTime: event.startTime.toISOString(),
+      endTime: event.endTime?.toISOString(),
+      location: event.location || '',
+      status: (event.status || 'CONFIRMED').toLowerCase(),
+      eventType: event.eventType,
+      hymns: event.hymns,
+      assignments: event.assignments,
+      isRootEvent: event.isRootEvent || false
+    }))
+
+    // Create combined list for filter building (includes root events for complete filter options)
+    const eventIds = new Set(events.map(e => e.id))
+    const uniqueRootEvents = rootRecurringEvents.filter(rootEvent => !eventIds.has(rootEvent.id))
+    const allEventsForFilters = [...events, ...uniqueRootEvents].map((event: any) => ({
+      id: event.id,
+      name: event.name,
+      eventType: event.eventType,
+      isRootEvent: event.isRootEvent || false
+    }))
+
     const plannerData = {
       serviceParts,
-      events: allEvents.map((event: any) => ({
-        id: event.id,
-        name: event.name,
-        description: event.description,
-        startTime: event.startTime.toISOString(),
-        endTime: event.endTime?.toISOString(),
-        location: event.location || '',
-        status: (event.status || 'CONFIRMED').toLowerCase(), // Include status field in lowercase
-        eventType: event.eventType,
-        hymns: event.hymns,
-        assignments: event.assignments,
-        isRootEvent: event.isRootEvent || false // Include isRootEvent flag for filter logic
-      })),
+      events: mainEvents, // Only future events for display
+      allEventsForFilters, // Future + root events for filter building
       pagination: {
         offset,
         limit,
