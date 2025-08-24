@@ -38,15 +38,10 @@ export async function GET(
     const timezone = user.timezone || 'America/Chicago' // Fallback to default if not set
 
     // Build event query based on filter type
-    // Include events from 30 days ago to avoid disappearing events
-    const thirtyDaysAgo = new Date()
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-    
+    // Include ALL events (no time restrictions)
     let eventQuery: any = {
       churchId: user.churchId,
-      startTime: {
-        gte: thirtyDaysAgo, // Include events from last 30 days + all future events
-      },
+      // No startTime filter - include ALL events regardless of date
       // Only include confirmed and cancelled events, exclude tentative
       status: {
         in: ['CONFIRMED', 'CANCELLED']
