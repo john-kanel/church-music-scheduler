@@ -48,11 +48,11 @@ export default function BillingPage() {
       price: 200,
       interval: 'year',
       originalPrice: 420, // 35 * 12 = 420
-      description: 'Everything included - 2 months free!',
+      description: 'Everything included - best value!',
       badge: 'Save $220 per year!',
       topBadge: 'Best Value - Save 52%',
       features: [
-        'Two month free trial',
+        'Save $220 per year',
         'Unlimited musicians',
         'Unlimited events',
         'Email & SMS messaging',

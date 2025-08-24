@@ -47,8 +47,7 @@ export default function TrialExpiredPage() {
         'Music file sharing',
         'Calendar integration',
         'Custom roles & permissions',
-        '💰 Save $220 per year',
-        '✨ 2 months free'
+        '💰 Save $220 per year'
       ],
       popular: true,
       stripePriceId: 'price_1RbkgaDKZUjfTbRbrVKLe5Hq',
@@ -219,14 +218,10 @@ export default function TrialExpiredPage() {
             <p className="text-gray-600 mb-4">
               If you have questions about pricing or need assistance, we're here to help.
             </p>
-            <div className="flex justify-center space-x-4">
+            <div className="text-center">
               <a href="mailto:support@churchmusicpro.com" className="text-blue-600 hover:text-blue-700">
-                Email Support
+                support@churchmusicpro.com
               </a>
-              <span className="text-gray-300">|</span>
-              <Link href="/contact" className="text-blue-600 hover:text-blue-700">
-                Contact Us
-              </Link>
             </div>
           </div>
         </div>
