@@ -1551,7 +1551,12 @@ export default function CalendarPage() {
           setOpenEventsData([])
         }}
         events={openEventsData}
-        onEventClick={handleEventClick}
+        onEventClick={(event) => {
+          handleEventClick(event)
+          // Close the open events modal so the event details modal is visible
+          setShowViewAllOpenEvents(false)
+          setOpenEventsData([])
+        }}
       />
 
       {/* Generate Public Link Modal */}
