@@ -2624,6 +2624,9 @@ export function EventDetailsModal({
                                 </div>
                               )}
                             </div>
+                          ) : assignment.group && !assignment.user ? (
+                            /* Group-level assignment - just show the group name, no assign button */
+                            <div className="text-sm text-gray-600">Group Assignment</div>
                           ) : (
                             /* Show assign musician button for open positions */
                             isDirector && isEditing ? (
