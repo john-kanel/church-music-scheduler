@@ -37,7 +37,11 @@ export async function GET(request: NextRequest) {
         assignments: {
           some: {
             userId: null,
-            status: 'PENDING'
+            status: 'PENDING',
+            // Exclude group-level assignments - only consider actual open individual roles
+            NOT: {
+              groupId: { not: null }
+            }
           }
         }
       },
@@ -52,7 +56,11 @@ export async function GET(request: NextRequest) {
         assignments: {
           where: {
             userId: null,
-            status: 'PENDING'
+            status: 'PENDING',
+            // Exclude group-level assignments - only include actual open individual roles
+            NOT: {
+              groupId: { not: null }
+            }
           },
           select: {
             id: true,
@@ -76,8 +84,17 @@ export async function GET(request: NextRequest) {
     // Get total assignment counts for each event
     const eventsWithCounts = await Promise.all(
       openEvents.map(async (event) => {
+        // Count only meaningful assignments (exclude group-level assignments that have no individual user)
         const totalAssignments = await prisma.eventAssignment.count({
-          where: { eventId: event.id }
+          where: { 
+            eventId: event.id,
+            NOT: {
+              AND: [
+                { groupId: { not: null } },
+                { userId: null }
+              ]
+            }
+          }
         })
         
         const filledAssignments = await prisma.eventAssignment.count({
