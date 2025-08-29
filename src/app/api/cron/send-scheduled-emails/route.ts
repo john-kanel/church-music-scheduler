@@ -168,6 +168,73 @@ ${documentLinks}
           })
 
           await prisma.emailSchedule.update({ where: { id: schedule.id }, data: { sentAt: new Date() } })
+        } else if (schedule.metadata && (schedule.metadata as any).type === 'TRIAL_ENDING_REMINDER') {
+          // Send trial ending reminder to primary contact
+          const user = await prisma.user.findUnique({ where: { id: schedule.userId } })
+          const church = await prisma.church.findUnique({ where: { id: schedule.churchId } })
+          if (!user || !church || !user.emailNotifications) {
+            await prisma.emailSchedule.update({ where: { id: schedule.id }, data: { sentAt: now, errorReason: 'User/Church disabled or missing' } })
+            continue
+          }
+
+          const offsetDays = (schedule.metadata as any).offsetDays as number
+          const subscriptionEndsIso = (schedule.metadata as any).subscriptionEnds as string
+          const subscriptionEnds = subscriptionEndsIso ? new Date(subscriptionEndsIso) : church.subscriptionEnds
+          const daysLeft = subscriptionEnds ? Math.ceil((subscriptionEnds.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : null
+
+          const subject = daysLeft !== null && daysLeft <= 0
+            ? 'Your free trial ends today'
+            : daysLeft === 1
+              ? 'Your free trial ends tomorrow'
+              : `Your free trial ends in ${daysLeft} days`
+
+          const billingUrl = `${process.env.NEXTAUTH_URL || 'https://churchmusicpro.com'}/billing`
+
+          const html = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; border-bottom: 3px solid #660033;">
+                ${getEmailLogoHtml()}
+                <h1 style="color: #333; margin: 0; font-size: 22px;">Free Trial Reminder</h1>
+              </div>
+              <div style="background: white; padding: 24px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                <p>Hi ${user.firstName || ''},</p>
+                <p>Your Church Music Pro free trial for <strong>${church.name}</strong> is ${daysLeft !== null && daysLeft <= 0 ? 'ending today' : daysLeft === 1 ? 'ending tomorrow' : `ending in ${daysLeft} days`}.</p>
+                <div style="background: #f8fafc; padding: 16px; border-radius: 8px; border-left: 4px solid #660033;">
+                  <p style="margin: 0; color: #334155;">
+                    Keep full access to scheduling, messaging, and file sharing by choosing a subscription plan.
+                  </p>
+                </div>
+                <div style="text-align:center; margin: 20px 0;">
+                  <a href="${billingUrl}" style="background: #660033; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Subscribe Now</a>
+                </div>
+                <p style="color:#64748b; font-size: 14px;">If you do nothing, access will pause after your trial ends. You can resume anytime by subscribing.</p>
+              </div>
+            </div>
+          `
+
+          if (process.env.RESEND_API_KEY) {
+            await resend.emails.send({
+              from: 'Church Music Pro <notifications@churchmusicpro.com>',
+              to: user.email,
+              subject,
+              html
+            })
+          } else {
+            console.log('[Trial reminder email simulated]', { to: user.email, subject })
+          }
+
+          await prisma.notificationLog.create({
+            data: {
+              type: 'AUTOMATED_NOTIFICATION_SENT' as any,
+              churchId: schedule.churchId,
+              recipientEmail: user.email,
+              recipientName: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+              subject,
+              metadata: { type: 'TRIAL_ENDING_REMINDER', offsetDays }
+            }
+          })
+
+          await prisma.emailSchedule.update({ where: { id: schedule.id }, data: { sentAt: new Date() } })
         } else {
           // Unknown email - mark as processed to avoid blocking
           await prisma.emailSchedule.update({ where: { id: schedule.id }, data: { sentAt: now, errorReason: 'Unhandled type' } })

@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
+const baseUrl = process.env.NEXTAUTH_URL || 'https://churchmusicpro.com'
+
 export const metadata: Metadata = {
   title: 'Blog | Church Music Pro',
   description: 'Guides for church music directors: scheduling, calendars, and rehearsal tips.',
@@ -21,8 +23,8 @@ export default function BlogLayout({ children }: { children: React.ReactNode }) 
             '@context': 'https://schema.org',
             '@type': 'BreadcrumbList',
             itemListElement: [
-              { '@type': 'ListItem', position: 1, name: 'Home', item: '/' },
-              { '@type': 'ListItem', position: 2, name: 'Blog', item: '/blog' },
+              { '@type': 'ListItem', position: 1, name: 'Home', item: baseUrl },
+              { '@type': 'ListItem', position: 2, name: 'Blog', item: `${baseUrl}/blog` },
             ],
           }),
         }}
