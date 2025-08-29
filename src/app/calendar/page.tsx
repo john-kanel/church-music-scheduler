@@ -426,11 +426,26 @@ export default function CalendarPage() {
     }
   }
 
-  const handleEventClick = (event: CalendarEvent) => {
+  const handleEventClick = (event: CalendarEvent | any) => {
     console.log('🎯 Event clicked:', event.name, 'User role:', session?.user?.role)
     
+    // Convert OpenEvent format to CalendarEvent format if needed
+    const calendarEvent: CalendarEvent = {
+      id: event.id,
+      name: event.name,
+      description: event.description,
+      location: event.location,
+      startTime: event.startTime,
+      endTime: event.endTime,
+      eventType: event.eventType,
+      status: event.status,
+      isRootEvent: event.isRootEvent,
+      generatedFrom: event.generatedFrom,
+      assignments: event.assignments
+    }
+    
     // Open event details modal for all users
-    setSelectedEvent(event)
+    setSelectedEvent(calendarEvent)
     setShowEventDetails(true)
     
     // Set edit capability based on role - only directors/pastors/associate directors can edit
