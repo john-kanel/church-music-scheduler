@@ -998,7 +998,7 @@ export function EventDetailsModal({
     
     setLoading(true)
     try {
-      const response = await fetch(`/api/events/${currentEvent.id}/assignments/${assignmentId}`, {
+      const response = await fetch(`/api/assignments/${assignmentId}`, {
         method: 'DELETE'
       })
 
