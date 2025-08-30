@@ -36,6 +36,12 @@ export async function POST(request: NextRequest) {
           },
           include: {
             assignments: {
+              where: {
+                userId: { not: null },
+                user: {
+                  emailNotifications: true
+                }
+              },
               include: {
                 user: true
               }
@@ -155,9 +161,8 @@ async function processMusicianNotifications(church: any, now: Date) {
 
       if (existingLog) continue
 
-      // Send notifications to all assigned musicians
+      // Send notifications to all assigned musicians (already filtered for emailNotifications: true)
       for (const assignment of event.assignments) {
-        if (!assignment.user.emailNotifications) continue
 
         try {
           await sendMusicianEventNotification(
