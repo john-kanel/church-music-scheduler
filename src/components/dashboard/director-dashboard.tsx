@@ -8,7 +8,7 @@ import {
   MapPin, User, Music, MessageCircle, ExternalLink, BookOpen, Eye,
   Trash2, Edit, ArrowUpRight, UserPlus, Send, Share2, UserCheck, Mail, Activity,
   Gift as GiftIcon, CreditCard, Heart as HandHeart, LifeBuoy, Lightbulb, 
-  MessageSquare, TrendingUp, ChevronLeft, ChevronRight
+  MessageSquare, TrendingUp, ChevronLeft, ChevronRight, X
 } from 'lucide-react'
 import { OnboardingFlow } from './onboarding-flow'
 import { CreateEventModal } from '@/components/events/create-event-modal'
@@ -160,6 +160,12 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
     if ((user.role === 'DIRECTOR' || user.role === 'PASTOR') && !user.hasCompletedOnboarding) {
       setShowOnboarding(true)
     }
+  }
+
+  const dismissTour = () => {
+    localStorage.setItem('hasSeenDirectorTour', 'true')
+    setShowTour(false)
+    // Don't trigger onboarding when dismissing with X
   }
 
   const completeOnboarding = () => {
@@ -354,8 +360,17 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
       {/* Tour Overlay */}
       {showTour && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl p-8 max-w-md mx-4 shadow-2xl border">
-            <h2 className="text-2xl font-bold mb-4 text-gray-900">Welcome to Church Music Pro!</h2>
+          <div className="bg-white rounded-xl p-8 max-w-md mx-4 shadow-2xl border relative">
+            {/* Close Button */}
+            <button
+              onClick={dismissTour}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+              aria-label="Close welcome popup"
+            >
+              <X size={20} />
+            </button>
+            
+            <h2 className="text-2xl font-bold mb-4 text-gray-900 pr-8">Welcome to Church Music Pro!</h2>
             <p className="text-gray-700 mb-6 text-base">
               Let's get you started with creating your first event and inviting musicians to your church.
             </p>
