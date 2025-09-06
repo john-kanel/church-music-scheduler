@@ -281,10 +281,13 @@ export default function HomePage() {
                   muted
                   loop
                   playsInline
-                  poster="/placeholder-video-poster.jpg"
+                  preload="auto"
                   aria-label="Church Music Pro platform demonstration video"
+                  onError={(e) => console.error('Video error:', e)}
+                  onLoadStart={() => console.log('Video loading started')}
+                  onCanPlay={() => console.log('Video can play')}
                 >
-                  <source src="https://churchmusicscheduler.s3.us-east-2.amazonaws.com/Church+Music+Pro+Video.mp4" type="video/mp4" />
+                  <source src="https://churchmusicproprivate.s3.us-east-2.amazonaws.com/Church+Music+Pro+Video.mp4" type="video/mp4" />
                   {/* Fallback content for browsers that don't support video */}
                   <div className="flex items-center justify-center h-full bg-gray-100">
                     <div className="text-center p-8">
@@ -298,7 +301,7 @@ export default function HomePage() {
                       </h3>
                       <p className="text-gray-600">
                         Your browser doesn't support video playback. 
-                        <a href="https://churchmusicscheduler.s3.us-east-2.amazonaws.com/Church+Music+Pro+Video.mp4" className="text-brand-600 hover:text-brand-700 underline ml-1">
+                        <a href="https://churchmusicproprivate.s3.us-east-2.amazonaws.com/Church+Music+Pro+Video.mp4" className="text-brand-600 hover:text-brand-700 underline ml-1">
                           Download the demo video
                         </a>
                       </p>
