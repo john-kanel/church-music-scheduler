@@ -42,7 +42,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: https: blob:",
-              "media-src 'self' https://churcmusicproprivate.s3.us-east-2.amazonaws.com",
+              "media-src 'self' https://churchmusicproprivate.s3.us-east-2.amazonaws.com",
               "connect-src 'self' https://api.stripe.com https://api.resend.com https://*.amazonaws.com https://www.google-analytics.com https://analytics.google.com",
               "frame-src https://js.stripe.com"
             ].join('; ')
