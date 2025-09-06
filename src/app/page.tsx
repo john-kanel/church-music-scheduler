@@ -286,7 +286,7 @@ export default function HomePage() {
                   onError={(e) => console.error('Video error:', e)}
                   onLoadStart={() => console.log('Video loading started')}
                   onCanPlay={() => console.log('Video can play')}
-                  onLoadedData={() => console.log('Video loaded successfully - updated version')}
+                  onLoadedData={() => console.log('Video loaded successfully - latest version')}
                 >
                   <source src="https://churchmusicproprivate.s3.us-east-2.amazonaws.com/Church+Music+Pro+Video.mp4" type="video/mp4" />
                   {/* Fallback content for browsers that don't support video */}
