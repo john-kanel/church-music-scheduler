@@ -269,6 +269,86 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* Video Demo Section */}
+      <div className="py-16 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              See Church Music Pro in Action
+            </h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Watch how easy it is to schedule your church music ministry with our platform. 
+              From PDF uploads to automated notifications, see the complete workflow in under 2 minutes.
+            </p>
+          </div>
+          
+          <div className="max-w-5xl mx-auto">
+            <div className="relative bg-white rounded-2xl shadow-2xl overflow-hidden">
+              <div className="aspect-video relative">
+                <video
+                  className="w-full h-full object-cover"
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  controls
+                  poster="/placeholder-video-poster.jpg"
+                  aria-label="Church Music Pro platform demonstration video"
+                >
+                  <source src="https://churchmusicscheduler.s3.us-east-2.amazonaws.com/Church+Music+Pro+Video.mp4" type="video/mp4" />
+                  {/* Fallback content for browsers that don't support video */}
+                  <div className="flex items-center justify-center h-full bg-gray-100">
+                    <div className="text-center p-8">
+                      <div className="w-16 h-16 bg-brand-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M8 5v14l11-7z"/>
+                        </svg>
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                        Video Demo Available
+                      </h3>
+                      <p className="text-gray-600">
+                        Your browser doesn't support video playback. 
+                        <a href="https://churchmusicscheduler.s3.us-east-2.amazonaws.com/Church+Music+Pro+Video.mp4" className="text-brand-600 hover:text-brand-700 underline ml-1">
+                          Download the demo video
+                        </a>
+                      </p>
+                    </div>
+                  </div>
+                </video>
+                
+                {/* Play button overlay for when video is paused */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 hover:opacity-100 transition-opacity duration-300">
+                  <div className="w-20 h-20 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
+                    <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z"/>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Video description */}
+              <div className="p-6 bg-white">
+                <div className="flex items-center justify-center space-x-8 text-sm text-gray-600">
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                    <span>PDF Auto-Population</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
+                    <span>Smart Scheduling</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-purple-500 rounded-full mr-2"></div>
+                    <span>Automated Notifications</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Features Section */}
       <div id="features" className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
