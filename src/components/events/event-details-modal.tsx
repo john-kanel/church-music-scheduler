@@ -890,6 +890,10 @@ export function EventDetailsModal({
       setLoading(true)
       setError('')
       
+      // Save current scroll position
+      const modalContent = document.querySelector('[data-modal-content]')
+      const scrollTop = modalContent?.scrollTop || 0
+      
       // Check if this is a past event
       const eventDateTime = new Date(currentEvent?.startTime || '')
       const now = new Date()
@@ -916,6 +920,14 @@ export function EventDetailsModal({
       
       // Refresh event data to show updated assignments
       await fetchEventData()
+      
+      // Restore scroll position after state update
+      setTimeout(() => {
+        const modalContent = document.querySelector('[data-modal-content]')
+        if (modalContent && scrollTop > 0) {
+          modalContent.scrollTop = scrollTop
+        }
+      }, 0)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to assign musician'
       setError(errorMessage)
@@ -929,6 +941,10 @@ export function EventDetailsModal({
     try {
       setLoading(true)
       setError('')
+      
+      // Save current scroll position
+      const modalContent = document.querySelector('[data-modal-content]')
+      const scrollTop = modalContent?.scrollTop || 0
       
       const response = await fetch(`/api/assignments/${assignmentId}`, {
         method: 'PUT',
@@ -945,6 +961,14 @@ export function EventDetailsModal({
       
       // Refresh event data to show updated assignments
       await fetchEventData()
+      
+      // Restore scroll position after state update
+      setTimeout(() => {
+        const modalContent = document.querySelector('[data-modal-content]')
+        if (modalContent && scrollTop > 0) {
+          modalContent.scrollTop = scrollTop
+        }
+      }, 0)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to remove musician'
       setError(errorMessage)
@@ -1024,6 +1048,10 @@ export function EventDetailsModal({
     
     setLoading(true)
     try {
+      // Save current scroll position
+      const modalContent = document.querySelector('[data-modal-content]')
+      const scrollTop = modalContent?.scrollTop || 0
+      
       const response = await fetch(`/api/assignments/${assignmentId}/signup`, {
         method: 'POST',
         headers: {
@@ -1039,6 +1067,14 @@ export function EventDetailsModal({
       // Refresh event data
       await fetchEventData()
       showToast('success', 'Successfully signed up for this role!')
+      
+      // Restore scroll position after state update
+      setTimeout(() => {
+        const modalContent = document.querySelector('[data-modal-content]')
+        if (modalContent && scrollTop > 0) {
+          modalContent.scrollTop = scrollTop
+        }
+      }, 0)
       
       // Call the parent's event updated callback to refresh dashboard data
       onEventUpdated?.()
@@ -1056,6 +1092,10 @@ export function EventDetailsModal({
     
     setLoading(true)
     try {
+      // Save current scroll position
+      const modalContent = document.querySelector('[data-modal-content]')
+      const scrollTop = modalContent?.scrollTop || 0
+      
       const response = await fetch(`/api/assignments/${assignmentId}`, {
         method: 'PUT',
         headers: {
@@ -1072,6 +1112,14 @@ export function EventDetailsModal({
       // Refresh event data
       await fetchEventData()
       showToast('success', 'Successfully removed from this role')
+      
+      // Restore scroll position after state update
+      setTimeout(() => {
+        const modalContent = document.querySelector('[data-modal-content]')
+        if (modalContent && scrollTop > 0) {
+          modalContent.scrollTop = scrollTop
+        }
+      }, 0)
       
       // Call the parent's event updated callback to refresh dashboard data
       onEventUpdated?.()
@@ -1709,7 +1757,7 @@ export function EventDetailsModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" key={renderKey} style={{backgroundColor: '#E6F0FA'}}>
-      <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" data-modal-content>
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b">
           <div className="flex items-center">
