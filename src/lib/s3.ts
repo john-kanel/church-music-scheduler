@@ -75,14 +75,25 @@ export async function uploadFileToS3(
 // Generate presigned URL for secure file access
 export async function getPresignedUrl(
   key: string,
-  expiresIn: number = 3600 // 1 hour default
+  expiresIn: number = 3600, // 1 hour default
+  forceDownload: boolean = false
 ): Promise<{ success: boolean; url?: string; error?: string }> {
   try {
-    const command = new GetObjectCommand({
+    const commandParams: any = {
       Bucket: BUCKET_NAME,
       Key: key,
-    })
+    }
 
+    // If forcing download, add response headers to trigger download
+    if (forceDownload) {
+      // Extract filename from key (remove folder prefix and timestamp)
+      const filename = key.split('/').pop()?.replace(/^\d+-/, '') || 'download'
+      
+      commandParams.ResponseContentDisposition = `attachment; filename="${filename}"`
+      commandParams.ResponseContentType = getContentType(filename)
+    }
+
+    const command = new GetObjectCommand(commandParams)
     const url = await getSignedUrl(s3Client, command, { expiresIn })
 
     return {

@@ -28,10 +28,10 @@ export async function GET(
       return NextResponse.json({ error: 'Document not found' }, { status: 404 })
     }
 
-    // Generate presigned URL for S3 file access
+    // Generate presigned URL for S3 file access with download headers
     const s3Key = document.filename
     
-    const presignedResult = await getPresignedUrl(s3Key, 3600) // 1 hour expiry
+    const presignedResult = await getPresignedUrl(s3Key, 3600, true) // 1 hour expiry, force download
     
     if (!presignedResult.success || !presignedResult.url) {
       console.error('Failed to generate presigned URL:', presignedResult.error)
