@@ -78,20 +78,16 @@ export default function ImportantDocsCard() {
 
   const handleDocumentDownload = async (docId: string, filename: string) => {
     try {
-      // Instead of fetching as blob, let the browser handle the redirect directly
-      // This avoids CORS issues with S3 direct access
+      // Use the API endpoint to get the proper S3 presigned URL
       const downloadUrl = `/api/church-documents/${docId}/download`
       
-      // Create a temporary link and click it to trigger download
-      const a = document.createElement('a')
-      a.href = downloadUrl
-      a.download = filename
-      a.target = '_blank' // Open in new tab as fallback
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
+      // Open in new tab to let the API handle the S3 redirect properly
+      // This ensures we always use web-accessible URLs, never local file paths
+      window.open(downloadUrl, '_blank')
     } catch (error) {
       console.error('Error downloading document:', error)
+      // Fallback: try direct navigation
+      window.location.href = `/api/church-documents/${docId}/download`
     }
   }
 

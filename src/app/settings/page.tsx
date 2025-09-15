@@ -1571,22 +1571,37 @@ export default function SettingsPage() {
                       ) : (
                         churchDocuments.map((doc) => (
                           <div key={doc.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                            <div className="flex items-center">
+                            <div className="flex items-center flex-1">
                               <FileText className="h-5 w-5 text-gray-400 mr-3" />
-                              <div>
+                              <div className="flex-1">
                                 <p className="font-medium text-gray-900">{doc.title}</p>
                                 <p className="text-sm text-gray-500">{doc.originalFilename} • {formatFileSize(doc.fileSize)}</p>
                               </div>
                             </div>
-                            {isEditing && (
+                            <div className="flex items-center space-x-2">
+                              {/* View/Download button */}
                               <button
                                 type="button"
-                                onClick={() => removeChurchDocument(doc.id)}
-                                className="p-1 text-red-600 hover:bg-red-100 rounded"
+                                onClick={() => {
+                                  const downloadUrl = `/api/church-documents/${doc.id}/download`
+                                  window.open(downloadUrl, '_blank')
+                                }}
+                                className="flex items-center px-2 py-1 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
+                                title="View document"
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <ExternalLink className="h-4 w-4 mr-1" />
+                                View
                               </button>
-                            )}
+                              {isEditing && (
+                                <button
+                                  type="button"
+                                  onClick={() => removeChurchDocument(doc.id)}
+                                  className="p-1 text-red-600 hover:bg-red-100 rounded"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              )}
+                            </div>
                           </div>
                         ))
                       )}

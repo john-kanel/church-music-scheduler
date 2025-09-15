@@ -28,6 +28,25 @@ export async function GET(
       return NextResponse.json({ error: 'Document not found' }, { status: 404 })
     }
 
+    // Debug: Log document info to help identify local file path issues
+    console.log('🔧 Church Document Download:', {
+      documentId: document.id,
+      filename: document.filename,
+      filePath: document.filePath,
+      originalFilename: document.originalFilename,
+      isLocalPath: document.filePath?.includes('/Users/') || document.filePath?.includes('Downloads') || document.filePath?.startsWith('file://'),
+      churchId: document.churchId
+    })
+
+    // Check if this document has a local file path (legacy data)
+    if (document.filePath && (document.filePath.includes('/Users/') || document.filePath.includes('Downloads') || document.filePath.startsWith('file://'))) {
+      console.error('⚠️  WARNING: Document has local file path:', document.filePath)
+      return NextResponse.json({ 
+        error: 'Document has invalid file path. Please re-upload this document.',
+        details: 'This document was uploaded before cloud storage was properly configured.'
+      }, { status: 400 })
+    }
+
     // Generate presigned URL for S3 file access with download headers
     const s3Key = document.filename
     
@@ -37,6 +56,13 @@ export async function GET(
       console.error('Failed to generate presigned URL:', presignedResult.error)
       return NextResponse.json({ error: 'File not accessible' }, { status: 404 })
     }
+
+    // Debug: Log successful S3 URL generation
+    console.log('✅ Generated S3 URL for document:', {
+      documentId: document.id,
+      s3Key: s3Key,
+      presignedUrlGenerated: !!presignedResult.url
+    })
 
     // Redirect to the presigned URL for direct S3 access
     return NextResponse.redirect(presignedResult.url)
