@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { 
   ArrowLeft, User, MapPin, Bell, Lock, CreditCard, Save, Edit3, Zap, Users,
   FileText, ExternalLink, Upload, X, Trash2, Plus, GripVertical, Clock,
-  Mail, Calendar, Settings as SettingsIcon, Globe, UserPlus, Book
+  Mail, Calendar, Settings as SettingsIcon, Globe, UserPlus, Book, Download
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -1579,18 +1579,32 @@ export default function SettingsPage() {
                               </div>
                             </div>
                             <div className="flex items-center space-x-2">
-                              {/* View/Download button */}
+                              {/* View button - opens inline in new tab */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const viewUrl = `/api/church-documents/${doc.id}/view`
+                                  window.open(viewUrl, '_blank')
+                                }}
+                                className="flex items-center px-2 py-1 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
+                                title="View document in new tab"
+                              >
+                                <ExternalLink className="h-4 w-4 mr-1" />
+                                View
+                              </button>
+                              
+                              {/* Download button - forces download */}
                               <button
                                 type="button"
                                 onClick={() => {
                                   const downloadUrl = `/api/church-documents/${doc.id}/download`
                                   window.open(downloadUrl, '_blank')
                                 }}
-                                className="flex items-center px-2 py-1 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
-                                title="View document"
+                                className="flex items-center px-2 py-1 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded transition-colors"
+                                title="Download document"
                               >
-                                <ExternalLink className="h-4 w-4 mr-1" />
-                                View
+                                <Download className="h-4 w-4 mr-1" />
+                                Download
                               </button>
                               {isEditing && (
                                 <button
