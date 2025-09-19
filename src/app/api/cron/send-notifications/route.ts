@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { sendMusicianEventNotification, sendPastorMonthlyReport, sendPastorDailyDigest, sendPastorWeeklyReport } from '@/lib/automation-emails'
+import { resolveEventAssignments } from '@/lib/dynamic-assignments'
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,14 +37,10 @@ export async function POST(request: NextRequest) {
           },
           include: {
             assignments: {
-              where: {
-                userId: { not: null },
-                user: {
-                  emailNotifications: true
-                }
-              },
               include: {
-                user: true
+                user: true,
+                group: true,
+                customRole: true
               }
             },
             eventType: true
@@ -69,7 +66,11 @@ export async function POST(request: NextRequest) {
 
         // Send musician notifications
         if (church.automationSettings.musicianNotifications.length > 0) {
-          await processMusicianNotifications(church, now)
+          // Resolve dynamic assignments for all events
+          const eventsWithDynamicAssignments = await resolveEventAssignments(church.events)
+          const churchWithResolvedEvents = { ...church, events: eventsWithDynamicAssignments }
+          
+          await processMusicianNotifications(churchWithResolvedEvents, now)
           notificationsSent++
         }
 
@@ -161,8 +162,10 @@ async function processMusicianNotifications(church: any, now: Date) {
 
       if (existingLog) continue
 
-      // Send notifications to all assigned musicians (already filtered for emailNotifications: true)
+      // Send notifications to all assigned musicians with email notifications enabled
       for (const assignment of event.assignments) {
+        // Skip if no user or user doesn't want email notifications
+        if (!assignment.userId || !assignment.user?.emailNotifications) continue
 
         try {
           await sendMusicianEventNotification(

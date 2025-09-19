@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db'
+import { resolveEventAssignmentsForSingle } from './dynamic-assignments'
 import { getUserTimezone } from '@/lib/timezone-utils'
 
 function getEndOfDayInTimezone(now: Date, timezone: string): Date {
@@ -23,17 +24,25 @@ export async function queueEventUpdateDigest(eventId: string, churchId: string):
     where: { id: eventId },
     include: {
       assignments: {
-        where: { userId: { not: null } },
-        include: { user: true }
+        include: { 
+          user: true,
+          group: true,
+          customRole: true
+        }
       }
     }
   })
 
   if (!event) return
 
+  // Resolve dynamic group assignments
+  const eventWithDynamicAssignments = await resolveEventAssignmentsForSingle(event)
+
   const now = new Date()
 
-  for (const assignment of event.assignments) {
+  for (const assignment of eventWithDynamicAssignments.assignments) {
+    // Skip if no user assigned
+    if (!assignment.userId) continue
     const user = assignment.user
     if (!user || !user.emailNotifications) continue
 

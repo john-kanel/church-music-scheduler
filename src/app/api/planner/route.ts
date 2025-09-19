@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { extendRecurringEvents } from '@/lib/recurrence'
+import { resolveEventAssignments } from '@/lib/dynamic-assignments'
 
 export async function GET(request: NextRequest) {
   try {
@@ -93,7 +94,8 @@ export async function GET(request: NextRequest) {
                 id: true,
                 name: true
               }
-            }
+            },
+            customRole: true
           }
         }
       }
@@ -145,7 +147,8 @@ export async function GET(request: NextRequest) {
                 id: true,
                 name: true
               }
-            }
+            },
+            customRole: true
           }
         }
       }
@@ -161,10 +164,13 @@ export async function GET(request: NextRequest) {
       }
     })
 
+    // Resolve dynamic group assignments for all events
+    const eventsWithDynamicAssignments = await resolveEventAssignments(events)
+    
     // Transform the data for the frontend
     // Only include future events in the main events list
     // Root events are merged separately for filter options only
-    const mainEvents = events.map((event: any) => ({
+    const mainEvents = eventsWithDynamicAssignments.map((event: any) => ({
       id: event.id,
       name: event.name,
       description: event.description,

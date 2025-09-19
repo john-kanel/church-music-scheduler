@@ -6,6 +6,7 @@ import { Prisma } from '@prisma/client'
 import { logActivity } from '@/lib/activity'
 import { checkSubscriptionStatus, createSubscriptionErrorResponse } from '@/lib/subscription-check'
 import { generateRecurringEvents, parseRecurrencePattern, extendRecurringEvents } from '@/lib/recurrence'
+import { resolveEventAssignments } from '@/lib/dynamic-assignments'
 
 
 export async function GET(request: NextRequest) {
@@ -40,7 +41,8 @@ export async function GET(request: NextRequest) {
                   email: true
                 }
               },
-              group: true
+              group: true,
+              customRole: true
             }
           },
           hymns: {
@@ -53,7 +55,10 @@ export async function GET(request: NextRequest) {
         orderBy: { startTime: 'asc' }
       })
 
-      return NextResponse.json({ events: rootEvents })
+      // Resolve dynamic group assignments for root events too
+      const rootEventsWithDynamicAssignments = await resolveEventAssignments(rootEvents)
+
+      return NextResponse.json({ events: rootEventsWithDynamicAssignments })
     }
 
     // Note: auto-extension moved to maintenance/backfill endpoint (called by cron)
@@ -112,7 +117,8 @@ export async function GET(request: NextRequest) {
                 email: true
               }
             },
-            group: true
+            group: true,
+            customRole: true
           }
         },
         hymns: {
@@ -129,7 +135,10 @@ export async function GET(request: NextRequest) {
       orderBy: { startTime: 'asc' }
     })
 
-    return NextResponse.json({ events })
+    // Resolve dynamic group assignments
+    const eventsWithDynamicAssignments = await resolveEventAssignments(events)
+
+    return NextResponse.json({ events: eventsWithDynamicAssignments })
   } catch (error) {
     console.error('Error fetching events:', error)
     
@@ -316,13 +325,13 @@ export async function POST(request: NextRequest) {
     }))
 
     // Prepare group assignments for auto-assignment
+    // NOTE: We now only create group-level assignments, not individual member snapshots
+    // Individual members will be resolved dynamically when events are fetched
     const groupAssignmentsToCreate: any[] = []
-    const individualAssignmentsFromGroups: any[] = []
     
     for (const groupId of selectedGroups) {
       const group = await prisma.group.findFirst({
-        where: { id: groupId, churchId: session.user.churchId },
-        include: { members: { include: { user: true } } }
+        where: { id: groupId, churchId: session.user.churchId }
       })
       
       if (group) {
@@ -330,14 +339,6 @@ export async function POST(request: NextRequest) {
           groupId: group.id,
           status: 'PENDING'
         })
-        
-        for (const member of group.members) {
-          individualAssignmentsFromGroups.push({
-            userId: member.user.id,
-            groupId: group.id,
-            status: 'PENDING'
-          })
-        }
       }
     }
 
@@ -365,8 +366,9 @@ export async function POST(request: NextRequest) {
       // Create assignments for the main event
       const allAssignments = [
         ...assignmentsToCreate.map(a => ({ ...a, eventId: event.id })),
-        ...groupAssignmentsToCreate.map(a => ({ ...a, eventId: event.id })),
-        ...individualAssignmentsFromGroups.map(a => ({ ...a, eventId: event.id }))
+        ...groupAssignmentsToCreate.map(a => ({ ...a, eventId: event.id }))
+        // Note: No longer creating individual assignments for group members
+        // These will be resolved dynamically when events are fetched
       ]
 
       if (allAssignments.length > 0) {

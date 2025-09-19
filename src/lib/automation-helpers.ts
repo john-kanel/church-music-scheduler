@@ -1,5 +1,6 @@
 import { prisma } from './db'
 import { sendMusicianEventNotification } from './automation-emails'
+import { resolveEventAssignmentsForSingle } from './dynamic-assignments'
 
 /**
  * Schedules automated notifications for a specific event based on church automation settings
@@ -21,26 +22,33 @@ export async function scheduleEventNotifications(eventId: string, churchId: stri
       return
     }
 
-    // Get the event with assignments
+    // Get the event with assignments (including group assignments)
     const event = await prisma.event.findUnique({
       where: { id: eventId },
       include: {
         assignments: {
-          where: {
-            userId: { not: null },
-            user: {
-              emailNotifications: true
-              // Removed isVerified requirement to send notifications to unverified musicians
-            }
-          },
           include: {
-            user: true
+            user: true,
+            group: true,
+            customRole: true
           }
         }
       }
     })
 
-    if (!event || event.assignments.length === 0) {
+    if (!event) {
+      return
+    }
+
+    // Resolve dynamic group assignments
+    const eventWithDynamicAssignments = await resolveEventAssignmentsForSingle(event)
+    
+    // Filter for users with email notifications enabled
+    eventWithDynamicAssignments.assignments = eventWithDynamicAssignments.assignments.filter((a: any) => 
+      a.userId && a.user?.emailNotifications
+    )
+
+    if (eventWithDynamicAssignments.assignments.length === 0) {
       return
     }
 
@@ -86,7 +94,7 @@ export async function scheduleEventNotifications(eventId: string, churchId: stri
         } catch (_) {
           publicToken = null
         }
-        const eventWithToken = publicToken ? { ...event, publicToken } : event
+        const eventWithToken = publicToken ? { ...eventWithDynamicAssignments, publicToken } : eventWithDynamicAssignments
         await sendImmediateNotifications(eventWithToken, notificationSetting.hoursBeforeEvent, churchId)
       }
       // Otherwise, the cron job will handle it later

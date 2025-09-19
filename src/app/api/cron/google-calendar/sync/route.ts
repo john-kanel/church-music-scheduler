@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { GoogleCalendarService, convertToGoogleCalendarEvent } from '@/lib/google-calendar'
+import { resolveEventAssignments } from '@/lib/dynamic-assignments'
 
 const CRON_SECRET = process.env.CRON_SECRET
 
@@ -72,7 +73,7 @@ export async function POST(request: NextRequest) {
           },
           include: {
             eventType: true,
-            assignments: { include: { user: true, group: { include: { members: true } } } },
+            assignments: { include: { user: true, group: true, customRole: true } },
             hymns: {
               include: { servicePart: true },
               orderBy: [{ servicePart: { order: 'asc' } }, { createdAt: 'asc' }]
@@ -82,9 +83,12 @@ export async function POST(request: NextRequest) {
           take: maxEvents
         })
 
+        // Resolve dynamic group assignments
+        const eventsWithDynamicAssignments = await resolveEventAssignments(events)
+        
         const userTimezone = integration.user.timezone || 'America/Chicago'
 
-        for (const e of events) {
+        for (const e of eventsWithDynamicAssignments) {
           try {
             const gEvent = convertToGoogleCalendarEvent(e, userTimezone)
 
