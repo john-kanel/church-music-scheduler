@@ -494,6 +494,8 @@ export function EventDetailsModal({
       const response = await fetch(`/api/events/${currentEvent.id}/hymns`)
       if (response.ok) {
         const data = await response.json()
+        console.log('🎵 FETCH DEBUG: Received hymns from server:', data.hymns)
+        console.log('🎵 FETCH DEBUG: Individual songs from server:', data.hymns?.filter((h: any) => !h.servicePartId).map((h: any) => ({ id: h.id, title: h.title, notes: h.notes })))
         setEventHymns(data.hymns || [])
         setOriginalHymns(data.hymns || [])
       }
@@ -1162,6 +1164,7 @@ export function EventDetailsModal({
   }
 
   const updateHymn = (id: string, field: keyof EventHymn, value: string) => {
+    console.log(`🎵 UPDATE DEBUG: Updating hymn ${id}, field: ${field}, value:`, value)
     setEventHymns(hymns => hymns.map(hymn => {
       if (hymn.id === id) {
         const updatedHymn = { ...hymn, [field]: value }
@@ -1177,6 +1180,7 @@ export function EventDetailsModal({
           }
         }
         
+        console.log(`🎵 UPDATE DEBUG: Updated hymn:`, updatedHymn)
         return updatedHymn
       }
       return hymn
@@ -1216,6 +1220,9 @@ export function EventDetailsModal({
 
     setLoadingHymns(true)
     try {
+      console.log('🎵 SAVE DEBUG: About to save hymns:', eventHymns)
+      console.log('🎵 SAVE DEBUG: Individual songs with notes:', eventHymns.filter(h => !h.servicePartId).map(h => ({ id: h.id, title: h.title, notes: h.notes })))
+      
       const response = await fetch(`/api/events/${currentEvent.id}/hymns`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -1235,6 +1242,7 @@ export function EventDetailsModal({
       }
       
       setOriginalHymns([...eventHymns])
+      console.log('🎵 SAVE DEBUG: About to fetch fresh hymns from server...')
       await fetchEventHymns() // Refresh with server data
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to save music'
