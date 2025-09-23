@@ -19,16 +19,13 @@ export async function GET(
     const resolvedParams = await params
     const eventId = resolvedParams.id
 
-    // Fetch event hymns ordered by service part order (then creation time)
+    // Fetch event hymns ordered by creation time to preserve user's intended order
     const hymns = await prisma.eventHymn.findMany({
       where: { eventId },
       include: {
         servicePart: { select: { id: true, name: true, order: true } }
       },
-      orderBy: [
-        { servicePart: { order: 'asc' } },
-        { createdAt: 'asc' }
-      ]
+      orderBy: { createdAt: 'asc' }
     })
 
     return NextResponse.json({ hymns })
@@ -93,10 +90,9 @@ export async function PUT(
     // Prepare data for bulk insert (keep empty titles to preserve service part placeholders)
     const validHymns = hymns
       .map((hymn: any, index: number) => {
-        // Calculate creation time with small offsets to preserve order
+        // Calculate creation time with small offsets to preserve user's intended order
         const baseTime = new Date()
-        const orderOffset = hymn.orderIndex !== undefined ? hymn.orderIndex : index
-        const createdAt = new Date(baseTime.getTime() + orderOffset * 1000) // 1 second intervals
+        const createdAt = new Date(baseTime.getTime() + index * 1000) // Use array order, 1 second intervals
         
         return {
           eventId: eventId, // Ensure we're using the correct event ID

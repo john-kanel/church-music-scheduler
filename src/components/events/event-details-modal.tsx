@@ -245,6 +245,25 @@ export function EventDetailsModal({
     eventTypeColor: '#3B82F6'
   })
 
+  // Helper function to extract custom section title from individual song notes
+  const extractSectionTitle = (notes: string | undefined): { sectionTitle: string; cleanNotes: string } => {
+    if (!notes) return { sectionTitle: 'Individual Song', cleanNotes: '' }
+    
+    if (notes.startsWith('[SECTION:')) {
+      const endIndex = notes.indexOf(']')
+      if (endIndex !== -1) {
+        const sectionTitle = notes.substring(9, endIndex) // Extract between '[SECTION:' and ']'
+        const cleanNotes = notes.substring(endIndex + 1).replace(/^\n/, '') // Remove leading newline if present
+        return {
+          sectionTitle,
+          cleanNotes
+        }
+      }
+    }
+    
+    return { sectionTitle: 'Individual Song', cleanNotes: notes }
+  }
+
   // Initialize current event when modal opens or event prop changes
   useEffect(() => {
     console.log('🔧 EventDetailsModal: event prop changed:', event)
@@ -2300,6 +2319,33 @@ export function EventDetailsModal({
                           </select>
                         </div>
 
+                        {/* Custom Section Title for Individual Songs */}
+                        {!hymn.servicePartId && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Section Title</label>
+                            <input
+                              type="text"
+                              value={(() => {
+                                const { sectionTitle } = extractSectionTitle(hymn.notes)
+                                return sectionTitle
+                              })()}
+                              onChange={(e) => {
+                                const { cleanNotes } = extractSectionTitle(hymn.notes)
+                                const newSectionTitle = e.target.value.trim()
+                                const notesWithSectionTitle = newSectionTitle && newSectionTitle !== 'Individual Song' 
+                                  ? `[SECTION:${newSectionTitle}]${cleanNotes ? '\n' + cleanNotes : ''}`
+                                  : cleanNotes
+                                updateHymn(hymn.id, 'notes', notesWithSectionTitle)
+                              }}
+                              placeholder="e.g., 'Communion Songs', 'Special Music'..."
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                              This appears as the section header (instead of "Individual Song")
+                            </p>
+                          </div>
+                        )}
+
                         {/* Song title */}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">Song Title *</label>
@@ -2316,8 +2362,27 @@ export function EventDetailsModal({
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">Notes (Optional)</label>
                           <textarea
-                            value={hymn.notes || ''}
-                            onChange={(e) => updateHymn(hymn.id, 'notes', e.target.value)}
+                            value={(() => {
+                              // For individual songs, show clean notes without section title prefix
+                              if (!hymn.servicePartId) {
+                                const { cleanNotes } = extractSectionTitle(hymn.notes)
+                                return cleanNotes
+                              }
+                              return hymn.notes || ''
+                            })()}
+                            onChange={(e) => {
+                              if (!hymn.servicePartId) {
+                                // For individual songs, preserve section title when updating notes
+                                const { sectionTitle } = extractSectionTitle(hymn.notes)
+                                const newNotes = e.target.value
+                                const notesWithSectionTitle = sectionTitle && sectionTitle !== 'Individual Song' 
+                                  ? `[SECTION:${sectionTitle}]${newNotes ? '\n' + newNotes : ''}`
+                                  : newNotes
+                                updateHymn(hymn.id, 'notes', notesWithSectionTitle)
+                              } else {
+                                updateHymn(hymn.id, 'notes', e.target.value)
+                              }
+                            }}
                             placeholder="Special instructions, key, tempo, etc..."
                             rows={2}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"
@@ -2331,13 +2396,21 @@ export function EventDetailsModal({
                           <div className="flex-1">
                             <div className="flex items-center mb-1">
                               <span className="text-sm font-medium text-gray-500 mr-2">
-                                {hymn.servicePart?.name || 'Other'}:
+                                {hymn.servicePart?.name || (() => {
+                                  // For individual songs, extract custom section title
+                                  const { sectionTitle } = extractSectionTitle(hymn.notes)
+                                  return sectionTitle
+                                })()}:
                               </span>
                               <span className="font-medium text-gray-900">{hymn.title}</span>
                             </div>
-                            {hymn.notes && (
-                              <p className="text-sm text-gray-600 mt-1">{hymn.notes}</p>
-                            )}
+                            {hymn.notes && (() => {
+                              // For individual songs, show clean notes without section title prefix
+                              const { cleanNotes } = extractSectionTitle(hymn.notes)
+                              return cleanNotes && (
+                                <p className="text-sm text-gray-600 mt-1">{cleanNotes}</p>
+                              )
+                            })()}
                           </div>
                           <div className="text-xs text-gray-400 ml-4">
                             #{index + 1}
