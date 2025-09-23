@@ -73,11 +73,8 @@ export async function GET(request: NextRequest) {
               select: { id: true, name: true, order: true }
             }
           },
-          // Ensure hymns are grouped by service part order, then by creation time
-          orderBy: [
-            { servicePart: { order: 'asc' } },
-            { createdAt: 'asc' }
-          ]
+          // Order hymns by creation time to preserve user's intended order
+          orderBy: { createdAt: 'asc' }
         },
         assignments: {
           include: {
