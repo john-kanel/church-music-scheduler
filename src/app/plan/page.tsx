@@ -480,6 +480,7 @@ export default function EventPlannerPage() {
   }, [session?.user?.role, router])
   const [visibleServiceParts, setVisibleServiceParts] = useState<Set<string>>(new Set())
   const [visibleEventColors, setVisibleEventColors] = useState<Set<string>>(new Set())
+  const [showOnlyOpenPositions, setShowOnlyOpenPositions] = useState(false)
 
   // Load filter settings from localStorage on component mount
   useEffect(() => {
@@ -2568,10 +2569,24 @@ export default function EventPlannerPage() {
     )
   }
 
-  // Filter events by selected colors
-  const filteredEvents = data?.events.filter(event => 
-    visibleEventColors.has(event.eventType.color)
-  ) || []
+  // Helper function to check if an event has open positions
+  const hasOpenPositions = (event: Event): boolean => {
+    if (!event.assignments) return false
+    
+    // Check for assignments where user is null and it's not a group-level assignment
+    return event.assignments.some(assignment => 
+      !assignment.user && 
+      assignment.status === 'PENDING' &&
+      !assignment.group // Exclude group-level assignments, only consider actual open individual roles
+    )
+  }
+
+  // Filter events by selected colors and open positions filter
+  const filteredEvents = data?.events.filter(event => {
+    const matchesColorFilter = visibleEventColors.has(event.eventType.color)
+    const matchesOpenPositionsFilter = !showOnlyOpenPositions || hasOpenPositions(event)
+    return matchesColorFilter && matchesOpenPositionsFilter
+  }) || []
 
   // Get unique colors for filter (blue = General, other colors = recurring series)
   const uniqueEvents = data ? 
@@ -3211,6 +3226,19 @@ export default function EventPlannerPage() {
                 Clear ({selectedEvents.size})
               </button>
             )}
+            
+            {/* Open Positions Filter Button */}
+            <button
+              onClick={() => setShowOnlyOpenPositions(!showOnlyOpenPositions)}
+              className={`flex items-center gap-1 px-3 py-1 text-xs rounded flex-shrink-0 transition-colors ${
+                showOnlyOpenPositions 
+                  ? 'bg-orange-600 text-white hover:bg-orange-700' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <Users className="w-3 h-3" />
+              {showOnlyOpenPositions ? 'Show All Events' : 'Open Positions Only'}
+            </button>
             
             {/* Select All Visible Events Button */}
             <button
