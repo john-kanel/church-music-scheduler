@@ -60,21 +60,20 @@ export async function POST(request: NextRequest) {
         // Skip scheduling in the past
         if (scheduledLocal.getTime() < now.getTime()) continue
 
-        // Dedupe by churchId+userId+type+offsetDays
+        // Dedupe by churchId+userId+reminderType+reminderOffset - check for both unsent and sent emails
         const existing = await prisma.emailSchedule.findFirst({
           where: {
             churchId: church.id,
             userId: primaryUser.id,
-            sentAt: null,
-            emailType: 'WELCOME',
-            AND: [
-              { metadata: { path: ['type'], equals: 'TRIAL_ENDING_REMINDER' } },
-              { metadata: { path: ['offsetDays'], equals: offset } }
-            ] as any
+            reminderType: 'TRIAL_ENDING_REMINDER',
+            reminderOffset: offset
           }
         })
 
-        if (existing) continue
+        if (existing) {
+          console.log(`Skipping duplicate trial reminder for church ${church.id}, user ${primaryUser.id}, offset ${offset} days`)
+          continue
+        }
 
         await prisma.emailSchedule.create({
           data: {
@@ -82,6 +81,8 @@ export async function POST(request: NextRequest) {
             userId: primaryUser.id,
             emailType: 'WELCOME',
             scheduledFor: scheduledLocal,
+            reminderType: 'TRIAL_ENDING_REMINDER',
+            reminderOffset: offset,
             metadata: {
               type: 'TRIAL_ENDING_REMINDER',
               offsetDays: offset,

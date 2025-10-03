@@ -168,7 +168,7 @@ ${documentLinks}
           })
 
           await prisma.emailSchedule.update({ where: { id: schedule.id }, data: { sentAt: new Date() } })
-        } else if (schedule.metadata && (schedule.metadata as any).type === 'TRIAL_ENDING_REMINDER') {
+        } else if (schedule.reminderType === 'TRIAL_ENDING_REMINDER' || (schedule.metadata && (schedule.metadata as any).type === 'TRIAL_ENDING_REMINDER')) {
           // Send trial ending reminder to primary contact
           const user = await prisma.user.findUnique({ where: { id: schedule.userId } })
           const church = await prisma.church.findUnique({ where: { id: schedule.churchId } })
@@ -177,10 +177,24 @@ ${documentLinks}
             continue
           }
 
-          const offsetDays = (schedule.metadata as any).offsetDays as number
+          // Additional safety check: verify this is still a trial church
+          if (!['trial', 'trialing'].includes(church.subscriptionStatus)) {
+            await prisma.emailSchedule.update({ where: { id: schedule.id }, data: { sentAt: now, errorReason: 'Church no longer in trial' } })
+            console.log(`Skipping trial reminder for church ${church.id} - no longer in trial status: ${church.subscriptionStatus}`)
+            continue
+          }
+
+          const offsetDays = schedule.reminderOffset || (schedule.metadata as any).offsetDays as number
           const subscriptionEndsIso = (schedule.metadata as any).subscriptionEnds as string
           const subscriptionEnds = subscriptionEndsIso ? new Date(subscriptionEndsIso) : church.subscriptionEnds
           const daysLeft = subscriptionEnds ? Math.ceil((subscriptionEnds.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : null
+
+          // Safety check: don't send if trial has already ended (more than 1 day past)
+          if (daysLeft !== null && daysLeft < -1) {
+            await prisma.emailSchedule.update({ where: { id: schedule.id }, data: { sentAt: now, errorReason: 'Trial already ended' } })
+            console.log(`Skipping trial reminder for church ${church.id} - trial ended ${Math.abs(daysLeft)} days ago`)
+            continue
+          }
 
           const subject = daysLeft !== null && daysLeft <= 0
             ? 'Your free trial ends today'

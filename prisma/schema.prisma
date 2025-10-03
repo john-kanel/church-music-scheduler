@@ -521,6 +521,8 @@ model EmailSchedule {
   lastAttemptAt DateTime?
   errorReason   String?
   metadata      Json?
+  reminderType  String?   // For trial reminders: 'TRIAL_ENDING_REMINDER'
+  reminderOffset Int?     // For trial reminders: 7, 1, or 0 days
   createdAt     DateTime  @default(now())
   church        Church    @relation(fields: [churchId], references: [id], onDelete: Cascade)
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -528,6 +530,7 @@ model EmailSchedule {
   @@index([sentAt, scheduledFor, attempts])
   @@index([churchId])
   @@index([scheduledFor])
+  @@unique([churchId, userId, reminderType, reminderOffset], name: "unique_trial_reminder_per_user")
   @@map("email_schedules")
 }
 
