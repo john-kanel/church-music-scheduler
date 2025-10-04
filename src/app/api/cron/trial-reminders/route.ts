@@ -75,23 +75,32 @@ export async function POST(request: NextRequest) {
           continue
         }
 
-        await prisma.emailSchedule.create({
-          data: {
-            churchId: church.id,
-            userId: primaryUser.id,
-            emailType: 'WELCOME',
-            scheduledFor: scheduledLocal,
-            reminderType: 'TRIAL_ENDING_REMINDER',
-            reminderOffset: offset,
-            metadata: {
-              type: 'TRIAL_ENDING_REMINDER',
-              offsetDays: offset,
-              subscriptionEnds: church.subscriptionEnds.toISOString(),
-              churchName: church.name
+        // Additional race condition protection: use upsert to prevent duplicates
+        try {
+          await prisma.emailSchedule.create({
+            data: {
+              churchId: church.id,
+              userId: primaryUser.id,
+              emailType: 'WELCOME',
+              scheduledFor: scheduledLocal,
+              reminderType: 'TRIAL_ENDING_REMINDER',
+              reminderOffset: offset,
+              metadata: {
+                type: 'TRIAL_ENDING_REMINDER',
+                offsetDays: offset,
+                subscriptionEnds: church.subscriptionEnds.toISOString(),
+                churchName: church.name
+              }
             }
+          })
+          queued++
+        } catch (error: any) {
+          if (error.code === 'P2002') {
+            console.log(`Race condition detected: duplicate trial reminder for church ${church.id}, user ${primaryUser.id}, offset ${offset} days - skipping`)
+            continue
           }
-        })
-        queued++
+          throw error
+        }
       }
     }
 
