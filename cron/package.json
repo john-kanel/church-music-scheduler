@@ -8,6 +8,7 @@
     "cleanup-pdfs": "node cron-worker.js cleanup-pdfs",
     "cleanup-tokens": "node cron-worker.js cleanup-tokens",
     "send-scheduled-emails": "node cron-worker.js send-scheduled-emails",
+    "trial-reminders": "node cron-worker.js trial-reminders",
     "sync-google": "node -e \"fetch(process.env.NEXTAUTH_URL + '/api/google-calendar/sync', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ syncAll: true })}).then(r=>r.text()).then(t=>console.log(t)).catch(e=>{console.error(e); process.exit(1)})\""
   },
   "engines": {

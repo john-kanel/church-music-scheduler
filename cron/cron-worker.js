@@ -76,13 +76,17 @@ async function runCronJobs() {
       case 'send-scheduled-emails':
         await makeRequest('/api/cron/send-scheduled-emails');
         break;
+        
+      case 'trial-reminders':
+        await makeRequest('/api/cron/trial-reminders');
+        break;
       
       case 'sync-google-calendar':
         await makeRequest('/api/google-calendar/sync');
         break;
         
       default:
-        console.error('Invalid job type. Use: notifications, cleanup-pdfs, cleanup-tokens, send-scheduled-emails, or sync-google-calendar');
+        console.error('Invalid job type. Use: notifications, cleanup-pdfs, cleanup-tokens, send-scheduled-emails, trial-reminders, or sync-google-calendar');
         process.exit(1);
     }
     
