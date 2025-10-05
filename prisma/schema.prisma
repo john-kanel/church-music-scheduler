@@ -530,7 +530,8 @@ model EmailSchedule {
   @@index([sentAt, scheduledFor, attempts])
   @@index([churchId])
   @@index([scheduledFor])
-  @@unique([churchId, userId, reminderType, reminderOffset], name: "unique_trial_reminder_per_user")
+  // Note: Partial unique index 'email_schedules_trial_reminder_unique' exists in DB 
+  // on (churchId, userId, reminderType, reminderOffset) WHERE reminderType = 'TRIAL_ENDING_REMINDER'
   @@map("email_schedules")
 }
 
