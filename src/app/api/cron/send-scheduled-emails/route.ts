@@ -23,8 +23,32 @@ export async function POST(request: NextRequest) {
       orderBy: { scheduledFor: 'asc' }
     })
 
+    console.log(`[SEND-SCHEDULED-EMAILS] Found ${schedules.length} emails ready to send`)
+
     for (const schedule of schedules) {
       try {
+        // CRITICAL FIX: Atomically claim this email by setting lastAttemptAt
+        // This prevents other cron instances from processing the same email
+        const claimed = await prisma.emailSchedule.updateMany({
+          where: {
+            id: schedule.id,
+            sentAt: null, // Only claim if still unsent
+            lastAttemptAt: schedule.lastAttemptAt // Only if attempt time hasn't changed
+          },
+          data: {
+            lastAttemptAt: now,
+            attempts: schedule.attempts + 1
+          }
+        })
+
+        // If we didn't claim it (another instance got it first), skip
+        if (claimed.count === 0) {
+          console.log(`[SEND-SCHEDULED-EMAILS] Email ${schedule.id} already claimed by another instance, skipping`)
+          continue
+        }
+
+        console.log(`[SEND-SCHEDULED-EMAILS] Processing email ${schedule.id}`)
+
         // Handle event update digest
         if (schedule.metadata && (schedule.metadata as any).type === 'EVENT_UPDATE_DIGEST') {
           const eventId = (schedule.metadata as any).eventId as string
