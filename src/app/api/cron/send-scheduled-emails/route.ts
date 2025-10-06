@@ -261,18 +261,24 @@ ${documentLinks}
             console.log('[Trial reminder email simulated]', { to: user.email, subject })
           }
 
-          await prisma.notificationLog.create({
-            data: {
-              type: 'AUTOMATED_NOTIFICATION_SENT' as any,
-              churchId: schedule.churchId,
-              recipientEmail: user.email,
-              recipientName: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
-              subject,
-              metadata: { type: 'TRIAL_ENDING_REMINDER', offsetDays }
-            }
-          })
-
+          // CRITICAL: Mark as sent FIRST, before logging (prevents duplicates if logging fails)
           await prisma.emailSchedule.update({ where: { id: schedule.id }, data: { sentAt: new Date() } })
+
+          // Then log it (if this fails, email still marked as sent)
+          try {
+            await prisma.notificationLog.create({
+              data: {
+                type: 'TRIAL_ENDING_REMINDER',
+                churchId: schedule.churchId,
+                recipientEmail: user.email,
+                recipientName: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+                subject,
+                metadata: { type: 'TRIAL_ENDING_REMINDER', offsetDays }
+              }
+            })
+          } catch (logError) {
+            console.error('[SEND-SCHEDULED-EMAILS] Failed to log notification, but email was sent:', logError)
+          }
         } else {
           // Unknown email - mark as processed to avoid blocking
           await prisma.emailSchedule.update({ where: { id: schedule.id }, data: { sentAt: now, errorReason: 'Unhandled type' } })
