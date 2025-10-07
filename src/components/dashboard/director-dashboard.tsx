@@ -134,15 +134,48 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
   }, [user.role])
 
   // Check for onboarding on component mount (for users who have seen tour but not completed onboarding)
+  // Also verify that session matches database to fix any stuck users
   useEffect(() => {
     const hasSeenTour = localStorage.getItem('hasSeenDirectorTour')
-    if (hasSeenTour && (user.role === 'DIRECTOR' || user.role === 'PASTOR') && !user.hasCompletedOnboarding) {
-      console.log('🎯 Triggering onboarding for user who has seen tour but not completed onboarding:', {
-        hasSeenTour: !!hasSeenTour,
-        role: user.role,
-        hasCompletedOnboarding: user.hasCompletedOnboarding
-      })
-      setShowOnboarding(true)
+    
+    // Verify session matches database for directors/pastors
+    if (hasSeenTour && (user.role === 'DIRECTOR' || user.role === 'PASTOR')) {
+      // Fetch fresh user data from database to check if session is out of sync
+      fetch('/api/profile')
+        .then(res => res.json())
+        .then(data => {
+          const dbHasCompletedOnboarding = data.user?.hasCompletedOnboarding
+          const sessionHasCompletedOnboarding = user.hasCompletedOnboarding
+          
+          console.log('🔍 Checking onboarding status sync:', {
+            database: dbHasCompletedOnboarding,
+            session: sessionHasCompletedOnboarding,
+            hasSeenTour: !!hasSeenTour
+          })
+          
+          // If database says completed but session says not completed, refresh session
+          if (dbHasCompletedOnboarding && !sessionHasCompletedOnboarding) {
+            console.log('⚠️ Session out of sync! Database has completed=true but session has false. Refreshing session...')
+            if (typeof window !== 'undefined') {
+              // Force session refresh by reloading - this will fetch fresh data from DB
+              window.location.reload()
+            }
+            return
+          }
+          
+          // Normal onboarding check
+          if (!dbHasCompletedOnboarding) {
+            console.log('🎯 Triggering onboarding for user who has not completed onboarding')
+            setShowOnboarding(true)
+          }
+        })
+        .catch(err => {
+          console.error('Error checking onboarding status:', err)
+          // Fall back to session data
+          if (!user.hasCompletedOnboarding) {
+            setShowOnboarding(true)
+          }
+        })
     }
   }, [user.role, user.hasCompletedOnboarding])
 
@@ -169,9 +202,9 @@ export function DirectorDashboard({ user }: DirectorDashboardProps) {
   }
 
   const completeOnboarding = () => {
+    console.log('🎉 Onboarding completed, closing dialog')
     setShowOnboarding(false)
-    // Refresh the page or update user data to reflect completion
-    window.location.reload()
+    // No need to reload - session has already been updated in onboarding flow
   }
 
   const refreshDashboardData = async (date?: Date) => {

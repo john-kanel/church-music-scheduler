@@ -77,7 +77,8 @@ export const authOptions: NextAuthOptions = {
     strategy: 'jwt'
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
+      // Initial sign in
       if (user) {
         token.role = user.role
         token.churchId = user.churchId
@@ -85,6 +86,25 @@ export const authOptions: NextAuthOptions = {
         token.hasCompletedOnboarding = user.hasCompletedOnboarding
         console.log('🔑 JWT callback - setting token hasCompletedOnboarding:', user.hasCompletedOnboarding)
       }
+      
+      // Handle session updates (when update() is called)
+      if (trigger === 'update' && token.sub) {
+        console.log('🔄 JWT callback - update trigger detected, fetching fresh user data')
+        // Fetch fresh user data from database
+        const freshUser = await prisma.user.findUnique({
+          where: { id: token.sub },
+          include: { church: true }
+        })
+        
+        if (freshUser) {
+          token.hasCompletedOnboarding = freshUser.hasCompletedOnboarding
+          token.role = freshUser.role
+          token.churchId = freshUser.churchId
+          token.churchName = freshUser.church.name
+          console.log('✅ JWT callback - updated token with fresh data, hasCompletedOnboarding:', freshUser.hasCompletedOnboarding)
+        }
+      }
+      
       return token
     },
     async session({ session, token }) {

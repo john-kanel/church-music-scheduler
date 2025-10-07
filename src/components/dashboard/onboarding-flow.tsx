@@ -81,7 +81,7 @@ const ONBOARDING_STEPS = [
 ]
 
 export function OnboardingFlow({ isVisible, onComplete }: OnboardingFlowProps) {
-  const { data: session } = useSession()
+  const { data: session, update } = useSession()
   const [currentStep, setCurrentStep] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
   const [onboardingData, setOnboardingData] = useState<OnboardingData>({
@@ -282,8 +282,23 @@ export function OnboardingFlow({ isVisible, onComplete }: OnboardingFlowProps) {
           }
           break
         case 5: // Complete
-          // Mark onboarding as complete
-          await saveStepData({ hasCompletedOnboarding: true }, '/api/profile')
+          // Mark onboarding as complete - make sure this succeeds
+          const response = await fetch('/api/profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ hasCompletedOnboarding: true })
+          })
+          
+          if (!response.ok) {
+            console.error('Failed to mark onboarding as complete')
+            throw new Error('Failed to complete onboarding. Please try again.')
+          }
+          
+          // Refresh the session to get updated hasCompletedOnboarding status
+          console.log('🔄 Onboarding complete, refreshing session...')
+          await update()
+          console.log('✅ Session refreshed after onboarding completion')
+          
           onComplete()
           return
       }
