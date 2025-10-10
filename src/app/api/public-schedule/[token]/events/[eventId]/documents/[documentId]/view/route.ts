@@ -37,7 +37,8 @@ export async function GET(
 
     // Generate presigned URL for S3 file access (read-only, time-limited)
     const s3Key = document.filename
-    const presigned = await getPresignedUrl(s3Key, 3600)
+    // Using 7 days (604800 seconds) - the maximum AWS allows for presigned URLs
+    const presigned = await getPresignedUrl(s3Key, 604800)
     if (!presigned.success || !presigned.url) {
       return NextResponse.json({ error: 'File not accessible' }, { status: 404 })
     }

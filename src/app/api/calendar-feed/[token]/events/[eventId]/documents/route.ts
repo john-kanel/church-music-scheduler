@@ -41,7 +41,8 @@ export async function GET(
     // If exactly one document, redirect straight to file
     if (documents.length === 1) {
       const single = documents[0]
-      const presigned = await getPresignedUrl(single.filename, 3600)
+      // Using 7 days (604800 seconds) - the maximum AWS allows for presigned URLs
+      const presigned = await getPresignedUrl(single.filename, 604800)
       if (presigned.success && presigned.url) {
         return NextResponse.redirect(presigned.url)
       }
@@ -53,7 +54,8 @@ export async function GET(
       listHtml = '<p style="color:#666">No documents for this event.</p>'
     } else {
       const items = await Promise.all(documents.map(async (doc) => {
-        const presigned = await getPresignedUrl(doc.filename, 3600)
+        // Using 7 days (604800 seconds) - the maximum AWS allows for presigned URLs
+        const presigned = await getPresignedUrl(doc.filename, 604800)
         const href = presigned.success && presigned.url ? presigned.url : '#'
         return `<li style="margin:8px 0"><a href="${href}" target="_blank" rel="noopener" style="color:#1d4ed8;text-decoration:none">${escapeHtml(doc.originalFilename)}</a></li>`
       }))

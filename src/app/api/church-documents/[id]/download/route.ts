@@ -50,7 +50,8 @@ export async function GET(
     // Generate presigned URL for S3 file access with download headers
     const s3Key = document.filename
     
-    const presignedResult = await getPresignedUrl(s3Key, 3600, true) // 1 hour expiry, force download
+    // Using 7 days (604800 seconds) - the maximum AWS allows for presigned URLs
+    const presignedResult = await getPresignedUrl(s3Key, 604800, true) // 7 days expiry, force download
     
     if (!presignedResult.success || !presignedResult.url) {
       console.error('Failed to generate presigned URL:', presignedResult.error)

@@ -75,7 +75,7 @@ export async function uploadFileToS3(
 // Generate presigned URL for secure file access
 export async function getPresignedUrl(
   key: string,
-  expiresIn: number = 3600, // 1 hour default
+  expiresIn: number = 604800, // 7 days default (AWS maximum)
   forceDownload: boolean = false
 ): Promise<{ success: boolean; url?: string; error?: string }> {
   try {
