@@ -733,6 +733,13 @@ export default function HomePage() {
               >
                 support@churchmusicpro.com
               </a>
+              {' '}or call{' '}
+              <a 
+                href="tel:+14028556227" 
+                className="text-brand-600 hover:text-brand-700 transition-colors font-medium"
+              >
+                (402) 855-6227
+              </a>
             </p>
           </div>
         </div>
