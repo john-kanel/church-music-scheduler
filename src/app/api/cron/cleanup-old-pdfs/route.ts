@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import fs from 'fs';
 import path from 'path';
+import { deleteFileFromS3 } from '@/lib/s3';
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,22 +12,34 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Calculate 18 months ago
+    // Calculate 18 months ago from today
     const eighteenMonthsAgo = new Date();
     eighteenMonthsAgo.setMonth(eighteenMonthsAgo.getMonth() - 18);
 
-    console.log(`Looking for PDF documents older than ${eighteenMonthsAgo.toISOString()}`);
+    console.log(`Looking for documents attached to events older than ${eighteenMonthsAgo.toISOString()}`);
 
-    // Find event documents older than 18 months
+    // Find event documents where the EVENT DATE is older than 18 months
+    // This way, documents for future events or recurring events are preserved
     const oldDocuments = await prisma.eventDocument.findMany({
       where: {
-        uploadedAt: {
-          lt: eighteenMonthsAgo
+        event: {
+          startTime: {
+            lt: eighteenMonthsAgo
+          }
+        }
+      },
+      include: {
+        event: {
+          select: {
+            id: true,
+            name: true,
+            startTime: true
+          }
         }
       }
     });
 
-    console.log(`Found ${oldDocuments.length} old PDF documents to delete`);
+    console.log(`Found ${oldDocuments.length} documents for events older than 18 months`);
 
     let deletedCount = 0;
     let errorCount = 0;
@@ -34,10 +47,21 @@ export async function GET(request: NextRequest) {
     // Delete each old document
     for (const document of oldDocuments) {
       try {
-        // Delete from file system if file exists
+        // Delete from file system if file exists (for legacy local files)
         if (document.filePath && fs.existsSync(document.filePath)) {
           fs.unlinkSync(document.filePath);
           console.log(`Deleted file: ${document.filePath}`);
+        }
+        // Delete from S3 if it's an S3 file
+        if (document.filename && document.filename.includes('/')) {
+          // The filename field often contains the S3 key
+          const s3Key = document.filename;
+          const s3Result = await deleteFileFromS3(s3Key);
+          if (s3Result.success) {
+            console.log(`Deleted S3 file: ${s3Key}`);
+          } else {
+            console.error(`Failed to delete S3 file ${s3Key}:`, s3Result.error);
+          }
         }
 
         // Delete from database
@@ -46,7 +70,7 @@ export async function GET(request: NextRequest) {
         });
 
         deletedCount++;
-        console.log(`Deleted document ${document.id} from event ${document.eventId}`);
+        console.log(`Deleted document ${document.id} from event ${document.eventId} (event date: ${document.event.startTime.toISOString()})`);
       } catch (error) {
         errorCount++;
         console.error(`Failed to delete document ${document.id}:`, error);
@@ -58,7 +82,8 @@ export async function GET(request: NextRequest) {
       totalFound: oldDocuments.length,
       deletedCount,
       errorCount,
-      cutoffDate: eighteenMonthsAgo.toISOString()
+      cutoffDate: eighteenMonthsAgo.toISOString(),
+      note: 'Only documents from events older than 18 months are deleted'
     };
 
     console.log('PDF cleanup completed:', summary);

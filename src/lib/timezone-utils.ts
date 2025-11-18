@@ -8,24 +8,26 @@ import { fromZonedTime, toZonedTime, format } from 'date-fns-tz'
  * @returns UTC Date object for database storage
  */
 export function createEventDateTime(dateStr: string, timeStr: string, timezone: string): Date {
-  // Create a simple local date/time and apply the same timezone correction
-  // that we use for display to maintain consistency
+  // Create a date string that JavaScript will interpret as local time
+  // IMPORTANT: We treat the input as "naive" time - whatever time the user typed
+  // JavaScript's Date constructor with YYYY-MM-DDTHH:mm format interprets it as local time
   const isoString = `${dateStr}T${timeStr}:00`
+  
+  // This creates a Date object that represents the user's intended local time
+  // The Date object internally stores UTC, but the user's intended time is preserved
   const localDate = new Date(isoString)
   
-  // Apply the same timezone offset correction as formatEventTimeForDisplay
-  // This ensures consistency between creation and display
-  const timezoneOffsetMinutes = localDate.getTimezoneOffset()
-  const correctedDate = new Date(localDate.getTime() - (timezoneOffsetMinutes * 60000))
+  console.log('🕐 Creating event datetime:', {
+    input: `${dateStr} ${timeStr}`,
+    createdDate: localDate.toISOString(),
+    localDisplay: localDate.toLocaleString(),
+    timezone
+  })
   
-     console.log('🕐 Simplified timezone conversion:', {
-     input: `${dateStr} ${timeStr}`,
-     localDate: localDate.toISOString(),
-     timezoneOffsetMinutes,
-     correctedDate: correctedDate.toISOString()
-   })
-  
-  return correctedDate
+  // Return the date as-is. JavaScript automatically handles the UTC conversion.
+  // When this date is saved to the database and retrieved, the timezone display
+  // functions will apply the inverse transformation to show the same local time
+  return localDate
 }
 
 /**
@@ -86,11 +88,10 @@ export async function getUserTimezone(userId: string): Promise<string> {
  */
 export function formatEventTimeForDisplay(utcTimeString: string): string {
   const utcDate = new Date(utcTimeString)
-  // Apply timezone fix: adjust for timezone offset to show intended local time
-  const timezoneOffsetMinutes = utcDate.getTimezoneOffset()
-  const localDate = new Date(utcDate.getTime() + (timezoneOffsetMinutes * 60000))
   
-  return localDate.toLocaleTimeString('en-US', {
+  // JavaScript's Date object automatically converts to local timezone when displaying
+  // We just need to format it properly for display
+  return utcDate.toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true
@@ -104,10 +105,9 @@ export function formatEventTimeForDisplay(utcTimeString: string): string {
  */
 export function formatEventTimeCompact(utcTimeString: string): string {
   const utcDate = new Date(utcTimeString)
-  const timezoneOffsetMinutes = utcDate.getTimezoneOffset()
-  const localDate = new Date(utcDate.getTime() + (timezoneOffsetMinutes * 60000))
   
-  return localDate.toLocaleTimeString([], { 
+  // JavaScript's Date object automatically converts to local timezone when displaying
+  return utcDate.toLocaleTimeString([], { 
     hour: 'numeric', 
     minute: '2-digit',
     hour12: true
