@@ -87,11 +87,14 @@ export async function getUserTimezone(userId: string): Promise<string> {
  * @returns Properly formatted local time string (e.g., "10:00 AM")
  */
 export function formatEventTimeForDisplay(utcTimeString: string): string {
-  const utcDate = new Date(utcTimeString)
+  const date = new Date(utcTimeString)
   
-  // JavaScript's Date object automatically converts to local timezone when displaying
-  // We just need to format it properly for display
-  return utcDate.toLocaleTimeString('en-US', {
+  // Apply timezone correction to reverse the storage conversion
+  // This ensures the time displays correctly in the user's local timezone
+  const timezoneOffsetMinutes = date.getTimezoneOffset()
+  const localDate = new Date(date.getTime() + (timezoneOffsetMinutes * 60000))
+  
+  return localDate.toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true
@@ -104,10 +107,13 @@ export function formatEventTimeForDisplay(utcTimeString: string): string {
  * @returns Compact time string (e.g., "10:00 AM")
  */
 export function formatEventTimeCompact(utcTimeString: string): string {
-  const utcDate = new Date(utcTimeString)
+  const date = new Date(utcTimeString)
   
-  // JavaScript's Date object automatically converts to local timezone when displaying
-  return utcDate.toLocaleTimeString([], { 
+  // Apply timezone correction to reverse the storage conversion
+  const timezoneOffsetMinutes = date.getTimezoneOffset()
+  const localDate = new Date(date.getTime() + (timezoneOffsetMinutes * 60000))
+  
+  return localDate.toLocaleTimeString([], { 
     hour: 'numeric', 
     minute: '2-digit',
     hour12: true
