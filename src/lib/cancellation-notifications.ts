@@ -47,6 +47,40 @@ export async function createCancellationNotification(data: CancellationData) {
 // Process and send batched cancellation notifications
 export async function processPendingCancellationNotifications(batchKey: string, churchId: string) {
   try {
+    // Check if church has an active subscription before sending notifications
+    const church = await prisma.church.findUnique({
+      where: { id: churchId },
+      select: { 
+        subscriptionStatus: true, 
+        subscriptionEnds: true 
+      }
+    })
+
+    if (!church) {
+      console.log(`Skipping cancellation notifications - church ${churchId} not found`)
+      return
+    }
+
+    // Verify active subscription or trial
+    const now = new Date()
+    const isExpired = church.subscriptionEnds ? now > church.subscriptionEnds : false
+    const isInactive = !['active', 'trialing', 'trial'].includes(church.subscriptionStatus)
+    
+    if (isExpired || isInactive) {
+      console.log(`Skipping cancellation notifications for church ${churchId} - subscription expired or inactive`)
+      // Mark notifications as processed to prevent retrying
+      await prisma.cancellationNotification.updateMany({
+        where: {
+          batchKey: batchKey,
+          sentAt: null
+        },
+        data: {
+          sentAt: new Date()
+        }
+      })
+      return
+    }
+
     // Get all unsent notifications for this batch
     const pendingNotifications = await prisma.cancellationNotification.findMany({
       where: {

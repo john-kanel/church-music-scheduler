@@ -58,6 +58,27 @@ export async function POST(request: NextRequest) {
             continue
           }
 
+          // Check if church has an active subscription before sending
+          const church = await prisma.church.findUnique({ 
+            where: { id: schedule.churchId },
+            select: { subscriptionStatus: true, subscriptionEnds: true }
+          })
+          
+          if (!church) {
+            await prisma.emailSchedule.update({ where: { id: schedule.id }, data: { sentAt: now, errorReason: 'Church not found' } })
+            continue
+          }
+
+          // Verify active subscription or trial
+          const isExpired = church.subscriptionEnds ? now > church.subscriptionEnds : false
+          const isInactive = !['active', 'trialing', 'trial'].includes(church.subscriptionStatus)
+          
+          if (isExpired || isInactive) {
+            await prisma.emailSchedule.update({ where: { id: schedule.id }, data: { sentAt: now, errorReason: 'Subscription expired or inactive' } })
+            console.log(`Skipping event digest for church ${schedule.churchId} - subscription expired or inactive`)
+            continue
+          }
+
           // Collect changes since last send (simplified: fetch current hymns, documents and basic event info)
           const event = await prisma.event.findUnique({
             where: { id: eventId },

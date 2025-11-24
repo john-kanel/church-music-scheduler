@@ -7,6 +7,30 @@ import { resolveEventAssignmentsForSingle } from './dynamic-assignments'
  */
 export async function scheduleEventNotifications(eventId: string, churchId: string, skipPastEventCheck: boolean = false) {
   try {
+    // Check if church has an active subscription before sending notifications
+    const church = await prisma.church.findUnique({
+      where: { id: churchId },
+      select: { 
+        subscriptionStatus: true, 
+        subscriptionEnds: true 
+      }
+    })
+
+    if (!church) {
+      console.log(`Skipping event notifications - church ${churchId} not found`)
+      return
+    }
+
+    // Verify active subscription or trial
+    const now = new Date()
+    const isExpired = church.subscriptionEnds ? now > church.subscriptionEnds : false
+    const isInactive = !['active', 'trialing', 'trial'].includes(church.subscriptionStatus)
+    
+    if (isExpired || isInactive) {
+      console.log(`Skipping event notifications for church ${churchId} - subscription expired or inactive`)
+      return
+    }
+
     // Get automation settings for the church
     const automationSettings = await prisma.automationSettings.findUnique({
       where: { churchId },
@@ -54,7 +78,6 @@ export async function scheduleEventNotifications(eventId: string, churchId: stri
 
     // Skip notifications for past events unless explicitly requested
     if (!skipPastEventCheck) {
-      const now = new Date()
       const eventDateTime = new Date(event.startTime)
       
       if (eventDateTime < now) {
@@ -63,7 +86,6 @@ export async function scheduleEventNotifications(eventId: string, churchId: stri
       }
     }
 
-    const now = new Date()
     const eventDateTime = new Date(event.startTime)
     const hoursUntilEvent = (eventDateTime.getTime() - now.getTime()) / (1000 * 60 * 60)
 

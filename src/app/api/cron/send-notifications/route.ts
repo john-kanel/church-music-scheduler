@@ -20,8 +20,23 @@ export async function POST(request: NextRequest) {
     
     console.log(`Running notification cron job at ${now.toISOString()}`)
 
-    // Get all churches with automation settings
+    // Get all churches with automation settings AND active subscriptions
+    // Only send emails to churches that have active subscriptions or trials
     const churches = await prisma.church.findMany({
+      where: {
+        OR: [
+          {
+            // Active or trialing subscription
+            subscriptionStatus: { in: ['active', 'trialing', 'trial'] },
+            subscriptionEnds: { gte: now }
+          },
+          {
+            // Active subscription with no end date
+            subscriptionStatus: { in: ['active', 'trialing', 'trial'] },
+            subscriptionEnds: null
+          }
+        ]
+      },
       include: {
         automationSettings: {
           include: {
