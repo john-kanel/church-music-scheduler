@@ -632,8 +632,16 @@ export default function CalendarPage() {
         let contentStartY = yPosition + 5
         let tempY = contentStartY
         
-        const eventDate = new Date(event.startTime)
-        const eventEndDate = event.endTime ? new Date(event.endTime) : null
+        const rawEventDate = new Date(event.startTime)
+        const rawEventEndDate = event.endTime ? new Date(event.endTime) : null
+        
+        // TIMEZONE FIX: Apply timezone correction to display correct times in PDF
+        // This reverses the UTC storage conversion to show the intended local time
+        const timezoneOffsetMinutes = rawEventDate.getTimezoneOffset()
+        const eventDate = new Date(rawEventDate.getTime() + (timezoneOffsetMinutes * 60000))
+        const eventEndDate = rawEventEndDate 
+          ? new Date(rawEventEndDate.getTime() + (timezoneOffsetMinutes * 60000))
+          : null
         
         // Calculate height needed for content
         tempY += 12 // Event title (increased for larger font)
