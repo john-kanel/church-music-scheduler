@@ -95,7 +95,11 @@ export async function DELETE(
       return NextResponse.json({ error: 'Root recurring event not found' }, { status: 404 })
     }
 
-    // Delete the entire series (root event and all generated events)
+    // Delete only FUTURE events in the series (preserve past events)
+    const now = new Date()
+    let futureEventsDeleted = 0
+    let pastEventsPreserved = 0
+
     await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Find all generated events from this root
       const generatedEvents = await tx.event.findMany({
@@ -105,25 +109,35 @@ export async function DELETE(
         }
       })
 
-      // Delete assignments and hymns for all generated events
-      for (const event of generatedEvents) {
+      // Separate future and past events
+      const futureEvents = generatedEvents.filter(event => new Date(event.startTime) >= now)
+      const pastEvents = generatedEvents.filter(event => new Date(event.startTime) < now)
+      
+      futureEventsDeleted = futureEvents.length
+      pastEventsPreserved = pastEvents.length
+
+      // Delete assignments and hymns only for FUTURE generated events
+      for (const event of futureEvents) {
         await tx.eventAssignment.deleteMany({ where: { eventId: event.id } })
         await tx.eventHymn.deleteMany({ where: { eventId: event.id } })
       }
 
-      // Delete all generated events
-      await tx.event.deleteMany({
-        where: {
-          generatedFrom: rootEventId,
-          churchId: session.user.churchId
-        }
-      })
+      // Delete only FUTURE generated events
+      if (futureEvents.length > 0) {
+        await tx.event.deleteMany({
+          where: {
+            generatedFrom: rootEventId,
+            churchId: session.user.churchId,
+            startTime: { gte: now }
+          }
+        })
+      }
 
-      // Delete assignments and hymns for root event
+      // Delete assignments and hymns for root event (root is just a template)
       await tx.eventAssignment.deleteMany({ where: { eventId: rootEventId } })
       await tx.eventHymn.deleteMany({ where: { eventId: rootEventId } })
 
-      // Delete the root event
+      // Delete the root event (it's just a template, past events are preserved)
       await tx.event.delete({
         where: { id: rootEventId }
       })
@@ -131,23 +145,27 @@ export async function DELETE(
       timeout: 30000, // 30 second timeout
       maxWait: 10000  // 10 second max wait
     })
+    
+    console.log(`🗑️ Recurring series delete: ${futureEventsDeleted} future events deleted, ${pastEventsPreserved} past events preserved`)
 
     // Log activity
     await logActivity({
       type: 'EVENT_CREATED', // Using existing enum value for event modifications
-      description: `Deleted recurring event series: ${rootEvent.name}`,
+      description: `Deleted recurring event series: ${rootEvent.name} (${futureEventsDeleted} future events deleted, ${pastEventsPreserved} past events preserved)`,
       churchId: session.user.churchId,
       userId: session.user.id,
       metadata: {
         eventId: rootEvent.id,
         eventName: rootEvent.name,
         isRecurringSeries: true,
-        isDelete: true
+        isDelete: true,
+        futureEventsDeleted,
+        pastEventsPreserved
       }
     })
 
     return NextResponse.json({ 
-      message: 'Recurring event series deleted successfully'
+      message: `Recurring event series deleted successfully. ${futureEventsDeleted} future events removed, ${pastEventsPreserved} past events preserved.`
     }, { status: 200 })
 
   } catch (error) {

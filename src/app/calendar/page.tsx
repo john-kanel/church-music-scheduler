@@ -473,7 +473,7 @@ export default function CalendarPage() {
 
   const handleDeleteRootEvent = async (rootEvent: RootRecurringEvent) => {
     const confirmDelete = window.confirm(
-      `Are you sure you want to delete the recurring event series "${rootEvent.name}"?\n\nThis will permanently delete:\n• The root event template\n• All generated events in this series\n• All assignments and hymns for this series\n\nThis action cannot be undone.`
+      `Are you sure you want to delete the recurring event series "${rootEvent.name}"?\n\nThis will:\n• Delete all FUTURE events in this series\n• Delete the root event template\n• Preserve all PAST events (they will remain on your calendar)\n\nThis action cannot be undone.`
     )
     
     if (!confirmDelete) return
