@@ -481,6 +481,7 @@ export default function EventPlannerPage() {
   const [visibleServiceParts, setVisibleServiceParts] = useState<Set<string>>(new Set())
   const [visibleEventColors, setVisibleEventColors] = useState<Set<string>>(new Set())
   const [showOnlyOpenPositions, setShowOnlyOpenPositions] = useState(false)
+  const [showOnlyOpenHymns, setShowOnlyOpenHymns] = useState(false)
 
   // Load filter settings from localStorage on component mount
   useEffect(() => {
@@ -2581,11 +2582,20 @@ export default function EventPlannerPage() {
     )
   }
 
-  // Filter events by selected colors and open positions filter
+  // Helper function to check if an event has hymns without titles (open hymns)
+  const hasOpenHymns = (event: Event): boolean => {
+    if (!event.hymns || event.hymns.length === 0) return false
+    
+    // Check if ANY hymn has an empty or whitespace-only title
+    return event.hymns.some(hymn => !hymn.title || hymn.title.trim() === '')
+  }
+
+  // Filter events by selected colors, open positions filter, and open hymns filter
   const filteredEvents = data?.events.filter(event => {
     const matchesColorFilter = visibleEventColors.has(event.eventType.color)
     const matchesOpenPositionsFilter = !showOnlyOpenPositions || hasOpenPositions(event)
-    return matchesColorFilter && matchesOpenPositionsFilter
+    const matchesOpenHymnsFilter = !showOnlyOpenHymns || hasOpenHymns(event)
+    return matchesColorFilter && matchesOpenPositionsFilter && matchesOpenHymnsFilter
   }) || []
 
   // Get unique colors for filter (blue = General, other colors = recurring series)
@@ -3238,6 +3248,19 @@ export default function EventPlannerPage() {
             >
               <Users className="w-3 h-3" />
               {showOnlyOpenPositions ? 'Show All Events' : 'Open Positions Only'}
+            </button>
+            
+            {/* Open Hymns Filter Button */}
+            <button
+              onClick={() => setShowOnlyOpenHymns(!showOnlyOpenHymns)}
+              className={`flex items-center gap-1 px-3 py-1 text-xs rounded flex-shrink-0 transition-colors ${
+                showOnlyOpenHymns 
+                  ? 'bg-purple-600 text-white hover:bg-purple-700' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <Music className="w-3 h-3" />
+              {showOnlyOpenHymns ? 'Show All Events' : 'Open Hymns Only'}
             </button>
             
             {/* Select All Visible Events Button */}
