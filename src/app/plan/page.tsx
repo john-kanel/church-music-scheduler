@@ -3201,80 +3201,87 @@ export default function EventPlannerPage() {
       {/* Event Filter Bar */}
       {uniqueEvents.length > 0 && (
         <div className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-3">
-          <div className="flex items-center gap-3 overflow-x-auto">
+          <div className="flex items-center gap-3">
             <Filter className="w-4 h-4 text-gray-400 flex-shrink-0" />
             <span className="text-sm font-medium text-gray-700 flex-shrink-0">Events:</span>
-            <div className="flex gap-4 min-w-0">
-              {uniqueEvents.map((eventGroup: any) => {
-                return (
-                  <div key={eventGroup.color} className="relative flex-shrink-0">
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={visibleEventColors.has(eventGroup.color)}
-                        onChange={() => toggleEventColor(eventGroup.color)}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <div 
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: eventGroup.color }}
-                      />
-                      <span className="text-sm text-gray-700">{eventGroup.name}</span>
-                    </label>
-                  </div>
-                )
-              })}
+            
+            {/* Scrollable Event Types Container */}
+            <div className="flex-1 min-w-0 overflow-x-auto scrollbar-thin">
+              <div className="flex gap-4 pb-1">
+                {uniqueEvents.map((eventGroup: any) => {
+                  return (
+                    <div key={eventGroup.color} className="relative flex-shrink-0">
+                      <label className="flex items-center gap-2 whitespace-nowrap cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={visibleEventColors.has(eventGroup.color)}
+                          onChange={() => toggleEventColor(eventGroup.color)}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <div 
+                          className="w-3 h-3 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: eventGroup.color }}
+                        />
+                        <span className="text-sm text-gray-700">{eventGroup.name}</span>
+                      </label>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
             
-            {/* Clear Selection Button */}
-            {selectedEvents.size > 0 && (
+            {/* Fixed Filter Buttons - Always visible */}
+            <div className="flex items-center gap-2 flex-shrink-0 border-l border-gray-200 pl-3 ml-2">
+              {/* Clear Selection Button */}
+              {selectedEvents.size > 0 && (
+                <button
+                  onClick={clearEventSelection}
+                  className="flex items-center gap-1 px-2 py-1 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded flex-shrink-0"
+                >
+                  <X className="w-3 h-3" />
+                  Clear ({selectedEvents.size})
+                </button>
+              )}
+              
+              {/* Open Positions Filter Button */}
               <button
-                onClick={clearEventSelection}
-                className="flex items-center gap-1 px-2 py-1 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded flex-shrink-0"
+                onClick={() => setShowOnlyOpenPositions(!showOnlyOpenPositions)}
+                className={`flex items-center gap-1 px-3 py-1 text-xs rounded flex-shrink-0 transition-colors whitespace-nowrap ${
+                  showOnlyOpenPositions 
+                    ? 'bg-orange-600 text-white hover:bg-orange-700' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
               >
-                <X className="w-3 h-3" />
-                Clear ({selectedEvents.size})
+                <Users className="w-3 h-3" />
+                {showOnlyOpenPositions ? 'Show All' : 'Open Positions'}
               </button>
-            )}
-            
-            {/* Open Positions Filter Button */}
-            <button
-              onClick={() => setShowOnlyOpenPositions(!showOnlyOpenPositions)}
-              className={`flex items-center gap-1 px-3 py-1 text-xs rounded flex-shrink-0 transition-colors ${
-                showOnlyOpenPositions 
-                  ? 'bg-orange-600 text-white hover:bg-orange-700' 
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              <Users className="w-3 h-3" />
-              {showOnlyOpenPositions ? 'Show All Events' : 'Open Positions Only'}
-            </button>
-            
-            {/* Open Hymns Filter Button */}
-            <button
-              onClick={() => setShowOnlyOpenHymns(!showOnlyOpenHymns)}
-              className={`flex items-center gap-1 px-3 py-1 text-xs rounded flex-shrink-0 transition-colors ${
-                showOnlyOpenHymns 
-                  ? 'bg-purple-600 text-white hover:bg-purple-700' 
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              <Music className="w-3 h-3" />
-              {showOnlyOpenHymns ? 'Show All Events' : 'Open Hymns Only'}
-            </button>
-            
-            {/* Select All Visible Events Button */}
-            <button
-              onClick={() => {
-                const allVisibleEventIds = filteredEvents.map(event => event.id)
-                const newSelected = new Set(allVisibleEventIds)
-                setSelectedEvents(newSelected)
-              }}
-              className="flex items-center gap-1 px-3 py-1 text-xs bg-blue-600 text-white hover:bg-blue-700 rounded flex-shrink-0 ml-auto"
-            >
-              <Check className="w-3 h-3" />
-              Select All Visible
-            </button>
+              
+              {/* Open Hymns Filter Button */}
+              <button
+                onClick={() => setShowOnlyOpenHymns(!showOnlyOpenHymns)}
+                className={`flex items-center gap-1 px-3 py-1 text-xs rounded flex-shrink-0 transition-colors whitespace-nowrap ${
+                  showOnlyOpenHymns 
+                    ? 'bg-purple-600 text-white hover:bg-purple-700' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <Music className="w-3 h-3" />
+                {showOnlyOpenHymns ? 'Show All' : 'Open Hymns'}
+              </button>
+              
+              {/* Select All Visible Events Button */}
+              <button
+                onClick={() => {
+                  const allVisibleEventIds = filteredEvents.map(event => event.id)
+                  const newSelected = new Set(allVisibleEventIds)
+                  setSelectedEvents(newSelected)
+                }}
+                className="flex items-center gap-1 px-3 py-1 text-xs bg-blue-600 text-white hover:bg-blue-700 rounded flex-shrink-0 whitespace-nowrap"
+              >
+                <Check className="w-3 h-3" />
+                Select All
+              </button>
+            </div>
           </div>
         </div>
       )}
