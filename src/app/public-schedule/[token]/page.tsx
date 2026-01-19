@@ -14,7 +14,7 @@ interface PublicScheduleData {
   }
   name?: string | null
   filter?: {
-    filterType: 'ALL' | 'GROUPS' | 'EVENT_TYPES'
+    filterType: 'ALL' | 'GROUPS' | 'EVENT_TYPES' | 'OPEN_POSITIONS'
     groupIds: string[]
     eventTypeIds: string[]
   }

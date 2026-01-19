@@ -792,6 +792,7 @@ enum CalendarFilterType {
   ALL
   GROUPS
   EVENT_TYPES
+  OPEN_POSITIONS
 }
 
 enum EventStatus {

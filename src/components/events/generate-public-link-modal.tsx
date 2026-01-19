@@ -11,7 +11,7 @@ interface PublicLink {
   endDate: string
   createdAt: string
   name?: string | null
-  filterType?: 'ALL' | 'GROUPS' | 'EVENT_TYPES'
+  filterType?: 'ALL' | 'GROUPS' | 'EVENT_TYPES' | 'OPEN_POSITIONS'
   groupIds?: string[]
   eventTypeIds?: string[]
 }
@@ -25,7 +25,7 @@ export function GeneratePublicLinkModal({ isOpen, onClose }: GeneratePublicLinkM
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [name, setName] = useState('')
-  const [filterType, setFilterType] = useState<'ALL' | 'GROUPS' | 'EVENT_TYPES'>('ALL')
+  const [filterType, setFilterType] = useState<'ALL' | 'GROUPS' | 'EVENT_TYPES' | 'OPEN_POSITIONS'>('ALL')
   const [availableGroups, setAvailableGroups] = useState<Array<{ id: string; name: string }>>([])
   const [availableEventTypes, setAvailableEventTypes] = useState<Array<{ id: string; name: string; color: string }>>([])
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([])
@@ -292,6 +292,7 @@ export function GeneratePublicLinkModal({ isOpen, onClose }: GeneratePublicLinkM
                 <option value="ALL">All events</option>
                 <option value="GROUPS">Only events involving selected groups</option>
                 <option value="EVENT_TYPES">Only selected event types</option>
+                <option value="OPEN_POSITIONS">Only events with open positions</option>
               </select>
 
               {filterType === 'GROUPS' && (
@@ -345,6 +346,14 @@ export function GeneratePublicLinkModal({ isOpen, onClose }: GeneratePublicLinkM
                     )}
                   </div>
                   <p className="text-xs text-gray-500 mt-1">Works with recurring event types and one-off types.</p>
+                </div>
+              )}
+
+              {filterType === 'OPEN_POSITIONS' && (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-700">
+                    Only events that have at least one unfilled musician role will be shown. This is useful for recruiting musicians to fill open spots.
+                  </p>
                 </div>
               )}
             </div>

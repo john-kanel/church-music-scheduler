@@ -65,6 +65,13 @@ export async function GET(
       } else {
         baseWhere.id = 'no-events'
       }
+    } else if ((publicLink as any).filterType === 'OPEN_POSITIONS') {
+      // Only show events that have at least one unfilled assignment (userId is null)
+      baseWhere.assignments = {
+        some: {
+          userId: null
+        }
+      }
     }
 
     // Fetch events within the date range using filters

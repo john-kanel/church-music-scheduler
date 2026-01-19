@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate filters
-    const validFilterTypes = ['ALL', 'GROUPS', 'EVENT_TYPES']
+    const validFilterTypes = ['ALL', 'GROUPS', 'EVENT_TYPES', 'OPEN_POSITIONS']
     if (!validFilterTypes.includes(filterType)) {
       return NextResponse.json({ error: 'Invalid filter type' }, { status: 400 })
     }
