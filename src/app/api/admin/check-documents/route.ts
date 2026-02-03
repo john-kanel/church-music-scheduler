@@ -130,6 +130,132 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Check if HTML format requested
+    const url = new URL(request.url)
+    if (url.searchParams.get('format') === 'html') {
+      const missingIds = results.missingDocuments.map(d => d.id)
+      return new NextResponse(
+        `<!DOCTYPE html>
+        <html>
+        <head>
+          <title>Document Diagnostic</title>
+          <style>
+            body { font-family: system-ui, -apple-system, sans-serif; max-width: 900px; margin: 40px auto; padding: 20px; background: #fafafa; }
+            .card { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
+            h1 { color: #1f2937; margin-bottom: 8px; }
+            .summary { display: flex; gap: 20px; margin: 20px 0; }
+            .stat { background: #f3f4f6; padding: 16px 24px; border-radius: 8px; text-align: center; }
+            .stat-value { font-size: 32px; font-weight: bold; }
+            .stat-label { color: #6b7280; font-size: 14px; }
+            .stat.missing .stat-value { color: #dc2626; }
+            .stat.existing .stat-value { color: #16a34a; }
+            table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+            th, td { text-align: left; padding: 12px; border-bottom: 1px solid #e5e7eb; }
+            th { background: #f9fafb; font-weight: 600; }
+            .btn { padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-weight: 500; }
+            .btn-danger { background: #fecaca; color: #991b1b; }
+            .btn-danger:hover { background: #fca5a5; }
+            .btn-primary { background: #7c3aed; color: white; }
+            .btn-primary:hover { background: #6d28d9; }
+            .actions { margin-top: 20px; display: flex; gap: 12px; }
+            .success { background: #dcfce7; color: #166534; padding: 12px 16px; border-radius: 8px; margin-top: 16px; display: none; }
+            .error { background: #fecaca; color: #991b1b; padding: 12px 16px; border-radius: 8px; margin-top: 16px; display: none; }
+          </style>
+        </head>
+        <body>
+          <div class="card">
+            <h1>Document Diagnostic</h1>
+            <p>Checking documents for your church against S3 storage.</p>
+            
+            <div class="summary">
+              <div class="stat">
+                <div class="stat-value">${results.total}</div>
+                <div class="stat-label">Total Documents</div>
+              </div>
+              <div class="stat existing">
+                <div class="stat-value">${results.existing}</div>
+                <div class="stat-label">Existing in S3</div>
+              </div>
+              <div class="stat missing">
+                <div class="stat-value">${results.missing}</div>
+                <div class="stat-label">Missing from S3</div>
+              </div>
+            </div>
+          </div>
+
+          ${results.missing > 0 ? `
+          <div class="card">
+            <h2>Missing Documents (${results.missing})</h2>
+            <p>These database records point to files that no longer exist in S3. You can remove them and re-upload.</p>
+            
+            <table>
+              <thead>
+                <tr>
+                  <th>File Name</th>
+                  <th>Event</th>
+                  <th>Event Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${results.missingDocuments.map(doc => `
+                  <tr>
+                    <td>${doc.originalFilename}</td>
+                    <td>${doc.eventName}</td>
+                    <td>${new Date(doc.eventDate).toLocaleDateString()}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+
+            <div class="actions">
+              <button class="btn btn-danger" onclick="cleanupMissing()">Remove ${results.missing} Broken Records</button>
+            </div>
+            
+            <div id="success" class="success"></div>
+            <div id="error" class="error"></div>
+          </div>
+
+          <script>
+            const missingIds = ${JSON.stringify(missingIds)};
+            
+            async function cleanupMissing() {
+              if (!confirm('Remove ' + missingIds.length + ' broken document records? You can then re-upload the files to those events.')) return;
+              
+              try {
+                const response = await fetch('/api/admin/check-documents', {
+                  method: 'DELETE',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ documentIds: missingIds })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                  document.getElementById('success').textContent = data.message + ' Refresh the page to see updated results.';
+                  document.getElementById('success').style.display = 'block';
+                  document.getElementById('error').style.display = 'none';
+                } else {
+                  document.getElementById('error').textContent = data.error || 'Failed to clean up';
+                  document.getElementById('error').style.display = 'block';
+                  document.getElementById('success').style.display = 'none';
+                }
+              } catch (err) {
+                document.getElementById('error').textContent = 'An error occurred: ' + err.message;
+                document.getElementById('error').style.display = 'block';
+              }
+            }
+          </script>
+          ` : '<div class="card"><h2>All documents exist in S3!</h2><p>No cleanup needed.</p></div>'}
+
+          <div class="card">
+            <a href="/calendar" class="btn btn-primary">Back to Calendar</a>
+          </div>
+        </body>
+        </html>`,
+        { headers: { 'Content-Type': 'text/html' } }
+      )
+    }
+
     return NextResponse.json({
       success: true,
       summary: {
@@ -141,7 +267,7 @@ export async function GET(request: NextRequest) {
       missingDocuments: results.missingDocuments,
       existingDocuments: results.existingDocuments,
       hint: results.missing > 0 
-        ? 'Add ?listS3=true to see what files actually exist in S3 for missing documents (helps diagnose key mismatches)'
+        ? 'Add ?format=html for a friendly interface with cleanup button, or ?listS3=true to see what files actually exist in S3'
         : undefined
     })
 
