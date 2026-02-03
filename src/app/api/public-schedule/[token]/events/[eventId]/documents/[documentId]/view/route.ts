@@ -41,7 +41,7 @@ export async function GET(
     // Check if the file actually exists in S3 before generating presigned URL
     const fileExists = await checkFileExists(s3Key)
     if (!fileExists.exists) {
-      console.error('File not found in S3:', s3Key)
+      console.error('File not found in S3:', s3Key, 'for event:', event.name)
       // Return a user-friendly HTML error page
       return new NextResponse(
         `<!DOCTYPE html>
@@ -49,20 +49,29 @@ export async function GET(
         <head>
           <title>File Not Found</title>
           <style>
-            body { font-family: system-ui, -apple-system, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; text-align: center; }
-            h1 { color: #dc2626; }
-            p { color: #4b5563; }
-            .filename { background: #f3f4f6; padding: 8px 16px; border-radius: 8px; font-family: monospace; display: inline-block; margin: 10px 0; }
-            a { color: #2563eb; text-decoration: none; }
-            a:hover { text-decoration: underline; }
+            body { font-family: system-ui, -apple-system, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; text-align: center; background: #fafafa; }
+            .card { background: white; border-radius: 12px; padding: 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+            h1 { color: #dc2626; margin-bottom: 16px; }
+            p { color: #4b5563; line-height: 1.6; }
+            .filename { background: #f3f4f6; padding: 12px 20px; border-radius: 8px; font-family: monospace; display: inline-block; margin: 16px 0; word-break: break-all; max-width: 100%; font-size: 14px; }
+            .event-name { color: #7c3aed; font-weight: 500; }
+            a { display: inline-block; margin-top: 20px; padding: 10px 24px; background: #e5e7eb; color: #374151; border-radius: 8px; text-decoration: none; font-weight: 500; }
+            a:hover { background: #d1d5db; }
+            .info { background: #fef3c7; border: 1px solid #fcd34d; padding: 12px 16px; border-radius: 8px; margin-top: 20px; font-size: 13px; color: #92400e; text-align: left; }
           </style>
         </head>
         <body>
-          <h1>File Not Found</h1>
-          <p>The document you're trying to access no longer exists or has been removed.</p>
-          <div class="filename">${document.originalFilename}</div>
-          <p>This may happen if the file was deleted or if there was an upload error.</p>
-          <p><a href="javascript:history.back()">Go back</a></p>
+          <div class="card">
+            <h1>File Not Found</h1>
+            <p>The document you're trying to access no longer exists in storage.</p>
+            <div class="filename">${document.originalFilename}</div>
+            <p>Event: <span class="event-name">${event.name}</span></p>
+            <div class="info">
+              <strong>What can you do?</strong><br>
+              Please contact the schedule administrator to have this document re-uploaded.
+            </div>
+            <a href="javascript:history.back()">Go Back</a>
+          </div>
         </body>
         </html>`,
         { 
