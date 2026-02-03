@@ -131,7 +131,6 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if HTML format requested
-    const url = new URL(request.url)
     if (url.searchParams.get('format') === 'html') {
       const missingIds = results.missingDocuments.map(d => d.id)
       return new NextResponse(
