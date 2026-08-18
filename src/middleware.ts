@@ -26,6 +26,8 @@ export async function middleware(request: NextRequest) {
   }
 
   // Define paths that should always be accessible (even for expired accounts)
+  // /api/cron is included so external schedulers (cron-job.org) can reach
+  // handlers that authenticate via CRON_SECRET instead of a user session.
   const alwaysAccessiblePaths = [
     '/',
     '/auth/signin',
@@ -37,7 +39,8 @@ export async function middleware(request: NextRequest) {
     '/support',
     '/api/auth',
     '/api/stripe',
-    '/api/support'
+    '/api/support',
+    '/api/cron'
   ]
 
   // Check if current path should always be accessible
