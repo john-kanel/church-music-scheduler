@@ -73,6 +73,8 @@ export default function PublicSchedulePage({ params }: { params: Promise<{ token
   const [pinValue, setPinValue] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showOpeningsOnly, setShowOpeningsOnly] = useState(false)
+  const [openingsFilterReady, setOpeningsFilterReady] = useState(false)
 
   useEffect(() => {
     const resolveParams = async () => {
@@ -102,6 +104,10 @@ export default function PublicSchedulePage({ params }: { params: Promise<{ token
 
       const scheduleData = await response.json()
       setData(scheduleData)
+      if (!openingsFilterReady) {
+        setShowOpeningsOnly(scheduleData.filter?.filterType === 'OPEN_POSITIONS')
+        setOpeningsFilterReady(true)
+      }
       setError(null)
     } catch (error) {
       console.error('Error fetching public schedule:', error)
@@ -175,6 +181,13 @@ export default function PublicSchedulePage({ params }: { params: Promise<{ token
     `${musician.firstName} ${musician.lastName}`.toLowerCase().includes(searchTerm.toLowerCase())
   ) || []
 
+  const eventHasOpenings = (event: PublicScheduleData['events'][number]) =>
+    event.assignments.some(assignment => !assignment.user)
+
+  const visibleEvents = data
+    ? (showOpeningsOnly ? data.events.filter(eventHasOpenings) : data.events)
+    : []
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -247,13 +260,37 @@ export default function PublicSchedulePage({ params }: { params: Promise<{ token
           <p className="text-gray-600">
             {new Date(data.timeRange.startDate).toLocaleDateString()} - {new Date(data.timeRange.endDate).toLocaleDateString()}
           </p>
+          <div className="mt-4 flex items-center gap-3">
+            <span className={`text-sm ${!showOpeningsOnly ? 'font-semibold text-gray-900' : 'text-gray-500'}`}>
+              All events
+            </span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={showOpeningsOnly}
+              aria-label="Show only events with openings"
+              onClick={() => setShowOpeningsOnly(current => !current)}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                showOpeningsOnly ? 'bg-green-600' : 'bg-gray-300'
+              }`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
+                  showOpeningsOnly ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
+            <span className={`text-sm ${showOpeningsOnly ? 'font-semibold text-gray-900' : 'text-gray-500'}`}>
+              Openings only
+            </span>
+          </div>
         </div>
       </div>
 
       {/* Events List */}
       <div className="max-w-4xl mx-auto px-4 py-6">
         <div className="space-y-4">
-          {data.events.map((event) => {
+          {visibleEvents.map((event) => {
             const isExpanded = expandedEvents.has(event.id)
             const availableRoles = event.assignments.filter(a => !a.user)
             const assignedGroups = event.assignments
@@ -528,6 +565,12 @@ export default function PublicSchedulePage({ params }: { params: Promise<{ token
         {data.events.length === 0 && (
           <div className="text-center py-12">
             <p className="text-gray-500">No events scheduled for this time period.</p>
+          </div>
+        )}
+
+        {data.events.length > 0 && visibleEvents.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-gray-500">No events with openings in this time period.</p>
           </div>
         )}
       </div>
