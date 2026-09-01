@@ -6,11 +6,16 @@ interface RecurrencePattern {
   weekOfMonth?: number // For monthly weekday type (1st, 2nd, 3rd, 4th, last)
   endDate?: Date
   maxOccurrences?: number
+  excludedDates?: string[]
 }
 
 export function parseRecurrencePattern(patternString: string): RecurrencePattern {
   try {
-    return JSON.parse(patternString)
+    const parsed = JSON.parse(patternString)
+    if (parsed.endDate) {
+      parsed.endDate = new Date(parsed.endDate)
+    }
+    return parsed
   } catch {
     // Handle legacy string patterns
     switch (patternString) {
@@ -20,6 +25,14 @@ export function parseRecurrencePattern(patternString: string): RecurrencePattern
       default: return { type: 'weekly' }
     }
   }
+}
+
+function filterExcludedDates(dates: Date[], pattern: RecurrencePattern): Date[] {
+  if (!pattern.excludedDates || pattern.excludedDates.length === 0) {
+    return dates
+  }
+  const excludedTimes = new Set(pattern.excludedDates.map(d => new Date(d).getTime()))
+  return dates.filter(date => !excludedTimes.has(date.getTime()))
 }
 
 export function generateRecurringDates(
@@ -33,9 +46,10 @@ export function generateRecurringDates(
   // Default max end date if not specified (rolling 6-month window)
   const maxEndDate = new Date(startDate)
   maxEndDate.setMonth(maxEndDate.getMonth() + maxMonths)
-  
-  const finalEndDate = pattern.endDate && pattern.endDate < maxEndDate 
-    ? pattern.endDate 
+
+  const patternEndDate = pattern.endDate ? new Date(pattern.endDate) : null
+  const finalEndDate = patternEndDate && patternEndDate < maxEndDate 
+    ? patternEndDate 
     : maxEndDate
   
   const maxOccurrences = pattern.maxOccurrences || Math.min(26, Math.ceil(maxMonths * 4.33)) // ~26 events max (6 months of weekly)
@@ -163,7 +177,10 @@ export async function generateRecurringEvents(
   prisma: any,
   churchId: string
 ) {
-  const recurringDates = generateRecurringDates(rootEvent.startTime, pattern)
+  const recurringDates = filterExcludedDates(
+    generateRecurringDates(rootEvent.startTime, pattern),
+    pattern
+  )
   
   if (recurringDates.length === 0) {
     return []
@@ -229,7 +246,12 @@ export async function extendRecurringEvents(
   
   // Find the latest generated event for this series
   const latestEvent = await prisma.event.findFirst({
-    where: { generatedFrom: rootEventId },
+    where: {
+      OR: [
+        { generatedFrom: rootEventId },
+        { parentEventId: rootEventId }
+      ]
+    },
     orderBy: { startTime: 'desc' }
   })
   
@@ -242,19 +264,37 @@ export async function extendRecurringEvents(
   if (latestEventDate >= targetDate) {
     return [] // Already have events up to the target date
   }
-  
-  // Generate additional events from the latest event date to target date + 3 months
+
   const pattern = parseRecurrencePattern(rootEvent.recurrencePattern)
-  const extendToDate = new Date(targetDate)
-  extendToDate.setMonth(extendToDate.getMonth() + 3) // Generate 3 months ahead
-  
-  if (pattern.endDate && pattern.endDate < extendToDate) {
-    return [] // Series has already ended
+  if (rootEvent.recurrenceEnd) {
+    const recEnd = new Date(rootEvent.recurrenceEnd)
+    if (!pattern.endDate || recEnd < pattern.endDate) {
+      pattern.endDate = recEnd
+    }
+  }
+
+  if (pattern.endDate && latestEventDate >= pattern.endDate) {
+    return [] // Series has already been ended (e.g. user deleted future events)
   }
   
+  // Generate additional events from the latest event date to target date + 3 months
+  const extendToDate = new Date(targetDate)
+  extendToDate.setMonth(extendToDate.getMonth() + 3) // Generate 3 months ahead
+
+  if (pattern.endDate && pattern.endDate < latestEventDate) {
+    return []
+  }
+
+  const generationEnd = pattern.endDate && pattern.endDate < extendToDate
+    ? pattern.endDate
+    : extendToDate
+  
   // Temporarily adjust the pattern to generate from latest event date
-  const tempPattern = { ...pattern, endDate: extendToDate }
-  const newDates = generateRecurringDates(latestEventDate, tempPattern, 3)
+  const tempPattern = { ...pattern, endDate: generationEnd }
+  const newDates = filterExcludedDates(
+    generateRecurringDates(latestEventDate, tempPattern, 3),
+    pattern
+  )
   
   if (newDates.length === 0) {
     return []

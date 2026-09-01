@@ -101,39 +101,54 @@ export async function DELETE(
     let pastEventsPreserved = 0
 
     await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      // Find all generated events from this root
-      const generatedEvents = await tx.event.findMany({
+      // Find all events in this series (both linkage fields, plus the root)
+      const seriesEvents = await tx.event.findMany({
         where: {
-          generatedFrom: rootEventId,
-          churchId: session.user.churchId
+          churchId: session.user.churchId,
+          OR: [
+            { id: rootEventId },
+            { generatedFrom: rootEventId },
+            { parentEventId: rootEventId }
+          ]
         }
       })
 
-      // Separate future and past events
-      const futureEvents = generatedEvents.filter(event => new Date(event.startTime) >= now)
-      const pastEvents = generatedEvents.filter(event => new Date(event.startTime) < now)
+      const futureEvents = seriesEvents.filter(event =>
+        event.id !== rootEventId && new Date(event.startTime) >= now
+      )
+      const pastEvents = seriesEvents.filter(event =>
+        event.id !== rootEventId && new Date(event.startTime) < now
+      )
       
       futureEventsDeleted = futureEvents.length
       pastEventsPreserved = pastEvents.length
 
-      // Delete assignments and hymns only for FUTURE generated events
-      for (const event of futureEvents) {
-        await tx.eventAssignment.deleteMany({ where: { eventId: event.id } })
-        await tx.eventHymn.deleteMany({ where: { eventId: event.id } })
-      }
+      const futureIds = futureEvents.map(event => event.id)
 
-      // Delete only FUTURE generated events
-      if (futureEvents.length > 0) {
+      if (futureIds.length > 0) {
+        await tx.communication.updateMany({
+          where: { eventId: { in: futureIds } },
+          data: { eventId: null }
+        })
+        await tx.notificationLog.updateMany({
+          where: { eventId: { in: futureIds } },
+          data: { eventId: null }
+        })
+        await tx.eventAssignment.deleteMany({ where: { eventId: { in: futureIds } } })
+        await tx.eventHymn.deleteMany({ where: { eventId: { in: futureIds } } })
         await tx.event.deleteMany({
-          where: {
-            generatedFrom: rootEventId,
-            churchId: session.user.churchId,
-            startTime: { gte: now }
-          }
+          where: { id: { in: futureIds } }
         })
       }
 
-      // Delete assignments and hymns for root event (root is just a template)
+      await tx.communication.updateMany({
+        where: { eventId: rootEventId },
+        data: { eventId: null }
+      })
+      await tx.notificationLog.updateMany({
+        where: { eventId: rootEventId },
+        data: { eventId: null }
+      })
       await tx.eventAssignment.deleteMany({ where: { eventId: rootEventId } })
       await tx.eventHymn.deleteMany({ where: { eventId: rootEventId } })
 

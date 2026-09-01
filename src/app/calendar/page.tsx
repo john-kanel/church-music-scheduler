@@ -79,6 +79,8 @@ interface CalendarEvent {
   }
   status?: 'confirmed' | 'tentative' | 'cancelled'
   isRootEvent?: boolean
+  isRecurring?: boolean
+  parentEventId?: string
   generatedFrom?: string
   assignments?: {
     id: string
@@ -440,6 +442,8 @@ export default function CalendarPage() {
       eventType: event.eventType,
       status: event.status,
       isRootEvent: event.isRootEvent,
+      isRecurring: event.isRecurring,
+      parentEventId: event.parentEventId,
       generatedFrom: event.generatedFrom,
       assignments: event.assignments
     }
