@@ -35,6 +35,8 @@ interface CalendarEvent {
   }
   templateId?: string
   parentEventId?: string
+  generatedFrom?: string
+  isRootEvent?: boolean
   status?: 'confirmed' | 'tentative' | 'cancelled' | 'pending' | 'error'
   isRecurring?: boolean
   recurrencePattern?: string
@@ -779,8 +781,13 @@ export function EventDetailsModal({
   // Helper function to check if event is part of a recurring series
   const isRecurringEvent = () => {
     if (!currentEvent) return false
-    // Event is recurring if it has isRecurring=true (parent) or has a parentEventId (child)
-    return currentEvent.isRecurring || !!currentEvent.parentEventId
+    const event = currentEvent as CalendarEvent & { generatedFrom?: string; isRootEvent?: boolean }
+    return !!(
+      event.isRecurring ||
+      event.parentEventId ||
+      event.generatedFrom ||
+      event.isRootEvent
+    )
   }
 
   // Handle delete button click - show appropriate modal
@@ -2940,31 +2947,27 @@ export function EventDetailsModal({
                   </div>
                 </button>
 
-                {currentEvent?.isRecurring && (
-                  <button
-                    onClick={() => handleDelete('all')}
-                    disabled={loading}
-                    className="w-full p-4 text-left border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <div className="font-medium text-gray-900">All events in series</div>
-                    <div className="text-sm text-gray-500 mt-1">
-                      Delete this event and all future recurring events
-                    </div>
-                  </button>
-                )}
+                <button
+                  onClick={() => handleDelete('future')}
+                  disabled={loading}
+                  className="w-full p-4 text-left border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <div className="font-medium text-gray-900">This and future events</div>
+                  <div className="text-sm text-gray-500 mt-1">
+                    Delete this event and every later event in the series. Earlier dates stay on the calendar.
+                  </div>
+                </button>
 
-                {currentEvent?.parentEventId && (
-                  <button
-                    onClick={() => handleDelete('future')}
-                    disabled={loading}
-                    className="w-full p-4 text-left border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <div className="font-medium text-gray-900">This and future events</div>
-                    <div className="text-sm text-gray-500 mt-1">
-                      Delete this event and all future events in the series
-                    </div>
-                  </button>
-                )}
+                <button
+                  onClick={() => handleDelete('all')}
+                  disabled={loading}
+                  className="w-full p-4 text-left border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <div className="font-medium text-gray-900">All events in series</div>
+                  <div className="text-sm text-gray-500 mt-1">
+                    Delete every event in this series, including past ones
+                  </div>
+                </button>
               </div>
 
               <div className="flex justify-end space-x-3">

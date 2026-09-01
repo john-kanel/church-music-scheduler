@@ -256,6 +256,10 @@ export default function PublicSchedulePage({ params }: { params: Promise<{ token
           {data.events.map((event) => {
             const isExpanded = expandedEvents.has(event.id)
             const availableRoles = event.assignments.filter(a => !a.user)
+            const assignedGroups = event.assignments
+              .map(assignment => assignment.group)
+              .filter((group): group is { id: string; name: string } => !!group)
+              .filter((group, index, self) => self.findIndex(g => g.id === group.id) === index)
             
             return (
               <div key={event.id} className="bg-white rounded-lg shadow-sm border">
@@ -266,9 +270,9 @@ export default function PublicSchedulePage({ params }: { params: Promise<{ token
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
+                      <div className="flex items-center gap-2 flex-wrap mb-2">
                         <div 
-                          className="w-3 h-3 rounded-full"
+                          className="w-3 h-3 rounded-full shrink-0"
                           style={{ backgroundColor: event.eventType.color }}
                         ></div>
                         <h3 className="text-lg font-semibold text-gray-900">{event.name}</h3>
@@ -277,6 +281,14 @@ export default function PublicSchedulePage({ params }: { params: Promise<{ token
                             {availableRoles.length} opening{availableRoles.length !== 1 ? 's' : ''}
                           </span>
                         )}
+                        {assignedGroups.map((group) => (
+                          <span
+                            key={group.id}
+                            className="bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded-lg"
+                          >
+                            {group.name}
+                          </span>
+                        ))}
                       </div>
                       
                       <div className="flex items-center gap-4 text-sm text-gray-600">

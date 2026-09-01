@@ -570,6 +570,51 @@ export async function PATCH(
   }
 }
 
+function getSeriesRootId(event: {
+  id: string
+  isRootEvent: boolean
+  isRecurring: boolean
+  parentEventId: string | null
+  generatedFrom: string | null
+}): string | null {
+  if (event.isRootEvent || event.isRecurring) return event.id
+  return event.generatedFrom || event.parentEventId || null
+}
+
+function seriesMemberWhere(rootId: string, churchId: string) {
+  return {
+    churchId,
+    OR: [
+      { id: rootId },
+      { parentEventId: rootId },
+      { generatedFrom: rootId }
+    ]
+  }
+}
+
+async function detachNonCascadingEventRefs(tx: Prisma.TransactionClient, eventIds: string[]) {
+  if (eventIds.length === 0) return
+  await tx.communication.updateMany({
+    where: { eventId: { in: eventIds } },
+    data: { eventId: null }
+  })
+  await tx.notificationLog.updateMany({
+    where: { eventId: { in: eventIds } },
+    data: { eventId: null }
+  })
+}
+
+function withRecurrenceEnd(patternString: string | null, endDate: Date): string {
+  let pattern: Record<string, unknown> = {}
+  try {
+    pattern = patternString ? JSON.parse(patternString) : {}
+  } catch {
+    pattern = { type: 'weekly' }
+  }
+  pattern.endDate = endDate.toISOString()
+  return JSON.stringify(pattern)
+}
+
 // DELETE /api/events/[id] - Delete event
 export async function DELETE(
   request: NextRequest,
@@ -588,15 +633,14 @@ export async function DELETE(
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
-    // Get deletion type from query parameters
     const { searchParams } = new URL(request.url)
     const deletionType = searchParams.get('type') || 'single' // 'single', 'all', 'future'
+    const churchId = session.user.churchId
 
-    // Verify event belongs to church and get recurring information
     const existingEvent = await prisma.event.findFirst({
       where: {
         id: params.id,
-        churchId: session.user.churchId
+        churchId
       }
     })
 
@@ -604,72 +648,93 @@ export async function DELETE(
       return NextResponse.json({ error: 'Event not found' }, { status: 404 })
     }
 
-    // Handle different deletion types
+    const seriesRootId = getSeriesRootId(existingEvent)
+
     await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       switch (deletionType) {
-        case 'single':
-          // Delete only this event
+        case 'single': {
+          await detachNonCascadingEventRefs(tx, [params.id])
           await tx.event.delete({
             where: { id: params.id }
           })
-          break
 
-        case 'all':
-          // Delete all events in the recurring series
-          if (existingEvent.parentEventId) {
-            // This is a child event, delete parent and all children
-            await tx.event.deleteMany({
-              where: {
-                OR: [
-                  { id: existingEvent.parentEventId },
-                  { parentEventId: existingEvent.parentEventId }
-                ]
+          // Remember this date so backfill does not recreate a skipped occurrence
+          if (seriesRootId && seriesRootId !== params.id) {
+            const root = await tx.event.findUnique({ where: { id: seriesRootId } })
+            if (root?.recurrencePattern) {
+              let pattern: { excludedDates?: string[] } = {}
+              try {
+                pattern = JSON.parse(root.recurrencePattern)
+              } catch {
+                pattern = {}
               }
-            })
-          } else {
-            // This is the parent event, delete it and all children
-            await tx.event.deleteMany({
-              where: {
-                OR: [
-                  { id: params.id },
-                  { parentEventId: params.id }
-                ]
+              const excludedDates = Array.isArray(pattern.excludedDates) ? pattern.excludedDates : []
+              const iso = existingEvent.startTime.toISOString()
+              if (!excludedDates.includes(iso)) {
+                excludedDates.push(iso)
+              }
+              await tx.event.update({
+                where: { id: seriesRootId },
+                data: {
+                  recurrencePattern: JSON.stringify({ ...pattern, excludedDates })
+                }
+              })
+            }
+          }
+          break
+        }
+
+        case 'all': {
+          const rootId = seriesRootId || params.id
+          const members = await tx.event.findMany({
+            where: seriesMemberWhere(rootId, churchId),
+            select: { id: true }
+          })
+          const ids = Array.from(new Set([...members.map(e => e.id), params.id]))
+          await detachNonCascadingEventRefs(tx, ids)
+          await tx.event.deleteMany({
+            where: { id: { in: ids } }
+          })
+          break
+        }
+
+        case 'future': {
+          const cutoff = existingEvent.startTime
+          const rootId = seriesRootId || params.id
+          const members = await tx.event.findMany({
+            where: {
+              ...seriesMemberWhere(rootId, churchId),
+              startTime: { gte: cutoff }
+            },
+            select: { id: true }
+          })
+          const ids = Array.from(new Set([...members.map(e => e.id), params.id]))
+          await detachNonCascadingEventRefs(tx, ids)
+          await tx.event.deleteMany({
+            where: { id: { in: ids } }
+          })
+
+          // Stop the series so cron/backfill cannot recreate deleted future dates
+          const rootStillThere = await tx.event.findUnique({ where: { id: rootId } })
+          if (rootStillThere) {
+            const seriesEnd = new Date(cutoff.getTime() - 1000)
+            await tx.event.update({
+              where: { id: rootId },
+              data: {
+                recurrenceEnd: seriesEnd,
+                recurrencePattern: withRecurrenceEnd(rootStillThere.recurrencePattern, seriesEnd)
               }
             })
           }
           break
-
-        case 'future':
-          // Delete this event and all future events in the series
-          if (existingEvent.parentEventId) {
-            // This is a child event, delete this and all future events
-            await tx.event.deleteMany({
-              where: {
-                OR: [
-                  { id: params.id },
-                  {
-                    parentEventId: existingEvent.parentEventId,
-                    startTime: { gte: existingEvent.startTime }
-                  }
-                ]
-              }
-            })
-          } else {
-            // This is the parent event, delete it and all children
-            await tx.event.deleteMany({
-              where: {
-                OR: [
-                  { id: params.id },
-                  { parentEventId: params.id }
-                ]
-              }
-            })
-          }
-          break
+        }
 
         default:
           throw new Error('Invalid deletion type')
       }
+    }, {
+      timeout: 30000,
+      maxWait: 10000
     })
 
     const deletionMessage = 
